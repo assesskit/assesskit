@@ -86,7 +86,7 @@ itself. `mountItem` ([items in a page](delivery.md#items-in-a-page)) mounts the 
   the pronunciation lexicons of the item shown: the shell loads the files that `documents.lexicons` names, through the gate,
   and leaves out one that is missing or is not a PLS document ([speech](speech.md#lexicons)).
 - **Settings** that the candidate may change have a list in the panel while their support is on: the color theme, the amount
-  of magnification and the preferences of reading aloud. A choice sends `{ type: "support-settings", settings }`, the state keeps it, and the next view applies it, so
+  of magnification, and the preferences of reading aloud and of braille. A choice sends `{ type: "support-settings", settings }`, the state keeps it, and the next view applies it, so
   it holds for later items and after a reload ([the settings](#the-settings)).
 - **The magnification** of non-text content reaches media sized in pixels at once: the shell sets the media scale of the
   content root from `mediaScaleOf` with every change of the supports, and the item is not drawn again, so what the candidate
@@ -144,8 +144,9 @@ a magnification.
 ## The settings
 
 The profile sets the preferences of a support when the session starts, and the candidate changes them during the session, as
-CERT asks of magnification (`A-30a`, `A-30b`) and of reading aloud (`A-40d`, `A-40e`), and the best practices guide of the color
-theme. The panel has a list for each
+CERT asks of braille (`A-10b`), magnification (`A-30a`, `A-30b`) and reading aloud (`A-40d`, `A-40e`), and the best practices
+guide of the color theme. The kind, grade and mathematics of braille choose among the files of a braille or tactile card that
+state them ([cards](#cards)); the rest of the preferences of braille are the screen reader's, which reads the page. The panel has a list for each
 setting that the player follows, while its support is on. A choice reports the settings whole, those of the view with the value
 chosen; the host sends them as `support-settings`, the runtime keeps them in the state, and the next view applies them to the
 content root and the frames at once, without drawing the item again.
@@ -171,6 +172,10 @@ flowchart LR
 |                   | Volume of the voice           | 25 to 100 percent by 25                                                                                                                     |
 |                   | How links are read            | The 4 terms of `link-indication`                                                                                                            |
 |                   | Repeat what I type            | The 4 terms of `typing-echo`                                                                                                                |
+| `braille`         | Braille delivery              | Refreshable display, or embossed on paper, which shows the text of a braille card                                                           |
+|                   | Braille grade                 | 1, 2 and 3                                                                                                                                  |
+|                   | Kind of braille               | UEB and EBAE, and a kind of a program that the profile names                                                                                |
+|                   | Braille of mathematics        | Nemeth and UEB, and a kind of a program that the profile names                                                                              |
 
 - **Each list** is a `select` with a label, so the pointer, the keyboard and a screen reader operate it as any list of the page:
   the first characters choose an entry, and the arrow keys move in it. It keeps the focus while views arrive, and it shows what
@@ -263,6 +268,8 @@ supports change. `destroy()` gives the content back as the root drew it.
 
 The language of a card is that of `keyword-translation` or `sign-language` for their own cards, else that of the
 `item-translation` support when it is on, else none, which gives the default entry of the card (the runtime's `selectCard`).
+While `braille` is on, its kind, grade and mathematics choose among the entries of a card that state them, as the braille and
+tactile cards of the guide do.
 
 Beside the content means inside the element at its end, or after it when the element cannot hold content (`img`, `video`,
 `audio`, `object`, `iframe`, `canvas`, `svg`, `math`, `input`, `select`, `textarea`, `br`, `hr`). The card is a `div` of the
@@ -386,14 +393,15 @@ A support that is wrong for the candidate is not an error of the player: the run
 
 ## Where the sources differ
 
-| Case                                                                       | Reading                                                                                     |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| The design lists `captions` and `alternative-text` with the cards          | The schema gives a `qti-card` no such `support`; they act on text tracks and on `alt`       |
-| The best practices guide leaves the presentation of a card to the platform | The table above                                                                             |
-| `item-translation` has a language but no card                              | Its language chooses the entry of the cards of supports that have none of their own         |
-| The PNP schema gives no unit for sizes and spacing                         | Points over 12 for the font size, ems for the spacing                                       |
-| The guide has `color-theme`, and the PNP schema does not                   | The runtime reads it ([spec gaps](../runtime/spec-gaps.md), G49), and the player acts on it |
-| The two gray themes are below the contrast of the other themes             | The guide asks for 3:1 to 4:1, as a choice of the candidate (G51)                           |
+| Case                                                                                             | Reading                                                                                     |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| The design lists `captions` and `alternative-text` with the cards                                | The schema gives a `qti-card` no such `support`; they act on text tracks and on `alt`       |
+| The best practices guide leaves the presentation of a card to the platform                       | The table above                                                                             |
+| `item-translation` has a language but no card                                                    | Its language chooses the entry of the cards of supports that have none of their own         |
+| The PNP schema gives no unit for sizes and spacing                                               | Points over 12 for the font size, ems for the spacing                                       |
+| The guide has `color-theme`, and the PNP schema does not                                         | The runtime reads it ([spec gaps](../runtime/spec-gaps.md), G49), and the player acts on it |
+| The two gray themes are below the contrast of the other themes                                   | The guide asks for 3:1 to 4:1, as a choice of the candidate (G51)                           |
+| The guide marks braille and tactile files with `data-` attributes and says nothing of the choice | The runtime's `selectCard` chooses by the braille settings (G52)                            |
 
 ## Evidence
 

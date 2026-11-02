@@ -2,7 +2,7 @@ import type { AssessmentItem, BodyNode, Catalog, FileHref, HtmlContent } from ".
 import { withDescendants } from "../asi/internal.js";
 import { checkArray, checkRecord, checkString, describe } from "../checks.js";
 import type { Issue } from "../errors.js";
-import type { SupportName } from "../pnp/index.js";
+import type { Braille, SupportName } from "../pnp/index.js";
 
 /**
  * The content of a card: HTML content, or references to files.
@@ -40,29 +40,93 @@ function entryFor<T extends { readonly language?: string; readonly default?: boo
 }
 
 /**
+ * The attributes of a card entry that state a preference of braille, with the setting of the profile that each matches. The
+ * guide adds `data-` to the names of the parameters of the PNP, and calls the grade `braille-grade`, so both names of the
+ * grade are read (spec gaps, G52).
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, braille and tactile}
+ */
+const BRAILLE_ATTRIBUTES: readonly (readonly [string, (braille: Braille) => string | undefined])[] = [
+  ["data-braille-type", ({ brailleType }) => brailleType],
+  ["data-braille-grade", ({ grade }) => (grade === undefined ? undefined : String(grade))],
+  ["data-grade", ({ grade }) => (grade === undefined ? undefined : String(grade))],
+  ["data-math-type", ({ mathType }) => mathType],
+];
+
+/** An attribute of a card entry beyond those of the schema, as the model of `asi` keeps it. */
+interface EntryAttribute {
+  readonly namespace: string;
+  readonly name: string;
+  readonly value: string;
+}
+
+/** Returns what an entry states of the preferences of braille: for each attribute it has, whether it agrees. */
+function brailleAgreement(extensions: readonly EntryAttribute[], braille: Braille): readonly boolean[] {
+  return BRAILLE_ATTRIBUTES.flatMap(([name, wanted]) => {
+    const stated = extensions.find((attribute) => attribute.namespace === "" && attribute.name === name)?.value;
+    const preferred = wanted(braille);
+    return stated === undefined || preferred === undefined
+      ? []
+      : [stated.trim().toLowerCase() === preferred.toLowerCase()];
+  });
+}
+
+/**
+ * Selects the card entry for the preferences of braille and the language: among the entries whose braille attributes agree
+ * with the preferences, the entry of the language or the default; else the first entry that states a preference and agrees;
+ * else the entry of the language or the default among all, as the guide gives grade 2 where a higher grade is missing.
+ */
+function brailleEntryFor<
+  T extends { readonly language?: string; readonly default?: boolean; readonly extensions: readonly EntryAttribute[] },
+>(entries: readonly T[], language: string | undefined, braille: Braille): T | undefined {
+  const agreements = entries.map(({ extensions }) => brailleAgreement(extensions, braille));
+  const agreeing = entries.filter((_, index) => (agreements[index] ?? []).every(Boolean));
+  const stating = entries.find((_, index) => {
+    const agreement = agreements[index] ?? [];
+    return agreement.length > 0 && agreement.every(Boolean);
+  });
+  return entryFor(agreeing, language) ?? stating ?? entryFor(entries, language);
+}
+
+/**
  * Selects the content of the card that a catalog has for a support.
  *
  * @remarks
  * A card without card entries gives its own content. A card with entries gives the entry for the language, by
- * `xml:lang` (the same tag, then the same primary language), and else the entry marked `default`.
+ * `xml:lang` (the same tag, then the same primary language), and else the entry marked `default`. With the braille settings
+ * of the candidate, entries whose `data-braille-type`, `data-braille-grade` (or `data-grade`) and `data-math-type` disagree
+ * with them are left out, and the first entry that states one and agrees is taken when no entry is of the language or the
+ * default; when none is left, the rule of the language applies to all, as the guide gives grade 2 where a higher grade is
+ * missing.
  *
  * @param catalog - The catalog.
  * @param support - The support that was requested, such as `glossary-on-screen` or `ext:name`.
  * @param language - The language tag of the candidate's PNP, such as the `item-translation` language. Without one, the
  * default entry is given.
+ * @param braille - The settings of the candidate's `braille` support while it is on, whose preferences choose among entries
+ * that state them, as those of a braille or a tactile card may.
  * @returns The content, or `undefined` when the catalog has no card for the support or no entry fits.
  * @throws `DataError` when an argument has the wrong type.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function selectCard(catalog: Catalog, support: SupportName, language?: string): CardContent | undefined {
+export function selectCard(
+  catalog: Catalog,
+  support: SupportName,
+  language?: string,
+  braille?: Braille,
+): CardContent | undefined {
   checkRecord(catalog, "The catalog must be an object of the model of qti-catalog");
   checkArray(catalog.cards, "The cards of the catalog must be an array");
   checkString(support, "The support");
   if (language !== undefined) checkString(language, "The language");
+  if (braille !== undefined) checkRecord(braille, "The braille settings must be an object");
   const card = catalog.cards.find((candidate) => candidate.support === support);
   if (card === undefined) return undefined;
-  const chosen = card.cardEntries.length === 0 ? card : entryFor(card.cardEntries, language);
+  const { cardEntries } = card;
+  const entry =
+    braille === undefined ? entryFor(cardEntries, language) : brailleEntryFor(cardEntries, language, braille);
+  const chosen = cardEntries.length === 0 ? card : entry;
   if (chosen === undefined) return undefined;
   return {
     ...(chosen.htmlContent === undefined ? {} : { htmlContent: chosen.htmlContent }),

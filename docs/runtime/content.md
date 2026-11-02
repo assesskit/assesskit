@@ -22,19 +22,19 @@ flowchart LR
   resolve -. "param, mi, ci" .-> substitution["template values"]
 ```
 
-| Function                                           | Does                                                                                             |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `resolveContent(nodes, variables, item, options)`  | Returns the nodes with hidden content removed, variables printed and template values substituted |
-| `isShown(showHide, identifier, value)`             | Tells whether feedback, template content or a choice is visible                                  |
-| `formatPrintedVariable(printed, value, variables)` | Writes the text of a `qti-printed-variable`                                                      |
-| `visibleModalFeedback(item, outcomes)`             | Returns the modal feedback an item shows                                                         |
-| `visibleTestFeedback(feedback, outcomes, access)`  | Returns the test feedback of one access, `during` or `atEnd`                                     |
-| `rubricBlocksFor(blocks, view)`                    | Returns the rubric blocks whose `view` lists the view                                            |
-| `testRubricBlocks(position, view)`                 | Returns the rubric of a test, its part and its sections, in the order the candidate meets it     |
-| `selectCard(catalog, support, language?)`          | Returns the content of the card for a support, by language                                       |
-| `catalogsFor(item, node)`                          | Returns the catalogs that `data-catalog-idref` of a node names                                   |
-| `checkCatalog(catalog)`                            | Returns `Issue`s for a catalog that breaks the rules of cards                                    |
-| `hazardExposure(hazards, profile?)`                | Returns the hazards of a resource in the terms of a PNP, each marked avoided or not              |
+| Function                                            | Does                                                                                             |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `resolveContent(nodes, variables, item, options)`   | Returns the nodes with hidden content removed, variables printed and template values substituted |
+| `isShown(showHide, identifier, value)`              | Tells whether feedback, template content or a choice is visible                                  |
+| `formatPrintedVariable(printed, value, variables)`  | Writes the text of a `qti-printed-variable`                                                      |
+| `visibleModalFeedback(item, outcomes)`              | Returns the modal feedback an item shows                                                         |
+| `visibleTestFeedback(feedback, outcomes, access)`   | Returns the test feedback of one access, `during` or `atEnd`                                     |
+| `rubricBlocksFor(blocks, view)`                     | Returns the rubric blocks whose `view` lists the view                                            |
+| `testRubricBlocks(position, view)`                  | Returns the rubric of a test, its part and its sections, in the order the candidate meets it     |
+| `selectCard(catalog, support, language?, braille?)` | Returns the content of the card for a support, by language and the preferences of braille        |
+| `catalogsFor(item, node)`                           | Returns the catalogs that `data-catalog-idref` of a node names                                   |
+| `checkCatalog(catalog)`                             | Returns `Issue`s for a catalog that breaks the rules of cards                                    |
+| `hazardExposure(hazards, profile?)`                 | Returns the hazards of a resource in the terms of a PNP, each marked avoided or not              |
 
 `HAZARD_TERMS` maps a DRD hazard term to the PNP term, and `VIEWS` lists the six views. The types are `ContentVariables`, `View`,
 `TestPosition`, `CardContent`, `HazardExposure`, `DrdHazardTerm`, `PnpHazardTerm` and `ResolveContentOptions`.
@@ -168,6 +168,23 @@ rubric block: the reader refuses it.
 whose `xml:lang` is the language, ignoring case, then the first entry with the same primary language (`fr` for `fr-CA`), then the
 entry marked `default`. The content is HTML or references to files in the package. `catalogsFor` finds the catalog that
 `data-catalog-idref` names wherever the item keeps it.
+
+The best practices guide tells braille and tactile files apart by attributes of the card entries, the parameters of the PNP with
+`data-` before them. With the candidate's `braille` settings, `selectCard` chooses among them:
+
+| Attribute of the entry                | Setting of `braille` |
+| ------------------------------------- | -------------------- |
+| `data-braille-type`                   | `brailleType`        |
+| `data-braille-grade`, or `data-grade` | `grade`              |
+| `data-math-type`                      | `mathType`           |
+
+1. The entries that state no attribute against a preference, or state the preferred value (ignoring case), are kept.
+2. Among them, the rule of the language and the default chooses; else the first that states a preferred value.
+3. Else the rule of the language and the default chooses among all entries, so a candidate who prefers grade 3 gets the
+   default grade 2 where no grade 3 exists, as the guide says.
+
+The guide names the grade `braille-grade` where the PNP names it `grade`, and says nothing of the choice: [spec gaps](spec-gaps.md),
+G52.
 
 `checkCatalog` returns `Issue`s:
 

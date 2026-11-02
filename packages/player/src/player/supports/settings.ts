@@ -1,5 +1,10 @@
 import type { SupportView } from "@assesskit/runtime/delivery";
 import type {
+  Braille,
+  BrailleDeliveryMode,
+  BrailleGrade,
+  BrailleMathType,
+  BrailleType,
   ColorTheme,
   LinkIndication,
   Magnification,
@@ -56,6 +61,9 @@ const PITCHES: readonly number[] = [0, 0.25, 0.5, 0.75, 1];
 
 /** The volumes offered, from 0 to 1 as the PNP gives them. */
 const VOLUMES: readonly number[] = [0.25, 0.5, 0.75, 1];
+
+/** The grades of braille: uncontracted, contracted and more contracted. */
+const GRADES: readonly BrailleGrade[] = [1, 2, 3];
 
 /** The prefix of a term of a program, which a list names by what follows it. */
 const EXTENSION_PREFIX = "ext:";
@@ -230,9 +238,71 @@ function spokenFields(settings: Spoken, context: FieldContext): Field[] {
   ];
 }
 
+/** The message that names each term of `delivery-mode`. */
+const DELIVERY_MODES: readonly (readonly [BrailleDeliveryMode, keyof Messages])[] = [
+  ["refreshable", "brailleRefreshable"],
+  ["embossed", "brailleEmbossed"],
+];
+
+/** The message that names each term of `braille-type`. */
+const BRAILLE_TYPES: readonly (readonly [BrailleType, keyof Messages])[] = [
+  ["ueb", "brailleTypeUeb"],
+  ["ebae", "brailleTypeEbae"],
+];
+
+/** The message that names each term of `math-type`. */
+const MATH_TYPES: readonly (readonly [BrailleMathType, keyof Messages])[] = [
+  ["nemeth", "brailleMathNemeth"],
+  ["ueb", "brailleMathUeb"],
+];
+
+/**
+ * The lists of the preferences of braille: how it is delivered, its grade, its kind and that of its mathematics, which
+ * choose the files of a card when its entries differ by them.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, braille}
+ */
+function brailleFields(settings: Braille, context: FieldContext): Field[] {
+  const { messages, language } = context;
+  return [
+    termField(
+      "delivery-mode",
+      messages.settingBrailleDelivery,
+      context,
+      DELIVERY_MODES,
+      settings.deliveryMode,
+      (deliveryMode) => ({ ...settings, deliveryMode }),
+    ),
+    numberField(
+      "grade",
+      messages.settingBrailleGrade,
+      GRADES,
+      settings.grade,
+      new Intl.NumberFormat(language).format,
+      (value) => {
+        const grade = GRADES.find((known) => known === value);
+        return grade === undefined ? undefined : { ...settings, grade };
+      },
+    ),
+    termField(
+      "braille-type",
+      messages.settingBrailleType,
+      context,
+      BRAILLE_TYPES,
+      settings.brailleType,
+      (brailleType) => ({ ...settings, brailleType }),
+    ),
+    termField("math-type", messages.settingBrailleMath, context, MATH_TYPES, settings.mathType, (mathType) => ({
+      ...settings,
+      mathType,
+    })),
+  ];
+}
+
 /** Returns the settings of a support that the profile gave none, as an empty element of the profile reads. */
 function emptySettings(name: SupportName): SupportSetting | undefined {
   switch (name) {
+    case "braille":
     case "magnification":
     case "text-appearance":
       return { name, replaceAccessModes: [] };
@@ -253,6 +323,8 @@ function fieldsOf(support: SupportView, context: FieldContext): Field[] {
       return magnificationFields(settings, context);
     case "spoken":
       return spokenFields(settings, context);
+    case "braille":
+      return brailleFields(settings, context);
     default:
       return [];
   }
@@ -302,7 +374,7 @@ export interface SettingsControls {
 
 /**
  * Creates the lists of the settings that the candidate may change during the session: the color theme of the text appearance,
- * the amount of magnification and the preferences of reading aloud.
+ * the amount of magnification, and the preferences of reading aloud and of braille.
  *
  * @remarks
  * Each list is a `select` with a label, so that the keyboard, the pointer and a screen reader operate it as they operate any
@@ -312,7 +384,7 @@ export interface SettingsControls {
  * @param context - The text and the language of the interface.
  * @param onSettings - Called with the settings that the candidate chose.
  * @returns The lists.
- * @see {@link https://www.imsglobal.org/spec/qti/v3p0/conf/ | QTI 3.0 Conformance and Certification, A-30a, A-30b, A-40d and A-40e}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/conf/ | QTI 3.0 Conformance and Certification, A-10b, A-30a, A-30b, A-40d and A-40e}
  */
 export function createSettingsControls(
   context: FieldContext,

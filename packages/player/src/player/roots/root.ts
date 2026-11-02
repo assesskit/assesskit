@@ -8,7 +8,7 @@ import {
   describe,
 } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
-import type { SupportName } from "@assesskit/runtime/pnp";
+import type { Braille, SupportName } from "@assesskit/runtime/pnp";
 import { renderCard } from "../catalogs/index.js";
 import { type BodyRenderer, type BodyRendererOptions, createBodyRenderer } from "../content/index.js";
 import {
@@ -78,10 +78,12 @@ export interface ContentRoot {
    * @param idref - The `data-catalog-idref` of the element that the candidate asks about.
    * @param support - The support that the candidate turned on.
    * @param language - The language of the candidate's PNP; without it the card gives its default entry.
+   * @param braille - The settings of the candidate's `braille` while it is on, which choose among entries that state a kind,
+   * grade or mathematics of braille.
    * @returns The content, or `undefined` when no catalog has the id or no card fits.
    * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, catalogs and cards}
    */
-  card(idref: string, support: SupportName, language?: string): DocumentFragment | undefined;
+  card(idref: string, support: SupportName, language?: string, braille?: Braille): DocumentFragment | undefined;
   /**
    * Sets the factor for the pixel sizes of media, which the magnification of non-text content gives.
    *
@@ -203,8 +205,8 @@ export function createContentRoot(host: HTMLElement, options: ContentRootOptions
       const failed = loaded.find((result) => result.status === "rejected");
       if (failed?.status === "rejected") throw failed.reason;
     },
-    card: (idref, support, language) => {
-      const card = renderCard(catalogs, idref, support, language, itemRenderer);
+    card: (idref, support, language, braille) => {
+      const card = renderCard(catalogs, idref, support, { language, braille }, itemRenderer);
       if (card !== undefined) scaleDeclaredSizes(card, mediaScale);
       return card;
     },

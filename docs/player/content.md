@@ -332,9 +332,10 @@ does not rely on it.
 
 ## Catalogs and cards
 
-A catalog is not drawn with the item. `root.card(idref, support, language)` renders the card of the catalog whose `id` is
+A catalog is not drawn with the item. `root.card(idref, support, language, braille)` renders the card of the catalog whose `id` is
 `idref`, for a support, with the runtime's `selectCard`: the card entry whose `xml:lang` is the language, ignoring case; else the
-first with the same primary language; else the entry marked `default`. The result is a `DocumentFragment` of the card's HTML
+first with the same primary language; else the entry marked `default`. With the settings of the candidate's `braille`, the
+entries that state another kind, grade or mathematics of braille are left out first ([runtime](../runtime/content.md#catalogs-and-cards)). The result is a `DocumentFragment` of the card's HTML
 content, rendered like any content with its `lang`, and of its files, each embedded like an `object` of the file's media
 type. It is `undefined` when no catalog has the id, or its card has no entry that fits. The element that asks keeps
 `data-catalog-idref`, which `mountContentSupports` reads to show the cards of the supports that are on ([supports](supports.md#cards)).

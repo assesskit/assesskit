@@ -59,7 +59,8 @@ The panel of the supports has a list for each setting that the candidate may cha
 choice as the runtime's `support-settings` action, so that the state keeps it for later items and after a reload: the 14 color
 themes of the best practices guide, so that a candidate can change the theme at any time and go back to the default colors, and
 the amount of magnification from 100 to 400 percent, of all content or of text and of images apart, as the guide asks, and the
-rate, pitch, volume, link indication and typing echo of the voice that reads aloud.
+rate, pitch, volume, link indication and typing echo of the voice that reads aloud, and the delivery, grade, kind and mathematics
+of braille, which choose the files of a braille or tactile card through `ContentRoot.card`.
 `mountSupportPanel` takes `onSettings` and `language`, a host that draws its own control sends the action through the session
 client, and `player.css` has the palettes under `data-ak-theme`. The two gray themes keep the 3:1 to 4:1 of the guide, below WCAG
 on purpose. At 400 percent the content reflows in a page 1280 pixels wide with no scrolling in two directions.

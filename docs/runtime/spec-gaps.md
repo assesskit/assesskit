@@ -1,6 +1,6 @@
 # Spec gaps
 
-The specifications contradict themselves in places and say nothing in others. Each place is a gap, numbered `G1` to `G51`,
+The specifications contradict themselves in places and say nothing in others. Each place is a gap, numbered `G1` to `G52`,
 and the runtime resolves it the same way everywhere. Every gap has a test that fixes its
 resolution, and the TSDoc and the guide of the module name it. A change to a resolution is a breaking change.
 
@@ -9,7 +9,7 @@ listed below.
 
 ```mermaid
 flowchart LR
-  gap["The specifications contradict<br/>themselves or are silent"] --> number["A gap, numbered G1 to G51"]
+  gap["The specifications contradict<br/>themselves or are silent"] --> number["A gap, numbered G1 to G52"]
   number --> resolution["One resolution,<br/>the same everywhere"]
   decision["A decision D3 to D9<br/>that several gaps share"] --> resolution
   resolution --> test["A test fixes it"]
@@ -71,6 +71,7 @@ flowchart LR
 | G49 | BPIG lists `color-theme` under `text-appearance`, with 14 terms and `ext:`, and says that a candidate must be able to change it; the PNP schema has no such element, and the example of the guide is not well-formed | BPIG sections 5.2.9.7 and 5.2.9.7.1, XSD      | `readPnp` reads it into `colorTheme`, an empty element as `default`; an extension is `ext:` and at most 256 characters, the rule of the guide. `writePnp` never writes it, so that its output passes the schema, and `validatePnp` warns. The player offers the themes while `text-appearance` is on. |
 | G50 | BPIG requests a preference with an empty element, such as `<font-size/>` or `<font-color/>`; the schema gives those elements a number or a color                                                                     | BPIG section 5.2.9.7, XSD                     | The schema decides: an empty element of a type is a `ReadError`. `<text-appearance/>` asks for the changes in general, and `color-theme` (G49) has no type in the schema.                                                                                                                             |
 | G51 | `darkgray-medgray` is dark gray text on medium gray, and the same paragraph says the text is lighter than the background; the two gray themes are below the contrast that the player keeps                           | BPIG section 5.2.9.7.1                        | The name and the convention of the vocabulary decide: the first color is the text. Both themes keep the 3:1 to 4:1 that the guide suggests, as a choice of the candidate, and every other color keeps 3:1.                                                                                            |
+| G52 | BPIG marks the braille and tactile files of a card with `data-` and a PNP parameter, calls the grade `braille-grade` though the PNP names it `grade`, and says nothing of the choice                                 | BPIG sections 5.2.2 and 5.2.8.4               | `selectCard` reads `data-braille-type`, `data-math-type`, and `data-braille-grade` or `data-grade`. It leaves out the entries that state another value than the braille settings, takes the language or the default among the rest, else the first that agrees, else the language among all.          |
 
 ## Decisions
 

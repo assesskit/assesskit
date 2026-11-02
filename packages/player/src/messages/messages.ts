@@ -754,6 +754,26 @@ export interface Messages {
   readonly typingEchoCharactersAndWords: string;
   /** The voice repeats nothing that is typed. */
   readonly typingEchoNone: string;
+  /** The label of the list of how braille reaches the candidate. */
+  readonly settingBrailleDelivery: string;
+  /** Braille on a refreshable display, through the screen reader. */
+  readonly brailleRefreshable: string;
+  /** Braille embossed on paper. */
+  readonly brailleEmbossed: string;
+  /** The label of the list of the grade of braille, from 1, uncontracted, to 3. */
+  readonly settingBrailleGrade: string;
+  /** The label of the list of the kind of braille. */
+  readonly settingBrailleType: string;
+  /** Unified English Braille. */
+  readonly brailleTypeUeb: string;
+  /** English Braille, American Edition. */
+  readonly brailleTypeEbae: string;
+  /** The label of the list of the braille of mathematics. */
+  readonly settingBrailleMath: string;
+  /** The Nemeth Code of braille mathematics. */
+  readonly brailleMathNemeth: string;
+  /** Unified English Braille for mathematics. */
+  readonly brailleMathUeb: string;
   /** The action that reads the content aloud. */
   readonly readAloud: string;
   /** The action that stops the reading. */

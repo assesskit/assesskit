@@ -6,6 +6,7 @@ import {
   type AssessmentItem,
   type AssessmentTest,
   type BodyNode,
+  type Braille,
   type Catalog,
   type ContentVariables,
   catalogsFor,
@@ -205,6 +206,39 @@ describe("catalogs and cards", () => {
     expect(htmlOf("de", "transcript")).toBe("Text");
     expect(htmlOf("fr", "transcript")).toBeUndefined();
     expect(htmlOf(undefined, "transcript")).toBeUndefined();
+  });
+
+  it("chooses the entry of a braille or tactile card by the braille settings of the candidate, as the guide's data attributes say", () => {
+    const item = itemOf(
+      `<qti-item-body><p data-catalog-idref="b">Text</p></qti-item-body><qti-catalog-info><qti-catalog id="b"><qti-card support="braille"><qti-card-entry data-braille-type="ueb"><qti-file-href mime-type="text/plain">ueb.brf</qti-file-href></qti-card-entry><qti-card-entry data-braille-type="EBAE"><qti-file-href mime-type="text/plain">ebae.brf</qti-file-href></qti-card-entry></qti-card><qti-card support="tactile"><qti-card-entry data-braille-type="ueb" data-braille-grade="1"><qti-file-href mime-type="image/svg+xml">ueb-1.svg</qti-file-href></qti-card-entry><qti-card-entry data-braille-type="ueb" data-grade="2" default="true"><qti-file-href mime-type="image/svg+xml">ueb-2.svg</qti-file-href></qti-card-entry><qti-card-entry data-math-type="nemeth" xml:lang="fr"><qti-file-href mime-type="image/svg+xml">nemeth.svg</qti-file-href></qti-card-entry></qti-card></qti-catalog></qti-catalog-info>`,
+    );
+    const [braille] = item.catalogInfo?.catalogs ?? [];
+    if (braille === undefined) throw new Error("The test reads a catalog.");
+    const files = (
+      support: "braille" | "tactile",
+      settings?: Partial<Braille>,
+      language?: string,
+    ): string[] | undefined =>
+      selectCard(
+        braille,
+        support,
+        language,
+        settings === undefined ? undefined : { name: "braille", replaceAccessModes: [], ...settings },
+      )?.fileHrefs.map(({ value }) => value);
+    expect(files("braille")).toBeUndefined();
+    expect(files("braille", {})).toBeUndefined();
+    expect(files("braille", { brailleType: "ueb" })).toEqual(["ueb.brf"]);
+    expect(files("braille", { brailleType: "ebae" })).toEqual(["ebae.brf"]);
+    expect(files("braille", { brailleType: "ext:other" })).toBeUndefined();
+    expect(files("tactile", { brailleType: "ueb", grade: 1 })).toEqual(["ueb-1.svg"]);
+    expect(files("tactile", { brailleType: "ueb", grade: 2 })).toEqual(["ueb-2.svg"]);
+    expect(files("tactile", { brailleType: "ueb", grade: 3 })).toEqual(["ueb-2.svg"]);
+    expect(files("tactile", { brailleType: "ueb" })).toEqual(["ueb-2.svg"]);
+    expect(files("tactile", { mathType: "nemeth" }, "fr")).toEqual(["nemeth.svg"]);
+    expect(files("tactile", { mathType: "ueb" }, "fr")).toEqual(["ueb-2.svg"]);
+    expect(() => selectCard(braille, "braille", undefined, JSON.parse('"ueb"'))).toThrow(
+      'The braille settings must be an object, found "ueb".',
+    );
   });
 
   it("finds the catalog that data-catalog-idref names, wherever the item keeps it", () => {

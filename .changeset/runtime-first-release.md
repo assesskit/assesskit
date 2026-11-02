@@ -51,3 +51,7 @@ The action `support-settings` changes the settings of a support that is on, what
 the candidate to change during the session (`ADJUSTABLE_SETTINGS`: braille, magnification, reading aloud, text appearance). The
 action carries the settings whole, the state keeps them, and the engine refuses one that changes a setting of the program with
 `setting-not-adjustable`. The view lists the action while such a support is on.
+
+`selectCard` takes the candidate's `braille` settings and chooses among the entries of a card by their `data-braille-type`,
+`data-braille-grade` (or `data-grade`) and `data-math-type`, as the best practices guide marks braille and tactile files,
+falling back to the language and the default where no entry fits.

@@ -3,6 +3,7 @@ import { createEngine, type DeliveryState, type SupportView, stamp } from "@asse
 import { DataError } from "@assesskit/runtime/errors";
 import { describeInteractions } from "@assesskit/runtime/interactions";
 import {
+  type Braille,
   type ColorTheme,
   type Magnification,
   PNP_COLOR_THEMES,
@@ -747,6 +748,63 @@ describe("mountSupportPanel", () => {
     });
   });
 
+  describe("the lists of the preferences of braille", () => {
+    const braille = (settings: Partial<Omit<Braille, "name">> = {}) =>
+      supportView("braille", {
+        state: "assigned",
+        active: true,
+        settings: { name: "braille", replaceAccessModes: [], language: "en-US", ...settings },
+      });
+
+    it("lists the delivery, the grade, the kind of braille and the braille of mathematics, as the profile sets them", () => {
+      const { host, panel } = adjusting();
+      panel.update([braille({ deliveryMode: "embossed", grade: 1, brailleType: "ext:ueb-uk", mathType: "nemeth" })]);
+      expect([...host.querySelectorAll("select")].map((select) => select.labels?.[0]?.firstChild?.textContent)).toEqual(
+        ["Braille delivery", "Braille grade", "Kind of braille", "Braille of mathematics"],
+      );
+      expect([...host.querySelectorAll("select")].map(({ value }) => value)).toEqual([
+        "embossed",
+        "1",
+        "ext:ueb-uk",
+        "nemeth",
+      ]);
+      expect(listNamed(host, "Kind of braille").selectedOptions[0]?.textContent).toBe("ueb-uk");
+      expect([...listNamed(host, "Braille grade").options].map(({ value }) => value)).toEqual(["1", "2", "3"]);
+    });
+
+    it("reports the settings whole with the preference chosen, the language of the profile kept", async () => {
+      const { host, panel, chosen } = adjusting();
+      panel.update([braille()]);
+      await userEvent.selectOptions(listNamed(host, "Braille grade"), "2");
+      await userEvent.selectOptions(listNamed(host, "Kind of braille"), "ebae");
+      expect(chosen).toEqual([
+        { name: "braille", replaceAccessModes: [], language: "en-US", grade: 2 },
+        { name: "braille", replaceAccessModes: [], language: "en-US", brailleType: "ebae" },
+      ]);
+    });
+
+    it("is operated by the keyboard alone, and has no list while braille is off", async () => {
+      const { host, panel, chosen } = adjusting();
+      panel.update([braille()]);
+      listNamed(host, "Braille delivery").focus();
+      await userEvent.keyboard("E");
+      await waitFor(() => expect(chosen.at(-1)).toMatchObject({ deliveryMode: "embossed" }));
+      panel.update([supportView("braille", { state: "option" })]);
+      expect(host.querySelector("select")).toBeNull();
+    });
+
+    it("passes axe, and has the names of its labels for a screen reader, in the language of the interface", async () => {
+      const { host, panel } = adjusting({ messages: ID_MESSAGES, language: "id" });
+      panel.update([braille()]);
+      expect(await axeViolations(host)).toEqual([]);
+      await waitFor(async () => {
+        const tree = await commands.ariaSnapshot();
+        expect(tree).toMatch(/- combobox "Jenis braille"/u);
+        expect(tree).toMatch(/- combobox "Braille matematika"/u);
+      });
+    });
+  });
+
   it("takes the panel away", () => {
     const { host, panel } = mountPanel();
     panel.update(offered);
@@ -1216,6 +1274,25 @@ describe("mountContentSupports", () => {
       expect(el(root.root, '[data-ak-card="braille"] qti-html-content').classList.contains("qti-visually-hidden")).toBe(
         false,
       );
+    });
+
+    it("shows the braille files of the kind and grade of braille that the candidate prefers, and follows a change", async () => {
+      const { root, supports } = await openSupported({
+        catalogs: CATALOGS.replace(
+          '<qti-card support="braille"><qti-html-content>⠉⠁⠞</qti-html-content><qti-file-href mime-type="text/x-brf">files/rug.brf</qti-file-href></qti-card>',
+          '<qti-card support="braille"><qti-card-entry data-braille-type="ueb"><qti-file-href mime-type="text/x-brf">files/rug-ueb.brf</qti-file-href></qti-card-entry><qti-card-entry data-braille-type="ebae"><qti-file-href mime-type="text/x-brf">files/rug-ebae.brf</qti-file-href></qti-card-entry></qti-card>',
+        ),
+      });
+      const file = (): string | null | undefined =>
+        root.root.querySelector('[data-ak-card="braille"] a')?.getAttribute("href");
+      supports.update([
+        onSupport("braille", settings({ name: "braille", replaceAccessModes: [], brailleType: "ebae" })),
+      ]);
+      expect(file()).toBe(`${ASSETS}items/q1/files/rug-ebae.brf`);
+      supports.update([
+        onSupport("braille", settings({ name: "braille", replaceAccessModes: [], brailleType: "ueb" })),
+      ]);
+      expect(file()).toBe(`${ASSETS}items/q1/files/rug-ueb.brf`);
     });
 
     it("offers the file of a tactile card", async () => {

@@ -85,7 +85,15 @@ const SETTING_SCHEMAS: ReadonlyMap<string, Schema<unknown>> = new Map<string, Sc
       wordWrapping: presentSchema,
     }),
   ],
-  ["braille", looseRecord({ deliveryMode: v.optional(v.picklist(PNP_BRAILLE_DELIVERY_MODES)) })],
+  [
+    "braille",
+    looseRecord({
+      deliveryMode: v.optional(v.picklist(PNP_BRAILLE_DELIVERY_MODES)),
+      grade: v.optional(v.picklist([1, 2, 3])),
+      brailleType: v.optional(v.string()),
+      mathType: v.optional(v.string()),
+    }),
+  ],
   ["long-description", looseRecord({ hideVisually: v.optional(v.boolean()) })],
   ["keyword-translation", languageSchema],
   ["item-translation", languageSchema],

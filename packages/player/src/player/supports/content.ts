@@ -1,6 +1,7 @@
 import { checkProperties, checkRecord, describe } from "@assesskit/runtime/checks";
 import type { SupportView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
+import type { Braille } from "@assesskit/runtime/pnp";
 import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";
 import { showTracks } from "../media/index.js";
@@ -41,6 +42,12 @@ function languageFor(supports: readonly SupportView[], { settings }: SupportView
   return translation?.name === "item-translation" ? translation.language : undefined;
 }
 
+/** Returns the settings of braille while it is on, whose preferences choose among the entries of a card. */
+function brailleOf(supports: readonly SupportView[]): Braille | undefined {
+  const settings = activeSupport(supports, "braille")?.settings;
+  return settings?.name === "braille" ? settings : undefined;
+}
+
 function checkRoot(root: unknown, options: unknown): asserts options is ContentSupportsOptions {
   checkRecord(root, "The content root must be an object");
   if (!(root.root instanceof ShadowRoot)) {
@@ -60,7 +67,8 @@ function checkRoot(root: unknown, options: unknown): asserts options is ContentS
  * in a popup that opens on request and stays until dismissed; high contrast and the simplified graphics and language in
  * place of the content; sign language, audio description, captions, transcript, alternative text, long description,
  * braille and tactile beside it. It also shows the caption and description tracks of the media, and the `alt` of images
- * as text when the alternative text is on. The card is chosen by `ContentRoot.card`, in the language of the support.
+ * as text when the alternative text is on. The card is chosen by `ContentRoot.card`, in the language of the support and by
+ * the preferences of braille while it is on.
  *
  * @param root - The content root whose content the supports change.
  * @param options - See {@link ContentSupportsOptions}.
@@ -85,12 +93,13 @@ export function mountContentSupports(root: ContentRoot, options: ContentSupports
       checkSupportViews(supports, "The list of supports");
       clear();
       const on = supports.filter(({ active }) => active);
+      const braille = brailleOf(supports);
       const boundary = (): DOMRect => scope.host.getBoundingClientRect();
       for (const element of scope.querySelectorAll("[data-catalog-idref]")) {
         const idref = element.getAttribute("data-catalog-idref") ?? "";
         for (const kind of CARD_KIND_ORDER) {
           for (const support of on.filter(({ name }) => cardKindOf(name) === kind)) {
-            const content = root.card(idref, support.name, languageFor(supports, support));
+            const content = root.card(idref, support.name, languageFor(supports, support), braille);
             if (content !== undefined) undo.push(showCard(kind, { messages, element, support, content, boundary }));
           }
         }
