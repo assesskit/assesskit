@@ -9,25 +9,28 @@ import {
 import { actionToJson, type CandidateAction, type ItemKey } from "@assesskit/runtime/delivery";
 import { type LtiLink, readLtiLink } from "@assesskit/runtime/package";
 import { single } from "@assesskit/runtime/values";
-import type { Fetch } from "@interopkit/core";
-import type { HttpResponse } from "@interopkit/core/http";
-import { createJwksCache } from "@interopkit/tool-integration";
+import { type Fetch, signerFromCryptoKey } from "@interopkit/core";
+import type { HttpRequest, HttpResponse } from "@interopkit/core/http";
+import { createJwksCache, type LtiMessage, SCOPES } from "@interopkit/tool-integration";
 import {
-  agsScores,
-  ltiPlatformAuthorize,
+  buildPlatformEndpoints,
+  handlePlatformRequest,
+  type LaunchStore,
   ltiPlatformFrame,
+  type MessageInput,
   type PlatformConfig,
-  platformEndpoints,
-  platformJwks,
-  platformToken,
-  type ToolRegistration,
+  type PlatformLoginOptions,
+  type PlatformRequestOptions,
+  type ToolMessageOptions,
 } from "@interopkit/tool-integration/platform";
-import { type LtiLaunch, ltiLaunch, ltiLogin, type PlatformRegistration } from "@interopkit/tool-integration/tool";
+import { ltiLaunch, ltiLogin, type PlatformRegistration } from "@interopkit/tool-integration/tool";
 import {
-  launchHooks,
+  checkBrowser,
+  checkSession,
+  createGradebook,
+  createProctoring,
   type MemoryOutbox,
   memoryOutbox,
-  onToolScore,
   outboxLog,
   runEventJob,
   runPublishJob,
@@ -44,7 +47,10 @@ import {
   authenticationRequest,
   clientAssertion,
   type Delivered,
+  DRAWING,
+  type FakeTool,
   type KeySet,
+  PROCTOR,
   readInitiation,
   tokenRequest,
   toolRegistration,
@@ -52,15 +58,17 @@ import {
 import { createClock, generateKeyPair, request, textOf, unescapeHtml } from "./fixture.ts";
 
 /**
- * Two LTI relationships around one exam. A learning platform launches the exam as a tool, and the exam's results go back to its
+ * Three LTI relationships around one exam. A learning platform launches the exam as a tool, and the exam's results go back to its
  * line item (the tool role). The exam holds a link to a drawing tool, which the host launches as a platform, and whose scores
- * reach the session (the platform role). The learning platform and the drawing tool are fakes written from the specifications.
+ * reach the session through the gradebook; a proctoring tool starts the candidate's session and controls it (the platform
+ * role). The learning platform, the drawing tool and the proctoring tool are fakes written from the specifications.
  */
 
 const PLATFORM_ISSUER = "https://platform.example";
 const PLATFORM_ORIGIN = "https://lti.platform.example";
-const SCORE_SCOPE = "https://purl.imsglobal.org/spec/lti-ags/scope/score";
+export const START_ASSESSMENT_URL = "https://player.platform.example/proctoring/start";
 const SCORE_TYPE = "application/vnd.ims.lis.v1.score+json";
+const LINE_ITEM_TYPE = "application/vnd.ims.lis.v2.lineitem+json";
 const ESSAY: ItemKey = { ref: "essay", instance: 1 };
 export const DRAW: ItemKey = { ref: "draw", instance: 1 };
 export const CANDIDATE: Caller = { session: "exam-1", principal: SUBJECT };
@@ -71,23 +79,29 @@ export const PARTIES = {
   assessment: "https://exam.example/tests/42",
   edApp: "https://exam.example",
 };
-const SCORER = "https://tool.example.com/lti/tools/drawing";
+const SCORER = DRAWING.launchUrl;
 const CALIPER_ENDPOINT = "https://lrs.example/caliper";
+/** The resource link of the exam that the proctoring tool is launched for. */
+export const EXAM_LINK = "exam-42";
 
-const platformKeys = await generateKeyPair("unused");
+const platformKeys = await generateKeyPair("platform-1");
 const lmsKeys = await generateKeyPair("lms-1");
 const examKeys = await generateKeyPair("exam-1");
-const toolKeys = await generateKeyPair("tool-key-1");
+export const toolKeys = await generateKeyPair("tool-key-1");
+export const proctorKeys = await generateKeyPair("proctor-key-1");
 const hintKey = await crypto.subtle.generateKey({ name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
 const config: PlatformConfig = {
   issuer: PLATFORM_ISSUER,
   origin: PLATFORM_ORIGIN,
   frameOrigin: "https://player.platform.example",
   reservedOrigins: ["https://assets.platform.example"],
-  keys: { privateKey: platformKeys.privateKey, publicKey: platformKeys.publicKey },
+  keys: {
+    signer: signerFromCryptoKey(platformKeys.privateKey, { algorithm: "RS256", keyId: platformKeys.kid }),
+    publicKeys: [platformKeys.publicJwk],
+  },
   hintKey,
 };
-const endpoints = platformEndpoints(config);
+export const endpoints = buildPlatformEndpoints(config);
 
 /** An in-memory store of the latest score of each item instance that compares times as the contract says. */
 function toolScoreStore(): ToolScoreStore & { readonly kept: Map<string, ToolScore> } {
@@ -102,6 +116,19 @@ function toolScoreStore(): ToolScoreStore & { readonly kept: Map<string, ToolSco
       return true;
     },
     latest: async (session, item) => kept.get(keyOf(session, item)),
+  };
+}
+
+/** The launches in progress, in memory: a real host keeps them where every process can reach them, for 300 seconds. */
+function launchStore(): LaunchStore {
+  const kept = new Map<string, MessageInput>();
+  return {
+    put: async (id, message) => void kept.set(id, message),
+    take: async (id) => {
+      const message = kept.get(id);
+      kept.delete(id);
+      return message;
+    },
   };
 }
 
@@ -124,7 +151,7 @@ function fakeEndpoint(): FakeEndpoint {
   };
 }
 
-/** The exam with its two LTI relationships and the jobs, wired as a host would wire them. */
+/** The exam with its LTI relationships and the jobs, wired as a host would wire them. */
 export async function rig(files: Readonly<Record<string, string>> = examFiles({ maximum: 20 })) {
   const clock = createClock();
   const scores = toolScoreStore();
@@ -133,28 +160,55 @@ export async function rig(files: Readonly<Record<string, string>> = examFiles({ 
   const host = await sessionHostOver(pkg, clock, { log: outboxLog(outbox) });
   const intake: ToolScoreIntake = createToolScoreIntake({ host, scores, scoredBy: async () => SCORER });
 
-  // The drawing tool's registration and the platform's handlers.
-  const tool: ToolRegistration = toolRegistration({
-    jwksUrl: undefined,
-    keys: new Map([[toolKeys.kid, toolKeys.publicKey]]),
-  });
+  // The tools of the platform role: the registrations, the ledger of single-use identifiers and the cache of key sets.
+  const tool = toolRegistration(DRAWING, new Map([[toolKeys.kid, toolKeys.publicKey]]), [
+    SCOPES.score,
+    SCOPES.lineitemReadonly,
+  ]);
+  const proctor = toolRegistration(PROCTOR, new Map([[proctorKeys.kid, proctorKeys.publicKey]]), [
+    SCOPES.assessmentControl,
+  ]);
+  const tools = async (clientId: string) => [tool, proctor].find((each) => each.clientId === clientId);
   const used = new Set<string>();
   const once = async (id: string): Promise<boolean> => {
     if (used.has(id)) return false;
     used.add(id);
     return true;
   };
-  const hooks = launchHooks(host);
-  const common = { config, clock };
-  const login = { ...common, registration: async () => tool, check: hooks.check };
-  const authorize = { ...common, client: async () => tool, once, checkLaunch: hooks.checkLaunch };
-  const token = {
-    ...common,
-    client: async () => tool,
+  const jwks = createJwksCache({ fetch: async () => new Response("", { status: 404 }) });
+  const launches = launchStore();
+  const toolMessage: ToolMessageOptions = { config, clock, client: tools, jwks, once };
+  const gradebook = createGradebook({
+    host,
+    intake,
+    linkOf: async (session, item) =>
+      session === CANDIDATE.session && item.ref === DRAW.ref
+        ? { clientId: tool.clientId, label: "Drawing tool", scoreMaximum: 10 }
+        : undefined,
+  });
+  const proctoring = createProctoring({ host, tool: toolMessage });
+  /** The options of the login for the request of the browser whose user is `principal`. */
+  const loginFor = (principal = CANDIDATE.principal): PlatformLoginOptions => ({
+    config,
+    clock,
+    registration: tools,
+    check: checkSession(host, principal),
+    launches,
+  });
+  /** The options of the handler for the request of the browser whose user is `principal`. */
+  const requests = (principal: string): PlatformRequestOptions => ({
+    config,
+    clock,
+    client: tools,
+    launches,
     once,
-    jwks: createJwksCache({ fetch: async () => new Response("", { status: 404 }) }),
-  };
-  const scoring = { ...common, onScore: onToolScore(intake) };
+    jwks,
+    checkLaunch: checkBrowser(principal),
+    services: { gradebook, control: proctoring.control },
+  });
+  /** Answers a request to the platform's origin, as the host's route does for the browser of `principal`. */
+  const handle = (httpRequest: HttpRequest, principal = CANDIDATE.principal): Promise<HttpResponse> =>
+    handlePlatformRequest(httpRequest, requests(principal));
   const link: LtiLink = readLtiLink(pkg.file("lti/draw.xml") ?? new Uint8Array());
 
   // The learning platform that launched the exam, and the launch.
@@ -173,7 +227,7 @@ export async function rig(files: Readonly<Record<string, string>> = examFiles({ 
   const auth = await lmsPlatform.authenticate(started.headers.location ?? "", { claims: { sub: SUBJECT } });
   const launched = await ltiLaunch(auth.post({ cookie: cookieOf(started.headers["set-cookie"]) }), toolOptions);
   if (!("messageType" in launched)) throw new Error("The launch is a page.");
-  const launch: LtiLaunch = launched;
+  const launch: LtiMessage = launched;
 
   const endpoint = fakeEndpoint();
   const jobs = {
@@ -211,11 +265,12 @@ export async function rig(files: Readonly<Record<string, string>> = examFiles({ 
     scores,
     outbox,
     intake,
-    login,
-    authorize,
-    token,
-    scoring,
+    loginFor,
+    handle,
+    gradebook,
+    proctoring,
     tool,
+    proctor,
     link,
     lms,
     launch,
@@ -239,42 +294,87 @@ function readPost(response: HttpResponse): Delivered {
   return { action: "", idToken: inputs.get("id_token") ?? "", state: inputs.get("state") ?? "" };
 }
 
-/** The drawing tool after its launch: it posts scores to the line item as the specification says a tool may. */
-export interface LaunchedTool {
+/** What a tool has after its launch: the id_token of the message and a token of the service it asked for. */
+export interface Launched {
+  readonly claims: Record<string, unknown>;
   readonly storageTarget: string;
-  post(body: Record<string, unknown>): Promise<HttpResponse>;
+  /** The bearer token of the service, for the scope asked for. */
+  readonly accessToken: string;
 }
 
-/** Launches the drawing tool in an item as a conformant tool does: the login, the authentication request and the id_token. */
-export async function launchTool(ctx: Rig, item: ItemKey): Promise<LaunchedTool> {
-  const frame = await ltiPlatformFrame(toolLaunch(CANDIDATE, item, ctx.link, 10), ctx.login);
-  const initiation = readInitiation(frame.url);
-  const parameters = authenticationParameters(initiation);
-  const page = await ltiPlatformAuthorize(authenticationRequest(endpoints.authorization, parameters), ctx.authorize);
+/**
+ * Takes a tool through the launch as a conformant tool does: the login, the authentication request, the id_token and a token for
+ * a scope. `browser` is the user of the browser's session at the platform.
+ */
+export async function takeThrough(
+  ctx: Rig,
+  message: MessageInput,
+  options: {
+    tool: FakeTool;
+    keys: typeof toolKeys;
+    scope: string;
+    browser?: string;
+    messageType?: "LtiStartProctoring";
+  },
+): Promise<Launched> {
+  const { tool, keys, scope, browser = CANDIDATE.principal, messageType } = options;
+  const frame = await ltiPlatformFrame(message, ctx.loginFor(browser));
+  const initiation = readInitiation(frame.url, tool);
+  const parameters = authenticationParameters(initiation, tool);
+  const page = await ctx.handle(authenticationRequest(endpoints.authorization, parameters), browser);
   if (page.status !== 200) throw new Error(`The platform refused the authentication request: ${textOf(page.body)}`);
   const delivered = readPost(page);
-  const keys: KeySet = JSON.parse(textOf((await platformJwks(ctx.login)).body));
-  const claims = await acceptIdToken(delivered.idToken, keys, {
+  const keySet: KeySet = JSON.parse(textOf((await ctx.handle(request({ url: endpoints.jwks }))).body));
+  const claims = await acceptIdToken(delivered.idToken, keySet, {
     issuer: PLATFORM_ISSUER,
     nonce: parameters.get("nonce") ?? "",
     clock: ctx.clock,
+    tool,
+    ...(messageType === undefined ? {} : { messageType }),
   });
-  const ags = agsClaim(claims);
-  const assertion = await clientAssertion(toolKeys, endpoints.token, ctx.clock);
-  const granted = await platformToken(tokenRequest(endpoints.token, assertion, SCORE_SCOPE), ctx.token);
+  const assertion = await clientAssertion(keys, endpoints.token, ctx.clock, {}, tool);
+  const granted = await ctx.handle(tokenRequest(endpoints.token, assertion, scope));
   if (granted.status !== 200) throw new Error(`The platform refused the token request: ${textOf(granted.body)}`);
-  const accessToken = JSON.parse(textOf(granted.body)).access_token as string;
+  const accessToken: string = JSON.parse(textOf(granted.body)).access_token;
+  return { claims, storageTarget: initiation.storageTarget, accessToken };
+}
+
+/** The drawing tool after its launch: it posts scores to the line item as the specification says a tool may. */
+export interface LaunchedTool {
+  readonly storageTarget: string;
+  /** The address of the line item that the launch offered. */
+  readonly lineItem: string;
+  /** Reads the line item, as a tool does to learn its maximum. */
+  read(): Promise<HttpResponse>;
+  post(body: Record<string, unknown>): Promise<HttpResponse>;
+}
+
+/** Launches the drawing tool in an item as a conformant tool does, and returns what it can do with the line item. */
+export async function launchTool(ctx: Rig, item: ItemKey): Promise<LaunchedTool> {
+  const launched = await takeThrough(ctx, toolLaunch(CANDIDATE, item, ctx.link, DRAWING), {
+    tool: DRAWING,
+    keys: toolKeys,
+    scope: `${SCOPES.score} ${SCOPES.lineitemReadonly}`,
+  });
+  const { lineitem } = agsClaim(launched.claims);
   return {
-    storageTarget: initiation.storageTarget,
+    storageTarget: launched.storageTarget,
+    lineItem: lineitem,
+    read: () =>
+      ctx.handle(
+        request({
+          url: lineitem,
+          headers: { authorization: `Bearer ${launched.accessToken}`, accept: LINE_ITEM_TYPE },
+        }),
+      ),
     post: (body) =>
-      agsScores(
+      ctx.handle(
         request({
           method: "POST",
-          url: `${ags.lineitem}/scores`,
-          headers: { authorization: `Bearer ${accessToken}`, "content-type": SCORE_TYPE },
-          body: JSON.stringify({ userId: claims.sub, ...body }),
+          url: `${lineitem}/scores`,
+          headers: { authorization: `Bearer ${launched.accessToken}`, "content-type": SCORE_TYPE },
+          body: JSON.stringify({ userId: SUBJECT, ...body }),
         }),
-        ctx.scoring,
       ),
   };
 }

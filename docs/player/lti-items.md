@@ -44,42 +44,48 @@ sequenceDiagram
   participant P as Player page
   participant H as Host route
   participant K as Library of the platform role
+  participant G as Gradebook of the host
   participant T as Tool
   participant S as Session host
   participant J as Host job
   P->>H: ltiLogin(item, { signal })
-  H->>H: read the link, ltiLaunchUrl(link), check the caller with SessionHost.check
-  H->>K: the launch of the item
+  H->>H: read the link, ltiLaunchUrl(link)
+  H->>K: ltiPlatformFrame(MessageInput), check with SessionHost.check
   K-->>H: the frame
   H-->>P: LtiFrame
   P->>T: frames open, login, launch
-  T->>K: a score
-  K->>H: onScore(resource, score)
-  H->>S: intake.onScore(session, item, ToolScore)
-  S-->>H: supply-scores applied
+  T->>K: a score for the line item
+  K->>G: keepScore(caller, session, line item, score)
+  G->>S: intake.onScore(session, item, ToolScore)
+  S-->>G: supply-scores applied
   S->>H: forward.log(step)
   H->>J: append to the outbox
   J->>S: results(), pending()
   J->>K: sessionScore, then the grade of the session
 ```
 
-| Step | The host does                                                                                                                                                                                                                               |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | Answers `ltiLogin`: it binds the request to the candidate with `SessionHost.check`, reads the `LtiLink` of the item, takes the launch URL with `ltiLaunchUrl` of the runtime, and has its LTI library build the `LtiFrame`.                 |
-| 2    | Takes the score of the tool: the handler of the grade service gives each score to `intake.onScore` as a `ToolScore`, and the host's log calls `intake.settle`, so that a score that came early is supplied when the item's session is over. |
-| 3    | Publishes the outcome: the log only appends each step to an outbox, and a job outside any step reads `results()` and `pending()`, calls `sessionScore`, and sends the grade and the analytics events with its libraries.                    |
+| Step | The host does                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Answers `ltiLogin`: it reads the `LtiLink` of the item, takes the launch URL with `ltiLaunchUrl` of the runtime, describes the launch as a message in which the session is the context and the item instance is the resource link, and has its LTI library build the `LtiFrame`; the library calls the host's `check` first, which binds the message to the candidate with `SessionHost.check`. |
+| 2    | Takes the score of the tool: the gradebook behind the grade services checks that the line item is a link of the tool and that the session is the user's, and gives each score to `intake.onScore` as a `ToolScore`; the host's log calls `intake.settle`, so that a score that came early is supplied when the item's session is over.                                                          |
+| 3    | Publishes the outcome: the log only appends each step to an outbox, and a job outside any step reads `results()` and `pending()`, calls `sessionScore`, and sends the grade and the analytics events with its libraries.                                                                                                                                                                        |
 
 The log never touches the network, so an outage of the platform never delays a candidate and never reads as a CAT failure.
 Each grade of a line item needs a later time than the one before, even after a timeout whose outcome is not known; the example
 records the time before it sends.
 
+A host with a proctoring tool maps the actions of its Assessment Control Service to `SessionHost.proctor` (`pause`, `resume`
+and `terminate` become `suspend`, `resume` and `end-test`), and starts the session when the tool sends the candidate back, after
+the message is verified against the browser's user.
+
 ## The example
 
 [`examples/player/lms-integration`](https://github.com/assesskit/assesskit/tree/main/examples/player/lms-integration) wires all three steps with
 [interopkit](https://github.com/interopkit/interopkit), the family that implements LTI and Caliper: the platform role for the
-launch, the grade services for the score and the grade, and Caliper for the events. It holds the outbox, the two jobs and the
-table that maps a delivery event to a Caliper event, and its test runs the whole exchange in Node. A host copies it or writes its
-own against the ports; neither family imports the other.
+launch, a `GradebookStore` over the score intake for the tool's score, the tool role's `publishScore` for the grade, an
+`AssessmentControl` over `SessionHost.proctor` for a proctoring tool, and Caliper for the events. It holds the outbox, the three
+jobs and the table that maps a delivery event to a Caliper event, and its test runs the whole exchange in Node. A host copies it
+or writes its own against the ports; neither family imports the other.
 
 ## Not included
 

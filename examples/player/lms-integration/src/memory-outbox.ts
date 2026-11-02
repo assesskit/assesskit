@@ -1,4 +1,5 @@
 import type { StepEvents } from "@assesskit/player/server";
+import { advanceScoreTimestamp } from "@interopkit/tool-integration/tool";
 import type { GradeProgress, Outbox } from "./outbox.ts";
 
 /** What the outbox keeps for one session. */
@@ -7,7 +8,7 @@ interface SessionRecord {
   readonly handled: Map<string, string | undefined>;
   through: number;
   covers: number;
-  lastAttempt: number;
+  lastAttempt?: string;
   failed?: string;
   claimed: boolean;
 }
@@ -17,7 +18,7 @@ const keyOf = (step: StepEvents["step"]): string => JSON.stringify(step);
 /** An outbox in memory that keeps the records of the sessions, which the tests read. */
 export interface MemoryOutbox extends Outbox {
   /** The time of each attempt to publish that `nextAttempt` gave, by session, in order. */
-  readonly attempts: Map<string, number[]>;
+  readonly attempts: Map<string, string[]>;
 }
 
 /**
@@ -26,7 +27,7 @@ export interface MemoryOutbox extends Outbox {
  */
 export function memoryOutbox(): MemoryOutbox {
   const records = new Map<string, SessionRecord>();
-  const attempts = new Map<string, number[]>();
+  const attempts = new Map<string, string[]>();
   const recordOf = (session: string): SessionRecord => {
     let record = records.get(session);
     if (record === undefined) {
@@ -35,7 +36,6 @@ export function memoryOutbox(): MemoryOutbox {
         handled: new Map(),
         through: 0,
         covers: 0,
-        lastAttempt: Number.NEGATIVE_INFINITY,
         claimed: false,
       };
       records.set(session, record);
@@ -62,11 +62,11 @@ export function memoryOutbox(): MemoryOutbox {
     },
     nextAttempt: async (session, floor, covers) => {
       const record = recordOf(session);
-      const at = Math.max(Date.parse(floor), record.lastAttempt + 1);
+      const at = advanceScoreTimestamp(record.lastAttempt, Date.parse(floor));
       record.lastAttempt = at;
       record.covers = covers;
       attempts.set(session, [...(attempts.get(session) ?? []), at]);
-      return new Date(at).toISOString();
+      return at;
     },
     markSent: async (session) => {
       const record = recordOf(session);

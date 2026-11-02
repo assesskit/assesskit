@@ -33,6 +33,8 @@ export class FakeLms {
   readonly calls: string[] = [];
   /** The `scoreMaximum` of the line item; `undefined` makes the line item answer without one. */
   scoreMaximum: number | undefined = 100;
+  /** Makes the line item answer 404 while set. */
+  lineItemGone = false;
   /** Makes the score service answer with this status while set. */
   scoreStatus: number | undefined;
   /** The platform whose token endpoint and key set the tool uses. */
@@ -60,6 +62,7 @@ export class FakeLms {
     expect(init.method).toBe("GET");
     expect(init.headers.accept).toBe(LINE_ITEM_TYPE);
     if (!this.authorized(init)) return new Response("", { status: 401 });
+    if (this.lineItemGone) return new Response("", { status: 404 });
     return new Response(
       JSON.stringify({
         id: LINE_ITEM_URL,

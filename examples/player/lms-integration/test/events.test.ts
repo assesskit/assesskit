@@ -76,12 +76,16 @@ describe("caliperEvents", () => {
     expect(events[0]).toMatchObject({
       actor: { id: PARTIES.actor, type: "Person" },
       object: { id: PARTIES.assessment, type: "Assessment" },
-      generated: { type: "Attempt", assignee: PARTIES.actor, assignable: PARTIES.assessment },
+      generated: {
+        type: "Attempt",
+        assignee: PARTIES.actor,
+        assignable: PARTIES.assessment,
+        startedAtTime: "2023-11-14T22:13:20.000Z",
+      },
       eventTime: "2023-11-14T22:13:20.000Z",
       edApp: PARTIES.edApp,
       profile: "AssessmentProfile",
     });
-    expect(events[0]?.generated?.startedAtTime).toBe("2023-11-14T22:13:20.000Z");
     expect(caliperEvents([], START)).toEqual([]);
   });
 
@@ -96,7 +100,7 @@ describe("caliperEvents", () => {
 
   it("closes the attempt at the test with Submitted, and leaves it open for Paused and Resumed", () => {
     const [submitted] = caliperEvents([eventOf("test-ended", AT + 5000)], LATER);
-    expect(submitted?.generated?.endedAtTime).toBe("2023-11-14T22:13:25.000Z");
+    expect(submitted?.generated).toMatchObject({ endedAtTime: "2023-11-14T22:13:25.000Z" });
     const [paused] = caliperEvents([eventOf("suspended")], LATER);
     expect(paused?.generated).not.toHaveProperty("endedAtTime");
     expect(paused?.generated).not.toHaveProperty("startedAtTime");
@@ -116,10 +120,10 @@ describe("caliperEvents", () => {
   it("names an item by the test and the item reference, the same in every session, and an attempt by its session", () => {
     const [first] = caliperEvents([eventOf("presented")], LATER);
     const [other] = caliperEvents([eventOf("presented")], { ...LATER, session: "session-2" });
-    expect(first?.object.id).toBe(mintUrn(["item", PARTIES.assessment, "q1"]));
-    expect(other?.object.id).toBe(first?.object.id);
-    expect(first?.generated?.id).toBe(mintUrn(["attempt", "session-1", "q1", 1]));
-    expect(other?.generated?.id).not.toBe(first?.generated?.id);
+    expect(first?.object).toMatchObject({ id: mintUrn(["item", PARTIES.assessment, "q1"]) });
+    expect(other?.object).toMatchObject({ id: mintUrn(["item", PARTIES.assessment, "q1"]) });
+    expect(first?.generated).toMatchObject({ id: mintUrn(["attempt", "session-1", "q1", 1]) });
+    expect(other?.generated).toMatchObject({ id: mintUrn(["attempt", "session-2", "q1", 1]) });
     expect(first?.generated).toMatchObject({ isPartOf: mintUrn(["attempt", "session-1"]), assignee: PARTIES.actor });
     expect(first?.object).toMatchObject({ name: "q1", isPartOf: PARTIES.assessment });
   });
@@ -207,15 +211,17 @@ describe("caliperGrade", () => {
       },
       eventTime: "2023-11-14T22:13:20.000Z",
     });
-    expect(event.generated?.attempt).toBe(event.object.id);
-    expect(event.generated?.id).toBe(mintUrn(["score", "session-1", 7, 2]));
+    expect(event.generated).toMatchObject({
+      id: mintUrn(["score", "session-1", 7, 2]),
+      attempt: mintUrn(["attempt", "session-1"]),
+    });
     expect(event.id).toBe(mintUrn(["event", "session-1", 7, 2]));
   });
 
   it("grades the attempt at an item when it names one, and a scoring service is a software application", () => {
     const event = caliperGrade({ ...grade, item: ITEM, scorer: "externalMachine", maxScore: undefined }, LATER);
     expect(event.object).toMatchObject({ id: mintUrn(["attempt", "session-1", "q1", 1]), type: "Attempt" });
-    expect(event.actor.type).toBe("SoftwareApplication");
+    expect(event.actor).toMatchObject({ type: "SoftwareApplication" });
     expect(event.generated).not.toHaveProperty("maxScore");
   });
 

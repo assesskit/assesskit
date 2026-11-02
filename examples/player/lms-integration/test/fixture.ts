@@ -32,7 +32,7 @@ export interface KeyPair {
   readonly kid: string;
   readonly privateKey: CryptoKey;
   readonly publicKey: CryptoKey;
-  readonly publicJwk: Record<string, unknown>;
+  readonly publicJwk: JsonWebKey & { readonly kid: string };
 }
 
 /** Generates an RSA key pair for RS256. */

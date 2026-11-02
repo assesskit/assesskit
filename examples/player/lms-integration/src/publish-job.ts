@@ -3,8 +3,8 @@ import { sessionScore } from "@assesskit/player/scoring";
 import type { SessionHost, StepEvents } from "@assesskit/player/server";
 import { DataError } from "@assesskit/runtime/errors";
 import type { CallOptions } from "@interopkit/core";
-import type { LtiLaunch } from "@interopkit/tool-integration/tool";
-import { type AccessTokenOptions, type AgsScoreInput, publishAgsScore } from "@interopkit/tool-integration/tool";
+import type { GradingProgress, LtiMessage, Score } from "@interopkit/tool-integration";
+import { createServiceClient, type ServiceClientOptions } from "@interopkit/tool-integration/tool";
 import type { Outbox } from "./outbox.ts";
 
 /** What the publish job needs. */
@@ -14,9 +14,9 @@ export interface PublishJobOptions {
   /** The session host, of which the job reads `results()` and `pending()`. */
   readonly host: Pick<SessionHost, "session">;
   /** Returns the launch of the learning platform that started the session, or `undefined` when none is on record. */
-  readonly launchOf: (session: string, options?: CallOptions) => Promise<LtiLaunch | undefined>;
+  readonly launchOf: (session: string, options?: CallOptions) => Promise<LtiMessage | undefined>;
   /** The registration of the learning platform, the clock, `fetch` and `timeoutMs` of the tool role. */
-  readonly tool: AccessTokenOptions;
+  readonly tool: Omit<ServiceClientOptions, "scopes">;
 }
 
 /**
@@ -33,15 +33,16 @@ const GRADING_PROGRESS = {
   complete: "FullyGraded",
   "awaiting-service": "Pending",
   "awaiting-person": "PendingManual",
-} as const satisfies Record<SessionScore["progress"], AgsScoreInput["gradingProgress"]>;
+} as const satisfies Record<SessionScore["progress"], GradingProgress>;
 
 /**
- * Turns the score of a session into the score of the learning platform: `complete` is `FullyGraded`, `awaiting-service` is
- * `Pending` and `awaiting-person` is `PendingManual`, a negative `SCORE` that was raised to 0 is told in the `comment`, and the
- * session is always `Completed`. A maximum goes with a score and not alone.
+ * Turns the score of a session into the score of its user at the learning platform: `complete` is `FullyGraded`,
+ * `awaiting-service` is `Pending` and `awaiting-person` is `PendingManual`, a negative `SCORE` that was raised to 0 is told in
+ * the `comment`, and the session is always `Completed`. A maximum goes with a score and not alone.
  */
-export function toAgsScore(score: SessionScore, timestamp: string): AgsScoreInput {
+export function toAgsScore(score: SessionScore, userId: string, timestamp: string): Score {
   return {
+    userId,
     activityProgress: "Completed",
     gradingProgress: GRADING_PROGRESS[score.progress],
     timestamp,
@@ -82,8 +83,8 @@ export function isDue(steps: readonly StepEvents[], through: number): boolean {
  * @param options - See {@link PublishJobOptions}.
  * @param call - The `signal` that ends this job's wait.
  * @returns What the run did.
- * @throws `ServiceError` when the token or the score request fails, `LtiError` when the launch refuses the scope, and the
- * error of the outbox or of the session host.
+ * @throws `ServiceError` when the token, the line item or the score request fails, `LtiError` when the launch offers or the
+ * platform grants no scope for it, and the error of the outbox or of the session host.
  */
 export async function runPublishJob(
   session: string,
@@ -99,8 +100,10 @@ export async function runPublishJob(
     const steps = await outbox.steps(session, call);
     if (!isDue(steps, through)) return "idle";
     const launch = await launchOf(session, call);
-    if (launch?.messageType !== "LtiResourceLinkRequest" || launch.ags?.lineitem === undefined) {
-      await outbox.markFailed(session, "The session has no launch with a line item to publish to.", call);
+    const grades = launch?.messageType === "LtiResourceLinkRequest" ? launch.services.grades : undefined;
+    const userId = launch?.user.subject;
+    if (launch === undefined || grades?.lineitem === undefined || userId === undefined) {
+      await outbox.markFailed(session, "The session has no launch of a user with a line item to publish to.", call);
       return "failed";
     }
     const state = host.session(session);
@@ -112,8 +115,18 @@ export async function runPublishJob(
       await outbox.markFailed(session, error.message, call);
       return "failed";
     }
+    const client = createServiceClient(launch, { ...tool, scopes: grades.scopes, ...call });
+    // A score needs its maximum. The results may have none, and then the line item has it.
+    if (score.score !== undefined && score.maximum === undefined) {
+      const lineItem = await client.lineItem(grades.lineitem, call);
+      if (lineItem === undefined) {
+        await outbox.markFailed(session, "The line item of the launch no longer exists.", call);
+        return "failed";
+      }
+      score = { ...score, maximum: lineItem.scoreMaximum };
+    }
     const timestamp = await outbox.nextAttempt(session, score.timestamp, steps.length, call);
-    await publishAgsScore(toAgsScore(score, timestamp), launch, { ...tool, ...call });
+    await client.publishScore(grades.lineitem, toAgsScore(score, userId, timestamp), call);
     await outbox.markSent(session, call);
     return "published";
   } finally {

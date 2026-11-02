@@ -1,13 +1,13 @@
 # LMS integration
 
-A host's wiring of an LTI item, a grade for a learning platform and Caliper events to the ports of `@assesskit/player`, over
+A host's wiring of an LTI item, a grade for a learning platform, a proctoring tool and Caliper events to the ports of `@assesskit/player`, over
 [interopkit](https://github.com/interopkit/interopkit). `@assesskit/runtime` and `@assesskit/player` do not import interopkit, and
 this directory does. A host copies `src/` or writes its own against the ports; the two families never import each other.
 
 ```mermaid
 flowchart LR
   subgraph assesskit["assesskit"]
-    host["Session host<br/>forward.log"]
+    host["Session host<br/>forward.log, proctor"]
     intake["createToolScoreIntake"]
     score["sessionScore"]
   end
@@ -16,11 +16,13 @@ flowchart LR
     settle["settle job"]
     events["event job"]
     publish["publish job"]
-    item["tool-item: launch, hooks, ToolScore"]
+    item["tool-item: MessageInput, checks"]
+    gradebook["gradebook: GradebookStore"]
+    proctoring["proctoring: AssessmentControl, start"]
   end
   subgraph kit["interopkit"]
-    platform["tool-integration/platform<br/>ltiPlatformFrame, agsScores"]
-    tool["tool-integration/tool<br/>publishAgsScore"]
+    platform["tool-integration/platform<br/>ltiPlatformFrame, handlePlatformRequest,<br/>readStartAssessment"]
+    tool["tool-integration/tool<br/>createServiceClient, publishScore"]
     analytics["learning-analytics<br/>buildEvent, sendCaliper"]
   end
   host -->|each saved step| log
@@ -31,34 +33,70 @@ flowchart LR
   publish --> score
   publish --> tool
   item --> platform
-  platform -->|onScore| item
-  item --> intake
+  platform -->|keepScore| gradebook
+  gradebook --> intake
+  platform -->|control| proctoring
+  proctoring --> host
 ```
 
-| What                                                                    | Where                                                                                                         |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| The launch of a tool, the hooks that bind it to a session               | `src/tool-item.ts`: `toolLaunch`, `launchHooks`, `resourceOf`, `parseResource`, `toToolScore`, `onToolScore`  |
-| The log that appends, and the port of the host's database               | `src/outbox.ts`: `outboxLog`, `Outbox`; `src/memory-outbox.ts` is one in memory                               |
-| The jobs, which run outside any step                                    | `src/settle-job.ts`, `src/event-job.ts`, `src/publish-job.ts`                                                 |
-| Delivery events to Caliper events                                       | `src/events.ts`: the rule table below; `src/entities.ts`, `src/grade.ts`, `src/build.ts`, `src/context.ts`    |
-| The exchange of the whole exam, and the failures of each port           | `test/exchange.test.ts`, `test/publish-job.test.ts`, `test/event-job.test.ts`, `test/tool-item.test.ts`       |
-| A learning platform and a drawing tool, written from the specifications | `test/fake-platform.ts`, `test/fake-lms.ts`, `test/fake-tool.ts`, `test/rig.ts`, which wires them to the exam |
+| What                                                                   | Where                                                                                                         |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| The launch of a tool, the checks that bind it to a session             | `src/tool-item.ts`: `toolLaunch`, `checkSession`, `checkBrowser`, `itemId`, `parseItemId`, `toToolScore`      |
+| The gradebook behind the grade services, over the score intake         | `src/gradebook.ts`: `createGradebook`                                                                         |
+| The proctoring tool: the launch, the control of the attempt, the start | `src/proctoring.ts`: `proctoringLaunch`, `createProctoring`                                                   |
+| The log that appends, and the port of the host's database              | `src/outbox.ts`: `outboxLog`, `Outbox`; `src/memory-outbox.ts` is one in memory                               |
+| The jobs, which run outside any step                                   | `src/settle-job.ts`, `src/event-job.ts`, `src/publish-job.ts`                                                 |
+| Delivery events to Caliper events                                      | `src/events.ts`: the rule table below; `src/entities.ts`, `src/grade.ts`, `src/build.ts`, `src/context.ts`    |
+| The exchange of the whole exam, and the failures of each port          | `test/exchange.test.ts`, `test/publish-job.test.ts`, `test/event-job.test.ts`, `test/tool-item.test.ts`       |
+| The rules of the gradebook and of the proctoring                       | `test/gradebook.test.ts`, `test/proctoring.test.ts`                                                           |
+| A learning platform and two tools, written from the specifications     | `test/fake-platform.ts`, `test/fake-lms.ts`, `test/fake-tool.ts`, `test/rig.ts`, which wires them to the exam |
 
 To run the tests, build interopkit in its own checkout beside this repository (`pnpm install && pnpm build` there), then run
 `pnpm exec vitest run --project examples` here, or `pnpm test` for the whole repository. interopkit is a dependency of this
 example only, linked from `../interopkit` beside this repository until it is on npm.
 
-## The three steps
+## The steps
 
-| Step | Port of the player               | What this example does                                                                                                                          |
-| ---- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | `LtiLogin`                       | The host's route calls `toolLaunch` and `ltiPlatformFrame`, with `launchHooks` for the `check` of the session and the `checkLaunch` of the hint |
-| 2    | `createToolScoreIntake`          | `agsScores` gets `onToolScore(intake)`; the settle job gives each step of the session to `intake.settle`                                        |
-| 3    | `forward.log` and `sessionScore` | `forward: { log: outboxLog(outbox) }`; the event job sends the Caliper events and the publish job sends the grade                               |
+| Step | Port of the player               | What this example does                                                                                                                                                                                         |
+| ---- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | `LtiLogin`                       | The host's route calls `toolLaunch` and `ltiPlatformFrame` with `checkSession` as the `check` of the login; `handlePlatformRequest` gets `checkBrowser` as `checkLaunch`, built for the request of the browser |
+| 2    | `createToolScoreIntake`          | `handlePlatformRequest` gets `createGradebook` as `services.gradebook`, which gives each score to `intake.onScore`; the settle job gives each step of the session to `intake.settle`                           |
+| 3    | `forward.log` and `sessionScore` | `forward: { log: outboxLog(outbox) }`; the event job sends the Caliper events and the publish job sends the grade                                                                                              |
+| 4    | `SessionHost.proctor`            | With a proctoring tool, the host's route calls `Proctoring.start`, and `handlePlatformRequest` gets `Proctoring.control` as `services.control`                                                                 |
 
 The log only appends. Nothing in a step reaches the network, so an outage of the learning platform or of the Caliper endpoint
 never delays a candidate and never reads as a failure of the CAT engine. A host's queue runs the three jobs after a step, for the
 session of the step, and retries a job that fails.
+
+## The gradebook
+
+The context of a launch is the session and the line item is the item instance, so the path of a score carries both. A tool's token
+says only which tool called, so the gradebook holds the rules that keep a tool to its own candidates. Only the line item and its
+scores exist: the other methods of `GradebookStore` answer that they have nothing, which the platform makes 404.
+
+| Method      | Rule                                                                                                                                                                      |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lineItem`  | Answers the name and the maximum that the host's `linkOf` gives, to the tool whose link the item holds; another tool, session or item gets `undefined`                    |
+| `keepScore` | The same lookup, and the session must be bound to the `userId` of the score (`SessionHost.check`); then `intake.onScore` keeps the later score and supplies the final one |
+| The others  | `undefined` and `false`: the host adds what it offers                                                                                                                     |
+
+## The proctoring
+
+The host launches `LtiStartProctoring` with `proctoringLaunch`, which offers the actions that it maps. The tool sends the candidate
+back to the host's start assessment URL; `Proctoring.start` reads the message with `readStartAssessment`, starts the session
+only when the user of the browser is the candidate that the sealed session data names, and records the attempt with the tool
+that started it.
+
+| Action      | `SessionHost.proctor` | Answer                                                                |
+| ----------- | --------------------- | --------------------------------------------------------------------- |
+| `pause`     | `suspend`             | `paused`                                                              |
+| `resume`    | `resume`              | `running`                                                             |
+| `terminate` | `end-test`            | `terminated`; an attempt that ended another way is `complete`         |
+| `update`    | none                  | The status, for a tool that polls                                     |
+| `flag`      | none                  | The status; the runtime has no flag, so the message does not offer it |
+
+An action that the engine refuses leaves the session as it is and answers its status. An attempt that is unknown, or that another
+tool started, is 404.
 
 ## The outbox
 
@@ -79,11 +117,11 @@ database.
 
 Each row is a test.
 
-| Job     | When it fails                                                                                                                                                                                                       | When it hangs                                                                                    | When it runs again                                                                                                                                |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Settle  | `pending` or `apply` rejects: the kept score stays, and the queue retries                                                                                                                                           | The timeout of the queue                                                                         | Safe: `settle` supplies only the requests that are open, so a repeat makes no step                                                                |
-| Event   | The endpoint answers with an error: `ServiceError`, and the step is not marked. A `supply-scores` step without a scorer by an IRI is refused and marked, and the other events go out                                | `timeoutMs` of the sender, then `ServiceError` with status 0                                     | The same event identifiers, with a new `sendTime`. Caliper has no deduplication, so an endpoint may hold both copies                              |
-| Publish | `ServiceError` from the token or the score request; `LtiError` for a refused scope. No launch, or none with a line item, or a report with no score (`DataError`): the session is marked failed and no retry follows | `timeoutMs`, then in doubt: the request may have arrived. An abort of the signal is in doubt too | Reads the latest state and takes a time later than every attempt before, so a resend after a timeout or a crash before `markSent` repeats no time |
+| Job     | When it fails                                                                                                                                                                                                                                                              | When it hangs                                                                                    | When it runs again                                                                                                                                |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Settle  | `pending` or `apply` rejects: the kept score stays, and the queue retries                                                                                                                                                                                                  | The timeout of the queue                                                                         | Safe: `settle` supplies only the requests that are open, so a repeat makes no step                                                                |
+| Event   | The endpoint answers with an error: `ServiceError`, and the step is not marked. A `supply-scores` step without a scorer by an IRI is refused and marked, and the other events go out                                                                                       | `timeoutMs` of the sender, then `ServiceError` with status 0                                     | The same event identifiers, with a new `sendTime`. Caliper has no deduplication, so an endpoint may hold both copies                              |
+| Publish | `ServiceError` from the token, the line item or the score request; `LtiError` for a refused scope. No launch, or none with a user and a line item, or a line item that is gone, or a report with no score (`DataError`): the session is marked failed and no retry follows | `timeoutMs`, then in doubt: the request may have arrived. An abort of the signal is in doubt too | Reads the latest state and takes a time later than every attempt before, so a resend after a timeout or a crash before `markSent` repeats no time |
 
 `results` and `pending` are two loads, so a step in another process can land between them and one send can mix two versions; that
 step's own run then sends the right pair. **One job runs for a session at a time**, through `claim`: two workers could read two
@@ -95,7 +133,8 @@ shows both the claim and the loss without it.
 The score service of LTI AGS says that a tool must not send two updates of one line item and user with the same timestamp, and
 that timestamps strictly increase ([AGS 2.0](https://www.imsglobal.org/spec/lti-ags/v2p0#timestamp)). The timestamp of
 `sessionScore` is the time of the report's last change, and two steps may share it. The publish job therefore takes its time from
-`nextAttempt`, which also answers for an attempt whose outcome is not known.
+`nextAttempt`, which is `advanceScoreTimestamp` of the tool role over the last attempt, and which also answers for an attempt whose
+outcome is not known.
 
 | Case                          | Timestamp sent                           |
 | ----------------------------- | ---------------------------------------- |
@@ -174,8 +213,8 @@ start step adds has the index `-1`. An item is the same in every session of the 
 
 ## Not included
 
-| Not included                             | Why                                                                                          |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------- |
-| A queue, a database, routes and sessions | They are the host's. The example shows the rules they must keep                              |
-| A scenario that runs outside the tests   | The fakes of a learning platform and a tool are test code; the exchange test is the scenario |
-| Registration of tools and platforms      | The host's records; the example's `rig.ts` gives one of each                                 |
+| Not included                                | Why                                                                                                                                       |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| A queue, a database, routes and sessions    | They are the host's. The example shows the rules they must keep                                                                           |
+| A scenario that runs outside the tests      | The fakes of a learning platform and a tool are test code; the exchange test is the scenario                                              |
+| Registration, Deep Linking, roster services | The host's records, and services an exam does not use: the example of interopkit shows each; `rig.ts` gives one registration of each tool |

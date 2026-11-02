@@ -4,125 +4,109 @@ import type { SessionHost, ToolScore } from "@assesskit/player/server";
 import type { ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { type LtiLink, ltiLaunchUrl } from "@assesskit/runtime/package";
-import { LtiError } from "@interopkit/tool-integration";
 import type {
-  AgsScore,
-  AgsScoresOptions,
-  PlatformAuthorizeOptions,
+  MessageInput,
   PlatformLoginOptions,
-  ToolLaunch,
+  PlatformRequestOptions,
+  ReceivedScore,
 } from "@interopkit/tool-integration/platform";
 
-/**
- * Names what a launch is for in the terms of the host: the session and the item instance. The platform signs the text into the
- * login URL and hands it back with the score, so it holds no secret and no personal data: the tool and the browser can read it.
- * The same launch gives the same text.
- */
-export function resourceOf(session: string, item: ItemKey): string {
-  return JSON.stringify([session, item.ref, item.instance]);
+/** The role of a candidate in the context of a launch (LTI 1.3 Core, Appendix A). */
+export const LEARNER = "http://purl.imsglobal.org/vocab/lis/v2/membership#Learner";
+
+/** The tool that a launch is for: its client at the platform, and the deployment the launch belongs to. */
+export interface LaunchTarget {
+  readonly clientId: string;
+  readonly deploymentId: string;
 }
 
 /**
- * Reads what `resourceOf` wrote.
- *
- * @throws `DataError` when the text is not the resource of an item instance.
+ * Names an item instance in the terms of LTI: the identifier of the resource link and of the line item of its launch. The
+ * session is the context, so that the pair of them is all a score needs to find its place. The tool reads the text, so it
+ * holds no secret and no personal data, and the same item instance gives the same text.
  */
-export function parseResource(resource: string): { readonly session: string; readonly item: ItemKey } {
+export function itemId(item: ItemKey): string {
+  return JSON.stringify([item.ref, item.instance]);
+}
+
+/** Reads what `itemId` wrote, or returns `undefined` when the text is not the identifier of an item instance. */
+export function parseItemId(id: string): ItemKey | undefined {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(resource);
+    parsed = JSON.parse(id);
   } catch {
-    parsed = undefined;
+    return undefined;
   }
-  if (
-    !Array.isArray(parsed) ||
-    parsed.length !== 3 ||
-    typeof parsed[0] !== "string" ||
-    typeof parsed[1] !== "string" ||
-    typeof parsed[2] !== "number"
-  ) {
-    throw new DataError(
-      `The resource ${JSON.stringify(resource)} must be a JSON array of a session, an item reference and an instance.`,
-    );
-  }
-  return { session: parsed[0], item: { ref: parsed[1], instance: parsed[2] } };
+  if (!Array.isArray(parsed) || parsed.length !== 2) return undefined;
+  const [ref, instance] = parsed;
+  return typeof ref === "string" && typeof instance === "number" ? { ref, instance } : undefined;
 }
 
 /**
- * Builds the launch of the tool of an LTI item for a candidate: the link of the item, its launch URL by the rule of the
- * implementation guide (`ltiLaunchUrl`), and the highest score of the item, which the line item offers.
+ * Builds the launch of the tool of an LTI item for a candidate: the item instance is the resource link and the session is its
+ * context. The message offers the tool the line item of the item instance, to which it posts its scores.
  *
  * @param caller - The candidate session that the host authenticated.
  * @param item - The item instance that holds the link.
  * @param link - The link, as the runtime read it from the package.
- * @param scoreMaximum - The highest score of the item, above 0.
+ * @param tool - The tool the host registered for the link.
  * @throws `DataError` when the link names only a vendor, and so has no launch URL.
  */
-export function toolLaunch(caller: Caller, item: ItemKey, link: LtiLink, scoreMaximum: number): ToolLaunch {
+export function toolLaunch(caller: Caller, item: ItemKey, link: LtiLink, tool: LaunchTarget): MessageInput {
   return {
-    principal: caller.principal,
-    resource: resourceOf(caller.session, item),
-    target: ltiLaunchUrl(link),
-    title: link.title,
+    messageType: "LtiResourceLinkRequest",
+    clientId: tool.clientId,
+    deploymentId: tool.deploymentId,
+    targetLinkUri: ltiLaunchUrl(link),
+    user: { subject: caller.principal },
+    roles: [LEARNER],
+    context: { id: caller.session },
+    resourceLink: { id: itemId(item), title: link.title },
     custom: Object.fromEntries(link.custom),
-    scoreMaximum,
+    services: { grades: { lineItemId: itemId(item), container: false } },
   };
 }
 
 /**
- * The hooks that tie the platform role to the session host: a launch is the candidate's only when the session is bound to the
- * principal that the launch names.
+ * The `check` of `ltiPlatformFrame` for the request of one browser: the message is for the browser's user, and a message that
+ * names a session, the launch of an item, names one that is bound to that user.
  *
  * @remarks
- * `check` runs first in `ltiPlatformFrame` and nothing is signed when it throws: the `AccessError` of the session host passes
- * through and stays the host's to map to 403. `checkLaunch` runs in `ltiPlatformAuthorize` before the hint is used, so that a
- * refusal does not burn it, and it throws the `LtiError` `caller-mismatch`.
+ * Nothing is signed when it throws. The `AccessError` passes through and stays the host's to map to 403. The Start Proctoring
+ * message comes before the session exists, so it has only the first check.
+ *
+ * @param host - The session host, of which the check uses `check`.
+ * @param principal - The user of the browser's session, whom the host authenticated for this request.
  */
-export function launchHooks(host: Pick<SessionHost, "check">): {
-  check: PlatformLoginOptions["check"];
-  checkLaunch: NonNullable<PlatformAuthorizeOptions["checkLaunch"]>;
-} {
-  return {
-    check: async (launch, options) => {
-      const { session } = parseResource(launch.resource);
-      await host.check({ session, principal: launch.principal }, options);
-    },
-    checkLaunch: async (launch, options) => {
-      const { session } = parseResource(launch.resource);
-      try {
-        await host.check({ session, principal: launch.principal }, options);
-      } catch (error) {
-        if (!(error instanceof AccessError)) throw error;
-        throw new LtiError(
-          "The launch is for a session that is not bound to the principal of the hint.",
-          "caller-mismatch",
-        );
-      }
-    },
+export function checkSession(host: Pick<SessionHost, "check">, principal: string): PlatformLoginOptions["check"] {
+  return async (message, options) => {
+    if (message.user.subject !== principal) {
+      throw new AccessError("The message is for another user than the browser's.", "not-bound");
+    }
+    if (message.messageType === "LtiStartProctoring") return;
+    if (message.context === undefined) {
+      throw new DataError("The launch of an item must name its session as the context.");
+    }
+    await host.check({ session: message.context.id, principal }, options);
   };
 }
 
+/**
+ * The `checkLaunch` of `handlePlatformRequest` for the request of one browser: the tool's authentication request is the
+ * candidate's own. The check runs before the message is taken, so that a refusal does not spend the launch.
+ *
+ * @param principal - The user of the browser's session, whom the host authenticated for this request.
+ */
+export function checkBrowser(principal: string): NonNullable<PlatformRequestOptions["checkLaunch"]> {
+  return async (launch) => launch.principal === principal;
+}
+
 /** Turns the score that the tool posted into the score that delivery needs: only a fully graded score is final. */
-export function toToolScore(score: AgsScore): ToolScore {
+export function toToolScore(score: ReceivedScore): ToolScore {
   return {
     ...(score.scoreGiven === undefined ? {} : { scoreGiven: score.scoreGiven }),
     ...(score.scoreMaximum === undefined ? {} : { scoreMaximum: score.scoreMaximum }),
     final: score.gradingProgress === "FullyGraded",
     timestampMs: score.timestampMs,
-  };
-}
-
-/** Returns the `onScore` of `agsScores`: it reads the resource of the line item and gives the score to the intake. */
-export function onToolScore(intake: {
-  readonly onScore: (
-    session: string,
-    item: ItemKey,
-    score: ToolScore,
-    options?: { readonly signal?: AbortSignal },
-  ) => Promise<void>;
-}): AgsScoresOptions["onScore"] {
-  return async (resource, score, options) => {
-    const { session, item } = parseResource(resource);
-    await intake.onScore(session, item, toToolScore(score), options);
   };
 }

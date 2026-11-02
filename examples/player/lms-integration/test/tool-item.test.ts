@@ -1,17 +1,24 @@
 import { AccessError } from "@assesskit/player";
-import type { ToolScore } from "@assesskit/player/server";
 import { DataError } from "@assesskit/runtime/errors";
 import { readLtiLink } from "@assesskit/runtime/package";
-import { LtiError } from "@interopkit/tool-integration";
-import type { AgsScore } from "@interopkit/tool-integration/platform";
+import type { MessageInput, ReceivedScore } from "@interopkit/tool-integration/platform";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { launchHooks, onToolScore, parseResource, resourceOf, toolLaunch, toToolScore } from "../src/index.ts";
+import {
+  checkBrowser,
+  checkSession,
+  itemId,
+  parseItemId,
+  proctoringLaunch,
+  toolLaunch,
+  toToolScore,
+} from "../src/index.ts";
 import { examFiles } from "./exam.ts";
+import { DRAWING } from "./fake-tool.ts";
 import { CANDIDATE, DRAW } from "./rig.ts";
 
 const AT = "2023-11-14T22:13:20.000Z";
-const score = (change: Partial<AgsScore> = {}): AgsScore => ({
+const score = (change: Partial<ReceivedScore> = {}): ReceivedScore => ({
   userId: "u1",
   scoreGiven: 6,
   scoreMaximum: 10,
@@ -27,39 +34,24 @@ const link = (inner: string) =>
     `<cartridge_basiclti_link xmlns="http://www.imsglobal.org/xsd/imslticc_v1p0" xmlns:blti="http://www.imsglobal.org/xsd/imsbasiclti_v1p0" xmlns:lticp="http://www.imsglobal.org/xsd/imslticp_v1p0"><blti:title>Tool</blti:title>${inner}</cartridge_basiclti_link>`,
   );
 
-describe("resourceOf", () => {
-  it("names the session and the item instance, and gives the same text for the same launch", () => {
-    expect(resourceOf("exam-1", { ref: "draw", instance: 2 })).toBe('["exam-1","draw",2]');
-    expect(resourceOf("exam-1", DRAW)).toBe(resourceOf("exam-1", { ...DRAW }));
+describe("itemId", () => {
+  it("names the item instance, and gives the same text for the same item", () => {
+    expect(itemId({ ref: "draw", instance: 2 })).toBe('["draw",2]');
+    expect(itemId(DRAW)).toBe(itemId({ ...DRAW }));
   });
 
-  it("reads back what it wrote, for any session and item", () => {
+  it("reads back what it wrote, for any item", () => {
     fc.assert(
-      fc.property(
-        fc.string({ minLength: 1 }),
-        fc.string({ minLength: 1 }),
-        fc.integer({ min: 1, max: 1000 }),
-        (session, ref, instance) => {
-          expect(parseResource(resourceOf(session, { ref, instance }))).toEqual({ session, item: { ref, instance } });
-        },
-      ),
+      fc.property(fc.string({ minLength: 1 }), fc.integer({ min: 1, max: 1000 }), (ref, instance) => {
+        expect(parseItemId(itemId({ ref, instance }))).toEqual({ ref, instance });
+      }),
       { seed: 20_261_101, numRuns: 100 },
     );
   });
 
-  it("refuses text that is not the resource of an item instance", () => {
-    for (const text of [
-      "",
-      "not json",
-      "{}",
-      "[]",
-      '["s","r"]',
-      '["s","r","1"]',
-      '[1,"r",1]',
-      '["s","r",1,2]',
-      "null",
-    ]) {
-      expect(() => parseResource(text), text).toThrow(DataError);
+  it("reads text that is not the identifier of an item instance as no item", () => {
+    for (const text of ["", "not json", "{}", "[]", '["r"]', '["r","1"]', "[1,1]", '["r",1,2]', "null"]) {
+      expect(parseItemId(text), text).toBeUndefined();
     }
   });
 });
@@ -67,69 +59,100 @@ describe("resourceOf", () => {
 describe("toolLaunch", () => {
   const draw = readLtiLink(new TextEncoder().encode(examFiles()["lti/draw.xml"]));
 
-  it("builds the launch of an item from its link: the secure launch URL, the title, the custom properties and the maximum", () => {
-    expect(toolLaunch(CANDIDATE, DRAW, draw, 10)).toEqual({
-      principal: CANDIDATE.principal,
-      resource: resourceOf(CANDIDATE.session, DRAW),
-      target: "https://tool.example.com/lti/tools/drawing",
-      title: "Drawing tool",
+  it("builds the launch of an item from its link: the session is the context, the item the resource link and the line item", () => {
+    const expected: MessageInput = {
+      messageType: "LtiResourceLinkRequest",
+      clientId: DRAWING.clientId,
+      deploymentId: DRAWING.deploymentId,
+      targetLinkUri: "https://tool.example.com/lti/tools/drawing",
+      user: { subject: CANDIDATE.principal },
+      roles: ["http://purl.imsglobal.org/vocab/lis/v2/membership#Learner"],
+      context: { id: CANDIDATE.session },
+      resourceLink: { id: itemId(DRAW), title: "Drawing tool" },
       custom: { exam: "tryout-1" },
-      scoreMaximum: 10,
-    });
+      services: { grades: { lineItemId: itemId(DRAW), container: false } },
+    };
+    expect(toolLaunch(CANDIDATE, DRAW, draw, DRAWING)).toEqual(expected);
   });
 
   it("prefers the secure launch URL over the launch URL, and refuses a link that names only a vendor", () => {
     const both = link(
       "<blti:launch_url>http://tool.example/a</blti:launch_url><blti:secure_launch_url>https://tool.example/a</blti:secure_launch_url>",
     );
-    expect(toolLaunch(CANDIDATE, DRAW, both, 5).target).toBe("https://tool.example/a");
+    expect(toolLaunch(CANDIDATE, DRAW, both, DRAWING).targetLinkUri).toBe("https://tool.example/a");
     const vendor = link("<blti:vendor><lticp:code>IMSGlobal.org</lticp:code></blti:vendor>");
-    expect(() => toolLaunch(CANDIDATE, DRAW, vendor, 5)).toThrow(DataError);
+    expect(() => toolLaunch(CANDIDATE, DRAW, vendor, DRAWING)).toThrow(DataError);
   });
 });
 
-describe("launchHooks", () => {
+describe("checkSession", () => {
   const bound: string[] = [];
   const host = {
     check: async (caller: { session: string; principal: string }) => {
       bound.push(`${caller.session} ${caller.principal}`);
-      if (caller.principal !== CANDIDATE.principal) {
+      if (caller.session !== CANDIDATE.session) {
         throw new AccessError("The session does not belong to the caller.", "not-bound");
       }
     },
   };
-  const launch = toolLaunch(CANDIDATE, DRAW, readLtiLink(new TextEncoder().encode(examFiles()["lti/draw.xml"])), 10);
-  const hooks = launchHooks(host);
+  const draw = readLtiLink(new TextEncoder().encode(examFiles()["lti/draw.xml"]));
+  const launch = toolLaunch(CANDIDATE, DRAW, draw, DRAWING);
+  const check = checkSession(host, CANDIDATE.principal);
 
-  it("confirms with the session host that the session is the principal's, before anything is signed", async () => {
-    await hooks.check(launch);
+  it("confirms with the session host that the session of the context is the user's, before anything is signed", async () => {
+    await check(launch);
     expect(bound.at(-1)).toBe(`${CANDIDATE.session} ${CANDIDATE.principal}`);
   });
 
   it("lets the AccessError of the session host through as the host's own", async () => {
-    await expect(hooks.check({ ...launch, principal: "someone-else" })).rejects.toBeInstanceOf(AccessError);
+    await expect(check({ ...launch, context: { id: "another-session" } })).rejects.toBeInstanceOf(AccessError);
   });
 
-  it("accepts the launch of a hint whose session is the principal's, and refuses another with the reason caller-mismatch", async () => {
-    await hooks.checkLaunch(launch);
-    const refused = await hooks.checkLaunch({ ...launch, principal: "someone-else" }).catch((error: unknown) => error);
-    expect(refused).toBeInstanceOf(LtiError);
-    expect(refused).toMatchObject({ reason: "caller-mismatch", status: 403 });
+  it("refuses a message for another user than the browser's, and an anonymous one, without asking the session host", async () => {
+    const before = bound.length;
+    await expect(check({ ...launch, user: { subject: "someone-else" } })).rejects.toBeInstanceOf(AccessError);
+    await expect(check({ ...launch, user: {} })).rejects.toBeInstanceOf(AccessError);
+    expect(bound).toHaveLength(before);
   });
 
   it("passes on a failure of the session host that is not a refusal", async () => {
-    const failing = launchHooks({
-      check: async () => {
-        throw new Error("The store is down.");
+    const failing = checkSession(
+      {
+        check: async () => {
+          throw new Error("The store is down.");
+        },
       },
-    });
-    await expect(failing.checkLaunch(launch)).rejects.toThrow("The store is down.");
-    await expect(failing.check(launch)).rejects.toThrow("The store is down.");
+      CANDIDATE.principal,
+    );
+    await expect(failing(launch)).rejects.toThrow("The store is down.");
   });
 
-  it("refuses a resource that is not an item instance, with a DataError", async () => {
-    await expect(hooks.check({ ...launch, resource: "nonsense" })).rejects.toThrow(DataError);
-    await expect(hooks.checkLaunch({ ...launch, resource: "nonsense" })).rejects.toThrow(DataError);
+  it("refuses a launch of an item without a context, with a DataError", async () => {
+    const { context: _context, ...withoutContext } = launch;
+    await expect(check(withoutContext)).rejects.toThrow(DataError);
+  });
+
+  it("asks the session host nothing for a Start Proctoring message, which comes before the session", async () => {
+    const before = bound.length;
+    const message = proctoringLaunch(
+      CANDIDATE,
+      { ...DRAWING, targetLinkUri: DRAWING.launchUrl },
+      { id: "exam", attemptNumber: 1 },
+      "https://player.platform.example/proctoring/start",
+    );
+    await expect(check(message)).resolves.toBeUndefined();
+    await expect(checkSession(host, "someone-else")(message)).rejects.toBeInstanceOf(AccessError);
+    expect(bound).toHaveLength(before);
+  });
+});
+
+describe("checkBrowser", () => {
+  it("accepts the launch of the browser's own user, and refuses any other user and an anonymous launch", async () => {
+    const check = checkBrowser("candidate-1");
+    const launch = { clientId: DRAWING.clientId, deploymentId: DRAWING.deploymentId };
+    expect(await check({ ...launch, principal: "candidate-1" })).toBe(true);
+    expect(await check({ ...launch, principal: "candidate-2" })).toBe(false);
+    expect(await check(launch)).toBe(false);
   });
 });
 
@@ -144,19 +167,5 @@ describe("toToolScore", () => {
   it("leaves out the parts that the tool did not give", () => {
     const { scoreGiven: _given, scoreMaximum: _maximum, ...bare } = score();
     expect(toToolScore(bare)).toEqual({ final: true, timestampMs: Date.parse(AT) });
-  });
-});
-
-describe("onToolScore", () => {
-  it("reads the resource of the line item and gives the session, the item and the score to the intake", async () => {
-    const received: unknown[][] = [];
-    const onScore = onToolScore({
-      onScore: async (...args) => void received.push(args),
-    });
-    const signal = new AbortController().signal;
-    await onScore(resourceOf("exam-1", DRAW), score(), { signal });
-    const expected: ToolScore = toToolScore(score());
-    expect(received).toEqual([["exam-1", DRAW, expected, { signal }]]);
-    await expect(onScore("nonsense", score())).rejects.toThrow(DataError);
   });
 });

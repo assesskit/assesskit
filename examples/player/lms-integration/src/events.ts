@@ -7,7 +7,7 @@ import {
 } from "@assesskit/runtime/checks";
 import type { DeliveryEvent, DeliveryEventType, ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import { type CaliperEntity, type CaliperEvent, caliperTime } from "@interopkit/learning-analytics";
+import { type Assessment, type AssessmentItem, type CaliperEvent, caliperTime } from "@interopkit/learning-analytics";
 import { assemble, type EventParts } from "./build.ts";
 import type { CaliperContext } from "./context.ts";
 import { assessmentOf, itemAttempt, itemOf, person, sectionOf, testAttempt } from "./entities.ts";
@@ -50,13 +50,19 @@ function assessmentEvent(
     actor: person(context.actor),
     object: assessmentOf(context),
     generated: testAttempt(context, times),
-    time,
+    eventTime: time,
   };
 }
 
 /** Builds the parts of a NavigationEvent: the candidate went to a section or to an item. */
-function navigatedTo(event: DeliveryEvent, object: CaliperEntity, context: CaliperContext): EventParts {
-  return { type: "NavigationEvent", action: "NavigatedTo", actor: person(context.actor), object, time: timeOf(event) };
+function navigatedTo(event: DeliveryEvent, object: AssessmentItem | Assessment, context: CaliperContext): EventParts {
+  return {
+    type: "NavigationEvent",
+    action: "NavigatedTo",
+    actor: person(context.actor),
+    object,
+    eventTime: timeOf(event),
+  };
 }
 
 const itemPresented: Rule = (event, context) => {
@@ -68,7 +74,7 @@ const itemPresented: Rule = (event, context) => {
     actor: person(context.actor),
     object: itemOf(context, key),
     generated: itemAttempt(context, key, { startedAtTime: time }),
-    time,
+    eventTime: time,
   };
 };
 
@@ -84,7 +90,7 @@ const itemAttemptEnded: Rule = (event, context) => {
     type: "AssessmentItemEvent",
     actor: person(context.actor),
     object: itemOf(context, key),
-    time,
+    eventTime: time,
   } as const;
   if (event.detail !== "skip") return { ...parts, action: "Completed" };
   return { ...parts, action: "Skipped", generated: itemAttempt(context, key, { endedAtTime: time }) };

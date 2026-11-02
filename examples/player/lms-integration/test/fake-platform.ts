@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: the names of LTI messages and of OAuth 2.0 responses are snake_case.
 
-import type { Fetch } from "@interopkit/core";
+import { type Fetch, signerFromCryptoKey } from "@interopkit/core";
 import type { HttpRequest } from "@interopkit/core/http";
 import type { LoginRecord, LtiStore, PlatformRegistration } from "@interopkit/tool-integration/tool";
 import { expect } from "vitest";
@@ -224,10 +224,18 @@ export class FakePlatform {
   /** The tool's token request (Security Framework section 4.1.1): checks the assertion and answers a token. */
   private async grant(init: Parameters<Fetch>[1]): Promise<Response> {
     expect(init.method).toBe("POST");
-    expect(init.headers["content-type"]).toBe("application/x-www-form-urlencoded");
+    // The media type may carry parameters, such as the charset that RFC 6749 section 3.2 has the form use.
+    expect(init.headers["content-type"]?.split(";")[0]).toBe("application/x-www-form-urlencoded");
     expect(init.headers.authorization).toBeUndefined();
     const form = new URLSearchParams(textOf(init.body));
-    expect([...form.keys()].sort()).toEqual(["client_assertion", "client_assertion_type", "grant_type", "scope"]);
+    // RFC 7521 section 4.2 makes `client_id` optional, since the assertion names the client; a tool may send it.
+    expect([...form.keys()].filter((name) => name !== "client_id").sort()).toEqual([
+      "client_assertion",
+      "client_assertion_type",
+      "grant_type",
+      "scope",
+    ]);
+    expect(form.get("client_id") ?? CLIENT_ID).toBe(CLIENT_ID);
     expect(form.get("grant_type")).toBe("client_credentials");
     expect(form.get("client_assertion_type")).toBe("urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
     const assertion = form.get("client_assertion") ?? "";
@@ -317,8 +325,7 @@ export function registrationOf(tool: KeyPair, overrides: Partial<PlatformRegistr
     jwksUrl: JWKS_URL,
     accessTokenUrl: ACCESS_TOKEN_URL,
     redirectUri: REDIRECT_URI,
-    keyId: tool.kid,
-    signingKey: tool.privateKey,
+    signer: signerFromCryptoKey(tool.privateKey, { algorithm: "RS256", keyId: tool.kid }),
     ...overrides,
   };
 }

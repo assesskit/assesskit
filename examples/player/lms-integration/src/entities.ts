@@ -1,18 +1,23 @@
 import type { ItemKey } from "@assesskit/runtime/delivery";
-import type { CaliperEntity } from "@interopkit/learning-analytics";
-import { mintUrn } from "@interopkit/learning-analytics";
+import {
+  type Assessment,
+  type AssessmentItem,
+  type Attempt,
+  mintUrn,
+  type Person,
+} from "@interopkit/learning-analytics";
 import type { CaliperContext } from "./context.ts";
 
 /** The times of an attempt, when the event knows them. */
-export type AttemptTimes = Pick<CaliperEntity, "startedAtTime" | "endedAtTime">;
+export type AttemptTimes = Pick<Attempt, "startedAtTime" | "endedAtTime">;
 
 /** Returns a person, named by the IRI the host gave. */
-export function person(id: string): CaliperEntity {
+export function person(id: string): Person {
   return { id, type: "Person" };
 }
 
 /** Returns the test as an assessment, named by the IRI the host gave. */
-export function assessmentOf(context: CaliperContext): CaliperEntity {
+export function assessmentOf(context: CaliperContext): Assessment {
   return { id: context.assessment, type: "Assessment" };
 }
 
@@ -22,7 +27,7 @@ function itemId(context: CaliperContext, key: ItemKey): string {
 }
 
 /** Returns the item of an item reference, named by the identifier of the reference. */
-export function itemOf(context: CaliperContext, key: ItemKey): CaliperEntity {
+export function itemOf(context: CaliperContext, key: ItemKey): AssessmentItem {
   return { id: itemId(context, key), type: "AssessmentItem", name: key.ref, isPartOf: context.assessment };
 }
 
@@ -33,7 +38,7 @@ export function itemOf(context: CaliperContext, key: ItemKey): CaliperEntity {
  * Caliper's Assessment Profile has no section, and a section is a group of items that is part of the test, so it is an
  * assessment that is part of the assessment.
  */
-export function sectionOf(context: CaliperContext, identifier: string): CaliperEntity {
+export function sectionOf(context: CaliperContext, identifier: string): Assessment {
   return {
     id: mintUrn(["section", context.assessment, identifier]),
     type: "Assessment",
@@ -48,7 +53,7 @@ function testAttemptId(context: CaliperContext): string {
 }
 
 /** Returns the candidate's attempt at the test: the candidate session. */
-export function testAttempt(context: CaliperContext, times: AttemptTimes): CaliperEntity {
+export function testAttempt(context: CaliperContext, times: AttemptTimes): Attempt {
   return {
     id: testAttemptId(context),
     type: "Attempt",
@@ -59,7 +64,7 @@ export function testAttempt(context: CaliperContext, times: AttemptTimes): Calip
 }
 
 /** Returns the candidate's attempt at an item instance, which is part of the attempt at the test. */
-export function itemAttempt(context: CaliperContext, key: ItemKey, times: AttemptTimes): CaliperEntity {
+export function itemAttempt(context: CaliperContext, key: ItemKey, times: AttemptTimes): Attempt {
   return {
     id: mintUrn(["attempt", context.session, key.ref, key.instance]),
     type: "Attempt",

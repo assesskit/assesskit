@@ -11,25 +11,51 @@ import { type KeyPair, readToken, request, signToken, type TestClock } from "./f
  * id_token), section 4.1.1 (the client assertion) and LTI 1.3 Core section 5 (the claims it relies on).
  */
 
-const TOOL_ORIGIN = "https://tool.example.com";
-const TOOL_CLIENT_ID = "tool-client-1";
-const TOOL_DEPLOYMENT_ID = "deployment-1";
-const TOOL_LOGIN_URL = `${TOOL_ORIGIN}/lti/login`;
-const TOOL_REDIRECT_URI = `${TOOL_ORIGIN}/lti/launch`;
-const TOOL_JWKS_URL = `${TOOL_ORIGIN}/.well-known/jwks.json`;
-
 const CLAIM = "https://purl.imsglobal.org/spec/lti/claim/";
 const AGS_CLAIM = "https://purl.imsglobal.org/spec/lti-ags/claim/endpoint";
+const AP_CLAIM = "https://purl.imsglobal.org/spec/lti-ap/claim/";
 
-/** The registration that the platform keeps of the tool. */
-export function toolRegistration(overrides: Partial<ToolRegistration> = {}): ToolRegistration {
+/** A tool as the platform knows it and as it knows itself: its client at the platform and its addresses. */
+export interface FakeTool {
+  readonly clientId: string;
+  readonly deploymentId: string;
+  readonly loginUrl: string;
+  readonly redirectUri: string;
+  /** The `target_link_uri` of a launch, which the platform's host takes from the link. */
+  readonly launchUrl: string;
+}
+
+/** The drawing tool that an item of the exam links to. */
+export const DRAWING: FakeTool = {
+  clientId: "tool-client-1",
+  deploymentId: "deployment-1",
+  loginUrl: "https://tool.example.com/lti/login",
+  redirectUri: "https://tool.example.com/lti/launch",
+  launchUrl: "https://tool.example.com/lti/tools/drawing",
+};
+
+/** A proctoring tool: another client, with another key. */
+export const PROCTOR: FakeTool = {
+  clientId: "proctor-client-1",
+  deploymentId: "deployment-1",
+  loginUrl: "https://proctor.example.com/lti/login",
+  redirectUri: "https://proctor.example.com/lti/launch",
+  launchUrl: "https://proctor.example.com/lti/launch",
+};
+
+/** The registration that the platform keeps of the tool, with its public key and the scopes the platform grants it. */
+export function toolRegistration(
+  tool: FakeTool,
+  keys: ReadonlyMap<string, CryptoKey>,
+  scopes: readonly string[],
+): ToolRegistration {
   return {
-    clientId: TOOL_CLIENT_ID,
-    deploymentId: TOOL_DEPLOYMENT_ID,
-    loginUrl: TOOL_LOGIN_URL,
-    redirectUris: [TOOL_REDIRECT_URI],
-    jwksUrl: TOOL_JWKS_URL,
-    ...overrides,
+    clientId: tool.clientId,
+    deploymentIds: [tool.deploymentId],
+    loginUrl: tool.loginUrl,
+    redirectUris: [tool.redirectUri],
+    keys,
+    scopes,
   };
 }
 
@@ -45,9 +71,9 @@ export interface Initiation {
 }
 
 /** Reads the initiation URL as a tool does: the parameters that the specifications require must be there. */
-export function readInitiation(url: string, loginUrl = TOOL_LOGIN_URL): Initiation {
+export function readInitiation(url: string, tool: FakeTool = DRAWING): Initiation {
   const parsed = new URL(url);
-  expect(`${parsed.origin}${parsed.pathname}`).toBe(loginUrl);
+  expect(`${parsed.origin}${parsed.pathname}`).toBe(tool.loginUrl);
   const parameters = parsed.searchParams;
   const get = (name: string): string => {
     const value = parameters.get(name);
@@ -72,6 +98,7 @@ export function readInitiation(url: string, loginUrl = TOOL_LOGIN_URL): Initiati
  */
 export function authenticationParameters(
   initiation: Initiation,
+  tool: FakeTool = DRAWING,
   state = "state-1",
   nonce = "nonce-1",
 ): URLSearchParams {
@@ -79,7 +106,7 @@ export function authenticationParameters(
     ["scope", "openid"],
     ["response_type", "id_token"],
     ["client_id", initiation.clientId],
-    ["redirect_uri", TOOL_REDIRECT_URI],
+    ["redirect_uri", tool.redirectUri],
     ["login_hint", initiation.loginHint],
     ["state", state],
     ["response_mode", "form_post"],
@@ -118,14 +145,21 @@ export interface KeySet {
 
 /**
  * Validates an `id_token` as Security Framework section 5.1.3 and LTI 1.3 Core section 5.3 say a tool must: the signature against the
- * platform's key set by `kid`, `iss`, `aud` (the client id alone), `exp`, `iat`, `nonce`; and the claims of a resource link
- * launch. It returns the claims.
+ * platform's key set by `kid`, `iss`, `aud` (the client id alone), `exp`, `iat`, `nonce`; and the claims every message has. It
+ * returns the claims.
  */
 export async function acceptIdToken(
   idToken: string,
   keySet: KeySet,
-  expected: { issuer: string; nonce: string; clock: TestClock },
+  expected: {
+    issuer: string;
+    nonce: string;
+    clock: TestClock;
+    tool?: FakeTool;
+    messageType?: "LtiResourceLinkRequest" | "LtiStartProctoring";
+  },
 ): Promise<Record<string, unknown>> {
+  const { tool = DRAWING, messageType = "LtiResourceLinkRequest" } = expected;
   const { header, payload } = readToken(idToken);
   expect(header.alg).toBe("RS256");
   const jwk = keySet.keys.find((key) => key.kid === header.kid);
@@ -147,14 +181,14 @@ export async function acceptIdToken(
   );
   expect(valid, "the signature").toBe(true);
   expect(payload.iss).toBe(expected.issuer);
-  expect([payload.aud].flat()).toEqual([TOOL_CLIENT_ID]);
+  expect([payload.aud].flat()).toEqual([tool.clientId]);
   const now = expected.clock.now() / 1000;
   expect(Number(payload.exp)).toBeGreaterThan(now);
   expect(Number(payload.iat)).toBeLessThanOrEqual(now);
   expect(payload.nonce).toBe(expected.nonce);
-  expect(payload[`${CLAIM}message_type`]).toBe("LtiResourceLinkRequest");
+  expect(payload[`${CLAIM}message_type`]).toBe(messageType);
   expect(payload[`${CLAIM}version`]).toBe("1.3.0");
-  expect(payload[`${CLAIM}deployment_id`]).toBe(TOOL_DEPLOYMENT_ID);
+  expect(payload[`${CLAIM}deployment_id`]).toBe(tool.deploymentId);
   expect(typeof payload.sub).toBe("string");
   expect(Array.isArray(payload[`${CLAIM}roles`])).toBe(true);
   expect(payload[`${CLAIM}target_link_uri`]).toBeTruthy();
@@ -188,22 +222,23 @@ export interface Assertion {
 
 /** Signs the client assertion that Security Framework section 4.1.1 describes, with `exp` five minutes after `iat`. */
 export function clientAssertion(
-  tool: KeyPair,
+  keys: KeyPair,
   tokenUrl: string,
   clock: TestClock,
   change: Assertion = {},
+  tool: FakeTool = DRAWING,
 ): Promise<string> {
   const iat = Math.floor(clock.now() / 1000);
   const claims = {
-    iss: TOOL_CLIENT_ID,
-    sub: TOOL_CLIENT_ID,
+    iss: tool.clientId,
+    sub: tool.clientId,
     aud: tokenUrl,
     iat,
     exp: iat + 300,
     jti: crypto.randomUUID(),
     ...Object.fromEntries(Object.entries(change).filter(([name]) => name !== "header" && name !== "signer")),
   };
-  return signToken(claims, change.signer ?? tool, change.header);
+  return signToken(claims, change.signer ?? keys, change.header);
 }
 
 /** The token request of the client-credentials grant with a JWT assertion (Security Framework section 4.1.1). */
@@ -228,5 +263,92 @@ export function tokenRequest(
     url: tokenUrl,
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: form.toString(),
+  });
+}
+
+/** The Assessment Control Service of a Start Proctoring message, as Proctoring Services 1.0 section 4.2.2.6 gives the claim. */
+export function acsClaim(claims: Record<string, unknown>): { url: string; actions: string[] } {
+  const claim = claims[`${AP_CLAIM}acs`];
+  if (typeof claim === "object" && claim !== null && "assessment_control_url" in claim && "actions" in claim) {
+    const { assessment_control_url: url, actions } = claim;
+    if (typeof url === "string" && Array.isArray(actions) && actions.every((item) => typeof item === "string")) {
+      return { url, actions };
+    }
+  }
+  throw new Error("The message has no acs claim with assessment_control_url and actions.");
+}
+
+/** The `session_data` of a Start Proctoring message, which the tool returns unchanged. */
+export function sessionDataOf(claims: Record<string, unknown>): string {
+  const data = claims[`${AP_CLAIM}session_data`];
+  if (typeof data !== "string") throw new Error("The message has no session_data claim.");
+  return data;
+}
+
+/** What the proctoring tool sends back to start the assessment, and what it may change to test the platform's checks. */
+export interface StartAssessment {
+  readonly url: string;
+  readonly issuer: string;
+  readonly sessionData: string;
+  readonly resourceLinkId: string;
+  readonly attemptNumber: number;
+  readonly nonce?: string;
+}
+
+/**
+ * The form that a proctoring tool posts to the start assessment URL (Proctoring Services 1.0 section 4.3): the parameter `JWT`
+ * with a message signed by the tool, which copies the session data, the resource link and the attempt number of the Start
+ * Proctoring message.
+ */
+export async function startAssessmentRequest(
+  tool: FakeTool,
+  keys: KeyPair,
+  clock: TestClock,
+  start: StartAssessment,
+): Promise<HttpRequest> {
+  const iat = Math.floor(clock.now() / 1000);
+  const jwt = await signToken(
+    {
+      iss: tool.clientId,
+      aud: start.issuer,
+      iat,
+      exp: iat + 300,
+      nonce: start.nonce ?? crypto.randomUUID(),
+      [`${CLAIM}message_type`]: "LtiStartAssessment",
+      [`${CLAIM}version`]: "1.3.0",
+      [`${CLAIM}deployment_id`]: tool.deploymentId,
+      [`${CLAIM}resource_link`]: { id: start.resourceLinkId },
+      [`${AP_CLAIM}attempt_number`]: start.attemptNumber,
+      [`${AP_CLAIM}session_data`]: start.sessionData,
+    },
+    keys,
+  );
+  return request({
+    method: "POST",
+    url: start.url,
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ JWT: jwt }).toString(),
+  });
+}
+
+/** The media type of a request to the Assessment Control Service (Proctoring Services 1.0 section 5.1). */
+const CONTROL_TYPE = "application/vnd.ims.lti-ap.v1.control+json";
+
+/** A request to the Assessment Control Service: an action on an attempt, with the token of the proctoring tool. */
+export function controlRequest(
+  url: string,
+  accessToken: string,
+  body: { issuer: string; subject: string; resourceLinkId: string; attemptNumber: number; action: string },
+): HttpRequest {
+  return request({
+    method: "POST",
+    url,
+    headers: { authorization: `Bearer ${accessToken}`, "content-type": CONTROL_TYPE, accept: CONTROL_TYPE },
+    body: JSON.stringify({
+      user: { iss: body.issuer, sub: body.subject },
+      resource_link: { id: body.resourceLinkId },
+      attempt_number: body.attemptNumber,
+      action: body.action,
+    }),
   });
 }

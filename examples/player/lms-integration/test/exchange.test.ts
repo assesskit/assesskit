@@ -1,16 +1,21 @@
 // biome-ignore-all lint/style/useNamingConvention: the names of LTI messages and of AGS scores are camelCase or snake_case by the specifications.
 
+import { AccessError } from "@assesskit/player";
 import type { ViewEnvelope } from "@assesskit/player/protocol";
 import { viewFromJson } from "@assesskit/runtime/delivery";
 import { single } from "@assesskit/runtime/values";
+import { ltiPlatformFrame } from "@interopkit/tool-integration/platform";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { runSettleJob } from "../src/index.ts";
+import { runSettleJob, toolLaunch } from "../src/index.ts";
 import { examFiles } from "./exam.ts";
 import { LINE_ITEM_URL, SUBJECT } from "./fake-lms.ts";
+import { authenticationParameters, DRAWING, readInitiation } from "./fake-tool.ts";
+import { request, textOf } from "./fixture.ts";
 import {
   CANDIDATE,
   DRAW,
   drawing,
+  endpoints,
   launchTool,
   openDrawing,
   requestsOf,
@@ -40,6 +45,28 @@ describe("an exam with an essay and a link to a tool", () => {
     expect(launched.storageTarget).toBe("lti-storage");
     expect(reply.documents).toEqual({ test: "tests/exam.xml", item: "", stimuli: [], lexicons: [] });
     expect(Object.keys(reply.assets)).toEqual([]);
+  });
+
+  it("refuses the authentication request of another user's browser, and leaves the launch for the candidate's own", async () => {
+    const ctx = await rig();
+    await ctx.host.start(CANDIDATE, { seed: 7 });
+    const frame = await ltiPlatformFrame(toolLaunch(CANDIDATE, DRAW, ctx.link, DRAWING), ctx.loginFor());
+    const parameters = authenticationParameters(readInitiation(frame.url));
+    const authenticate = (browser: string) =>
+      ctx.handle(request({ url: `${endpoints.authorization}?${parameters}` }), browser);
+    const refused = await authenticate("someone-else");
+    expect(refused.status).toBe(403);
+    expect(textOf(refused.body)).not.toContain("id_token");
+    expect((await authenticate(CANDIDATE.principal)).status).toBe(200);
+  });
+
+  it("refuses to launch an item for a session that is not the browser's user's, before anything is kept", async () => {
+    const ctx = await rig();
+    await ctx.host.start(CANDIDATE, { seed: 7 });
+    const message = toolLaunch({ ...CANDIDATE, session: "exam-2" }, DRAW, ctx.link, DRAWING);
+    await expect(ltiPlatformFrame(message, ctx.loginFor())).rejects.toBeInstanceOf(AccessError);
+    const other = toolLaunch({ ...CANDIDATE, principal: "someone-else" }, DRAW, ctx.link, DRAWING);
+    await expect(ltiPlatformFrame(other, ctx.loginFor())).rejects.toBeInstanceOf(AccessError);
   });
 
   it("keeps interim progress, and supplies a final score to the requests that the item makes when the candidate leaves it", async () => {

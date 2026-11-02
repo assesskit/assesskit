@@ -5,6 +5,7 @@ import { DataError } from "@assesskit/runtime/errors";
 import { type Fetch, ServiceError } from "@interopkit/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { isDue, type Outbox, runPublishJob, toAgsScore } from "../src/index.ts";
+import { examFiles } from "./exam.ts";
 import { CANDIDATE, DRAW, deferred, drawing, openDrawing, type Rig, rig, supplyEssay } from "./rig.ts";
 
 afterEach(() => vi.useRealTimers());
@@ -134,14 +135,34 @@ describe("runPublishJob", () => {
     const ctx = await ended();
     const none = { ...ctx.jobs.publish, launchOf: async () => undefined };
     expect(await runPublishJob(SESSION, none)).toBe("failed");
-    expect((await ctx.outbox.progress(SESSION)).failed).toContain("no launch with a line item");
+    expect((await ctx.outbox.progress(SESSION)).failed).toContain("no launch of a user with a line item");
     expect(await runPublishJob(SESSION, ctx.jobs.publish)).toBe("failed");
     expect(ctx.lms.received).toEqual([]);
 
     const other = await ended();
-    const { ags: _ags, ...bare } = other.launch as typeof other.launch & { ags?: unknown };
-    expect(await runPublishJob(SESSION, { ...other.jobs.publish, launchOf: async () => bare as never })).toBe("failed");
+    const bare = { ...other.launch, services: {} };
+    expect(await runPublishJob(SESSION, { ...other.jobs.publish, launchOf: async () => bare })).toBe("failed");
     expect(other.lms.received).toEqual([]);
+
+    const anonymous = await ended();
+    const nobody = { ...anonymous.launch, user: {} };
+    expect(await runPublishJob(SESSION, { ...anonymous.jobs.publish, launchOf: async () => nobody })).toBe("failed");
+    expect(anonymous.lms.received).toEqual([]);
+  });
+
+  it("marks the session failed when the results have no maximum and the line item is gone, and does not try again", async () => {
+    const ctx = await rig(examFiles());
+    const tool = await openDrawing(ctx);
+    await ctx.send({ type: "submit", item: DRAW });
+    await tool.post(drawing(ctx, 10));
+    await supplyEssay(ctx, 8);
+    await ctx.host.proctor(SESSION, { type: "end-test" });
+    ctx.lms.lineItemGone = true;
+    expect(await runPublishJob(SESSION, ctx.jobs.publish)).toBe("failed");
+    expect((await ctx.outbox.progress(SESSION)).failed).toContain("no longer exists");
+    ctx.lms.lineItemGone = false;
+    expect(await runPublishJob(SESSION, ctx.jobs.publish)).toBe("failed");
+    expect(ctx.lms.received).toEqual([]);
   });
 
   it("marks the session failed when the report gives no score, and a rerun does not try again", async () => {
@@ -249,17 +270,19 @@ describe("toAgsScore", () => {
   const at = "2023-11-14T22:13:20.000Z";
 
   it("maps the progress of the scoring to the grading progress, and always completes the activity", () => {
-    expect(toAgsScore({ progress: "complete", timestamp: at, score: 3, maximum: 4 }, at)).toEqual({
+    expect(toAgsScore({ progress: "complete", timestamp: at, score: 3, maximum: 4 }, "u1", at)).toEqual({
+      userId: "u1",
       activityProgress: "Completed",
       gradingProgress: "FullyGraded",
       timestamp: at,
       scoreGiven: 3,
       scoreMaximum: 4,
     });
-    expect(toAgsScore({ progress: "awaiting-service", timestamp: at, score: 3, maximum: 4 }, at).gradingProgress).toBe(
-      "Pending",
-    );
-    expect(toAgsScore({ progress: "awaiting-person", timestamp: at, maximum: 4 }, at)).toEqual({
+    expect(
+      toAgsScore({ progress: "awaiting-service", timestamp: at, score: 3, maximum: 4 }, "u1", at).gradingProgress,
+    ).toBe("Pending");
+    expect(toAgsScore({ progress: "awaiting-person", timestamp: at, maximum: 4 }, "u1", at)).toEqual({
+      userId: "u1",
       activityProgress: "Completed",
       gradingProgress: "PendingManual",
       timestamp: at,
@@ -269,11 +292,11 @@ describe("toAgsScore", () => {
   it("tells a raised negative score in the comment, and takes the time that it is given and not the score's", () => {
     const later = "2023-11-14T22:13:21.000Z";
     expect(
-      toAgsScore({ progress: "complete", timestamp: at, score: 0, maximum: 10, rawScore: -2.5 }, later),
+      toAgsScore({ progress: "complete", timestamp: at, score: 0, maximum: 10, rawScore: -2.5 }, "u1", later),
     ).toMatchObject({ scoreGiven: 0, comment: "Raw score: -2.5", timestamp: later });
   });
 
   it("throws no error of its own for a report with neither score nor maximum", () => {
-    expect(() => toAgsScore({ progress: "complete", timestamp: at }, at)).not.toThrow(DataError);
+    expect(() => toAgsScore({ progress: "complete", timestamp: at }, "u1", at)).not.toThrow(DataError);
   });
 });
