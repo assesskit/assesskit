@@ -330,6 +330,7 @@ These numbers are fixed and cannot be replaced:
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | 100       | Runs of template processing for its constraints (INFO section 5.150), fixed by the specification.                                   |
 | 256       | Levels of the JSON content of a view that `viewFromJson` reads, the depth that the XML reader allows.                               |
+| 65,536    | Characters of a module resolution file that `parseModuleResolution` reads; a longer file is a `DataError` before it is parsed.      |
 | 1,100     | The width and the precision of a printed variable format; a larger one is ignored.                                                  |
 | 1,000,000 | Entries, states and transitions together, that the matcher of a pattern keeps of its automaton; beyond it the matcher starts again. |
 

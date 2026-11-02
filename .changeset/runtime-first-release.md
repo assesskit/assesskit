@@ -28,6 +28,7 @@ the end record, so that an archive of more than 65,535 entries is read whole and
 record whose count differs from the entries is a `ReadError`. A document that declares ISO-8859-1 is read byte for byte.
 A validation lists at most `maxFindings` issues, 1,000 by default, and ends a longer list with the error
 `assesskit/validate/findings-stopped`; `validateResults`, `validatePnpNamespace` and `validateXmlFiles` take the option too.
+`parseModuleResolution` refuses a file longer than 65,536 characters before it parses it.
 
 `readItemVariables` and `readTestInputs` of `@assesskit/runtime/delivery` read a stored results report back into the inputs of
 `runResponseProcessing` and `runOutcomeProcessing`, so that a host can score a fixed item again; the guide has the recipe. For that, a

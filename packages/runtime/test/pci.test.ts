@@ -442,6 +442,20 @@ describe("module resolution files", () => {
     ]);
   });
 
+  it("reads a file of 65,536 characters and refuses a longer one before it parses it", () => {
+    const filled = (length: number): string => {
+      const head = '{"paths": {"a": "modules/';
+      return `${head}${"a".repeat(length - head.length - 3)}"}}`;
+    };
+    expect(filled(65_536)).toHaveLength(65_536);
+    expect(parseModuleResolution(filled(65_536)).paths.get("a")).toMatch(/^modules\/a+$/);
+    expect(() => parseModuleResolution(filled(65_537))).toThrow(
+      "The module resolution file has 65537 characters, more than the 65536 that a module resolution file may have.",
+    );
+    // Text that would parse into millions of objects is refused by its length, as it is not read.
+    expect(() => parseModuleResolution(`[${"{},".repeat(1_000_000)}{}]`)).toThrow(/more than the 65536/);
+  });
+
   it("refuses text that is not the file: not JSON, not an object, a bad waitSeconds, a path that is not a string", () => {
     expect(() => parseModuleResolution("{")).toThrow("The module resolution file must be JSON: ");
     expect(() => parseModuleResolution("[]")).toThrow(
