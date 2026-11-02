@@ -35,7 +35,7 @@ export const BUDGETS = {
  * other rows, rounded up to one significant digit.
  */
 export const LONGSIGHT_BUDGETS = {
-  /** Reading the 223 example items that both implementations read. */
+  /** Reading the example items that both implementations read and score, 215 of them. */
   parse: { time: 500, ratio: 1.5 },
   /** Validating each of them. */
   validate: { time: 80, ratio: 4.5 },
