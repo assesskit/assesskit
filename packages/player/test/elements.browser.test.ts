@@ -1533,10 +1533,8 @@ describe("a recording that starts by itself and is kept", () => {
       const { scene, files, status, recording } = open('data-ak-record-start="0"');
       await recording();
       for (const track of listened.mock.contexts) {
-        if (!(track instanceof MediaStreamTrack)) continue;
-        track.stop();
-        // A browser fires it when the device goes; a stop by the page does not.
-        track.dispatchEvent(new Event("ended"));
+        // A browser fires it when the device goes. The test cannot stop the track first: Firefox then calls no listener.
+        if (track instanceof MediaStreamTrack) track.dispatchEvent(new Event("ended"));
       }
       expect(status()).toBe("The microphone could not be used.");
       await scene.interaction().settled();

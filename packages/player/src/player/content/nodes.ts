@@ -37,6 +37,9 @@ const NOT_DRAWN: ReadonlySet<string> = new Set(["stylesheet", "catalog-info", "p
  */
 const RUBRIC_USES: ReadonlySet<string> = new Set(["instructions", "scoring", "navigation"]);
 
+/** The most children that one call of `append` takes. */
+const APPEND_STEP = 10_000;
+
 const isInteraction = (node: ModelNode): node is Interaction => node.kind.endsWith("-interaction");
 const isRubricBlock = (node: ModelNode): node is RubricBlock | TestRubricBlock => node.kind === "rubric-block";
 const isPrintedVariable = (node: ModelNode): node is PrintedVariable => node.kind === "printed-variable";
@@ -68,8 +71,11 @@ export function buildElement(
 ): Element {
   const element = document.createElementNS(XHTML_NAMESPACE, name);
   setAttributes(element, node, context);
-  // One call each: a spread of the children of a wide element throws a RangeError above about 100,000.
-  for (const child of children) element.append(child);
+  // A spread of all the children of a wide element throws a RangeError above about 100,000, and WebKit takes time that grows
+  // with the square of the text nodes that are appended one by one, so they go in steps.
+  for (let start = 0; start < children.length; start += APPEND_STEP) {
+    element.append(...children.slice(start, start + APPEND_STEP));
+  }
   return element;
 }
 
