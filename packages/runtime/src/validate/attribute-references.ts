@@ -1,6 +1,6 @@
 import type { AttributeDef, AttributeType, ElementVisit } from "../asi/index.js";
 import type { Findings } from "./findings.js";
-import { elementPath } from "./model-access.js";
+import { elementPath, isWithin } from "./model-access.js";
 import type { StaticType } from "./static-type.js";
 
 /** The base types a reference to a number may name, by the type of the attribute. */
@@ -68,7 +68,7 @@ export class AttributeReferences {
   visit(visit: ElementVisit): void {
     const references = referencesOf(visit.attributes);
     if (references.length === 0) return;
-    const templateProcessing = this.within(visit, "qti-template-processing");
+    const templateProcessing = isWithin(visit, "qti-template-processing");
     for (const { definition, type } of references) {
       for (const identifier of this.identifiersOf(visit.model[definition.property])) {
         const found = this.lookup(identifier, templateProcessing);
@@ -85,11 +85,6 @@ export class AttributeReferences {
         }
       }
     }
-  }
-
-  private within(visit: ElementVisit, name: string): boolean {
-    for (let at = visit.parent; at !== undefined; at = at.parent) if (at.name === name) return true;
-    return false;
   }
 
   /** Returns the identifiers an attribute value names: the value, or the items of a list, when they are not numbers. */

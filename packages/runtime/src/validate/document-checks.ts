@@ -2,7 +2,7 @@ import { type ElementVisit, SCORE_COVERS_CLASS, SCORING_RUBRIC_CLASS } from "../
 import { XINCLUDE_NAMESPACE } from "../xml/index.js";
 import { checkPatternText } from "./expressions.js";
 import type { Findings } from "./findings.js";
-import { elementPath, textOf } from "./model-access.js";
+import { elementPath, isWithin, textOf } from "./model-access.js";
 
 const TEST = "qti-assessment-test";
 const ITEM_BODY = "qti-item-body";
@@ -38,7 +38,7 @@ export class DocumentChecks {
     if (mask !== undefined) {
       checkPatternText(this.findings, mask, `The pattern-mask of the ${visit.name}`, elementPath(visit));
     }
-    if (visit.name.endsWith("-interaction") && this.within(visit, "qti-rubric-block")) {
+    if (visit.name.endsWith("-interaction") && isWithin(visit, "qti-rubric-block")) {
       const message = `The ${visit.name} is inside a qti-rubric-block, which must not contain interactions.`;
       this.findings.error("assesskit/validate/rubric-interaction", message, elementPath(visit));
     }
@@ -47,7 +47,7 @@ export class DocumentChecks {
       const message = `The qti-rubric-block has the class ${SCORE_COVERS_CLASS}, which only a rubric block of the test is recognized by; here it is an ordinary rubric block.`;
       this.findings.warning("assesskit/covers/malformed", message, elementPath(visit));
     }
-    if (this.hasClass(visit, SCORING_RUBRIC_CLASS) && visit.parent?.name !== TEST && !this.within(visit, ITEM_BODY)) {
+    if (this.hasClass(visit, SCORING_RUBRIC_CLASS) && visit.parent?.name !== TEST && !isWithin(visit, ITEM_BODY)) {
       const message = `The qti-rubric-block has the class ${SCORING_RUBRIC_CLASS}, which only a rubric block of an item body or of the test is recognized by; here it is an ordinary rubric block.`;
       this.findings.warning("assesskit/scoring-rubric/malformed", message, elementPath(visit));
     }
@@ -59,11 +59,6 @@ export class DocumentChecks {
       const message = `The ${visit.name} holds an xi:include, which must be resolved before the document is validated or run.`;
       this.findings.error("assesskit/validate/unresolved-include", message, elementPath(visit));
     }
-  }
-
-  private within(visit: ElementVisit, name: string): boolean {
-    for (let at = visit.parent; at !== undefined; at = at.parent) if (at.name === name) return true;
-    return false;
   }
 
   private hasClass(visit: ElementVisit, token: string): boolean {

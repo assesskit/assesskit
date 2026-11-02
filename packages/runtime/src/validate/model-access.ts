@@ -17,6 +17,18 @@ export function elementPath(visit: ElementVisit): string {
 }
 
 /**
+ * Tells whether a visited element lies inside an element of a name.
+ *
+ * @param visit - The element that the walk of the document reached.
+ * @param name - The name of the element around it, such as `qti-template-processing`.
+ * @returns Whether an ancestor has the name.
+ */
+export function isWithin(visit: ElementVisit, name: string): boolean {
+  for (let at = visit.parent; at !== undefined; at = at.parent) if (at.name === name) return true;
+  return false;
+}
+
+/**
  * Returns a property of a model when it is a number, else `undefined`: a reference to a variable is a string.
  *
  * @param model - The properties of a model.
