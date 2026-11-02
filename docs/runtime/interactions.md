@@ -217,11 +217,16 @@ engine stores give the same descriptor again when a session resumes.
 White space around the number is ignored. In base 10 the text is a decimal with sign, point and exponent; in another base it is an
 integer. Text that is no number has `stringValue` only, and the empty string is NULL.
 
+A fraction typed as `1/2` is such a text: QTI has no fraction, so it has no numeric value in processing. An item that takes
+fractions has one of three shapes: a `string` response that lists the accepted spellings (`qti-map-response` or `qti-match`
+with `1/2` and `2/4`, say), two boxes for the numerator and the denominator, or a custom operator that reads the fraction.
+
 ```ts
 import { numericRecord } from "@assesskit/runtime/interactions";
 
 [...numericRecord("12.50e-3").fields].map(([name, field]) => [name, field.value]);
 // => [["stringValue", "12.50e-3"], ["floatValue", 0.0125], ["leftDigits", 2], ["rightDigits", 2], ["ndp", 5], ["nsf", 4], ["exponent", -3]]
+[...numericRecord("1/2").fields].map(([name, field]) => [name, field.value]); // => [["stringValue", "1/2"]]
 numericRecord(""); // => null
 ```
 
