@@ -250,6 +250,21 @@ describe("createContentRoot", () => {
     expect(computed(el(root.root, ".x"), "color")).toBe("rgb(1, 2, 3)");
   });
 
+  it("lets go of the sheets that the content shown does not hold, since the URL of a gate changes with each view", async () => {
+    const { fetcher, requests } = fakeFetch({
+      "items/q1/style/a.css": ".x { color: rgb(1, 2, 3); }",
+      "items/q1/style/b.css": ".x { color: rgb(4, 5, 6); }",
+    });
+    const { root } = createRoot({ fetch: fetcher });
+    const showing = (sheet: string) =>
+      root.show({ body: { nodes: itemBody('<p class="x">x</p>') }, stylesheets: [sheet] });
+    await showing("items/q1/style/a.css");
+    await showing("items/q1/style/b.css");
+    await showing("items/q1/style/a.css");
+    expect(requests.map(({ url }) => url.slice(-5))).toEqual(["a.css", "b.css", "a.css"]);
+    expect(computed(el(root.root, ".x"), "color")).toBe("rgb(1, 2, 3)");
+  });
+
   it("shows the content and adopts the stylesheets that loaded when one cannot be fetched, and rejects with AssesskitError", async () => {
     const { fetcher, requests } = fakeFetch({
       "items/q1/style/ok.css": ".x { color: rgb(1, 2, 3); }",

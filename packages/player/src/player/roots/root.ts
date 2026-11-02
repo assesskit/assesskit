@@ -170,8 +170,8 @@ export function createContentRoot(host: HTMLElement, options: ContentRootOptions
   const stage = html("div", { class: "ak-root-stage" });
   shadow.append(stage);
 
-  const sheetFor = (path: string): Promise<CSSStyleSheet> => {
-    const url = new URL(assets(path), document.baseURI).href;
+  const urlOf = (path: string): string => new URL(assets(path), document.baseURI).href;
+  const sheetFor = (url: string): Promise<CSSStyleSheet> => {
     let loading = sheets.get(url);
     if (loading === undefined) {
       loading = loadStylesheet({ url, origins }, fetcher);
@@ -197,7 +197,11 @@ export function createContentRoot(host: HTMLElement, options: ContentRootOptions
       generation += 1;
       const mine = generation;
       adoptItemSheets([]);
-      const loaded = await Promise.allSettled((content.stylesheets ?? []).map(sheetFor));
+      const urls = (content.stylesheets ?? []).map(urlOf);
+      // Only the sheets of the content shown are kept: the URL of a gate holds a token that changes with each view, so a
+      // sheet of an earlier view would be held for the life of the root and never asked for again.
+      for (const url of sheets.keys()) if (!urls.includes(url)) sheets.delete(url);
+      const loaded = await Promise.allSettled(urls.map(sheetFor));
       if (mine === generation) {
         adoptItemSheets(loaded.flatMap((result) => (result.status === "fulfilled" ? [result.value] : [])));
         await typesetter?.typeset(shadow);
