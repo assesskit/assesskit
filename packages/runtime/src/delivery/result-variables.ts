@@ -42,7 +42,10 @@ export function reportedValues(variables: readonly ResultVariable[]): ReportedVa
     switch (variable.kind) {
       case "response":
         responses.set(variable.identifier, variable.candidateResponse);
-        if (variable.correctResponse !== undefined) keys.set(variable.identifier, variable.correctResponse.value);
+        if (variable.correctResponse !== undefined) {
+          checkRecord(variable.correctResponse, "The correct response of a variable of a result must be an object");
+          keys.set(variable.identifier, variable.correctResponse.value);
+        }
         break;
       case "outcome":
         outcomes.set(variable.identifier, variable.value);
@@ -72,6 +75,7 @@ export function fitReported(
   value: Value | null,
 ): Value | null {
   if (value === null) return null;
+  checkRecord(value, `The value of the ${kind} variable ${identifier} of the result must be an object`);
   const fitted = fitValue(value, type);
   if (fitted === undefined) {
     throw new DataError(

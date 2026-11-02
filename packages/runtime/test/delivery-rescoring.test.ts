@@ -27,6 +27,7 @@ import {
   validateResults,
   writeResults,
 } from "../src/index.js";
+import { fuzzJson } from "./fuzz.js";
 import {
   ADAPTIVE,
   act,
@@ -530,6 +531,18 @@ describe("readItemVariables", () => {
     expect(() =>
       readItemVariables(MIXED, json('{"variables":[{"kind":"context","identifier":"LEVEL","value":"x"}]}')),
     ).toThrow(DataError);
+    expect(() =>
+      readItemVariables(
+        MIXED,
+        json('{"variables":[{"kind":"response","identifier":"RESPONSE","correctResponse":null}]}'),
+      ),
+    ).toThrow(DataError);
+    expect(() =>
+      readItemVariables(
+        MIXED,
+        json('{"variables":[{"kind":"response","identifier":"RESPONSE","candidateResponse":5}]}'),
+      ),
+    ).toThrow("The value of the response variable RESPONSE of the result must be an object, found 5.");
   });
 });
 
@@ -843,6 +856,14 @@ describe("rescoring a report", () => {
 });
 
 describe("properties", () => {
+  it("reads a result or a report of any other shape with a DataError, and nothing else", () => {
+    // Under the seed 4 the fourth instance is `d1`, whose result holds the key that template processing set.
+    const { engine, state } = sit(ITEMS, 4);
+    const report: AssessmentResult = JSON.parse(JSON.stringify(engine.results(state)));
+    fuzzJson((json) => readTestInputs(STRUCTURE, json as AssessmentResult, ITEM_MAP), [report]);
+    fuzzJson((json) => readItemVariables(ITEMS.d1 ?? fail("No item."), json as ItemResult), [resultOf(report, "d1")]);
+  });
+
   it("reads the same inputs from a report that was written and read as from the report itself", () => {
     fc.assert(
       fc.property(fc.integer({ min: 1, max: 40 }), fc.integer({ min: 0, max: 4 }), (seed, count) => {
