@@ -1528,9 +1528,12 @@ describe("a recording that starts by itself and is kept", () => {
 
     it("ends a recording whose microphone went away, keeps the bytes, says so, and lets the candidate go on", async (context) => {
       await needsAudio(context, audioContextRuns());
-      const { scene, files, streams, status, recording } = open('data-ak-record-start="0"');
+      // The tracks that the element listens to, which Firefox does not give again from getTracks of the stream.
+      const listened = vi.spyOn(MediaStreamTrack.prototype, "addEventListener");
+      const { scene, files, status, recording } = open('data-ak-record-start="0"');
       await recording();
-      for (const track of first(streams).getTracks()) {
+      for (const track of listened.mock.contexts) {
+        if (!(track instanceof MediaStreamTrack)) continue;
         track.stop();
         // A browser fires it when the device goes; a stop by the page does not.
         track.dispatchEvent(new Event("ended"));
