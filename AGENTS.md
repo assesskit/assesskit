@@ -223,6 +223,9 @@ in some browsers and untested in the others.
   and accepts a result, a `ReadError` or a `SecurityError`, nothing else.
 - A browser test waits for a condition with `waitFor` of `test/wait.ts`, never with `vi.waitFor`, whose limit of one second a busy
   host does not meet; for media it waits for the events of the recording and moves the timers by hand, never for a time.
+- A browser test that records waits with `heardFor` of `test/audio.ts` until the audio contexts have played the seconds it needs,
+  never for real time: a busy host stalls the clock of a context, and the recording holds a header and no sound. The fake
+  microphone presses a button first, because WebKit keeps an audio context suspended without a recent gesture.
 - The browser files of the player have size budgets in `packages/player/test/size-budgets.ts`; `size.test.ts` bundles each entry
   point and fails when a file is above its budget after gzip ([size.md](docs/player/size.md)).
 
