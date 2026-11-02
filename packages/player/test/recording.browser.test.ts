@@ -105,6 +105,26 @@ describe("recording", () => {
     expect(blob.size).toBeGreaterThan(0);
   });
 
+  it("gives what was recorded when the tracks of the recorder of the browser ended before the stop", async (context) => {
+    if (typeof MediaRecorder === "undefined") context.skip();
+    await needsAudio(context, audioContextRuns());
+    const type = ["audio/webm", "audio/ogg", "audio/mp4"].find((candidate) => MediaRecorder.isTypeSupported(candidate));
+    trackAudioContexts();
+    const stream = await tone();
+    const started = vi.spyOn(MediaRecorder.prototype, "start");
+    const recording = await startRecording(stream, { kind: "recorder", mimeType: type ?? "" }, WORKLET);
+    await heardFor(0.2);
+    const recorder = started.mock.contexts[0];
+    if (recorder === undefined) throw new Error("The recorder did not start.");
+    const inactive = new Promise((resolve) => recorder.addEventListener("stop", resolve, { once: true }));
+    for (const track of stream.getTracks()) track.stop();
+    await inactive;
+    // The recorder stopped by itself, so a stop now finds it inactive, and fires no event.
+    expect(recorder.state).toBe("inactive");
+    const blob = await recording.stop();
+    expect(blob.size).toBeGreaterThan(0);
+  });
+
   it("records 16-bit mono PCM through the worklet into a WAV file", async (context) => {
     await needsAudio(context, audioContextRuns());
     trackAudioContexts();

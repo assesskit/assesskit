@@ -1526,6 +1526,22 @@ describe("a recording that starts by itself and is kept", () => {
       expect(files.filled).toEqual([]);
     });
 
+    it("ends a recording whose microphone went away, keeps the bytes, says so, and lets the candidate go on", async (context) => {
+      await needsAudio(context, audioContextRuns());
+      const { scene, files, streams, status, recording } = open('data-ak-record-start="0"');
+      await recording();
+      for (const track of first(streams).getTracks()) {
+        track.stop();
+        // A browser fires it when the device goes; a stop by the page does not.
+        track.dispatchEvent(new Event("ended"));
+      }
+      expect(status()).toBe("The microphone could not be used.");
+      await scene.interaction().settled();
+      await waitFor(() => expect(files.filled).toHaveLength(1));
+      expect(scene.responses).toEqual([{ responseIdentifier: "R", value: single("file", first(files.reserved)) }]);
+      expect(status()).toBe("The microphone could not be used.");
+    });
+
     it("takes the response away and offers Record again when the bytes cannot be stored while the candidate can act", async (context) => {
       await needsAudio(context, audioContextRuns());
       const { scene, stop, record, status, recording } = open('data-ak-record-start="0"', fakeFiles({ fill: true }));

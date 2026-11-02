@@ -285,16 +285,17 @@ that the runtime knows nothing of them and another player ignores them:
 A value that is not a whole number of seconds counts as absent. A blueprint's prepare and respond times are one item with
 `max-time` of their sum and the prompt on screen throughout; no item needs extra seconds for storing.
 
-| Event                                                         | Happens                                                                                                  |
-| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Item shown with a start and no response                       | Type check, `reserve`, microphone; a countdown; the status says once that the recording starts by itself |
-| The countdown ends, or Record is pressed                      | The recording starts, the response names the file, and the clock counts down the limit                   |
-| While recording                                               | The part that plays the file and Remove stay hidden: they would show a file with no bytes                |
-| Stop, or the limit                                            | The recorder stops, `fill` stores the bytes, and the file shows                                          |
-| The interaction locks, or the element leaves the page         | The same: stop and `fill`, and the microphone is let go of. A countdown ends with nothing kept           |
-| The candidate goes on or submits                              | `settled()` waits for the recorder to stop and ends a countdown; `fill` goes on behind it                |
-| The mount is destroyed during a recording                     | The same; the end of the mount does not abort `fill`                                                     |
-| The item is shown with a response, locked, or `record: false` | Nothing starts                                                                                           |
+| Event                                                         | Happens                                                                                                            |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Item shown with a start and no response                       | Type check, `reserve`, microphone; a countdown; the status says once that the recording starts by itself           |
+| The countdown ends, or Record is pressed                      | The recording starts, the response names the file, and the clock counts down the limit                             |
+| While recording                                               | The part that plays the file and Remove stay hidden: they would show a file with no bytes                          |
+| Stop, or the limit                                            | The recorder stops, `fill` stores the bytes, and the file shows                                                    |
+| The microphone goes away, as when a headset is unplugged      | The recording ends with what it holds: `fill` stores it, and the status says that the microphone could not be used |
+| The interaction locks, or the element leaves the page         | The same: stop and `fill`, and the microphone is let go of. A countdown ends with nothing kept                     |
+| The candidate goes on or submits                              | `settled()` waits for the recorder to stop and ends a countdown; `fill` goes on behind it                          |
+| The mount is destroyed during a recording                     | The same; the end of the mount does not abort `fill`                                                               |
+| The item is shown with a response, locked, or `record: false` | Nothing starts                                                                                                     |
 
 | Failure                                                 | Result                                                                                                                                                                                                                 |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

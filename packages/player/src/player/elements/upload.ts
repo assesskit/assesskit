@@ -386,6 +386,16 @@ export class UploadInteractionElement extends InteractionElement {
     this.#status.classList.add("ak-recording");
     this.#count(this.#attributes.limit, messages.uploadTimeLeft, () => void this.#end());
     this.respond(single("file", prepared.file));
+    for (const track of prepared.stream.getTracks()) {
+      track.addEventListener("ended", () => this.#microphoneLost(recording, messages), { once: true });
+    }
+  }
+
+  /** Ends a recording whose microphone went away, as when a headset is unplugged, and keeps what it holds. */
+  #microphoneLost(recording: Recording, messages: Messages): void {
+    if (this.#recording !== recording) return;
+    void this.#end();
+    this.#status.textContent = messages.uploadNoMicrophone;
   }
 
   /** Gives up a countdown, or a recording that has not started: the microphone is let go of and the reservation stays unfilled. */

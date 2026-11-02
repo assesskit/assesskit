@@ -48,18 +48,29 @@ export function chooseRecording(accepted: readonly string[] | undefined): Record
   return wav === undefined ? undefined : { kind: "wav", mimeType: wav };
 }
 
-/** Records with the recorder of the browser. */
+/**
+ * Records with the recorder of the browser.
+ *
+ * @remarks
+ * A recorder stops by itself when the tracks of its stream end, as when a headset is unplugged or the permission is
+ * taken back, and then a call of `stop` does nothing and fires no event. So the listener is there from the start, and the
+ * recording ends with what the recorder delivered, however it stopped.
+ *
+ * @see {@link https://www.w3.org/TR/mediastream-recording/#dom-mediarecorder-stop | MediaStream Recording, stop}
+ */
 function recordWithRecorder(stream: MediaStream, mimeType: string): Recording {
   const chunks: Blob[] = [];
   const recorder = new MediaRecorder(stream, { mimeType });
   recorder.addEventListener("dataavailable", (event) => chunks.push(event.data));
+  const stopped = new Promise<Blob>((resolve) => {
+    recorder.addEventListener("stop", () => resolve(new Blob(chunks, { type: mimeType })), { once: true });
+  });
   recorder.start();
   return {
-    stop: () =>
-      new Promise((resolve) => {
-        recorder.addEventListener("stop", () => resolve(new Blob(chunks, { type: mimeType })), { once: true });
-        recorder.stop();
-      }),
+    stop: () => {
+      if (recorder.state !== "inactive") recorder.stop();
+      return stopped;
+    },
   };
 }
 
