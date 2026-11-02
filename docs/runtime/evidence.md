@@ -154,11 +154,15 @@ flowchart LR
   rule["A rule: file, line,<br/>text without it, test"] --> copy["Copy of the repository"]
   copy --> base{"The test passes<br/>on the unchanged copy?"}
   base -->|no| fix["Fix the test first"]
+  base -->|out of time| slow["TIMED OUT:<br/>run it again on a quieter host"]
   base -->|yes| remove["Remove the rule in the copy"]
   remove --> run{"The test fails?"}
   run -->|yes| ok["The rule is guarded"]
   run -->|no| add["Add a test that fails without it"]
+  run -->|run stopped at its limit| slow
 ```
+
+A host with other work to do makes a run slow, and a slow run says nothing about a rule. A test that runs out of time on the unchanged copy, and a run of the test file that is stopped at 300 s, are reported as `TIMED OUT` and not as `UNGUARDED`; `pnpm check:rules` ends with 1 when a rule is not guarded, with 2 when every rule that could be judged is guarded and a run timed out, and with 0 otherwise. A test that runs out of time on the copy without the rule counts as failing, because a removed deadline shows in that way.
 
 | Group                | What is removed                                                                                                                                                                               | Test file                                                            |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
@@ -250,8 +254,8 @@ its point (`5.`), which the information model gives and the oracle does not; the
 
 ### The second oracle
 
-Longsight is not certified by 1EdTech. Amp-up `qti3-item-player` (AU) is a Vue 2 component that the Amp-up test player, certified
-by 1EdTech at Basic and Advanced delivery, is built on. `differential/amp-up.ts` runs it in jsdom, a window without a screen,
+Longsight is not certified by 1EdTech. Amp-up `qti3-item-player` (AU) is the Vue 2 component of the Amp-up test player, which holds
+the 1EdTech certifications for QTI 3 delivery at Basic and Advanced. `differential/amp-up.ts` runs it in jsdom, a window without a screen,
 as a scoring system uses it: the player loads the item, its interactions make their state, and the responses of the case
 replace the response values of that state, which the player restores and scores with `scoreAttempt`.
 

@@ -179,8 +179,8 @@ function withResponses(state: ItemState, responses: ItemCase["responses"]): Item
 }
 
 /**
- * Amp-up.io `qti3-item-player`, the second oracle for items: the Vue 2 component that is certified for QTI 3 Advanced
- * delivery, run in a window without a screen. The player loads the item and its interactions make their state; the
+ * Amp-up.io `qti3-item-player`, the second oracle for items: the Vue 2 component of a test player that holds the 1EdTech
+ * certification for QTI 3 Advanced delivery, run in a window without a screen. The player loads the item and its interactions make their state; the
  * responses of the case replace the response values of that state, which the player restores and scores with `scoreAttempt`,
  * as a scoring system does with the state of a candidate. The player draws template values with `Math.random`, which the
  * window gets from the seeded generator of the other oracle. An item is not accepted when it holds a `qti-` element that
