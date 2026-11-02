@@ -12,7 +12,7 @@ import { rubricBlocksFor } from "@assesskit/runtime/content";
 import { DataError } from "@assesskit/runtime/errors";
 import { resolveReference } from "@assesskit/runtime/package";
 import type { XmlElement } from "@assesskit/runtime/xml";
-import { XHTML_NAMESPACE } from "../internal.js";
+import { appendAll, XHTML_NAMESPACE } from "../internal.js";
 import { setAttributes } from "./attributes.js";
 import type { RenderContext } from "./context.js";
 import { renderForeign } from "./foreign.js";
@@ -36,9 +36,6 @@ const NOT_DRAWN: ReadonlySet<string> = new Set(["stylesheet", "catalog-info", "p
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, rubric block}
  */
 const RUBRIC_USES: ReadonlySet<string> = new Set(["instructions", "scoring", "navigation"]);
-
-/** The most children that one call of `append` takes. */
-const APPEND_STEP = 10_000;
 
 const isInteraction = (node: ModelNode): node is Interaction => node.kind.endsWith("-interaction");
 const isRubricBlock = (node: ModelNode): node is RubricBlock | TestRubricBlock => node.kind === "rubric-block";
@@ -71,11 +68,7 @@ export function buildElement(
 ): Element {
   const element = document.createElementNS(XHTML_NAMESPACE, name);
   setAttributes(element, node, context);
-  // A spread of all the children of a wide element throws a RangeError above about 100,000, and WebKit takes time that grows
-  // with the square of the text nodes that are appended one by one, so they go in steps.
-  for (let start = 0; start < children.length; start += APPEND_STEP) {
-    element.append(...children.slice(start, start + APPEND_STEP));
-  }
+  appendAll(element, children);
   return element;
 }
 

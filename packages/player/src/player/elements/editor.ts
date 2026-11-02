@@ -1,5 +1,5 @@
 import type { Messages } from "../../messages/index.js";
-import { html, XHTML_NAMESPACE } from "../internal.js";
+import { appendAll, html, XHTML_NAMESPACE } from "../internal.js";
 import { NO_ASSISTANCE, type TextField } from "./text.js";
 
 /**
@@ -126,7 +126,7 @@ function readNodes(nodes: NodeListOf<ChildNode>): Node[] {
     const children = readNodes(node.childNodes);
     if (name === undefined) return children;
     const element = document.createElement(name);
-    element.append(...children);
+    appendAll(element, children);
     return [element];
   });
 }
@@ -207,7 +207,8 @@ export class EditorField implements TextField {
    * @param text - The XHTML.
    */
   set text(text: string) {
-    this.area.replaceChildren(...readXhtml(text));
+    this.area.replaceChildren();
+    appendAll(this.area, readXhtml(text));
   }
 
   /** Whether the candidate cannot change the text. */

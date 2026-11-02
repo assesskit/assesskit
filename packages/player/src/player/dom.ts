@@ -41,6 +41,25 @@ export function svg<TTag extends keyof SVGElementTagNameMap>(
   return element;
 }
 
+/**
+ * The most nodes that one call appends. A spread of all the children of a wide element throws a RangeError above about
+ * 100,000, and WebKit takes time that grows with the square of the text nodes that are appended one by one, so they go in
+ * steps.
+ */
+const APPEND_STEP = 10_000;
+
+/**
+ * Appends nodes to a parent in steps, so that a document or a response decides their number and no call fails for it.
+ *
+ * @param parent - The parent.
+ * @param children - The nodes, in order.
+ */
+export function appendAll(parent: ParentNode, children: readonly Node[]): void {
+  for (let start = 0; start < children.length; start += APPEND_STEP) {
+    parent.append(...children.slice(start, start + APPEND_STEP));
+  }
+}
+
 let lastId = 0;
 
 /**

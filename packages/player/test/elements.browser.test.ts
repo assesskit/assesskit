@@ -866,6 +866,15 @@ describe("extended text", () => {
     expect(again.find("[role=textbox]").innerHTML).toBe("<p>one two three \u{1f600}</p>");
   });
 
+  it("shows an XHTML answer of more nodes than a call of the engine takes as arguments", () => {
+    const scene = mountScene(declare("single", "string"), Body('format="xhtml"'));
+    const lines = 200_000;
+    scene.setValue("R", single("string", `<p>${"a<br/>".repeat(lines)}</p>${"<p>b</p>".repeat(lines)}`));
+    const area = scene.find("[role=textbox]");
+    expect(area.childElementCount).toBe(lines + 1);
+    expect(area.firstElementChild?.childElementCount).toBe(lines);
+  });
+
   it("formats the selected text with the buttons of the toolbar", async () => {
     const scene = mountScene(declare("single", "string"), Body('format="xhtml"'));
     const area = scene.find("[role=textbox]");
