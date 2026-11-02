@@ -26,24 +26,24 @@ function copyMermaid(): void {
   }
 }
 
-/** Points each page at the copy in the site, by a path from the page, so that the site works under any path. */
-function repointPages(): number {
+/** Links each page at the copy in the site, by a path from the page, so that the site works under any path. */
+function linkPages(): number {
   let pages = 0;
   for (const page of globSync("**/*.html", { cwd: SITE })) {
     const path = join(SITE, page);
     const text = readFileSync(path, "utf8");
     const local = relative(dirname(path), join(TARGET, ENTRY));
-    const repointed = text.replace(CDN_ADDRESS, local.startsWith(".") ? local : `./${local}`);
-    if (repointed !== text) {
-      writeFileSync(path, repointed);
+    const linked = text.replace(CDN_ADDRESS, local.startsWith(".") ? local : `./${local}`);
+    if (linked !== text) {
+      writeFileSync(path, linked);
       pages += 1;
     }
-    if (repointed.includes("unpkg.com")) throw new Error(`The page ${path} still loads a script from unpkg.com.`);
+    if (linked.includes("unpkg.com")) throw new Error(`The page ${path} still loads a script from unpkg.com.`);
   }
   return pages;
 }
 
 copyMermaid();
-const pages = repointPages();
+const pages = linkPages();
 if (pages === 0) throw new Error(`No page of ${SITE} loads Mermaid, so the plugin changed what it writes.`);
 process.stdout.write(`Mermaid is served from the site for ${pages} pages.\n`);
