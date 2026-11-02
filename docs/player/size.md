@@ -9,17 +9,17 @@ xychart-beta
   title "Entry points after gzip, in kilobytes"
   x-axis ["root", "protocol", "client", "player", "mountItem", "engine (on demand)"]
   y-axis "kB" 0 --> 140
-  bar [12.4, 7.1, 21.6, 127.4, 90.8, 127.4]
+  bar [13.7, 7.1, 21.7, 132.6, 92.9, 128.4]
 ```
 
 | File                          | Bytes   | Gzip    | Budget  | What it holds                                                                                                                 |
 | ----------------------------- | ------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `@assesskit/player`           | 38,704  | 12,399  | 14,500  | The errors, the checks of the player, valibot, and the interface messages in English and Indonesian                           |
-| `@assesskit/player/protocol`  | 22,112  | 7,067   | 7,500   | The envelopes and their schemas, and the check of a scoring rubric; valibot is 10.9 kB of it                                  |
-| `@assesskit/player/client`    | 67,226  | 21,647  | 25,000  | The remote and the local session, and the decoders of a view and of an action that they take from the runtime                 |
-| `@assesskit/player/player`    | 397,985 | 127,410 | 140,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions |
-| `mountItem`                   | 281,138 | 90,835  | 107,500 | The content, the interactions, the supports, speech and the host of portable custom interactions; no chrome and no tools      |
-| `@assesskit/runtime/delivery` | 536,408 | 127,395 | 152,000 | The engine, which `createLocalSession` loads with `import()` for practice on a device                                         |
+| `@assesskit/player`           | 42,907  | 13,678  | 14,500  | The errors, the checks of the player, valibot, and the interface messages in English and Indonesian                           |
+| `@assesskit/player/protocol`  | 22,149  | 7,083   | 7,500   | The envelopes and their schemas, and the check of a scoring rubric; valibot is 10.9 kB of it                                  |
+| `@assesskit/player/client`    | 67,553  | 21,734  | 25,000  | The remote and the local session, and the decoders of a view and of an action that they take from the runtime                 |
+| `@assesskit/player/player`    | 412,482 | 132,578 | 140,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions |
+| `mountItem`                   | 286,632 | 92,918  | 107,500 | The content, the interactions, the supports, speech and the host of portable custom interactions; no chrome and no tools      |
+| `@assesskit/runtime/delivery` | 539,882 | 128,356 | 152,000 | The engine, which `createLocalSession` loads with `import()` for practice on a device                                         |
 | `pci-frame/bridge.js`         | 10,026  | 3,735   | 5,000   | The script of the frame of a portable custom interaction                                                                      |
 | `pci-frame/require.js`        | 17,781  | 6,863   | 9,000   | RequireJS, which the frame loads                                                                                              |
 | `recorder-worklet.js`         | 322     | 270     | 500     | The script of the audio worklet of a WAV recording                                                                            |
@@ -42,11 +42,30 @@ exports `parseLexicon`.
 
 | Part                                             | Bytes   | Why                                                                                              |
 | ------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------ |
-| The elements of the player                       | 233,720 | The folders of `player/`, of which `elements` is 74 kB and `tools` 39 kB                         |
+| The elements of the player                       | 254,075 | The folders of `player/`, of which `elements` is 74 kB, `tools` 45 kB and `supports` 23 kB       |
 | `values` of the runtime                          | 40,761  | The values of responses, and the automaton and the Unicode tables for the patterns of text entry |
-| The messages                                     | 27,400  | Both catalogs; `selectMessages` chooses one at run time                                          |
+| The messages                                     | 33,570  | Both catalogs; `selectMessages` chooses one at run time                                          |
 | `saxes`, and `xml` and `xmlchars` of the runtime | 40,317  | The reader of a pronunciation lexicon in `speech/`                                               |
 | valibot                                          | 11,350  | The schemas of the JSON that crosses the wire                                                    |
+
+## What the controls of the conformance gaps cost
+
+The controls that close the gaps of [conformance](../runtime/conformance.md) stay in their entry points: the largest, the
+scientific calculator, adds 2.7 kB after gzip with its messages, 2 percent of the budget of the player, and it comes with the
+tools that draw its button. The lists of the panel are chrome, so `mountItem` grows by their messages and by what the content
+root shares, such as the choice of braille files. Bytes after gzip:
+
+| Addition                                                                        | `player` | `mountItem` | Root | Engine |
+| ------------------------------------------------------------------------------- | -------- | ----------- | ---- | ------ |
+| `support-settings`, the lists of the zoom and of the color theme (A-30a, A-30b) | +611     | +45         | +119 | +587   |
+| The scientific calculator (A-12)                                                | +2,687   | +723        | +512 | 0      |
+| The breaks of a profile in the session host (A-11)                              | 0        | 0           | 0    | 0      |
+| The lists of reading aloud (A-40d, A-40e)                                       | +710     | +386        | +367 | 0      |
+| The lists of braille and the choice of braille files (A-10b)                    | +868     | +678        | +281 | 0      |
+| The stylesheets of the test (T-3)                                               | +57      | +39         | 0    | 0      |
+
+The root holds the two catalogs, and it is at 13,678 of its 14,500 bytes: the next messages need the catalogs out of the root, or
+a budget with its reason.
 
 ## Running it
 
