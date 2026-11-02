@@ -283,7 +283,9 @@ candidate can respond (only while the item is interacting), and the response; it
 `set-responses`, and hears `ak-end-attempt` and sends `end-attempt`. It sets the response on an element when the content is
 drawn and when the item is not interacting, as in review and in the solution, where the response is the engine's. While the
 candidate interacts the element holds the response, so a view that answers an earlier request never takes back what was typed
-since.
+since. Both actions name the item whose content holds the element, and a portable custom interaction names the item its frame
+was mounted for: a view that presents another item arrives before that item is drawn, and what the candidate does in the
+content still shown goes to the item it belongs to, which the engine refuses once the candidate has left it.
 
 A request that submits or leaves the item (`submit`, `skip`, `next-attempt`, `end-attempt`, `end-part`, `end-test` and every
 `move`) waits first for `settled()` of each interaction element, after the candidate has confirmed it. An interaction that

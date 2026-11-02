@@ -1,5 +1,5 @@
 import type { Interaction, PortableCustomInteraction } from "@assesskit/runtime/asi";
-import type { CandidateItem, PciView } from "@assesskit/runtime/delivery";
+import type { CandidateItem, ItemKey, PciView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { moduleConfigurationPaths, type PciModuleConfiguration, parseModuleResolution } from "@assesskit/runtime/pci";
 import type { Value, ValueDeclaration } from "@assesskit/runtime/values";
@@ -39,8 +39,8 @@ export interface PciContext {
   readonly item: () => CandidateItem | undefined;
   /** Returns the package paths of the stylesheets of the test, which apply in the frame before those of the item. */
   readonly testStylesheets: () => readonly string[];
-  /** Receives the response and the state of an interaction when they change. */
-  readonly respond: (identifier: string, value: Value | null, state: string) => void;
+  /** Receives the response and the state of an interaction when they change, for the item instance the frame shows. */
+  readonly respond: (item: ItemKey, identifier: string, value: Value | null, state: string) => void;
 }
 
 /** The interactions in the frames of portable custom interactions that a view shows. */
@@ -174,7 +174,7 @@ export function createPciHost(context: PciContext): PciHost {
       onEvent: (event) => {
         if (mine !== generation) return;
         if (event.type === "changed" || event.type === "done" || event.type === "completed") {
-          context.respond(identifier, event.response, event.state);
+          context.respond(item.key, identifier, event.response, event.state);
         } else if (event.type === "failed") {
           container.replaceChildren(html("p", { class: "ak-notice", role: "note" }, context.messages.pciFailed));
         }

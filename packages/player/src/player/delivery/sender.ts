@@ -1,4 +1,4 @@
-import type { CandidateAction } from "@assesskit/runtime/delivery";
+import type { CandidateAction, ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { SupportName, SupportSetting } from "@assesskit/runtime/pnp";
 import type { Value } from "@assesskit/runtime/values";
@@ -35,11 +35,17 @@ export interface Sender {
   /**
    * Sends a response that an interaction gave, with the state of a portable custom interaction when it has one.
    *
+   * @remarks
+   * The response goes to the item instance whose content holds the interaction, which the caller names: a view that
+   * presents another item arrives before that item's content is drawn, and a response given in the meantime is not the
+   * other item's.
+   *
+   * @param item - The item instance that the interaction belongs to.
    * @param identifier - The response identifier.
    * @param value - The response.
    * @param pciState - The opaque state of the interaction.
    */
-  respond(identifier: string, value: Value | null, pciState?: string): void;
+  respond(item: ItemKey, identifier: string, value: Value | null, pciState?: string): void;
   /** Asks to turn a support on or off: the next view says whether it took effect. */
   request(name: SupportName, active: boolean): void;
   /** Asks to change the settings of a support that is on: the next view says whether they took effect. */
@@ -71,9 +77,8 @@ export function createSender(context: SenderContext): Sender {
 
   return {
     send,
-    respond: (identifier, value, pciState) => {
-      const item = state.view.current?.key;
-      if (item === undefined || state.destroyed) return;
+    respond: (item, identifier, value, pciState) => {
+      if (state.destroyed) return;
       void send(
         {
           type: "set-responses",

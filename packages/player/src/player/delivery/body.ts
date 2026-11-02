@@ -1,4 +1,4 @@
-import type { CandidateAction, CandidateItem, CandidateView } from "@assesskit/runtime/delivery";
+import type { CandidateAction, CandidateItem, CandidateView, ItemKey } from "@assesskit/runtime/delivery";
 import {
   createInteractionRenderers,
   END_ATTEMPT_EVENT,
@@ -156,14 +156,16 @@ export function createBody(context: BodyContext): Body {
     await settled();
     if (!state.destroyed) await sender.send(action);
   };
+  // The item instance that the interaction elements of the content are bound to. A view that presents another item is the
+  // current view before its content is drawn, and what the candidate does in the content shown meanwhile is not for it.
+  let boundTo: ItemKey | undefined;
 
   content.root.addEventListener(RESPONSE_EVENT, (event) => {
-    sender.respond(event.detail.responseIdentifier, event.detail.value);
+    if (boundTo !== undefined) sender.respond(boundTo, event.detail.responseIdentifier, event.detail.value);
   });
   content.root.addEventListener(END_ATTEMPT_EVENT, (event) => {
-    const item = state.view.current?.key;
-    if (item !== undefined) {
-      void sendSettled({ type: "end-attempt", item, interaction: event.detail.responseIdentifier });
+    if (boundTo !== undefined) {
+      void sendSettled({ type: "end-attempt", item: boundTo, interaction: event.detail.responseIdentifier });
     }
   });
 
@@ -191,6 +193,7 @@ export function createBody(context: BodyContext): Body {
       }
       // The player may have been destroyed while the content was drawn.
       if (state.destroyed) return undefined;
+      boundTo = current?.key;
       if (current !== undefined) {
         const elements = interactionElements();
         bindInteractions(elements, current, drawn);

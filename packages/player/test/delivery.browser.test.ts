@@ -1053,6 +1053,24 @@ describe("the interactions in the player", () => {
     expect(choices(s.ui).map((input) => input.checked)).toEqual([false, true]);
   });
 
+  it("sends what the candidate gives in the item still drawn to that item, and not to the item of a view not yet drawn", async () => {
+    const s = await shell({ practice: true });
+    await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    const drawn = choices(s.ui);
+    // This listener runs after the player's, which has taken the view of q2 and not yet drawn its content.
+    const stop = s.client.subscribe((view) => {
+      if (view.current?.key.ref !== "q2") return;
+      stop();
+      drawn[1]?.click();
+    });
+    await s.client.dispatch({ type: "move", to: { ref: "q2", instance: 1 } });
+    await waitFor(() => expect(statusOf(s.ui)).not.toBe(""));
+    expect(s.client.view.current?.key).toEqual({ ref: "q2", instance: 1 });
+    expect(s.client.view.current?.responses.get("RESPONSE") ?? null).toBeNull();
+    await waitFor(() => expect(choices(s.ui)).not.toContain(drawn[0]));
+    expect(choices(s.ui).map((input) => input.checked)).toEqual([false, false]);
+  });
+
   it("sends the held response before the submit, so that the engine submits what the candidate chose", async () => {
     const control = '<qti-item-session-control allow-review="true" show-solution="true"/>';
     const s = await shell({ files: examFiles({ control }) });
