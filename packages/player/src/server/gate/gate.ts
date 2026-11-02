@@ -92,7 +92,7 @@ export interface AssetGate {
    * @param now - The time in epoch milliseconds.
    * @param options - See {@link SessionCallOptions}.
    * @returns The URL, `https://<origin>/f/<token>/<reference>`.
-   * @throws `DataError` when an argument has the wrong type.
+   * @throws `DataError` when an argument has the wrong type, or the reference is `.` or `..`, which a URL takes as a step.
    * @throws `signal.reason` when the signal has aborted.
    */
   signFile(session: string, file: FileValue, now: number, options?: SessionCallOptions): Promise<string>;
@@ -178,10 +178,23 @@ function checkPrefix(prefix: unknown): asserts prefix is string {
   }
 }
 
+/**
+ * The references that a URL takes as a step to another path, which `encodeURIComponent` leaves as they are: `/f/<token>/..`
+ * is `/f/`, so the URL of such a file would lose its token.
+ *
+ * @see {@link https://url.spec.whatwg.org/#single-dot-path-segment | URL Standard, dot segments}
+ */
+const DOT_SEGMENTS: ReadonlySet<string> = new Set([".", ".."]);
+
 function checkFileValue(file: unknown): asserts file is FileValue {
   checkRecord(file, "The file must be an object");
   checkString(file.reference, "The reference of the file");
   checkString(file.mimeType, "The mimeType of the file");
+  if (DOT_SEGMENTS.has(file.reference)) {
+    throw new DataError(
+      `The reference of the file cannot be ${describe(file.reference)}, which the path of a URL takes as a step to another path.`,
+    );
+  }
 }
 
 /** Reads the claims of a token and checks its expiry; `undefined` when the token is no good. */

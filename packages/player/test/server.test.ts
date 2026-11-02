@@ -662,6 +662,21 @@ describe("the asset gate", () => {
     });
   });
 
+  it("refuses to sign a file whose reference is . or .., which a URL takes as a step out of the token", async () => {
+    const { gate } = await gateOf();
+    for (const reference of [".", ".."]) {
+      await expect(gate.signFile("s1", { reference, mimeType: "image/png" }, NOW), reference).rejects.toThrow(
+        new DataError(
+          `The reference of the file cannot be "${reference}", which the path of a URL takes as a step to another path.`,
+        ),
+      );
+    }
+    for (const reference of ["...", "%2e%2e", "../x", "a/.."]) {
+      const path = new URL(await gate.signFile("s1", { reference, mimeType: "image/png" }, NOW)).pathname;
+      expect(decodeURIComponent(path.split("/")[3] ?? ""), reference).toBe(reference);
+    }
+  });
+
   it("answers 404 for a file that the store no longer has", async () => {
     const { gate } = await gateOf();
     const gone = await gate.signFile("s1", { reference: "gone", mimeType: "image/png" }, NOW);
