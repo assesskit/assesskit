@@ -33,5 +33,5 @@ export const declarationSchema: Schema<ScoringDeclaration> = v.variant("cardinal
  * @throws `DataError` when it is not a declaration.
  */
 export function checkDeclaration(declaration: unknown): asserts declaration is ScoringDeclaration {
-  parseWith(declarationSchema, declaration, "The declaration of a submission");
+  parseWith(declarationSchema, declaration, "The declaration of the request");
 }

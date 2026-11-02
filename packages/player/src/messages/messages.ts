@@ -24,7 +24,7 @@ export interface Messages {
   readonly toolBasicCalculator: string;
   /** The name of the standard calculator, which adds memory, percent, square root and sign to the basic one. */
   readonly toolStandardCalculator: string;
-  /** The name of the scientific calculator, which the host provides. */
+  /** The name of the scientific calculator, which the player builds in and the host may replace. */
   readonly toolScientificCalculator: string;
   /** The name of the graphing calculator, which the host provides. */
   readonly toolGraphingCalculator: string;

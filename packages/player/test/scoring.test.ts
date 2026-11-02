@@ -507,7 +507,7 @@ describe("toSupplyScores", () => {
     );
     expect(() =>
       toSupplyScores({ ...request, declaration: json('{"cardinality":"single"}') as never }, 1, "human"),
-    ).toThrow(/^The declaration of a submission is invalid: missing the property "baseType"/);
+    ).toThrow(/^The declaration of the request is invalid: missing the property "baseType"/);
     expect(() => toSupplyScores(request, 1, json('"robot"') as "human")).toThrow(
       new DataError('The scorer must be "human" or "externalMachine", found "robot".'),
     );

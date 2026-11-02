@@ -137,9 +137,9 @@ function buttonNames(entries: readonly ToolEntry[], messages: Messages): readonl
  *
  * @remarks
  * The toolbar goes into `host` with the physical materials and the panels of the open tools; the tools that overlay the
- * item go into a layer over the stage. The tools are the rule, the protractor, the basic and standard calculators, the line
- * reader, answer masking and the digital materials, and the tools of the host in their slots. Every tool works by keyboard
- * and without dragging.
+ * item go into a layer over the stage. The tools are the rule, the protractor, the basic, standard and scientific
+ * calculators, the line reader, answer masking, the highlighter, the answer eliminator and the digital materials, and the
+ * tools of the host in their slots. Every tool works by keyboard and without dragging.
  *
  * @param host - The element that gets the toolbar, in a document or a shadow root.
  * @param options - See {@link ToolsOptions}.
