@@ -122,7 +122,7 @@ records.get("s1").version; // => 1
 | `clientActions` | `CandidateActionType[]`                      | The types of action a client may send. Default: every type but `suspend` and `resume` (`EXAM_CLIENT_ACTIONS`).                                                                 |
 | `profileBreaks` | `boolean`                                    | Whether a candidate whose profile has breaks may send `suspend` and `resume` beside `clientActions` ([the policy](#client-action-policy)). Default: `true`.                    |
 | `maxIdle`       | `number`                                     | The longest gap between steps, in milliseconds, that counts as time on task, as on `createLocalSession`. Needs `suspend` in `clientActions`; never for an exam. Default: none. |
-| `limits`        | `Partial<ActionLimits>`                      | The limits on the size of an action, as the runtime's `parseCandidateAction` takes them. Default: the runtime's.                                                               |
+| `limits`        | `Partial<ActionLimits>`                      | The limits on the size of an action, as the runtime's `parseCandidateAction` takes them; give the remote client the same ones. Default: the runtime's.                         |
 | `forward`       | `ForwardOptions`                             | Where the events of each step go: the host's `log`. Default: nowhere.                                                                                                          |
 | `cat`           | `CatSessionPort`                             | The port of the CAT engines: the host then answers its own CAT requests ([CAT](cat.md#the-option-cat)). Default: none.                                                         |
 

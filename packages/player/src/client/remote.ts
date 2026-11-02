@@ -1,6 +1,13 @@
 import { checkFunction, functionSchema, parseWith, recordSchema, untilAborted } from "@assesskit/runtime/checks";
-import { actionToJson, type CandidateAction, type CandidateView, viewFromJson } from "@assesskit/runtime/delivery";
-import { DataError } from "@assesskit/runtime/errors";
+import {
+  type ActionLimits,
+  actionToJson,
+  type CandidateAction,
+  type CandidateView,
+  parseCandidateAction,
+  viewFromJson,
+} from "@assesskit/runtime/delivery";
+import { DataError, SecurityError } from "@assesskit/runtime/errors";
 import type { Value } from "@assesskit/runtime/values";
 import * as v from "valibot";
 import { AccessError } from "../errors.js";
@@ -44,6 +51,13 @@ export interface RemoteSessionOptions {
    */
   readonly clock?: Clock;
   /**
+   * The limits on the size of an action, as the session host takes them in its option `limits`. The client refuses an action
+   * above them before it sends it or holds it, so that one oversized PCI state does not take the responses held with it.
+   *
+   * @defaultValue the runtime's limits, which the host has by default
+   */
+  readonly limits?: Partial<ActionLimits>;
+  /**
    * Receives the errors that the client can only report: a listener that threw, and a send at an autosave or a deadline that
    * failed, since no call waits for it.
    *
@@ -54,7 +68,11 @@ export interface RemoteSessionOptions {
 
 const remoteOptionsSchema = v.pipe(
   recordSchema,
-  v.strictObject({ clock: v.optional(clockSchema), onError: v.optional(functionSchema<(error: unknown) => void>()) }),
+  v.strictObject({
+    clock: v.optional(clockSchema),
+    limits: v.optional(recordSchema),
+    onError: v.optional(functionSchema<(error: unknown) => void>()),
+  }),
 );
 
 const NO_DOCUMENTS: ViewDocuments = { test: "", item: "", stimuli: [], lexicons: [] };
@@ -78,14 +96,15 @@ interface Latest {
 }
 
 /** Whether an error says that the host looked at the request and did not apply it, so that a new request may take its place. */
-const isRejection = (error: unknown): boolean => error instanceof DataError || error instanceof AccessError;
+const isRejection = (error: unknown): boolean =>
+  error instanceof DataError || error instanceof AccessError || error instanceof SecurityError;
 
 /**
  * Creates the session client of exam mode: the engine is on the server, and the client keeps the latest view.
  *
  * @remarks
  * - **Envelopes.** Each request is an `ActionEnvelope` with the next sequence number and the action in the runtime's JSON form,
- *   sent one at a time. The answer is read with `viewFromJson`.
+ *   sent one at a time. The answer is read with `viewFromJson`. An action above `limits` is a `SecurityError` and is not sent.
  * - **Lost answers.** A request that got no answer may or may not have been applied, so it is sent again, unchanged, before
  *   any later one; the host answers a repeated sequence number with the answer it stored. A request whose call aborted while
  *   it waited for the answer is one of these.
@@ -113,7 +132,7 @@ export function createRemoteSession(
   checkFunction(transport, "The transport must be a function");
   checkViewEnvelope(initial);
   parseWith(remoteOptionsSchema, options, "The options object");
-  const { clock = BROWSER_CLOCK, onError = (error: unknown) => reportError(error) } = options;
+  const { clock = BROWSER_CLOCK, limits = {}, onError = (error: unknown) => reportError(error) } = options;
 
   const listeners = new Set<(view: CandidateView) => void>();
   let sequence = initial.seq;
@@ -285,7 +304,8 @@ export function createRemoteSession(
       checkCallOptions(options);
       const signal = options?.signal;
       if (closed) throw new DataError("The session client is closed.");
-      actionToJson(action);
+      // The host reads the action with these limits; one above them is refused here, before it joins the held responses.
+      parseCandidateAction(actionToJson(action), { limits });
       if (action.type === "set-responses") return hold(action, signal);
       signal?.throwIfAborted();
       await flush();

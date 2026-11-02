@@ -43,6 +43,7 @@ export interface SessionClient {
    * @param options - See {@link SessionCallOptions}.
    * @returns The view after the action, and the refusal when the engine did not apply it.
    * @throws `DataError` when the host refuses the action as outside the policy or malformed.
+   * @throws `SecurityError` when the action is above the limits on its size; a remote client refuses it before it sends it.
    * @throws `ServiceError` when the host cannot be reached or cannot save.
    * @throws `signal.reason` when the signal aborts. An action that had not started is dropped. A request of a remote client
    * that is in flight stays in doubt, and the client sends it again before the next one. Held `set-responses` are sent

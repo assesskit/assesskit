@@ -1,5 +1,5 @@
 import type { CandidateAction, ItemKey } from "@assesskit/runtime/delivery";
-import { DataError } from "@assesskit/runtime/errors";
+import { DataError, SecurityError } from "@assesskit/runtime/errors";
 import type { SupportName, SupportSetting } from "@assesskit/runtime/pnp";
 import type { Value } from "@assesskit/runtime/values";
 import { AccessError } from "../../errors.js";
@@ -69,9 +69,12 @@ export function createSender(context: SenderContext): Sender {
       if (refusal === undefined) applied?.();
       else status.say(messages[REFUSAL_MESSAGES[refusal.code]]);
     } catch (error) {
-      const rejected = error instanceof DataError || error instanceof AccessError;
+      // An action above a limit is the content's, such as a PCI state that is too long: it is not sent again, and the page
+      // hears of it.
+      const oversized = error instanceof SecurityError;
+      const rejected = oversized || error instanceof DataError || error instanceof AccessError;
       status.say(rejected ? messages.sendRejected : messages.sendFailed);
-      if (!rejected) report(error);
+      if (!rejected || oversized) report(error);
     }
   };
 

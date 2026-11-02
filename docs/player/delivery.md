@@ -253,13 +253,14 @@ The engine refuses a well-formed action that the rules do not allow, and leaves 
 says why, in the language of the interface, in a polite live region with `role="status"` that never takes the focus
 (WCAG 4.1.3). The catalog has a message for each `RefusalCode`, and a test fails when the runtime adds a code that has none.
 
-| Case                                             | Message (English)                                                      |
-| ------------------------------------------------ | ---------------------------------------------------------------------- |
-| The engine refused the action                    | The message of the code, such as "The time for this question is over." |
-| The answers were saved (after a `set-responses`) | Answers saved.                                                         |
-| A comment was saved                              | Comment saved.                                                         |
-| The host could not be reached or could not save  | Your answers could not be sent. They will be sent again.               |
-| The host rejected the action (`DataError`, 403)  | The test could not accept this action.                                 |
+| Case                                             | Message (English)                                                        |
+| ------------------------------------------------ | ------------------------------------------------------------------------ |
+| The engine refused the action                    | The message of the code, such as "The time for this question is over."   |
+| The answers were saved (after a `set-responses`) | Answers saved.                                                           |
+| A comment was saved                              | Comment saved.                                                           |
+| The host could not be reached or could not save  | Your answers could not be sent. They will be sent again.                 |
+| The host rejected the action (`DataError`, 403)  | The test could not accept this action.                                   |
+| The action is above the limits (`SecurityError`) | The test could not accept this action; the error goes to `hooks.onError` |
 
 ## Focus
 

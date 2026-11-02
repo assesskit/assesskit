@@ -2,8 +2,8 @@ or {
   JsImport() as $import where {
     $import <: r"(?s)^import\b.*[\"']@assesskit/runtime/delivery[\"'].*",
     not $import <: r"(?s)^import\s+type\b.*",
-    not $import <: r"(?s)^import\s*\{\s*(?:type\s+\w+(?:\s+as\s+\w+)?|(?:viewFromJson|actionToJson)(?:\s+as\s+\w+)?)(?:\s*,\s*(?:type\s+\w+(?:\s+as\s+\w+)?|(?:viewFromJson|actionToJson)(?:\s+as\s+\w+)?))*\s*,?\s*\}\s*from\b.*",
-    register_diagnostic(span=$import, message="Browser code imports from @assesskit/runtime/delivery only viewFromJson, actionToJson and types: the engine holds the answer keys and never ships to a candidate.", severity="error")
+    not $import <: r"(?s)^import\s*\{\s*(?:type\s+\w+(?:\s+as\s+\w+)?|(?:viewFromJson|actionToJson|parseCandidateAction)(?:\s+as\s+\w+)?)(?:\s*,\s*(?:type\s+\w+(?:\s+as\s+\w+)?|(?:viewFromJson|actionToJson|parseCandidateAction)(?:\s+as\s+\w+)?))*\s*,?\s*\}\s*from\b.*",
+    register_diagnostic(span=$import, message="Browser code imports from @assesskit/runtime/delivery only viewFromJson, actionToJson, parseCandidateAction and types: the engine holds the answer keys and never ships to a candidate.", severity="error")
   },
   JsExport() as $export where {
     $export <: r"(?s)^export\b[^;=]*\bfrom\s*[\"']@assesskit/runtime/delivery[\"'].*",

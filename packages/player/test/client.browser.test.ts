@@ -1,6 +1,11 @@
 import { untilAborted } from "@assesskit/runtime/checks";
-import type { CandidateView } from "@assesskit/runtime/delivery";
-import { DataError } from "@assesskit/runtime/errors";
+import {
+  type ActionLimits,
+  type CandidateAction,
+  type CandidateView,
+  DEFAULT_ACTION_LIMITS,
+} from "@assesskit/runtime/delivery";
+import { DataError, SecurityError } from "@assesskit/runtime/errors";
 import { single } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { AUTOSAVE_MS, createLocalSession, createRemoteSession, FLUSH_BEFORE_DEADLINE_MS } from "../src/client/index.js";
@@ -30,9 +35,12 @@ async function remote(
     readonly fail?: (envelope: Sent, call: number) => "before" | "after" | undefined;
     /** Holds the transport before it sends the envelope, until the promise settles or the signal of the call aborts. */
     readonly wait?: (envelope: Sent, call: number) => Promise<void> | undefined;
+    /** The limits on the size of an action, of the host and of the client. */
+    readonly limits?: Partial<ActionLimits>;
   } = {},
 ) {
-  const setup = await examHost({}, options.files, inject("fixtures").asset);
+  const limits = options.limits === undefined ? {} : { limits: options.limits };
+  const setup = await examHost(limits, options.files, inject("fixtures").asset);
   const calls: Sent[] = [];
   const signals: (AbortSignal | undefined)[] = [];
   const transport = async (envelope: Sent, callOptions?: SessionCallOptions) => {
@@ -48,7 +56,7 @@ async function remote(
     return JSON.parse(JSON.stringify(reply));
   };
   const initial = JSON.parse(JSON.stringify(await setup.host.start(ALICE, { seed: 1 })));
-  const client = createRemoteSession(transport, initial, { clock: setup.clock });
+  const client = createRemoteSession(transport, initial, { clock: setup.clock, ...limits });
   return { ...setup, client, calls, signals, transport, initial };
 }
 
@@ -115,6 +123,35 @@ describe("createRemoteSession", () => {
     expect((await saved).view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
     expect(typesOf(calls)).toEqual(["set-responses", "move"]);
     expect(moved.view.current?.key.ref).toBe("q2");
+    client.close();
+  });
+
+  /** A `set-responses` of q1 with a PCI state of a length. */
+  const withState = (length: number): CandidateAction => ({
+    type: "set-responses",
+    item: Q1,
+    responses: new Map([["RESPONSE", single("identifier", "A")]]),
+    pciStates: new Map([["RESPONSE", "x".repeat(length)]]),
+  });
+
+  it("refuses a PCI state above the limit of the host before it joins the held responses, which still go", async () => {
+    const { client, calls } = await remote();
+    const saved = client.dispatch(answer("B"));
+    const oversized = client.dispatch(withState(DEFAULT_ACTION_LIMITS.maxPciStateLength + 1));
+    await expect(oversized).rejects.toThrow(SecurityError);
+    await expect(oversized).rejects.toMatchObject({ limit: "maxPciStateLength" });
+    const moved = await client.dispatch({ type: "move", to: "next" });
+    expect((await saved).view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "B"));
+    expect(typesOf(calls)).toEqual(["set-responses", "move"]);
+    expect(moved.view.current?.key.ref).toBe("q2");
+    client.close();
+  });
+
+  it("takes the limits of the host, and sends nothing above them", async () => {
+    const { client, calls } = await remote({ limits: { maxPciStateLength: 64 } });
+    await expect(client.dispatch(withState(65))).rejects.toMatchObject({ limit: "maxPciStateLength" });
+    await expect(client.dispatch({ type: "move", to: "next" })).resolves.toBeDefined();
+    expect(typesOf(calls)).toEqual(["move"]);
     client.close();
   });
 

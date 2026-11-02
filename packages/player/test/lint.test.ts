@@ -185,7 +185,7 @@ const DELIVERY = '"@assesskit/runtime/delivery"';
 const delivery = {
   allowed: source(`${SRC}/player/allowed-delivery.ts`, [
     `import { actionToJson, viewFromJson } from ${DELIVERY};`,
-    `import { type CandidateView, viewFromJson as read } from ${DELIVERY};`,
+    `import { parseCandidateAction, type CandidateView, viewFromJson as read } from ${DELIVERY};`,
     `import type { CandidateAction, createEngine } from ${DELIVERY};`,
     `import {\n  actionToJson as write,\n  type CandidateView as View,\n} from ${DELIVERY};`,
     `export type { CandidateView as Shown } from ${DELIVERY};`,
@@ -354,7 +354,7 @@ describe("GritQL rules", () => {
 });
 
 describe("browser-delivery-imports.grit", () => {
-  it("lets browser folders import viewFromJson, actionToJson and types from @assesskit/runtime/delivery", () => {
+  it("lets browser folders import viewFromJson, actionToJson, parseCandidateAction and types from @assesskit/runtime/delivery", () => {
     expect(messagesFor(delivery.allowed, "Browser code")).toEqual([]);
   });
 
