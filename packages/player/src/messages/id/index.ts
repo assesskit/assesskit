@@ -1,4 +1,11 @@
-import type { Messages } from "./messages.js";
+/**
+ * The messages of the interface in Indonesian, a module of its own so that a host that does not show the interface in
+ * Indonesian loads none of it.
+ *
+ * @module @assesskit/player/messages/id
+ */
+
+import type { Messages } from "../index.js";
 
 /** The messages in Indonesian. */
 export const ID_MESSAGES: Messages = {

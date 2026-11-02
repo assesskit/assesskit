@@ -2,7 +2,8 @@ import { DataError } from "@assesskit/runtime/errors";
 import { container, single, type Value } from "@assesskit/runtime/values";
 import { describe, expect, it, vi } from "vitest";
 import { commands, userEvent } from "vitest/browser";
-import { EN_MESSAGES, ID_MESSAGES } from "../src/messages/index.js";
+import { ID_MESSAGES } from "../src/messages/id/index.js";
+import { EN_MESSAGES } from "../src/messages/index.js";
 import {
   MAX_PCI_HEIGHT,
   MIN_PCI_HEIGHT,

@@ -56,6 +56,10 @@
       "types": "./dist/server/index.d.ts",
       "default": "./dist/server/index.js"
     },
+    "./messages/id": {
+      "types": "./dist/messages/id/index.d.ts",
+      "default": "./dist/messages/id/index.js"
+    },
     "./player.css": "./player.css",
     "./pci-frame/*": "./dist/pci-frame/*",
     "./recorder-worklet.js": "./dist/recorder-worklet.js"

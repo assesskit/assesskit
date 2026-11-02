@@ -8,7 +8,8 @@ import {
 import { container, single } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
+import { EN_MESSAGES } from "../src/index.js";
+import { ID_MESSAGES } from "../src/messages/id/index.js";
 import {
   Board,
   cardinalityOf,

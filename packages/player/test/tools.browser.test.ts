@@ -3,7 +3,8 @@ import { DataError } from "@assesskit/runtime/errors";
 import type { CalculatorType, SupportName, SupportState } from "@assesskit/runtime/pnp";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { commands, userEvent } from "vitest/browser";
-import { EN_MESSAGES, ID_MESSAGES, type Messages } from "../src/messages/index.js";
+import { ID_MESSAGES } from "../src/messages/id/index.js";
+import { EN_MESSAGES, type Messages } from "../src/messages/index.js";
 import {
   mountTools,
   type ToolOptions,

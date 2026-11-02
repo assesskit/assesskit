@@ -5,7 +5,8 @@ import { INTERACTION_TYPES } from "@assesskit/runtime/metadata";
 import { container, type FileValue, single, type Value } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
-import { EN_MESSAGES, ID_MESSAGES, selectMessages } from "../src/index.js";
+import { EN_MESSAGES, selectMessages } from "../src/index.js";
+import { ID_MESSAGES } from "../src/messages/id/index.js";
 import { ExtendedTextInteractionElement, readRecordAttributes } from "../src/player/elements/internal.js";
 import {
   createContentRoot,

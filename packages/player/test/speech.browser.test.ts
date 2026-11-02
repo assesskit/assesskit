@@ -2,7 +2,8 @@ import { AssesskitError, DataError } from "@assesskit/runtime/errors";
 import type { RestrictionType } from "@assesskit/runtime/pnp";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
-import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
+import { EN_MESSAGES } from "../src/index.js";
+import { ID_MESSAGES } from "../src/messages/id/index.js";
 import {
   applyReadingType,
   buildSpeechRequest,

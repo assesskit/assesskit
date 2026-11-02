@@ -5,16 +5,18 @@
  * the sizes. A budget changes only with the reason in the commit that changes it.
  */
 export const SIZE_BUDGETS = {
-  /** `@assesskit/player`: the errors and the messages in both languages. */
-  root: 14_500,
+  /** `@assesskit/player`: the errors and the English messages. */
+  root: 10_000,
   /** `@assesskit/player/protocol`. */
   protocol: 7_500,
   /** `@assesskit/player/client`, without the engine that `createLocalSession` loads on demand. */
   client: 25_000,
+  /** `@assesskit/player/messages/id`, the messages in Indonesian, which a host that shows Indonesian loads beside the player. */
+  catalog: 8_000,
   /** `@assesskit/player/player`. */
-  player: 140_500,
+  player: 134_500,
   /** `mountItem` of `@assesskit/player/player`, with the code that it shares with `mountDelivery` and none of the chrome. */
-  item: 107_500,
+  item: 101_000,
   /** `@assesskit/runtime/delivery`, which `createLocalSession` loads for practice on a device. */
   engine: 152_000,
   /** The script of the frame of a portable custom interaction. */

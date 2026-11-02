@@ -14,7 +14,8 @@ import {
 } from "@assesskit/runtime/pnp";
 import { afterEach, beforeEach, describe, expect, inject, it } from "vitest";
 import { commands, userEvent } from "vitest/browser";
-import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
+import { EN_MESSAGES } from "../src/index.js";
+import { ID_MESSAGES } from "../src/messages/id/index.js";
 import {
   applyPresentation,
   createContentRoot,

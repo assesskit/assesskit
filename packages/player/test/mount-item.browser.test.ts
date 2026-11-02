@@ -5,6 +5,8 @@ import { single } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { createLocalSession, createRemoteSession, type Transport } from "../src/client/index.js";
+import { ID_MESSAGES } from "../src/messages/id/index.js";
+import type { Messages } from "../src/messages/index.js";
 import { mountItem } from "../src/player/index.js";
 import { deepActiveElement, HOST_SHADOW_RULE } from "../src/player/internal.js";
 import type { SessionClient } from "../src/protocol/index.js";
@@ -87,6 +89,8 @@ async function embed(
     readonly profile?: string;
     readonly wrap?: (client: SessionClient) => SessionClient;
     readonly language?: string;
+    /** The catalogs of the languages the host shows, by tag. */
+    readonly messages?: Readonly<Record<string, Partial<Messages>>>;
   } = {},
 ): Promise<Embed> {
   const parsed = readAsi(lessonItem(id, options.extra));
@@ -117,6 +121,7 @@ async function embed(
     stylesheet: player,
     fetch: fetcher,
     ...(options.language === undefined ? {} : { language: options.language }),
+    ...(options.messages === undefined ? {} : { messages: options.messages }),
   });
   return { host, ui: host.shadowRoot as ShadowRoot, client: shown, mounted };
 }
@@ -204,7 +209,7 @@ describe("mountItem", () => {
   });
 
   it("writes the interface in the language of the candidate", async () => {
-    const s = await embed("l1", { language: "id" });
+    const s = await embed("l1", { language: "id", messages: { id: ID_MESSAGES } });
     await shown(s);
     expect(s.ui.querySelector(".ak-item")?.getAttribute("lang")).toBe("id");
     choices(s.ui)[1]?.click();
@@ -463,7 +468,11 @@ describe("the lifecycle of an item in a page", () => {
 
 describe("accessibility of items in a page", () => {
   it("has no violation of WCAG 2.2 A and AA with several items in a page, and with a modal feedback open", async () => {
-    const items = await Promise.all([embed("l1"), embed("l2"), embed("l3", { language: "id" })]);
+    const items = await Promise.all([
+      embed("l1"),
+      embed("l2"),
+      embed("l3", { language: "id", messages: { id: ID_MESSAGES } }),
+    ]);
     await Promise.all(items.map(shown));
     expect(await axeViolations(page)).toEqual([]);
     const [first] = items;

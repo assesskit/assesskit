@@ -1,13 +1,17 @@
 import { DataError } from "@assesskit/runtime/errors";
 import { describe, expect, it } from "vitest";
 import messagesGuide from "../../../docs/player/messages.md?raw";
-import { EN_MESSAGES, ID_MESSAGES, type Messages, selectMessages } from "../src/index.js";
+import { EN_MESSAGES, type Messages, selectMessages } from "../src/index.js";
+import { ID_MESSAGES } from "../src/messages/id/index.js";
 import { fuzzJson } from "./fuzz.js";
 import { runGuideSamples } from "./guide-samples.js";
 
-/** Passes overrides to `selectMessages` as JSON delivers them, which TypeScript does not check. */
-const select = (language: string, overrides: unknown = {}): Messages =>
-  selectMessages(language, JSON.parse(JSON.stringify(overrides)));
+/** Passes catalogs to `selectMessages` as JSON delivers them, which TypeScript does not check. */
+const select = (language: string, catalogs: unknown = {}): Messages =>
+  selectMessages(language, JSON.parse(JSON.stringify(catalogs)));
+
+/** The catalog of Indonesian, which a host imports from its module and gives to `selectMessages`. */
+const INDONESIAN = { id: ID_MESSAGES };
 
 describe("the catalogs", () => {
   const keys = Object.keys(EN_MESSAGES);
@@ -34,26 +38,31 @@ describe("the catalogs", () => {
 });
 
 describe("selectMessages", () => {
-  it("chooses the catalog of the language of the interface", () => {
+  it("gives the English messages for English, and for a language that the host gives no catalog for", () => {
     expect(select("en")).toEqual(EN_MESSAGES);
-    expect(select("id")).toEqual(ID_MESSAGES);
-    expect(select("id").interactiveQuestion).toBe("Soal interaktif");
+    expect(select("id")).toEqual(EN_MESSAGES);
+  });
+
+  it("chooses the catalog that the host gives for the language of the interface", () => {
+    expect(select("en", INDONESIAN)).toEqual(EN_MESSAGES);
+    expect(select("id", INDONESIAN)).toEqual(ID_MESSAGES);
+    expect(select("id", INDONESIAN).interactiveQuestion).toBe("Soal interaktif");
   });
 
   it("chooses by the language of a tag with a region or a script, and ignores case", () => {
-    expect(select("id-ID")).toEqual(ID_MESSAGES);
-    expect(select("ID")).toEqual(ID_MESSAGES);
-    expect(select("en-GB")).toEqual(EN_MESSAGES);
-    expect(select("id-Latn-ID")).toEqual(ID_MESSAGES);
+    expect(select("id-ID", INDONESIAN)).toEqual(ID_MESSAGES);
+    expect(select("ID", INDONESIAN)).toEqual(ID_MESSAGES);
+    expect(select("en-GB", INDONESIAN)).toEqual(EN_MESSAGES);
+    expect(select("id-Latn-ID", INDONESIAN)).toEqual(ID_MESSAGES);
   });
 
   it("gives English for a language without a catalog, and for the empty tag", () => {
-    expect(select("jv")).toEqual(EN_MESSAGES);
-    expect(select("")).toEqual(EN_MESSAGES);
+    expect(select("jv", INDONESIAN)).toEqual(EN_MESSAGES);
+    expect(select("", INDONESIAN)).toEqual(EN_MESSAGES);
   });
 
-  it("replaces messages by the overrides of the language", () => {
-    const messages = select("id", { id: { toolRule: "Mistar" } });
+  it("replaces messages of the catalog of a language by those of a catalog for the same language", () => {
+    const messages = select("id", { id: { ...ID_MESSAGES, toolRule: "Mistar" } });
     expect(messages.toolRule).toBe("Mistar");
     expect(messages.toolProtractor).toBe(ID_MESSAGES.toolProtractor);
   });
@@ -64,15 +73,17 @@ describe("selectMessages", () => {
     expect(messages.toolProtractor).toBe(EN_MESSAGES.toolProtractor);
   });
 
-  it("prefers the overrides of the whole tag to those of its language", () => {
-    const overrides = { id: { toolRule: "Mistar" }, "id-ID": { toolRule: "Penggaris kelas" } };
-    expect(select("id-ID", overrides).toolRule).toBe("Penggaris kelas");
-    expect(select("id", overrides).toolRule).toBe("Mistar");
-    expect(select("ID-id", overrides).toolRule).toBe("Penggaris kelas");
+  it("prefers the catalog of the whole tag to that of its language", () => {
+    const catalogs = { id: ID_MESSAGES, "id-ID": { toolRule: "Penggaris kelas" } };
+    expect(select("id-ID", catalogs).toolRule).toBe("Penggaris kelas");
+    expect(select("id-ID", catalogs).toolProtractor).toBe(ID_MESSAGES.toolProtractor);
+    expect(select("id", catalogs).toolRule).toBe("Penggaris");
+    expect(select("ID-id", catalogs).toolRule).toBe("Penggaris kelas");
   });
 
-  it("does not change the shipped catalogs", () => {
+  it("does not change the catalogs it is given", () => {
     select("id", { id: { toolRule: "Mistar" } });
+    selectMessages("id", INDONESIAN);
     expect(ID_MESSAGES.toolRule).toBe("Penggaris");
   });
 
@@ -87,31 +98,31 @@ describe("selectMessages", () => {
     }
   });
 
-  it("rejects overrides that are not an object of catalogs of strings", () => {
+  it("rejects catalogs that are not an object of catalogs of strings", () => {
     expect(() => selectMessages("id", JSON.parse("null"))).toThrow(
-      new DataError("The overrides is invalid: expected an object, found null."),
+      new DataError("The catalogs is invalid: expected an object, found null."),
     );
     expect(() => select("id", { id: [] })).toThrow(
-      new DataError('The overrides is invalid: the property "id" is invalid: expected an object, found an array.'),
+      new DataError('The catalogs is invalid: the property "id" is invalid: expected an object, found an array.'),
     );
     expect(() => select("id", { id: { toolRule: 5 } })).toThrow(
-      new DataError('The overrides is invalid: the property "id" at toolRule is invalid: expected a string, found 5.'),
+      new DataError('The catalogs is invalid: the property "id" at toolRule is invalid: expected a string, found 5.'),
     );
   });
 
   it("rejects a message key that the catalog does not have", () => {
     expect(() => select("id", { id: { toolRulers: "x" } })).toThrow(
-      new DataError('The overrides is invalid: the property "id" is invalid: unexpected property "toolRulers".'),
+      new DataError('The catalogs is invalid: the property "id" is invalid: unexpected property "toolRulers".'),
     );
   });
 
-  it("checks the overrides of every language, not only the chosen one", () => {
+  it("checks the catalogs of every language, not only the chosen one", () => {
     expect(() => select("en", { jv: { toolRule: 5 } })).toThrow(DataError);
   });
 
-  it("reads or refuses arbitrary JSON overrides with a DataError, and nothing else", () => {
+  it("reads or refuses arbitrary JSON catalogs with a DataError, and nothing else", () => {
     fuzzJson(
-      (overrides) => selectMessages("id", overrides as Record<string, Partial<Messages>>),
+      (catalogs) => selectMessages("id", catalogs as Record<string, Partial<Messages>>),
       [{}, { id: { toolRule: "Penggaris" }, "id-ID": {} }],
     );
   });
@@ -120,7 +131,10 @@ describe("selectMessages", () => {
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
     expect(
-      await runGuideSamples(messagesGuide, { "@assesskit/player": await import("../src/index.js") }),
+      await runGuideSamples(messagesGuide, {
+        "@assesskit/player": await import("../src/index.js"),
+        "@assesskit/player/messages/id": await import("../src/messages/id/index.js"),
+      }),
     ).toBeGreaterThan(0);
   });
 });

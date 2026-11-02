@@ -2,6 +2,7 @@ import { type RubricRating, type ScoringRubric, scoreFromRatings } from "@assess
 import { DataError } from "@assesskit/runtime/errors";
 import { afterEach, describe, expect, it } from "vitest";
 import { userEvent } from "vitest/browser";
+import { ID_MESSAGES } from "../src/messages/id/index.js";
 import { mountRatingForm, type RatingFormOptions } from "../src/player/index.js";
 import { HOST_SHADOW_RULE } from "../src/player/internal.js";
 import { PLAYER_CSS, stylesheet } from "./css-fixture.js";
@@ -180,7 +181,7 @@ describe("the form of each kind", () => {
   });
 
   it("shows the weight of a criterion only when it is not 1, written for the language of the interface", () => {
-    const { shadow } = show(HALF, { language: "id" });
+    const { shadow } = show(HALF, { language: "id", messages: { id: ID_MESSAGES } });
     expect(all(shadow, ".ak-rating-weight").map((node) => node.textContent)).toEqual(["Bobot 0,5"]);
     expect(all(show(HOLISTIC).shadow, ".ak-rating-weight")).toEqual([]);
   });
@@ -388,7 +389,7 @@ describe("showing another rubric", () => {
 
 describe("the languages", () => {
   it("marks the language of the interface on the form and the language of the rubric on each text of it", () => {
-    const { shadow } = show(ESSAY, { language: "id" }, {});
+    const { shadow } = show(ESSAY, { language: "id", messages: { id: ID_MESSAGES } }, {});
     expect(el(shadow, "form").getAttribute("lang")).toBe("id");
     const texts = all(shadow, '[dir="auto"]');
     expect(texts.length).toBeGreaterThan(0);
@@ -402,14 +403,14 @@ describe("the languages", () => {
   });
 
   it("leaves the language of a text to the interface when the rubric gives none, and writes numbers for the interface", async () => {
-    const { shadow } = show(FRACTIONS, { language: "id" });
+    const { shadow } = show(FRACTIONS, { language: "id", messages: { id: ID_MESSAGES } });
     expect(all(shadow, "[lang]:not(form):not(output)")).toEqual([]);
     await choose(shadow, 0, 1);
     expect(status(shadow)).toBe("Skor 1,5 dari maksimum 1,5");
   });
 
   it("takes the messages that a host gives, for the language of the interface", () => {
-    const { shadow } = show(ESSAY, { language: "id", messages: { id: { ratingScore: "Nilai" } } });
+    const { shadow } = show(ESSAY, { language: "id", messages: { id: { ...ID_MESSAGES, ratingScore: "Nilai" } } });
     expect(status(shadow)).toBe("Nilai belum dinilai");
   });
 });

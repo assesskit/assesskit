@@ -4,7 +4,8 @@ import type { PciModuleConfiguration } from "@assesskit/runtime/pci";
 import { container, single, type Value, type ValueDeclaration } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
+import { EN_MESSAGES } from "../src/index.js";
+import { ID_MESSAGES } from "../src/messages/id/index.js";
 import type { PciFiles, PciFrameOptions } from "../src/player/pci/index.js";
 import {
   buildFrameCsp,

@@ -117,7 +117,7 @@ export function readSubmissionOptions(options: unknown): SubmissionSettings {
     checkFunction(url, "The url of the option files must be a function");
     fileUrl = returningHttpUrl((file) => Reflect.apply(url, files, [file]));
   }
-  // `selectMessages` checks the overrides, language by language, down to each message.
+  // `selectMessages` checks the catalogs, language by language, down to each message.
   const text = selectMessages(language, messages as Readonly<Record<string, Partial<Messages>>>);
   const { assets, origins, interactions } = readRenderOptions({
     messages: text,

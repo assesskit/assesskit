@@ -419,7 +419,7 @@
   "overrides": [
     {
       "filename": [
-        "packages/player/src/messages/id.ts",
+        "packages/player/src/messages/id/index.ts",
         "packages/player/test/messages.test.ts",
         "docs/player/messages.md",
         "packages/player/README.md",

@@ -1,7 +1,8 @@
 import { type CandidateView, createEngine } from "@assesskit/runtime/delivery";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
+import { EN_MESSAGES } from "../src/index.js";
+import { ID_MESSAGES } from "../src/messages/id/index.js";
 import {
   bindToLifetime,
   clockText,

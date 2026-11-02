@@ -149,6 +149,7 @@ async function serve(): Promise<{ readonly url: string; readonly stop: () => Pro
 /** The check of the shared modules, which runs in the page. */
 const SHARED_MODULES = `(async () => {
   const { selectMessages } = await import("/dist/index.js");
+  const { ID_MESSAGES } = await import("/dist/messages/id/index.js");
   const { checkActionEnvelope } = await import("/dist/protocol/index.js");
   checkActionEnvelope({ seq: 1, action: {} });
   let refused = "";
@@ -157,7 +158,7 @@ const SHARED_MODULES = `(async () => {
   } catch (error) {
     refused = error.name;
   }
-  return { rule: selectMessages("id-ID").toolRule, refused };
+  return { rule: selectMessages("id-ID", { id: ID_MESSAGES }).toolRule, refused };
 })()`;
 
 /** The check of the stylesheet, which runs in the page: a content root that adopts it, as the player makes one. */

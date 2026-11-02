@@ -10,7 +10,7 @@ import {
   type ValueDeclaration,
 } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it } from "vitest";
-import { ID_MESSAGES } from "../src/index.js";
+import { ID_MESSAGES } from "../src/messages/id/index.js";
 import { mountSubmission, type SubmissionOptions } from "../src/player/index.js";
 import { HOST_SHADOW_RULE } from "../src/player/internal.js";
 import type { Submission, SubmissionItem, SubmissionPart, SubmissionValue } from "../src/protocol/index.js";
@@ -478,11 +478,14 @@ describe("mountSubmission", () => {
   });
 
   it("speaks the language of the interface that the host gives, and uses its messages", () => {
-    const { shadow } = show(submission(), { language: "id" });
+    const { shadow } = show(submission(), { language: "id", messages: { id: ID_MESSAGES } });
     expect(el(shadow, "article").getAttribute("lang")).toBe("id");
     expect(el(shadow, "h2").textContent).toBe(ID_MESSAGES.submissionTitle);
     expect(fact(shadow, ID_MESSAGES.submissionScorer)).toBe(ID_MESSAGES.submissionHuman);
-    const custom = show(submission(), { language: "id", messages: { id: { submissionTitle: "Work to score" } } });
+    const custom = show(submission(), {
+      language: "id",
+      messages: { id: { ...ID_MESSAGES, submissionTitle: "Work to score" } },
+    });
     expect(el(custom.shadow, "h2").textContent).toBe("Work to score");
     expect(el(show(submission()).shadow, "article").getAttribute("lang")).toBe("en");
   });

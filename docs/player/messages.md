@@ -2,38 +2,44 @@
 
 The interface text is a catalog of plain strings, one per function of the interface, so that the same function has the
 same name everywhere. A message that goes with a count is a label before the number, such as `Words: 1`, so that no noun
-has to agree with the count in a language that the host adds. The player ships English and Indonesian, and a host
-replaces any message or adds a language.
+has to agree with the count in a language that the host adds. The player carries English, which every other catalog is
+checked against. The Indonesian catalog is a module of its own, `@assesskit/player/messages/id`, and a host gives the player the
+catalog of each language it shows: a host that shows English loads no other, and a host that adds a language adds one module.
 
 ```mermaid
 flowchart LR
-  en["EN_MESSAGES<br/>every key"] --> shipped["Shipped catalog<br/>of the language"]
-  shipped --> language["Overrides for the language<br/>such as id"]
-  language --> tag["Overrides for the tag in full<br/>such as id-ID"]
+  en["EN_MESSAGES<br/>every key, in the player"] --> language["Catalog of the host for the language<br/>such as id, from messages/id"]
+  language --> tag["Catalog of the host for the tag in full<br/>such as id-ID"]
   tag --> result["Messages<br/>every key has a message"]
 ```
 
 ## Choosing a catalog
 
-`selectMessages(language, overrides)` returns the messages for the language of the interface. Each step of the diagram
-replaces the keys that it has; a language without a catalog gets English.
+`selectMessages(language, catalogs)` returns the messages for the language of the interface. Each step of the diagram
+replaces the keys that it has; a language without a catalog gets English. The mounts of the player take the same `catalogs` as
+their option `messages`, with `language`, and call `selectMessages` themselves.
 
-| Parameter   | Type                                | Meaning                                                                                                                            |
-| ----------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `language`  | `string`                            | A BCP 47 tag, such as `id` or `id-ID`. Case is ignored.                                                                            |
-| `overrides` | `Record<string, Partial<Messages>>` | Messages that replace the shipped ones, by language tag; a catalog may have only some keys. Without it the shipped messages stand. |
+| Parameter  | Type                                | Meaning                                                                                                                                                                        |
+| ---------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `language` | `string`                            | A BCP 47 tag, such as `id` or `id-ID`. Case is ignored.                                                                                                                        |
+| `catalogs` | `Record<string, Partial<Messages>>` | The catalogs of the host by language tag; a catalog may have only some keys, and one for a tag may change a few messages of its language. Without it the messages are English. |
 
 ```ts
 import { selectMessages } from "@assesskit/player";
+import { ID_MESSAGES } from "@assesskit/player/messages/id";
 
-selectMessages("id-ID").toolRule; // => "Penggaris"
-selectMessages("jv").toolRule; // => "Ruler"
-selectMessages("id", { id: { toolRule: "Mistar" } }).toolRule; // => "Mistar"
-selectMessages("id-ID", { id: { toolRule: "Rule 1" }, "id-ID": { toolRule: "Rule 2" } }).toolRule; // => "Rule 2"
+selectMessages("id-ID").toolRule; // => "Ruler"
+selectMessages("id-ID", { id: ID_MESSAGES }).toolRule; // => "Penggaris"
+selectMessages("jv", { id: ID_MESSAGES }).toolRule; // => "Ruler"
+selectMessages("id", { id: { ...ID_MESSAGES, toolRule: "Mistar" } }).toolRule; // => "Mistar"
+selectMessages("id-ID", { id: ID_MESSAGES, "id-ID": { toolRule: "Penggaris kelas" } }).toolRule; // => "Penggaris kelas"
 ```
 
-`selectMessages` throws `DataError` when `language` is not a string, `overrides` is not an object of objects, a catalog
+`selectMessages` throws `DataError` when `language` is not a string, `catalogs` is not an object of objects, a catalog
 has a key that is not a message key, or a message is not a string.
+
+The size of what a host loads for its language is in [size](size.md): about 5.7 kB after gzip for English, in the player, and
+6.1 kB for the Indonesian module.
 
 ## The catalog
 
@@ -437,8 +443,8 @@ has a key that is not a message key, or a message is not a string.
 | `ltiClosed`                     | The tool for this question is no longer open.                                                                                                                                                                                                                                        | Alat untuk soal ini sudah tidak terbuka.                                                                                                                                                                                                                                                            |
 | `ltiStorageFrame`               | Storage for the tool                                                                                                                                                                                                                                                                 | Penyimpanan untuk alat                                                                                                                                                                                                                                                                              |
 
-`Messages` is the type of a catalog, `EN_MESSAGES` and `ID_MESSAGES` are the shipped ones, and a catalog for another
-language has the same keys.
+`Messages` is the type of a catalog, `EN_MESSAGES` is the English one, in the player, and `ID_MESSAGES` is the Indonesian one,
+in `@assesskit/player/messages/id`. A catalog for another language has the same keys.
 
 ## Adding a message
 
@@ -454,7 +460,7 @@ Each file of `src/messages/` holds one concept.
 | ------------- | ----------------------------------------------------------------------------- |
 | `messages.ts` | The `Messages` type, a property for each message of the interface             |
 | `en.ts`       | The English catalog                                                           |
-| `id.ts`       | The Indonesian catalog                                                        |
+| `id/index.ts` | The Indonesian catalog, the module `@assesskit/player/messages/id`            |
 | `select.ts`   | `selectMessages`                                                              |
 | `check.ts`    | The check of a catalog that a host passes                                     |
 | `internal.ts` | Helpers that other folders and tests share, which the package does not export |

@@ -2,7 +2,8 @@ import { DataError } from "@assesskit/runtime/errors";
 import { attributeOf, parseXml } from "@assesskit/runtime/xml";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
+import { EN_MESSAGES } from "../src/index.js";
+import { ID_MESSAGES } from "../src/messages/id/index.js";
 import { type Lexicon, parseLexicon } from "../src/player/speech/index.js";
 import {
   applyDataSsml,

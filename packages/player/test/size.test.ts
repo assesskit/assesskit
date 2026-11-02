@@ -22,6 +22,7 @@ const ENTRY_POINTS = {
   client: 'export * from "./client/index.ts";',
   player: 'export * from "./player/index.ts";',
   item: 'export { mountItem } from "./player/index.ts";',
+  catalog: 'export * from "./messages/id/index.ts";',
 } as const;
 
 /** What a host's bundler gives an entry point, and the sources it takes the code from. */
@@ -53,6 +54,16 @@ describe("the size of the entry points", () => {
         /\/node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?(jose|uuid|saxes)\//.test(path),
       );
       expect(libraries, `The libraries in the entry point ${name}`).toEqual([]);
+    }
+  });
+
+  it("holds no catalog of Indonesian in the root, the protocol, the client, the player or the first load of an item", async () => {
+    for (const name of ["root", "protocol", "client", "player", "item"] as const) {
+      const { inputs } = await entry(name);
+      expect(
+        inputs.filter((path) => path.endsWith("/messages/id/index.ts")),
+        `The catalog of Indonesian in the entry point ${name}`,
+      ).toEqual([]);
     }
   });
 

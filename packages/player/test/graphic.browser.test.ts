@@ -1,7 +1,8 @@
 import { container, single } from "@assesskit/runtime/values";
 import { describe, expect, it } from "vitest";
 import { userEvent } from "vitest/browser";
-import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
+import { EN_MESSAGES } from "../src/index.js";
+import { ID_MESSAGES } from "../src/messages/id/index.js";
 import { pointsOf } from "../src/player/elements/internal.js";
 import { colorAt, type Graphic, outlined, picture, settle, show } from "./graphic-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";

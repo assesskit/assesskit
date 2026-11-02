@@ -91,9 +91,10 @@ export interface MountOptions {
    */
   readonly language?: string;
   /**
-   * Messages that replace the shipped ones, by language tag; a catalog may leave messages out.
+   * The catalogs of the languages the host shows, by language tag, over the English messages; a catalog may leave messages
+   * out. The player ships English only: the catalog of Indonesian is `ID_MESSAGES` of `@assesskit/player/messages/id`.
    *
-   * @defaultValue None
+   * @defaultValue None, so that the messages are English
    */
   readonly messages?: Readonly<Record<string, Partial<Messages>>>;
   /**

@@ -7,7 +7,8 @@ import { type FileValue, single } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import { createLocalSession, createRemoteSession, type Transport } from "../src/client/index.js";
-import { ID_MESSAGES } from "../src/index.js";
+import { ID_MESSAGES } from "../src/messages/id/index.js";
+import type { Messages } from "../src/messages/index.js";
 import type { MountFiles, SpeechRequest, StylesheetFetch, ToolSlots } from "../src/player/index.js";
 import { mountDelivery } from "../src/player/index.js";
 import { HOST_SHADOW_RULE } from "../src/player/internal.js";
@@ -48,6 +49,8 @@ async function shell(
   options: {
     readonly files?: Readonly<Record<string, string | Uint8Array>>;
     readonly language?: string;
+    /** The catalogs of the languages the host shows, by tag. */
+    readonly messages?: Readonly<Record<string, Partial<Messages>>>;
     readonly practice?: boolean;
     /** Whether the engine allows a review after the end. */
     readonly reviewAfterEnd?: boolean;
@@ -144,6 +147,7 @@ async function shell(
       ...(options.tools === undefined ? {} : { tools: options.tools }),
     },
     ...(options.language === undefined ? {} : { language: options.language }),
+    ...(options.messages === undefined ? {} : { messages: options.messages }),
     ...(options.chrome === undefined ? {} : { chrome: options.chrome }),
     ...(options.landmark === undefined ? {} : { landmark: options.landmark }),
     ...(options.headingLevel === undefined ? {} : { headingLevel: options.headingLevel }),
@@ -273,7 +277,7 @@ describe("mountDelivery", () => {
     });
 
     it("names the button and the mark in Indonesian", async () => {
-      const s = await shell({ marking: true, language: "id" });
+      const s = await shell({ marking: true, language: "id", messages: { id: ID_MESSAGES } });
       await waitFor(() => expect(buttonNamed(s.ui, "Tandai untuk ditinjau")).toBeTruthy());
       buttonNamed(s.ui, "Tandai untuk ditinjau").click();
       await waitFor(() => expect(mapOf(s.ui)[0]).toContain("Ditandai untuk ditinjau"));
@@ -377,7 +381,11 @@ describe("mountDelivery", () => {
   });
 
   it("writes the interface in the language of the candidate, the refusals included", async () => {
-    const s = await shell({ language: "id", files: examFiles({ limits: '<qti-time-limits max-time="600"/>' }) });
+    const s = await shell({
+      language: "id",
+      messages: { id: ID_MESSAGES },
+      files: examFiles({ limits: '<qti-time-limits max-time="600"/>' }),
+    });
     await shown(s);
     expect(s.ui.querySelector(".ak-player")?.getAttribute("lang")).toBe("id");
     expect(buttons(s.ui)).toEqual([
@@ -1268,7 +1276,7 @@ describe("the supports in the player", () => {
   });
 
   it("names the supports in the language of the interface", async () => {
-    const s = await shell({ profile: PROFILE, language: "id" });
+    const s = await shell({ profile: PROFILE, language: "id", messages: { id: ID_MESSAGES } });
     await waitFor(() => expect(panelButtons(s.ui)).toHaveLength(2));
     expect(s.ui.querySelector(".ak-supports")?.getAttribute("aria-label")).toBe(ID_MESSAGES.supportsLabel);
   });

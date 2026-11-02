@@ -93,7 +93,7 @@ and `reportValidity()` is `false` until the rater has decided every criterion.
 | ------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `stylesheet` | `CSSStyleSheet`                     | The player's stylesheet, built from `player.css` ([styling](styling.md)). Required                                     |
 | `language`   | `string`                            | The language of the interface, a BCP 47 tag. Default: `"en"`                                                           |
-| `messages`   | `Record<string, Partial<Messages>>` | Messages that replace the shipped ones, by language tag ([messages](messages.md)). Default: none                       |
+| `messages`   | `Record<string, Partial<Messages>>` | The catalogs of the languages the host shows, by language tag ([messages](messages.md)). Default: none, English        |
 | `ratings`    | `readonly RubricRating[]`           | The ratings to show at first, such as those of an earlier rater. Default: `[]`                                         |
 | `readOnly`   | `boolean`                           | Whether the form only shows the ratings as text, for a second rater or an adjudicator. Default: `false`                |
 | `onChange`   | `(ratings, score) => void`          | Called with the ratings and their score after each change by the rater, never for `ratings` or `update`. Default: none |
