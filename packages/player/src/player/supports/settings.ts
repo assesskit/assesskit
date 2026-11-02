@@ -18,7 +18,8 @@ import type {
 } from "@assesskit/runtime/pnp";
 import type { Messages } from "../../messages/index.js";
 import { html } from "../internal.js";
-import { BASE_FONT_SIZE, DEFAULT_ZOOM } from "./appearance.js";
+import { BASE_FONT_SIZE, fontSizeOf, zoomAmountOf } from "./appearance.js";
+import { EXTENSION_PREFIX } from "./names.js";
 
 /** A value of a list as the `value` of its option, and the text that names it. */
 type Choice = readonly [value: string, text: string];
@@ -68,9 +69,6 @@ const VOLUMES: readonly number[] = [0.25, 0.5, 0.75, 1];
 
 /** The grades of braille: uncontracted, contracted and more contracted. */
 const GRADES: readonly BrailleGrade[] = [1, 2, 3];
-
-/** The prefix of a term of a program, which a list names by what follows it. */
-const EXTENSION_PREFIX = "ext:";
 
 /** Names a term of a program by what follows `ext:`. */
 const termText = (value: string): string =>
@@ -160,8 +158,7 @@ const THEMES: readonly (readonly [ColorTheme, keyof Messages])[] = [
  */
 function textAppearanceFields(settings: TextAppearance, context: FieldContext): Field[] {
   const { messages, language } = context;
-  // A size of 0 or less asks for nothing, so the text keeps the size of the player.
-  const size = settings.fontSize !== undefined && settings.fontSize > 0 ? settings.fontSize : BASE_FONT_SIZE;
+  const size = fontSizeOf(settings) ?? BASE_FONT_SIZE;
   return [
     termField(
       "color-theme",
@@ -192,8 +189,7 @@ function textAppearanceFields(settings: TextAppearance, context: FieldContext): 
 function magnificationFields(settings: Magnification, { messages, language }: FieldContext): Field[] {
   const format = percent(language);
   const field = (part: "allContent" | "text" | "nonText", label: string, zoom: Zoom | undefined): Field => {
-    const amount = zoom?.zoomAmount !== undefined && zoom.zoomAmount > 0 ? zoom.zoomAmount : DEFAULT_ZOOM;
-    return numberField(`zoom-${part}`, label, ZOOM_AMOUNTS, amount, format, (zoomAmount) => ({
+    return numberField(`zoom-${part}`, label, ZOOM_AMOUNTS, zoomAmountOf(zoom), format, (zoomAmount) => ({
       ...settings,
       [part]: { ...zoom, zoomAmount },
     }));

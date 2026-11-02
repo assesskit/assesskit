@@ -1,5 +1,5 @@
 import type { SupportView } from "@assesskit/runtime/delivery";
-import type { ColorTheme, FontFace, GenericFontFace, SupportName, Zoom } from "@assesskit/runtime/pnp";
+import type { ColorTheme, FontFace, GenericFontFace, SupportName, TextAppearance, Zoom } from "@assesskit/runtime/pnp";
 import type { Presentation } from "../presentation/index.js";
 import { activeSupport, checkSupportViews, colorThemeOf } from "./check.js";
 
@@ -11,7 +11,7 @@ export const BASE_FONT_SIZE = 12;
  *
  * @see {@link https://www.w3.org/TR/WCAG22/#resize-text | WCAG 2.2, resize text}
  */
-export const DEFAULT_ZOOM = 2;
+const DEFAULT_ZOOM = 2;
 
 /** The generic font families as CSS spells them. */
 const GENERIC_FONT_FACES: Readonly<Record<GenericFontFace, string>> = {
@@ -39,8 +39,13 @@ interface Writer {
 
 type Applier = (support: SupportView, out: Writer) => void;
 
-/** Returns the amount of a zoom, or the default when the zoom names none that can be used: a zoom of 0 or less shows nothing. */
-function amountOf(zoom: Zoom | undefined): number {
+/**
+ * Returns the amount of a zoom, or the default when the zoom names none that can be used: a zoom of 0 or less shows nothing.
+ *
+ * @param zoom - The zoom of the profile.
+ * @returns The amount, the default of 2 for none.
+ */
+export function zoomAmountOf(zoom: Zoom | undefined): number {
   const amount = zoom?.zoomAmount;
   return amount !== undefined && amount > 0 ? amount : DEFAULT_ZOOM;
 }
@@ -53,13 +58,24 @@ function amountOf(zoom: Zoom | undefined): number {
 function zoomsOf(support: SupportView): { readonly text: number; readonly nonText: number } {
   const settings = support.settings?.name === "magnification" ? support.settings : undefined;
   if (settings === undefined || (settings.text === undefined && settings.nonText === undefined)) {
-    const all = amountOf(settings?.allContent);
+    const all = zoomAmountOf(settings?.allContent);
     return { text: all, nonText: all };
   }
   return {
-    text: settings.text === undefined ? 1 : amountOf(settings.text),
-    nonText: settings.nonText === undefined ? 1 : amountOf(settings.nonText),
+    text: settings.text === undefined ? 1 : zoomAmountOf(settings.text),
+    nonText: settings.nonText === undefined ? 1 : zoomAmountOf(settings.nonText),
   };
+}
+
+/**
+ * Returns the size of text that the text appearance asks for, in points, or `undefined` for none: a size of 0 or less would
+ * show no text, so it asks for nothing.
+ *
+ * @param settings - The settings of the text appearance.
+ * @returns The size.
+ */
+export function fontSizeOf({ fontSize }: TextAppearance): number | undefined {
+  return fontSize !== undefined && fontSize > 0 ? fontSize : undefined;
 }
 
 /** The settings of text appearance that are a number written as a CSS number, with the unit of its property. */
@@ -84,10 +100,8 @@ function applyTextAppearance({ settings }: SupportView, { attributes, properties
   if (settings?.name !== "text-appearance") return;
   if (settings.fontColor !== undefined) properties.set("--ak-fg", settings.fontColor);
   if (settings.backgroundColor !== undefined) properties.set("--ak-bg", settings.backgroundColor);
-  // A size of 0 or less would show no text, so it asks for nothing.
-  if (settings.fontSize !== undefined && settings.fontSize > 0) {
-    properties.set("--ak-font-scale", String(settings.fontSize / BASE_FONT_SIZE));
-  }
+  const size = fontSizeOf(settings);
+  if (size !== undefined) properties.set("--ak-font-scale", String(size / BASE_FONT_SIZE));
   const family = settings.fontFace === undefined ? undefined : fontFamilyOf(settings.fontFace);
   if (family !== undefined) properties.set("--ak-font-family", family);
   for (const [field, property, unit] of SPACINGS) {

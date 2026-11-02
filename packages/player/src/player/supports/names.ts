@@ -39,7 +39,7 @@ const MESSAGE_OF: ReadonlyMap<SupportName, keyof Messages> = new Map<SupportName
  *
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, custom supports}
  */
-const EXTENSION_PREFIX = "ext:";
+export const EXTENSION_PREFIX = "ext:";
 
 /**
  * The custom supports that a tool of the toolbar turns on and off: the highlighter and the answer eliminator.
