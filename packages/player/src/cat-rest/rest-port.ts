@@ -91,6 +91,14 @@ const optionsSchema = v.strictObject({
   timeoutMs: v.optional(positiveSchema, DEFAULT_TIMEOUT_MS),
 });
 
+/**
+ * The segments of a path that a URL takes as a step to another path, written as they are or with escapes: an identifier that
+ * is one cannot be sent, since `sections/..` is the endpoint itself.
+ *
+ * @see {@link https://url.spec.whatwg.org/#single-dot-path-segment | URL Standard, dot segments}
+ */
+const DOT_SEGMENTS: ReadonlySet<string> = new Set([".", ".."]);
+
 /** Removes the slashes that end a URL, so that a reference and an endpoint with and without one are the same. */
 function withoutTrailingSlashes(url: string): string {
   let end = url.length;
@@ -167,6 +175,12 @@ export function createRestCatPort(options: RestCatPortOptions): CatPort {
     prefix: string,
     ...path: readonly string[]
   ): Promise<{ readonly engine: CatEngine; readonly url: string }> => {
+    const step = path.find((segment) => DOT_SEGMENTS.has(segment));
+    if (step !== undefined) {
+      throw new DataError(
+        `The identifier ${describe(step)} cannot be sent in the path of a URL, which takes it as a step to another path.`,
+      );
+    }
     const engine = await engineOf(prefix);
     return { engine, url: [withoutTrailingSlashes(engine.endpoint), ...path.map(encodeURIComponent)].join("/") };
   };

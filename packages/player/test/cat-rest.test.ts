@@ -572,6 +572,25 @@ describe("createRestCatPort", () => {
     ).toThrow(/^The engine of the reference .* is invalid at credentials\.tokenUrl: expected an absolute https URL/);
   });
 
+  it("refuses an identifier that a URL takes as a step to another path, and sends nothing", async () => {
+    const service = fakeService();
+    const port = onePort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
+    for (const [call, step] of [
+      [() => port.getSection(PREFIX, ".."), ".."],
+      [() => port.endSection(PREFIX, "."), "."],
+      [() => port.createSession(PREFIX, "..", {}), ".."],
+      [() => port.submitResults(PREFIX, "sec1", "..", { assessmentResult: RESULT }), ".."],
+      [() => port.endSession(PREFIX, "..", "s1"), ".."],
+    ] as const) {
+      expect(await rejection(call())).toBe(
+        `The identifier "${step}" cannot be sent in the path of a URL, which takes it as a step to another path.`,
+      );
+    }
+    expect(service.calls).toEqual([]);
+    await port.endSection(PREFIX, "...");
+    expect(engineCalls(service.calls).map(({ url }) => url)).toEqual([`${PREFIX}/sections/...`]);
+  });
+
   it("takes the global fetch as it is", () => {
     expect(() => onePort({ fetch, endpoint: PREFIX, credentials: CREDENTIALS })).not.toThrow();
   });
