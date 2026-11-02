@@ -1755,26 +1755,29 @@ describe("regular expressions", () => {
       const runs = 7;
       const smallLength = 125_000;
       const largeLength = 2_000_000;
+      const repeats = largeLength / smallLength;
       const microsecondsPerMillisecond = 1000;
       // A busy machine delays a process but adds nothing to its processor time, so the growth is measured on that, not
       // on the wall clock; and the least of several runs leaves out what a garbage collection or a cold compiler adds.
-      const processorTimeOf = (compiled: XsdPattern, text: string): number => {
+      // The small text is matched as many times as it is shorter, so that both sides do the same work if the time is
+      // linear, and take long enough that the other threads of the process do not decide the ratio.
+      const processorTimeOf = (compiled: XsdPattern, text: string, times: number): number => {
         const before = process.cpuUsage();
-        compiled.matches(text);
+        for (let time = 0; time < times; time += 1) compiled.matches(text);
         const { user, system } = process.cpuUsage(before);
         return (user + system) / microsecondsPerMillisecond;
       };
-      const leastTime = (compiled: XsdPattern, length: number): number => {
+      const leastTime = (compiled: XsdPattern, length: number, times: number): number => {
         const text = "a".repeat(length);
         compiled.matches(text);
-        return Math.min(...Array.from({ length: runs }, () => processorTimeOf(compiled, text)));
+        return Math.min(...Array.from({ length: runs }, () => processorTimeOf(compiled, text, times)));
       };
       for (const pattern of ["(a+)+$", "(a|a)*b", "\\p{L}*\\p{Nd}"]) {
         const compiled = compileXsdRegex(pattern);
-        const growth = leastTime(compiled, largeLength) / leastTime(compiled, smallLength);
-        // Sixteen times the text takes about sixteen times as long, and a quadratic pattern 256 times as long. The
-        // limit of 64 is where the time grows with the 1.5th power of the length.
-        expect(growth, pattern).toBeLessThan(64);
+        const growth = leastTime(compiled, largeLength, 1) / leastTime(compiled, smallLength, repeats);
+        // Linear time makes the ratio about 1, and a quadratic pattern makes it 16, the factor of the lengths. The limit
+        // of 4 is where the time grows with the 1.5th power of the length.
+        expect(growth, pattern).toBeLessThan(4);
       }
     }, 30_000);
 
