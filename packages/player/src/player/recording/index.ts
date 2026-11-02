@@ -6,5 +6,11 @@
  *
  * @module
  */
-export { chooseRecording, type Recording, type RecordingMethod, startRecording } from "./recorder.js";
+export {
+  chooseRecording,
+  RECORDER_START_LIMIT_MS,
+  type Recording,
+  type RecordingMethod,
+  startRecording,
+} from "./recorder.js";
 export { encodeWav } from "./wav.js";

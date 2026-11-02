@@ -1,8 +1,18 @@
+import { AssesskitError } from "@assesskit/runtime/errors";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
-import { chooseRecording, startRecording } from "../src/player/recording/index.js";
-import { audioContextRuns, fakeMicrophone, heardFor, needsAudio, trackAudioContexts } from "./audio.js";
+import { chooseRecording, RECORDER_START_LIMIT_MS, startRecording } from "../src/player/recording/index.js";
+import {
+  audioContextRuns,
+  fakeMicrophone,
+  heardFor,
+  needsAudio,
+  suspendedAudioContext,
+  trackAudioContexts,
+  trackedContexts,
+} from "./audio.js";
 import { STATIC_URL } from "./interactions-fixture.js";
+import { waitFor } from "./wait.js";
 
 /** The URL of the worklet that the asset origin of the tests serves. */
 const WORKLET = `${STATIC_URL}recorder-worklet.js`;
@@ -40,8 +50,11 @@ function recorderOf(...types: readonly string[]): void {
   );
 }
 
+const realSetTimeout = globalThis.setTimeout;
+
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("recording", () => {
@@ -117,5 +130,100 @@ describe("recording", () => {
     // The worklet delivers blocks of 128 frames, so a recording of a moment holds many of them.
     expect(fields.dataBytes).toBeGreaterThan(0);
     expect(fields.dataBytes % 2).toBe(0);
+  });
+  describe("the start of a WAV recording", () => {
+    const wav = { kind: "wav", mimeType: "audio/wav" } as const;
+
+    it("gives up at the limit when the audio context never runs, and lets go of the context", async () => {
+      const contexts = suspendedAudioContext();
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      let settled = false;
+      const outcome = startRecording(new MediaStream(), wav, WORKLET)
+        .then(
+          () => "started",
+          (error: unknown) => error,
+        )
+        .finally(() => {
+          settled = true;
+        });
+      await vi.advanceTimersByTimeAsync(RECORDER_START_LIMIT_MS - 1);
+      expect([settled, contexts.made(), contexts.closed()]).toEqual([false, 1, 0]);
+      await vi.advanceTimersByTimeAsync(1);
+      const error = await outcome;
+      expect(error).toBeInstanceOf(AssesskitError);
+      expect((error as Error).message).toContain(`did not run within ${RECORDER_START_LIMIT_MS} ms`);
+      expect([contexts.made(), contexts.closed()]).toEqual([1, 1]);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it("limits the start to the 5 seconds that the guide states", () => {
+      expect(RECORDER_START_LIMIT_MS).toBe(5000);
+    });
+
+    it("hears of a start that fails after the limit once, and not again", async () => {
+      const heard: unknown[] = [];
+      const listen = (event: PromiseRejectionEvent): void => void heard.push(event.reason);
+      window.addEventListener("unhandledrejection", listen);
+      let closed = 0;
+      vi.stubGlobal(
+        "AudioContext",
+        class {
+          state = "suspended";
+          audioWorklet = { addModule: (): Promise<void> => Promise.resolve() };
+          resume(): Promise<void> {
+            return new Promise((_, failed) =>
+              setTimeout(() => failed(new Error("The device failed late.")), RECORDER_START_LIMIT_MS + 1000),
+            );
+          }
+          close(): Promise<void> {
+            closed += 1;
+            return Promise.resolve();
+          }
+        },
+      );
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      const outcome = startRecording(new MediaStream(), wav, WORKLET).then(
+        () => "started",
+        (error: unknown) => error,
+      );
+      await vi.advanceTimersByTimeAsync(RECORDER_START_LIMIT_MS);
+      expect(await outcome).toBeInstanceOf(AssesskitError);
+      await vi.advanceTimersByTimeAsync(1000);
+      await new Promise((done) => realSetTimeout(done, 50));
+      window.removeEventListener("unhandledrejection", listen);
+      expect([heard, closed]).toEqual([[], 1]);
+    });
+
+    it("starts when the context runs just before the limit", async (context) => {
+      await needsAudio(context, audioContextRuns());
+      const stream = await tone();
+      const Real = globalThis.AudioContext;
+      const late = RECORDER_START_LIMIT_MS - 1000;
+      vi.stubGlobal(
+        "AudioContext",
+        class extends Real {
+          override resume(): Promise<void> {
+            return new Promise((running) => setTimeout(() => running(super.resume()), late));
+          }
+        },
+      );
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      const started = startRecording(stream, wav, WORKLET);
+      await vi.advanceTimersByTimeAsync(late);
+      const recording = await started;
+      expect(vi.getTimerCount()).toBe(0);
+      vi.useRealTimers();
+      expect((await recording.stop()).type).toBe("audio/wav");
+    });
+
+    it("lets go of the context when the worklet cannot load", async (context) => {
+      await needsAudio(context, audioContextRuns());
+      trackAudioContexts();
+      const stream = await tone();
+      await expect(startRecording(stream, wav, `${STATIC_URL}nothing-here/recorder-worklet.js`)).rejects.toThrow();
+      const [microphone, recorder] = trackedContexts();
+      expect(microphone?.state).toBe("running");
+      await waitFor(() => expect(recorder?.state).toBe("closed"));
+    });
   });
 });

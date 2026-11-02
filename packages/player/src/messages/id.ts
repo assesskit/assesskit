@@ -175,6 +175,7 @@ export const ID_MESSAGES: Messages = {
   uploadUploading: "Mengunggah",
   uploadFailed: "Berkas tidak dapat diunggah. Coba lagi.",
   uploadNoMicrophone: "Mikrofon tidak dapat digunakan.",
+  uploadNotStarted: "Perekaman tidak dapat dimulai. Periksa perangkat suara, lalu tekan Rekam.",
   uploadAutomatic: "Perekaman dimulai sendiri saat hitung mundur berakhir.",
   uploadStartsIn: "Dimulai dalam",
   uploadTimeLeft: "Sisa waktu",

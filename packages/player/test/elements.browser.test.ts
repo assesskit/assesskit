@@ -1,5 +1,5 @@
 import { readAsi } from "@assesskit/runtime/asi";
-import { DataError } from "@assesskit/runtime/errors";
+import { AssesskitError, DataError } from "@assesskit/runtime/errors";
 import { describeInteractions } from "@assesskit/runtime/interactions";
 import { INTERACTION_TYPES } from "@assesskit/runtime/metadata";
 import { container, type FileValue, single, type Value } from "@assesskit/runtime/values";
@@ -17,7 +17,15 @@ import {
   type InteractionOptions,
   MAX_RECORDING_SECONDS,
 } from "../src/player/index.js";
-import { audioContextRuns, fakeMicrophone, heardFor, needsAudio, trackAudioContexts } from "./audio.js";
+import { RECORDER_START_LIMIT_MS } from "../src/player/recording/index.js";
+import {
+  audioContextRuns,
+  fakeMicrophone,
+  heardFor,
+  needsAudio,
+  suspendedAudioContext,
+  trackAudioContexts,
+} from "./audio.js";
 import { PLAYER_CSS, stylesheet } from "./css-fixture.js";
 import { NO_RECORDING } from "./files-fixture.js";
 import { mountScene, type Scene } from "./interactions-fixture.js";
@@ -1056,6 +1064,17 @@ function fakeFiles(failures: { readonly reserve?: boolean; readonly fill?: boole
   return files;
 }
 
+/** The status of a recording that could not start. */
+const NOT_STARTED = "The recording could not start. Check that the sound device works, then press Record.";
+
+const realSetTimeout = globalThis.setTimeout;
+
+/** Waits on the real clock until the host has named a file, and returns how many it named. */
+async function waitForReservation(files: { readonly reserved: readonly unknown[] }): Promise<number> {
+  while (files.reserved.length === 0) await new Promise((done) => realSetTimeout(done, 10));
+  return files.reserved.length;
+}
+
 describe("upload", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -1193,7 +1212,7 @@ describe("upload", () => {
       },
     });
     await userEvent.click(first(scene.findAll(".ak-upload button")));
-    await waitFor(() => expect(scene.find(".ak-upload-status").textContent).toBe("The microphone could not be used."));
+    await waitFor(() => expect(scene.find(".ak-upload-status").textContent).toBe(NOT_STARTED));
     expect(stream.getTracks().map((track) => track.readyState)).toEqual(["ended"]);
     expect(scene.responses).toEqual([]);
     expect(errors).toHaveLength(1);
@@ -1228,6 +1247,7 @@ describe("a recording that starts by itself and is kept", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   /** Intervals that a test moves by hand, so that a countdown waits for it and for nothing else. */
@@ -1527,6 +1547,53 @@ describe("a recording that starts by itself and is kept", () => {
       await waitFor(() => expect(status()).toBe("The file could not be uploaded. Try again."));
       expect(scene.responses.at(-1)?.value).toBeNull();
       expect(record().disabled).toBe(true);
+    });
+
+    it("tells the candidate and reports it when the audio context of a WAV recording never runs, and starts nothing", async (context) => {
+      await needsAudio(context, audioContextRuns());
+      const stream = await fakeMicrophone();
+      vi.spyOn(navigator.mediaDevices, "getUserMedia").mockResolvedValue(stream);
+      const contexts = suspendedAudioContext();
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
+      const files = fakeFiles();
+      const errors: unknown[] = [];
+      const scene = mountScene(
+        Declaration,
+        `<qti-upload-interaction response-identifier="R" type="audio/wav" data-ak-record-start="1"><qti-prompt>Say it.</qti-prompt></qti-upload-interaction>`,
+        { options: { files, onError: (error) => errors.push(error) } },
+      );
+      const status = (): string => scene.find(".ak-upload-status").textContent ?? "";
+      expect(await waitForReservation(files)).toBe(1);
+      expect(status()).toBe("Recording starts by itself when the countdown ends.");
+      // The countdown ends, and the recorder asks the context to run.
+      await vi.advanceTimersByTimeAsync(1000);
+      while (contexts.made() === 0) await new Promise((done) => realSetTimeout(done, 10));
+      expect(status()).toBe("Recording starts by itself when the countdown ends.");
+      await vi.advanceTimersByTimeAsync(RECORDER_START_LIMIT_MS - 1);
+      expect([status(), errors]).toEqual(["Recording starts by itself when the countdown ends.", []]);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(status()).toBe(NOT_STARTED);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toBeInstanceOf(AssesskitError);
+      // The reservation is named and never referenced: no response, no recording, nothing to store.
+      expect(files.reserved).toHaveLength(1);
+      expect([scene.responses, files.filled]).toEqual([[], []]);
+      expect(scene.root.querySelector(".ak-recording")).toBeNull();
+      expect(scene.find(".ak-upload-clock").hasAttribute("hidden")).toBe(true);
+      expect(scene.find(".ak-stored").textContent).toBe("");
+      expect(contexts.closed()).toBe(1);
+      expect(stream.getTracks().map((track) => track.readyState)).toEqual(["ended"]);
+      const record = first(scene.findAll<HTMLButtonElement>(".ak-upload button"));
+      expect(record.disabled).toBe(false);
+
+      // Record starts a recording with a new reservation once the device runs.
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+      vi.spyOn(navigator.mediaDevices, "getUserMedia").mockImplementation(fakeMicrophone);
+      await userEvent.click(record);
+      await waitFor(() => expect(scene.root.querySelector(".ak-recording")).not.toBeNull());
+      expect(files.reserved).toHaveLength(2);
+      expect(scene.responses).toEqual([{ responseIdentifier: "R", value: single("file", first(files.reserved, 1)) }]);
     });
 
     it("reports that the bytes cannot be stored after the lock, and leaves the response naming the file", async (context) => {

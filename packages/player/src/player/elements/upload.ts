@@ -56,7 +56,7 @@ interface Prepared {
 
 /** Why a recording could not be prepared: the message to show, none when the hint of the interaction says it, and the error to report. */
 interface Failure {
-  readonly key: "uploadFailed" | "uploadNoMicrophone" | undefined;
+  readonly key: "uploadFailed" | "uploadNoMicrophone" | "uploadNotStarted" | undefined;
   readonly error: unknown;
 }
 
@@ -367,7 +367,7 @@ export class UploadInteractionElement extends InteractionElement {
       started = await startRecording(prepared.stream, recorder.method, services.workletUrl);
     } catch (error) {
       stopTracks(prepared.stream);
-      this.#fail(attempt, { key: "uploadNoMicrophone", error });
+      this.#fail(attempt, { key: "uploadNotStarted", error });
       return;
     }
     // The recorder ends first: a recorder whose tracks end under it stops by itself.

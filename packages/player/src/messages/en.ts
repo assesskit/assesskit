@@ -175,6 +175,7 @@ export const EN_MESSAGES: Messages = {
   uploadUploading: "Uploading",
   uploadFailed: "The file could not be uploaded. Try again.",
   uploadNoMicrophone: "The microphone could not be used.",
+  uploadNotStarted: "The recording could not start. Check that the sound device works, then press Record.",
   uploadAutomatic: "Recording starts by itself when the countdown ends.",
   uploadStartsIn: "Starts in",
   uploadTimeLeft: "Time left",

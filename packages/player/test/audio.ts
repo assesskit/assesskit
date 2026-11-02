@@ -93,6 +93,47 @@ export function trackAudioContexts(): void {
   );
 }
 
+/** The audio contexts that the page made since {@link trackAudioContexts}, in the order it made them. */
+export function trackedContexts(): readonly AudioContext[] {
+  return TRACKED;
+}
+
+/** What a test asks of the contexts that {@link suspendedAudioContext} made. */
+export interface SuspendedContexts {
+  /** How many contexts the page made. */
+  made(): number;
+  /** How many of them it closed. */
+  closed(): number;
+}
+
+/**
+ * Replaces the audio context of the page with one that no device runs, as a browser with no audio output makes it: it stays
+ * suspended, and `resume()` and the load of a worklet never settle. A test that restores the globals after it
+ * (`vi.unstubAllGlobals`) brings the real context back.
+ */
+export function suspendedAudioContext(): SuspendedContexts {
+  let made = 0;
+  let closed = 0;
+  vi.stubGlobal(
+    "AudioContext",
+    class {
+      state = "suspended";
+      audioWorklet = { addModule: (): Promise<void> => new Promise<void>(() => undefined) };
+      constructor() {
+        made += 1;
+      }
+      resume(): Promise<void> {
+        return new Promise<void>(() => undefined);
+      }
+      close(): Promise<void> {
+        closed += 1;
+        return Promise.resolve();
+      }
+    },
+  );
+  return { made: () => made, closed: () => closed };
+}
+
 /**
  * Gives the page a user activation by pressing a button that it adds and removes. WebKit keeps an audio context suspended
  * unless a gesture of the person came a few seconds before, as a microphone that is not capturing does not excuse, and the

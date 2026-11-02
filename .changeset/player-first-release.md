@@ -52,3 +52,5 @@ a marked item. The guide of the server has the recipe of a review step with a ca
 The frame of a portable custom interaction takes a relative URL from `assets`, resolved against the base URL of the page, and
 refuses at mount a module of the package on an origin that the frame loads no scripts from, the origin of `staticUrl` and
 `origins`. The counters of an extended text are labels before the number (`Words: 1`), so that no noun has to agree with it.
+
+A WAV recording that has not started in 5 seconds, because the audio context stays suspended where the device has no audio output or the worklet does not load, stops waiting: the player says that the recording could not start (`uploadNotStarted`), reports an `AssesskitError` to `hooks.onError`, lets go of the context and the microphone, and leaves Record available.

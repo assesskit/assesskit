@@ -340,6 +340,8 @@ export interface Messages {
   readonly uploadFailed: string;
   /** The notice that the microphone could not be used for a recording. */
   readonly uploadNoMicrophone: string;
+  /** The status when a recording could not start: the recorder failed or did not run within its limit. */
+  readonly uploadNotStarted: string;
   /** The status that says once that a recording starts by itself when the countdown ends. */
   readonly uploadAutomatic: string;
   /** The label of the clock that counts down to the start of a recording. */

@@ -1,3 +1,4 @@
+import { AssesskitError } from "@assesskit/runtime/errors";
 import { RECORDER_PROCESSOR } from "./names.js";
 import { encodeWav } from "./wav.js";
 
@@ -62,9 +63,24 @@ function recordWithRecorder(stream: MediaStream, mimeType: string): Recording {
   };
 }
 
-/** Records the samples that the worklet delivers, and writes them as a WAV file when the recording ends. */
-async function recordWav(stream: MediaStream, workletUrl: string, mimeType: string): Promise<Recording> {
-  const context = new AudioContext();
+/**
+ * The longest a WAV recording may take to start, in milliseconds: the audio context runs, the worklet loads and the graph is
+ * connected. That takes tens of milliseconds, and a slow link to the asset origin adds the load of a file of a few
+ * kilobytes, so 5 seconds is generous; a context that has not run by then will not, because a browser with no audio
+ * output holds it suspended and never settles `resume()`. The limit is short enough that a candidate who is told of the
+ * failure has most of a speaking turn left.
+ */
+export const RECORDER_START_LIMIT_MS = 5000;
+
+/** What a WAV recording keeps once its graph is connected. */
+interface WavGraph {
+  readonly blocks: Float32Array[];
+  readonly source: MediaStreamAudioSourceNode;
+  readonly node: AudioWorkletNode;
+}
+
+/** Runs the context, loads the worklet and connects the stream to it, so that the samples it delivers are kept. */
+async function connectWorklet(context: AudioContext, stream: MediaStream, workletUrl: string): Promise<WavGraph> {
   // A browser may hold a context that no press created suspended, as at a recording that starts by itself.
   await context.resume();
   await context.audioWorklet.addModule(workletUrl);
@@ -79,6 +95,42 @@ async function recordWav(stream: MediaStream, workletUrl: string, mimeType: stri
   source.connect(node);
   node.connect(silence);
   silence.connect(context.destination);
+  return { blocks, source, node };
+}
+
+/**
+ * Records the samples that the worklet delivers, and writes them as a WAV file when the recording ends.
+ *
+ * @remarks
+ * A start that fails or takes longer than {@link RECORDER_START_LIMIT_MS} closes the context, so that nothing is held.
+ */
+async function recordWav(stream: MediaStream, workletUrl: string, mimeType: string): Promise<Recording> {
+  const context = new AudioContext();
+  const connecting = connectWorklet(context, stream, workletUrl);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const limit = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () =>
+        reject(
+          new AssesskitError(
+            `The audio context did not run within ${RECORDER_START_LIMIT_MS} ms, so the recording did not start. A browser holds it suspended when the device has no audio output; put an audio type that the browser records, such as audio/webm, before audio/wav in the type of the interaction.`,
+          ),
+        ),
+      RECORDER_START_LIMIT_MS,
+    );
+  });
+  let graph: WavGraph;
+  try {
+    graph = await Promise.race([connecting, limit]);
+  } catch (error) {
+    // The context closes whether the start failed or timed out; a start that goes on after the limit fails on it unheard,
+    // because the race has taken its rejection.
+    context.close().catch(() => undefined);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+  const { blocks, source, node } = graph;
   return {
     stop: async () => {
       source.disconnect();
@@ -96,6 +148,8 @@ async function recordWav(stream: MediaStream, workletUrl: string, mimeType: stri
  * @param method - How to record, from {@link chooseRecording}.
  * @param workletUrl - The URL of `recorder-worklet.js`, which a WAV recording loads.
  * @returns The recording under way.
+ * @throws `AssesskitError` when a WAV recording does not start within {@link RECORDER_START_LIMIT_MS}, and the error of the
+ * browser when its worklet cannot load.
  */
 export function startRecording(stream: MediaStream, method: RecordingMethod, workletUrl: string): Promise<Recording> {
   return method.kind === "recorder"
