@@ -1,6 +1,6 @@
 import type { AssessmentItem, BodyNode, Catalog, FileHref, HtmlContent } from "../asi/index.js";
 import { withDescendants } from "../asi/internal.js";
-import { checkArray, checkRecord, checkString, describe } from "../checks.js";
+import { checkArray, checkPositiveInteger, checkRecord, checkString, describe, optional } from "../checks.js";
 import type { Issue } from "../errors.js";
 import type { Braille, SupportName } from "../pnp/index.js";
 
@@ -72,6 +72,20 @@ function brailleAgreement(extensions: readonly EntryAttribute[], braille: Braill
 }
 
 /**
+ * Checks the preferences of braille that choose an entry, each of its type; a term outside the vocabulary is valid here, and
+ * agrees with no entry that states another.
+ *
+ * @throws `DataError` when they are not an object, or a preference of the choice has the wrong type.
+ */
+function checkBraille(braille: unknown): void {
+  checkRecord(braille, "The braille settings must be an object");
+  const { brailleType, grade, mathType } = braille;
+  optional(brailleType, (value) => checkString(value, "The braille type"));
+  optional(grade, (value) => checkPositiveInteger(value, "The braille grade"));
+  optional(mathType, (value) => checkString(value, "The math type"));
+}
+
+/**
  * Selects the card entry for the preferences of braille and the language: among the entries whose braille attributes agree
  * with the preferences, the entry of the language or the default; else the first entry that states a preference and agrees;
  * else the entry of the language or the default among all, as the guide gives grade 2 where a higher grade is missing.
@@ -120,7 +134,7 @@ export function selectCard(
   checkArray(catalog.cards, "The cards of the catalog must be an array");
   checkString(support, "The support");
   if (language !== undefined) checkString(language, "The language");
-  if (braille !== undefined) checkRecord(braille, "The braille settings must be an object");
+  if (braille !== undefined) checkBraille(braille);
   const card = catalog.cards.find((candidate) => candidate.support === support);
   if (card === undefined) return undefined;
   const { cardEntries } = card;

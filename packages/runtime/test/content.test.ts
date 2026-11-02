@@ -239,6 +239,19 @@ describe("catalogs and cards", () => {
     expect(() => selectCard(braille, "braille", undefined, JSON.parse('"ueb"'))).toThrow(
       'The braille settings must be an object, found "ueb".',
     );
+    const settingsOf = (json: string): Braille => ({ name: "braille", replaceAccessModes: [], ...JSON.parse(json) });
+    expect(() => selectCard(braille, "braille", undefined, settingsOf('{"brailleType": 5}'))).toThrow(
+      "The braille type must be a string, found 5.",
+    );
+    expect(() => selectCard(braille, "tactile", undefined, settingsOf('{"mathType": null}'))).toThrow(
+      "The math type must be a string, found null.",
+    );
+    expect(() => selectCard(braille, "tactile", undefined, settingsOf('{"grade": "2"}'))).toThrow(
+      'The braille grade must be a positive integer, found "2".',
+    );
+    expect(() => selectCard(braille, "tactile", undefined, settingsOf('{"grade": {}}'))).toThrow(
+      "The braille grade must be a positive integer, found an object.",
+    );
   });
 
   it("finds the catalog that data-catalog-idref names, wherever the item keeps it", () => {
