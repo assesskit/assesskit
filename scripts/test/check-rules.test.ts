@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { checkRule, failedTests, RULES, type Rule, removeRule, timedOutTests } from "../check-rules.ts";
 
 const ROOT = join(import.meta.dirname, "../..");
@@ -65,9 +65,15 @@ describe("failedTests", () => {
 describe("timedOutTests", () => {
   it("counts the tests and the hooks that ran out of time", () => {
     const report =
-      "FAIL a\nError: Test timed out in 30000ms.\nFAIL b\nError: Hook timed out in 10000ms.\nFAIL c\nError: x\n";
+      " FAIL a\nError: Test timed out in 30000ms.\n FAIL b\nError: Hook timed out in 10000ms.\n FAIL c\nError: x\n";
     expect(timedOutTests(report)).toBe(2);
     expect(timedOutTests(" Test Files  1 passed (1)\n      Tests  3 passed (3)\n")).toBe(0);
+  });
+
+  it("counts a test once when the message is printed again outside its block, as the reporter of GitHub Actions does", () => {
+    const report =
+      " FAIL a\nError: Test timed out in 50ms.\n\n::error file=a.test.ts,title=a::Error: Test timed out in 50ms.\n";
+    expect(timedOutTests(report)).toBe(1);
   });
 });
 
@@ -94,7 +100,11 @@ describe("checkRule", () => {
     );
     writeFileSync(
       join(repository, "test/slow.test.ts"),
-      'import { it } from "vitest";\nit("runs out of time", async () => { await new Promise((resolve) => setTimeout(resolve, 2000)); }, 50);\n',
+      'import { it } from "vitest";\nit("runs out of time", () => new Promise(() => undefined), 50);\n',
+    );
+    writeFileSync(
+      join(repository, "test/mixed.test.ts"),
+      'import { expect, it } from "vitest";\nit("runs out of time", () => new Promise(() => undefined), 50);\nit("fails", () => { expect(1).toBe(2); });\n',
     );
     writeFileSync(
       join(repository, "test/hangs.test.ts"),
@@ -112,6 +122,10 @@ describe("checkRule", () => {
 
   afterAll(() => {
     rmSync(repository, { recursive: true, force: true });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("reports a rule as guarded when its test fails without it", () => {
@@ -137,6 +151,20 @@ describe("checkRule", () => {
     const verdict = checkRule(repository, { ...rule, test: "test/slow.test.ts" });
     expect(verdict.outcome).toBe("timed-out");
     expect(verdict.message).toContain("test/slow.test.ts has 1 test that ran out of time on the unchanged code");
+  });
+
+  it("counts the same in the environment of GitHub Actions, whose reporter prints a failure twice", () => {
+    vi.stubEnv("GITHUB_ACTIONS", "true");
+    const verdict = checkRule(repository, { ...rule, test: "test/slow.test.ts" });
+    expect(verdict.outcome).toBe("timed-out");
+    expect(verdict.message).toContain("test/slow.test.ts has 1 test that ran out of time on the unchanged code");
+  });
+
+  it("reports a test that fails beside one that runs out of time as a rule that is not guarded, in that environment too", () => {
+    vi.stubEnv("GITHUB_ACTIONS", "true");
+    const verdict = checkRule(repository, { ...rule, test: "test/mixed.test.ts" });
+    expect(verdict.outcome).toBe("unguarded");
+    expect(verdict.message).toContain("does not pass on the unchanged code");
   });
 
   it("reports a run that is stopped at its limit on the unchanged code as a timeout", () => {

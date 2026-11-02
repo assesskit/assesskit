@@ -79,9 +79,16 @@ export function failedTests(report: string): number | undefined {
   return count("failed") + Math.max(0, total - finished) + errors;
 }
 
-/** Returns how many times a report of a Vitest run says that a test or a hook ran out of time. */
+/**
+ * Returns how many of the failed tests of a report of a Vitest run ran out of time. A failed test has one block, which starts
+ * with `FAIL`, and the message may be printed again outside it (the reporter of GitHub Actions annotates it), so the blocks
+ * are counted and not the messages.
+ */
 export function timedOutTests(report: string): number {
-  return report.match(/(?:Test|Hook) timed out in \d+ms/g)?.length ?? 0;
+  return report
+    .split(/^ FAIL /m)
+    .slice(1)
+    .filter((block) => /(?:Test|Hook) timed out in \d+ms/.test(block)).length;
 }
 
 /** The folders directly below a folder of the repository, if it exists. */
@@ -122,12 +129,16 @@ function runTest(root: string, scratch: string, test: string, browser: boolean, 
   const vitest = join(root, "node_modules/vitest/vitest.mjs");
   const testTimeout = `--testTimeout=${browser ? BROWSER_TEST_TIMEOUT_MS : TEST_TIMEOUT_MS}`;
   const where = browser ? ["--project", "player-browser"] : [];
-  const run = spawnSync(process.execPath, [vitest, "run", "--maxWorkers=2", testTimeout, ...where, test], {
-    cwd: scratch,
-    encoding: "utf8",
-    env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0", BROWSERS: "chromium" },
-    timeout: limit,
-  });
+  const run = spawnSync(
+    process.execPath,
+    [vitest, "run", "--reporter=default", "--maxWorkers=2", testTimeout, ...where, test],
+    {
+      cwd: scratch,
+      encoding: "utf8",
+      env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0", BROWSERS: "chromium" },
+      timeout: limit,
+    },
+  );
   const report = `${run.stdout}${run.stderr}`;
   const failed = failedTests(report);
   return {
