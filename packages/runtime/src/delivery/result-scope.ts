@@ -155,8 +155,9 @@ function instantOf(result: ItemResult, position: number): number {
  * with the latest datestamp among those of the reference that have an attempt and are not `pendingSubmission`, else
  * the last; `ITEM.n.VAR` reads the nth; `duration`, `PART.duration` and `SECTION.duration` are the test result's, 0 for
  * one not entered. A report that lists presented instances only, or holds several results for one instance, makes
- * `ITEM.n`, `qti-number-*` and every aggregate read wrong, and no error says so: read reports of ended sessions that
- * list every planned instance, as `assembleResults` does.
+ * `ITEM.n`, `qti-number-*` and every aggregate read wrong, and one in another order than the plan's makes `ITEM.n.VAR`
+ * and a tie of `ITEM.VAR` read another instance; no error says so. Read reports of ended sessions that list every planned
+ * instance in plan order, as `Engine.results` writes them.
  *
  * @param structure - The structure of the test, as `resolveStructure` returns it.
  * @param result - The stored report, with a test result.

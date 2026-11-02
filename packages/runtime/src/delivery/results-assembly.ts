@@ -401,41 +401,50 @@ function testResultOf(course: Course, state: DeliveryState, cat: CatSession | un
 }
 
 /**
- * Returns the results of the instances of the plan not presented, after those presented, in plan order: no attempt, no
- * time, the status `initial`, the datestamp of the test result, which the schema requires, and no other variable.
+ * Returns the result of an instance of the plan that was not presented: no attempt, no time, the status `initial`, the
+ * datestamp of the test result, which the schema requires, and no other variable.
  *
+ * @param sequenceIndex - The index after those of the instances presented, as the schema requires one.
  * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
  */
-function notPresented(state: DeliveryState): ItemResult[] {
-  const delivered = deliveredLookup(state);
-  return planIndex(state.plan)
-    .placements.filter(({ key }) => delivered(key) === undefined)
-    .map(({ key }, position) => ({
-      identifier: key.ref,
-      sequenceIndex: state.items.length + position + 1,
-      datestamp: datestampOf(state.at),
-      sessionStatus: "initial",
-      variables: builtInResponses(single("integer", 0), single("duration", 0)),
-      supports: [],
-    }));
+function notPresented(state: DeliveryState, key: ItemKey, sequenceIndex: number): ItemResult {
+  return {
+    identifier: key.ref,
+    sequenceIndex,
+    datestamp: datestampOf(state.at),
+    sessionStatus: "initial",
+    variables: builtInResponses(single("integer", 0), single("duration", 0)),
+    supports: [],
+  };
 }
 
 /**
  * Assembles the results report of a session: the context, the result of the test unless an item is delivered alone, and
- * one result for each item instance of the plan, those presented in the order of presentation and then those not.
+ * one result for each item instance of the plan, in plan order.
  *
  * @remarks
- * While scoring requests are pending the report is provisional. An instance not presented has the status `initial`,
- * and the report writes the correct response of a response variable that template processing set.
+ * While scoring requests are pending the report is provisional. The sequence index of an instance presented is its place
+ * in the order of presentation; an instance not presented has the status `initial` and an index after them. Plan order
+ * keeps the nth result of an item reference its instance `n`, and the last of equal datestamps the last instance, as the
+ * engine reads `ITEM.n.VAR` and `ITEM.VAR`, so that `readTestInputs` reads a report as the engine read the session. The
+ * report writes the correct response of a response variable that template processing set.
  */
 export function assembleResults(course: Course, state: DeliveryState): AssessmentResult {
+  const delivered = deliveredLookup(state);
+  let unpresented = state.items.length;
+  const itemResults = planIndex(state.plan).placements.flatMap(({ key }): ItemResult[] => {
+    const item = delivered(key);
+    if (item !== undefined) {
+      const result = itemResultOf(course, state, item, {});
+      return result === undefined ? [] : [result];
+    }
+    unpresented += 1;
+    return [notPresented(state, key, unpresented)];
+  });
   return {
     context: state.report,
     ...(course.standalone ? {} : { testResult: testResultOf(course, state, undefined) }),
-    itemResults: [
-      ...state.items.flatMap((delivered) => itemResultOf(course, state, delivered, {}) ?? []),
-      ...notPresented(state),
-    ],
+    itemResults,
   };
 }
 

@@ -764,8 +764,9 @@ reaches the section, in a nonlinear part too.
 
 `results(state)` assembles the Results Reporting document: the `context` given at `start`; the result of the test, with its
 `duration`, `PART.duration` and `SECTION.duration`, its context variables and outcomes, and the supports used; and an item
-result for each instance of the plan: those presented, in order of presentation, with `sequenceIndex` from 1, then those not
-presented, in plan order, with the next indexes. A report that lists every planned instance can be scored again
+result for each instance of the plan, in plan order. The `sequenceIndex` of an instance presented is its place in the order of
+presentation, from 1; those not presented take the next indexes. Plan order keeps the nth result of an item reference its
+instance `n` after the jumps of a nonlinear part, so a report can be scored again as the engine scored the session
 ([Rescoring a stored report](#rescoring-a-stored-report)).
 
 | Item result       | Content                                                                                                                                                                                                                     |
@@ -1446,11 +1447,12 @@ into `variables` for a regrade such as full credit.
 | Route, selection, CAT stages                         | Stay as taken                                                  | The recipe evaluates no navigation: a corrected item never reroutes a finished session                                                                                                                                    |
 | `qti-random` in processing                           | Fresh draws from `context.random`                              | A report holds no seed                                                                                                                                                                                                    |
 | The variant of an item that was delivered            | The item in `items`                                            | A report does not name the variant; variants share their scoring by content rule                                                                                                                                          |
-| `ITEM.n.VAR` after jumps in a nonlinear part         | The nth result of the reference in the report                  | The report is in order of presentation, which the candidate's jumps can make differ from the plan; `ITEM.VAR` and every aggregate are unaffected                                                                          |
 | `QTI_CONTEXT`, when the test does not declare it     | NULL                                                           | A report holds no value for an undeclared variable: declare it to read it                                                                                                                                                 |
 
 `ITEM.VAR` reads the result with the latest datestamp among those of the reference that have an attempt and are not `pendingSubmission`, and
-the last result of the reference when none has; on equal datestamps, the later. `ITEM.n.VAR` reads the nth result of the reference.
+the last result of the reference when none has; on equal datestamps, such as those of a part that submits its items together, the later in
+the report. `ITEM.n.VAR` reads the nth result of the reference. Both read a report of `results` as the engine read the session, because it
+lists the instances in plan order.
 
 | Options of `readTestInputs` | Default | Meaning                                                                                                   |
 | --------------------------- | ------- | --------------------------------------------------------------------------------------------------------- |

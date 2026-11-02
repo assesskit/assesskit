@@ -1,6 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
+  type Action,
   ASI_NAMESPACE,
   type AssessmentItem,
   type AssessmentResult,
@@ -162,6 +163,8 @@ interface Rescoring {
   readonly outcomes?: (outcomes: ReadonlyMap<string, Value | null>) => ReadonlyMap<string, Value | null>;
   /** The seed of the draws of processing. Default: 1. */
   readonly seed?: number;
+  /** The structure of the test. Default: that of the fixture. */
+  readonly structure?: TestStructure;
 }
 
 /** The outcomes of the recipe of `docs/runtime/delivery.md`: response processing of the corrected items, then the test. */
@@ -175,6 +178,7 @@ function rescored(
     fix = (variables) => variables,
     outcomes = (kept) => kept,
     seed = 1,
+    structure = STRUCTURE,
   } = options;
   const context = { random: createRandom(seed) };
   const variables = new Map<number, ItemVariables>();
@@ -184,8 +188,46 @@ function rescored(
     if (itemResult.sessionStatus === "initial" || itemResult.sessionStatus === "pendingSubmission") return;
     variables.set(position, runResponseProcessing(item, fix(readItemVariables(item, itemResult), itemResult), context));
   });
-  const inputs = readTestInputs(STRUCTURE, report, items, { variables });
-  return runOutcomeProcessing(STRUCTURE.test.model, outcomes(inputs.outcomes), inputs.scope, context);
+  const inputs = readTestInputs(structure, report, items, { variables });
+  return runOutcomeProcessing(structure.test.model, outcomes(inputs.outcomes), inputs.scope, context);
+}
+
+/**
+ * A test of one nonlinear part that submits its items together, with three instances of `q1`, whose outcomes read `q1.SCORE`
+ * and each instance.
+ */
+const TOGETHER = `${outcome("LATEST", "float")}${outcome("FIRST", "float")}${outcome("SECOND", "float")}${outcome("THIRD", "float")}${part(
+  "P",
+  section("S", `<qti-selection select="3" with-replacement="true"/>${refs("q1")}`),
+  "nonlinear",
+  "simultaneous",
+)}${processing(
+  setOutcome("LATEST", '<qti-variable identifier="q1.SCORE"/>'),
+  setOutcome("FIRST", '<qti-variable identifier="q1.1.SCORE"/>'),
+  setOutcome("SECOND", '<qti-variable identifier="q1.2.SCORE"/>'),
+  setOutcome("THIRD", '<qti-variable identifier="q1.3.SCORE"/>'),
+)}`;
+
+/** A session of {@link TOGETHER} that answers the first instance, jumps to the third, answers it right and the second wrong. */
+function jumped(): Sitting {
+  const engine = engineOf(TOGETHER, { items: ITEMS });
+  const answer = (instance: number, choice: string, at: number): Action => ({
+    type: "set-responses",
+    item: key("q1", instance),
+    responses: new Map([["RESPONSE", single("identifier", choice)]]),
+    at,
+  });
+  const { state } = played(
+    engine,
+    begun(engine).state,
+    answer(1, "C", 100),
+    { type: "move", to: key("q1", 3), at: 200 },
+    answer(3, "B", 300),
+    { type: "move", to: key("q1", 2), at: 400 },
+    answer(2, "C", 500),
+    { type: "end-test", at: 600 },
+  );
+  return { engine, state };
 }
 
 /**
@@ -210,7 +252,7 @@ describe("the results of the instances not presented", () => {
   const { engine, state } = sit(ITEMS, 2);
   const report = engine.results(state);
 
-  it("lists every planned instance, those presented first, then those not, in plan order with the next sequence indexes", () => {
+  it("lists every planned instance in plan order, those not presented with the sequence indexes after the others", () => {
     expect(state.plan.parts[0]?.children[0]?.children).toHaveLength(4);
     expect(report.itemResults.map(({ sequenceIndex }) => sequenceIndex)).toEqual([1, 2, 3, 4]);
     expect(report.itemResults.map(({ sessionStatus }) => sessionStatus)).toEqual([
@@ -254,6 +296,17 @@ describe("the results of the instances not presented", () => {
   it("is a valid report that survives writing and reading", () => {
     expect(validateResults(report)).toEqual([]);
     expect(readResults(writeResults(report))).toEqual(report);
+  });
+
+  it("lists the instances in plan order after the jumps of a nonlinear part, each with its place in the presentation", () => {
+    const { engine, state } = jumped();
+    const report = engine.results(state);
+    expect(report.itemResults.map(({ sequenceIndex }) => sequenceIndex)).toEqual([1, 3, 2]);
+    expect(report.itemResults.map((result) => response(result, "RESPONSE").candidateResponse)).toEqual([
+      single("identifier", "C"),
+      single("identifier", "C"),
+      single("identifier", "B"),
+    ]);
   });
 
   it("lists nothing more when the session presented every instance", () => {
@@ -713,6 +766,14 @@ describe("rescoring a report", () => {
         expect(untimed(rescored(report, ITEM_MAP, { corrected: new Set() }))).toEqual(untimed(state.outcomes));
       }
     }
+  });
+
+  it("gives the outcomes of a part that submits its items together, after jumps between the instances of an item", () => {
+    const { engine, state } = jumped();
+    expect(state.outcomes.get("LATEST")).toEqual(single("float", 1));
+    const structure = structureOf(TOGETHER);
+    expect(rescored(engine.results(state), ITEM_MAP, { structure })).toEqual(state.outcomes);
+    expect(rescored(engine.results(state), ITEM_MAP, { structure, corrected: new Set() })).toEqual(state.outcomes);
   });
 
   it("scores a corrected key as an engine of the fixed item does with the same actions", () => {
