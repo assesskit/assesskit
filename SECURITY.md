@@ -102,7 +102,7 @@ Points to be aware of when deploying the runtime:
 
 A portable custom interaction is code of the package, and it runs in the candidate's browser. The player runs each one in an
 `iframe` with `sandbox="allow-scripts"` and no `allow-same-origin`, so the code has an opaque origin: no cookie, storage or
-access to the player. The frame restricts itself with a content security policy before it loads the code: no connection,
+access to the player. The frame sends no referrer, so the code does not learn the address of the page. The frame restricts itself with a content security policy before it loads the code: no connection,
 frame, form or `base`, no inline script and no `eval`, and scripts, styles, images, media and fonts only from the asset
 origin and the origins the host allows. The frame refuses to start where the browser does not apply the policy.
 

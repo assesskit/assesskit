@@ -245,9 +245,10 @@ that is to see new markup or a new status is mounted again with the saved state.
 
 ## The frame and its limits
 
-The `iframe` has `sandbox="allow-scripts"` and no `allow-same-origin`, so its origin is opaque. The module has no cookie,
-`localStorage`, `sessionStorage` or IndexedDB, cannot read the player's document or location, cannot navigate the top
-window, open a window or submit a form.
+The `iframe` has `sandbox="allow-scripts"` and no `allow-same-origin`, so its origin is opaque, and
+`referrerpolicy="no-referrer"`, so its `document.referrer` is empty. The module has no cookie, `localStorage`,
+`sessionStorage` or IndexedDB, cannot read the player's document or location, cannot navigate the top window, open a window
+or submit a form.
 
 When the player starts it, the frame restricts itself with this policy, in a `meta` element, before it loads anything:
 

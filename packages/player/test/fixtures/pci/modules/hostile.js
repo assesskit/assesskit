@@ -126,6 +126,9 @@ define(["qtiCustomInteractionContext"], function (context) {
     results.topLocation = sync(function () {
       return top.location.href;
     });
+    results.referrer = sync(function () {
+      if (document.referrer === "") throw new Error("no referrer");
+    });
     results.localStorage = sync(function () {
       localStorage.setItem("stolen", "1");
     });

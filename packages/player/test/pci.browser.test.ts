@@ -603,7 +603,7 @@ describe("mountPciFrame", () => {
 
 describe("the frame", () => {
   describe("the policy", () => {
-    it("reaches no network, no parent, no storage and no other window", async () => {
+    it("reaches no network, no parent, no storage and no other window, and learns no address of the page", async () => {
       const result = mount({
         interaction: interactionOf(
           `module="hostile" custom-interaction-type-identifier="urn:test:hostile" data-evil="${stranger}"`,
@@ -625,6 +625,7 @@ describe("the frame", () => {
         parentDocument: "blocked",
         parentLocation: "blocked",
         topLocation: "blocked",
+        referrer: "blocked",
         localStorage: "blocked",
         sessionStorage: "blocked",
         cookie: "blocked",

@@ -92,6 +92,8 @@ function createFrameElement(staticUrl: string, title: string): HTMLIFrameElement
   const frame = document.createElement("iframe");
   // No allow-same-origin, so that the frame has an opaque origin: no cookies, storage or access to the player.
   frame.setAttribute("sandbox", "allow-scripts");
+  // No referrer, so that the module cannot read the address of the player's page in `document.referrer`.
+  frame.setAttribute("referrerpolicy", "no-referrer");
   frame.title = title;
   frame.src = new URL(FRAME_PATH, staticUrl).href;
   frame.style.display = "block";
@@ -105,8 +107,9 @@ function createFrameElement(staticUrl: string, title: string): HTMLIFrameElement
  * Mounts a portable custom interaction in a sandboxed frame and appends the frame to a parent.
  *
  * @remarks
- * The frame is an `iframe` with `sandbox="allow-scripts"` and no `allow-same-origin`, so it has an opaque origin, and its
- * document is `pci-frame/frame.html` under `staticUrl`. The player writes the variables bound to the interaction as the
+ * The frame is an `iframe` with `sandbox="allow-scripts"` and no `allow-same-origin`, so it has an opaque origin, and with
+ * `referrerpolicy="no-referrer"`, so it does not learn the address of the page; its document is `pci-frame/frame.html` under
+ * `staticUrl`. The player writes the variables bound to the interaction as the
  * JSON of the binding, reading the bytes of the files among them first, and sends them with the configuration once the
  * frame says it runs. The frame restricts itself with a content security policy, loads `player.css` and the stylesheets,
  * builds the markup, loads the modules with RequireJS and creates the interaction.

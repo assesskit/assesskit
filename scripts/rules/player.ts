@@ -160,6 +160,14 @@ export const PLAYER_RULES: readonly Rule[] = [
     browser: true,
   },
   {
+    rule: "A frame of a portable custom interaction is not told the address of the page.",
+    file: "packages/player/src/player/pci/host.ts",
+    find: 'frame.setAttribute("referrerpolicy", "no-referrer");',
+    replace: "",
+    test: "packages/player/test/pci.browser.test.ts",
+    browser: true,
+  },
+  {
     rule: "A message from a window other than the frame of the interaction is ignored.",
     file: "packages/player/src/player/pci/host.ts",
     find: "if (event.source !== frame.contentWindow) return;",
