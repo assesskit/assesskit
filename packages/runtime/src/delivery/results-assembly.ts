@@ -428,6 +428,8 @@ function notPresented(state: DeliveryState, key: ItemKey, sequenceIndex: number)
  * keeps the nth result of an item reference its instance `n`, and the last of equal datestamps the last instance, as the
  * engine reads `ITEM.n.VAR` and `ITEM.VAR`, so that `readTestInputs` reads a report as the engine read the session. The
  * report writes the correct response of a response variable that template processing set.
+ *
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function assembleResults(course: Course, state: DeliveryState): AssessmentResult {
   const delivered = deliveredLookup(state);
