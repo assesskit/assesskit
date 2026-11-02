@@ -1,4 +1,4 @@
-import { inject } from "vitest";
+import { inject, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 
 /**
@@ -71,8 +71,27 @@ export async function needsAudio(context: { skip(): never }, available: Promise<
 
 const realSetTimeout = globalThis.setTimeout;
 
-/** The audio context of each stream that {@link fakeMicrophone} gave, and the time on its clock when it gave it. */
-const CLOCKS = new WeakMap<MediaStream, { readonly context: AudioContext; readonly from: number }>();
+/** The audio contexts that the page made since {@link trackAudioContexts}, the ones of the code under test among them. */
+const TRACKED: AudioContext[] = [];
+
+/**
+ * Starts to keep every audio context that the page makes, and forgets the ones kept before, so that {@link heardFor} can wait
+ * for the sound that the code under test records, whichever context records it. A test that restores the globals after it
+ * (`vi.unstubAllGlobals`) ends the tracking.
+ */
+export function trackAudioContexts(): void {
+  TRACKED.length = 0;
+  const Real = globalThis.AudioContext;
+  vi.stubGlobal(
+    "AudioContext",
+    class extends Real {
+      constructor(...options: ConstructorParameters<typeof Real>) {
+        super(...options);
+        TRACKED.push(this);
+      }
+    },
+  );
+}
 
 /**
  * A stream of an oscillator, which a test gives in place of the microphone. It needs an audio context that runs, so a test
@@ -97,24 +116,31 @@ export async function fakeMicrophone(): Promise<MediaStream> {
     };
     look();
   });
-  CLOCKS.set(destination.stream, { context, from: context.currentTime });
   return destination.stream;
 }
 
 /**
- * Resolves when the sound of a stream from {@link fakeMicrophone} has played for the seconds given, by the clock of its audio
- * context. A busy host can stall that clock, and a recording of a stream whose clock stood still holds a header and no sound.
+ * Resolves when every audio context that is running, the one of the microphone and the one that records it, has advanced the
+ * seconds given by its own clock since the call. A busy host stalls the clock of a context, and a recording that was made
+ * while the clock of its context stood still holds a header and no sound, however long a test waited in real time.
  *
- * @param stream - A stream from `fakeMicrophone`.
- * @param seconds - How long the sound has played.
+ * @param seconds - How long the sound plays before the promise resolves.
+ * @throws `Error` when no context is running, because the test did not call {@link trackAudioContexts} before the page made
+ * one.
  */
-export async function heard(stream: MediaStream, seconds: number): Promise<void> {
-  const clock = CLOCKS.get(stream);
-  if (clock === undefined) throw new Error("The stream is not one from fakeMicrophone.");
+export async function heardFor(seconds: number): Promise<void> {
+  const running = TRACKED.filter(({ state }) => state === "running").map((context) => ({
+    context,
+    from: context.currentTime,
+  }));
+  if (running.length === 0) throw new Error("No audio context is running: call trackAudioContexts first.");
   await new Promise<void>((played) => {
     const look = (): void => {
-      if (clock.context.currentTime - clock.from >= seconds) played();
-      else realSetTimeout(look, 20);
+      if (running.every(({ context, from }) => context.state !== "running" || context.currentTime - from >= seconds)) {
+        played();
+      } else {
+        realSetTimeout(look, 20);
+      }
     };
     look();
   });

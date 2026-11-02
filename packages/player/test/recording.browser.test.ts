@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { chooseRecording, startRecording } from "../src/player/recording/index.js";
-import { audioContextRuns, needsAudio } from "./audio.js";
+import { audioContextRuns, fakeMicrophone, heardFor, needsAudio, trackAudioContexts } from "./audio.js";
 import { STATIC_URL } from "./interactions-fixture.js";
 
 /** The URL of the worklet that the asset origin of the tests serves. */
@@ -11,13 +11,7 @@ const WORKLET = `${STATIC_URL}recorder-worklet.js`;
 async function tone(): Promise<MediaStream> {
   // A browser starts an audio context only after a gesture of the person.
   await userEvent.click(document.body);
-  const context = new AudioContext();
-  await context.resume();
-  const oscillator = context.createOscillator();
-  const destination = context.createMediaStreamDestination();
-  oscillator.connect(destination);
-  oscillator.start();
-  return destination.stream;
+  return fakeMicrophone();
 }
 
 /** Reads a WAV header: the fields of RIFF, `fmt ` and `data` (Multimedia Programming Interface and Data Specifications 1.0). */
@@ -89,8 +83,10 @@ describe("recording", () => {
     await needsAudio(context, audioContextRuns());
     const type = ["audio/webm", "audio/ogg", "audio/mp4"].find((candidate) => MediaRecorder.isTypeSupported(candidate));
     expect(type).toBeDefined();
-    const recording = await startRecording(await tone(), { kind: "recorder", mimeType: type ?? "" }, WORKLET);
-    await new Promise((done) => setTimeout(done, 200));
+    trackAudioContexts();
+    const stream = await tone();
+    const recording = await startRecording(stream, { kind: "recorder", mimeType: type ?? "" }, WORKLET);
+    await heardFor(0.2);
     const blob = await recording.stop();
     expect(blob.type).toBe(type);
     expect(blob.size).toBeGreaterThan(0);
@@ -98,9 +94,10 @@ describe("recording", () => {
 
   it("records 16-bit mono PCM through the worklet into a WAV file", async (context) => {
     await needsAudio(context, audioContextRuns());
+    trackAudioContexts();
     const stream = await tone();
     const recording = await startRecording(stream, { kind: "wav", mimeType: "audio/wav" }, WORKLET);
-    await new Promise((done) => setTimeout(done, 400));
+    await heardFor(0.4);
     const blob = await recording.stop();
     expect(blob.type).toBe("audio/wav");
     const bytes = new Uint8Array(await blob.arrayBuffer());

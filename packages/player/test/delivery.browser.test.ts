@@ -12,7 +12,7 @@ import type { MountFiles, SpeechRequest, StylesheetFetch, ToolSlots } from "../s
 import { mountDelivery } from "../src/player/index.js";
 import { HOST_SHADOW_RULE } from "../src/player/internal.js";
 import type { HostSession, SessionClient } from "../src/protocol/index.js";
-import { audioContextRuns, fakeMicrophone, heard, needsAudio } from "./audio.js";
+import { audioContextRuns, fakeMicrophone, heardFor, needsAudio, trackAudioContexts } from "./audio.js";
 import { computed, PLAYER_CSS } from "./css-fixture.js";
 import { examDefinition, examFiles, examHost, lexiconFiles, packageOf, pciFiles } from "./exam-fixture.js";
 import { NO_RECORDING } from "./files-fixture.js";
@@ -1881,18 +1881,14 @@ describe("a recording kept at the clock", () => {
   }
 
   /**
-   * A shell whose first item records at once, with the oscillator for a microphone, once half a second of sound has played
-   * and the response of the recording has reached the host: the client holds the responses of an exam for a second before it
-   * sends them.
+   * A shell whose first item records at once, with the oscillator for a microphone, once the recording has had half a second
+   * of sound by the clock of its audio contexts and its response has reached the host: the client holds the responses of an exam for a second before it sends
+   * them.
    */
   async function recording(practice: boolean, context: Parameters<typeof needsAudio>[0]) {
     await needsAudio(context, audioContextRuns());
-    const streams: MediaStream[] = [];
-    vi.spyOn(navigator.mediaDevices, "getUserMedia").mockImplementation(async () => {
-      const stream = await fakeMicrophone();
-      streams.push(stream);
-      return stream;
-    });
+    trackAudioContexts();
+    vi.spyOn(navigator.mediaDevices, "getUserMedia").mockImplementation(fakeMicrophone);
     vi.useFakeTimers({ toFake: ["setTimeout", "setInterval", "clearTimeout", "clearInterval"] });
     const store = recordingStore();
     const dispatched: Promise<unknown>[] = [];
@@ -1905,9 +1901,7 @@ describe("a recording kept at the clock", () => {
     const s = await shell({ files: recordingFiles(), practice, reserve: store.reserve, fill: store.fill, wrap });
     await vi.advanceTimersByTimeAsync(0);
     await waitFor(() => expect(contentOf(s.ui).querySelector(".ak-recording")).not.toBeNull());
-    const [stream] = streams;
-    if (stream === undefined) throw new Error("The recording asked for no microphone.");
-    await heard(stream, 0.5);
+    await heardFor(0.5);
     await vi.advanceTimersByTimeAsync(1100);
     await Promise.all(dispatched);
     return { s, store };

@@ -17,7 +17,7 @@ import {
   type InteractionOptions,
   MAX_RECORDING_SECONDS,
 } from "../src/player/index.js";
-import { audioContextRuns, fakeMicrophone, needsAudio } from "./audio.js";
+import { audioContextRuns, fakeMicrophone, heardFor, needsAudio, trackAudioContexts } from "./audio.js";
 import { PLAYER_CSS, stylesheet } from "./css-fixture.js";
 import { NO_RECORDING } from "./files-fixture.js";
 import { mountScene, type Scene } from "./interactions-fixture.js";
@@ -1057,6 +1057,10 @@ function fakeFiles(failures: { readonly reserve?: boolean; readonly fill?: boole
 }
 
 describe("upload", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   const Body = (types: string): string =>
     `<qti-upload-interaction response-identifier="R" ${types}><qti-prompt>Upload your work.</qti-prompt></qti-upload-interaction>`;
   const Declaration = declare("single", "file");
@@ -1144,6 +1148,7 @@ describe("upload", () => {
     // The WebKit of Playwright on Linux has no MediaRecorder.
     if (typeof MediaRecorder === "undefined") context.skip();
     await needsAudio(context, audioContextRuns());
+    trackAudioContexts();
     const microphone = vi.spyOn(navigator.mediaDevices, "getUserMedia").mockImplementation(fakeMicrophone);
     const files = fakeFiles();
     const scene = mountScene(Declaration, Body('type="audio/webm audio/ogg audio/mp4"'), { options: { files } });
@@ -1160,7 +1165,7 @@ describe("upload", () => {
     expect(reserved.fileName).toMatch(/^recording\.(webm|ogg|m4a)$/u);
     expect(scene.responses).toEqual([{ responseIdentifier: "R", value: single("file", reserved) }]);
     expect(scene.find(".ak-stored").textContent).toBe("");
-    await new Promise((done) => setTimeout(done, 300));
+    await heardFor(0.3);
     await userEvent.click(stop ?? scene.host);
     await waitFor(() => expect(files.filled).toHaveLength(1));
     expect(first(files.filled).file).toEqual(reserved);
