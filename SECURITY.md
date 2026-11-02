@@ -319,10 +319,11 @@ Test plans (`PlanLimits`; option `limits` of `planTest` and of `createEngine`, w
 
 Actions of a client (`ActionLimits`; option `limits` of `parseCandidateAction`):
 
-| Limit               | Default   | Unit       | Largest example | Applies to                                                                                                                                    |
-| ------------------- | --------- | ---------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `maxActionSize`     | 4,194,304 | JSON nodes | none            | One action: each string, number, boolean, `null`, array and object counts 1, and each string and property name adds its length in code units. |
-| `maxPciStateLength` | 1,048,576 | characters | none            | The state of one portable custom interaction, in code units.                                                                                  |
+| Limit                  | Default   | Unit       | Largest example | Applies to                                                                                                                                                                                                                                            |
+| ---------------------- | --------- | ---------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `maxActionSize`        | 4,194,304 | JSON nodes | none            | One action: each string, number, boolean, `null`, array and object counts 1, and each string and property name adds its length in code units.                                                                                                         |
+| `maxPciStateLength`    | 1,048,576 | characters | none            | The state of one portable custom interaction, in code units.                                                                                                                                                                                          |
+| `maxSettingListLength` | 256       | entries    | none            | One list in the settings of a `support-settings` action, such as the font names of `text-appearance`, nested lists included. Reading the settings builds an element of a profile for each entry, and a million entries need more than 192 MB of heap. |
 
 Regular expressions (`XsdRegexLimits`; option `limits` of `compileXsdRegex`, whose defaults `qti-pattern-match` uses):
 

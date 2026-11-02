@@ -20,7 +20,8 @@ The option `reviewAfterEnd` of `createEngine` lets a candidate review the items 
 session control allows; it is off by default, and an engine with it names the content version of the states it reads.
 The builders of the covers block and of the scoring rubric block are `buildScoreCoversBlock` and `buildScoringRubricBlock`.
 `parseCandidateAction(json, { limits })` takes its limits in an options object like the other readers, and reports an action
-above a limit as a `SecurityError` that names it. `sendCatRequest(port, request, { signal })` and `drainCat` end their wait
+above a limit as a `SecurityError` that names it; `maxSettingListLength`, 256 by default, bounds each list in the settings of a
+`support-settings` action. `sendCatRequest(port, request, { signal })` and `drainCat` end their wait
 when the signal aborts, and leave the request of the port to its own timeout. A custom operator that throws is a
 `ProcessingError` that names it and keeps what it threw as `cause`, so that `Engine.apply` reports `processing-failed` and
 never throws on a state of the engine. The ZIP reader ends the central directory by its size and not by the 16-bit count of

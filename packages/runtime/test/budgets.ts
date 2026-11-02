@@ -23,6 +23,13 @@ export const BUDGETS = {
   stateRoundTrip: 30,
   /** The size of the state of a session of 100 items that has ended, in bytes. */
   stateBytes: 150_000,
+  /**
+   * The old generation of the heap of a worker, in megabytes, in which `parseCandidateAction` refuses a `support-settings`
+   * action of 1,000,000 font names. The worker needs 24 to 28 MB with that input, and the same action read without the limit
+   * `maxSettingListLength` needs 192 to 256 MB. A heap is no time of a runner, so the budget is a little over twice the
+   * measure, on any machine.
+   */
+  settingsHeap: 64,
 } as const;
 
 /**

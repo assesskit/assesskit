@@ -31,6 +31,13 @@ export interface ActionLimits {
    * @defaultValue `1048576`
    */
   readonly maxPciStateLength: number;
+  /**
+   * The entries of one list in the settings of a `support-settings` action, such as the font names of `text-appearance`:
+   * reading the settings builds an element of a profile for each entry, which takes far more memory than the entry.
+   *
+   * @defaultValue `256`
+   */
+  readonly maxSettingListLength: number;
 }
 
 /** The options of {@link parseCandidateAction}. */
@@ -44,7 +51,11 @@ export interface ParseCandidateActionOptions {
 }
 
 /** The default limits of {@link parseCandidateAction}. */
-export const DEFAULT_ACTION_LIMITS: ActionLimits = { maxActionSize: 4_194_304, maxPciStateLength: 1_048_576 };
+export const DEFAULT_ACTION_LIMITS: ActionLimits = {
+  maxActionSize: 4_194_304,
+  maxPciStateLength: 1_048_576,
+  maxSettingListLength: 256,
+};
 
 /** The types of the actions of the host, which a candidate never sends. */
 const HOST_ACTION_TYPES: readonly string[] = ["time", "supply-scores", "cat-response"];
@@ -57,10 +68,12 @@ function readLimits(limits: Partial<ActionLimits>): ActionLimits {
   const {
     maxActionSize = DEFAULT_ACTION_LIMITS.maxActionSize,
     maxPciStateLength = DEFAULT_ACTION_LIMITS.maxPciStateLength,
+    maxSettingListLength = DEFAULT_ACTION_LIMITS.maxSettingListLength,
   } = limits;
   checkPositiveInteger(maxActionSize, "The limit maxActionSize");
   checkPositiveInteger(maxPciStateLength, "The limit maxPciStateLength");
-  return { maxActionSize, maxPciStateLength };
+  checkPositiveInteger(maxSettingListLength, "The limit maxSettingListLength");
+  return { maxActionSize, maxPciStateLength, maxSettingListLength };
 }
 
 /**
@@ -121,6 +134,30 @@ function refuseHostAction(json: unknown): void {
   }
 }
 
+/** Returns the members of a JSON array or object, and none of another value. */
+const membersOf = (value: unknown): readonly unknown[] =>
+  Array.isArray(value) ? value : isRecord(value) ? Object.values(value) : [];
+
+/**
+ * Checks every list in the settings of a `support-settings` action against the limit, nested lists included, before the
+ * settings are read. It walks without recursion a value that {@link checkSize} has bounded.
+ */
+function checkSettingLists(json: unknown, limit: number): void {
+  if (!isRecord(json) || json.type !== "support-settings") return;
+  const pending: unknown[] = [json.settings];
+  while (pending.length > 0) {
+    const value = pending.pop();
+    if (Array.isArray(value) && value.length > limit) {
+      throw new SecurityError(
+        `A list in the settings of support-settings has ${value.length} entries, more than the limit maxSettingListLength of ${limit}.`,
+        "maxSettingListLength",
+        limit,
+      );
+    }
+    for (const member of membersOf(value)) pending.push(member);
+  }
+}
+
 /** Checks the length of every PCI state against the limit, which is the caller's and not the form's. */
 function checkPciStates(action: CandidateAction, limit: number): void {
   if (action.type !== "set-responses" || action.pciStates === undefined) return;
@@ -147,14 +184,16 @@ function checkPciStates(action: CandidateAction, limit: number): void {
  * @param options - See {@link ParseCandidateActionOptions}.
  * @returns The action of the candidate, without a time.
  * @throws `DataError` when the input is not an action of the candidate, or an option has the wrong type.
- * @throws `SecurityError` when the action is larger than `maxActionSize`, or a PCI state is longer than `maxPciStateLength`.
+ * @throws `SecurityError` when the action is larger than `maxActionSize`, a PCI state is longer than `maxPciStateLength`, or
+ * a list in the settings of `support-settings` is longer than `maxSettingListLength`.
  */
 export function parseCandidateAction(json: unknown, options: ParseCandidateActionOptions = {}): CandidateAction {
   checkOptions(options);
   const { limits = {} } = options;
-  const { maxActionSize, maxPciStateLength } = readLimits(limits);
+  const { maxActionSize, maxPciStateLength, maxSettingListLength } = readLimits(limits);
   checkSize(json, maxActionSize);
   refuseHostAction(json);
+  checkSettingLists(json, maxSettingListLength);
   const action = parseWith(actionSchema, json, "The action");
   checkPciStates(action, maxPciStateLength);
   return action;
@@ -164,6 +203,7 @@ export function parseCandidateAction(json: unknown, options: ParseCandidateActio
 const UNLIMITED: ActionLimits = {
   maxActionSize: Number.MAX_SAFE_INTEGER,
   maxPciStateLength: Number.MAX_SAFE_INTEGER,
+  maxSettingListLength: Number.MAX_SAFE_INTEGER,
 };
 
 /**

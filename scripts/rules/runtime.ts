@@ -256,6 +256,13 @@ export const RUNTIME_RULES: readonly Rule[] = [
     test: DELIVERY_TEST,
   },
   {
+    rule: "A list in the settings of a support-settings action of a client longer than maxSettingListLength is refused.",
+    file: ACTION,
+    find: "if (Array.isArray(value) && value.length > limit) {",
+    replace: "if (false) {",
+    test: DELIVERY_TEST,
+  },
+  {
     rule: "A client cannot send an action of the host: the time, a supplied score or a CAT response.",
     file: ACTION,
     find: 'if (isRecord(json) && typeof json.type === "string" && HOST_ACTION_TYPES.includes(json.type)) {',

@@ -90,8 +90,11 @@ of the tests generate with a fixed seed. A benchmark fails when its fastest samp
 | `serializeState` and `deserializeState` | The state of a session of 100 items, all answered                                                                           | 4.81 ms                  | 30 ms         |
 | Rescoring a report                      | `readTestInputs` and `runOutcomeProcessing` on the report of 200 items, all answered, with 21 rules that read item sessions | 1.40 ms                  | 7 ms          |
 | Size of that state                      | The same state as JSON text                                                                                                 | 118,699 bytes            | 150,000 bytes |
+| Heap of a refused action                | A `support-settings` action of 1,000,000 font names, read by the build of `parseCandidateAction` in a worker                | 24 to 28 MB on a laptop  | 64 MB         |
 
-The replay also checks that the replayed state equals the state of the session.
+The replay also checks that the replayed state equals the state of the session. The heap is the old generation of the worker
+(`resourceLimits`), which no runner changes: the same action read without the limit `maxSettingListLength` needs 192 to 256 MB
+and runs out of the budget, which the benchmark also checks.
 
 A benchmark takes at least 10 samples, and the gate is the fastest of them, which the other work of a shared machine affects
 least. The rule of the budgets is the one of measurekit and of the rest of the family: **a time is five times the fastest

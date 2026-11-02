@@ -4876,7 +4876,11 @@ describe("candidate actions", () => {
 
   it("refuses an action larger than the limit maxActionSize, and a PCI state longer than maxPciStateLength", () => {
     const comment = (text: string): unknown => actionToJson({ type: "comment", item, text });
-    expect(DEFAULT_ACTION_LIMITS).toEqual({ maxActionSize: 4_194_304, maxPciStateLength: 1_048_576 });
+    expect(DEFAULT_ACTION_LIMITS).toEqual({
+      maxActionSize: 4_194_304,
+      maxPciStateLength: 1_048_576,
+      maxSettingListLength: 256,
+    });
     expect(parseCandidateAction(comment("x".repeat(100)), { limits: { maxActionSize: 200 } })).toMatchObject({
       type: "comment",
     });
@@ -4916,6 +4920,64 @@ describe("candidate actions", () => {
     expect(parseCandidateAction(many)).toMatchObject({ type: "set-responses" });
   });
 
+  it("refuses a list in the settings of support-settings longer than maxSettingListLength, before it reads the settings", () => {
+    const fonts = (fontNames: unknown[]): unknown =>
+      json(
+        JSON.stringify({
+          type: "support-settings",
+          settings: { name: "text-appearance", replaceAccessModes: [], fontFace: { fontNames } },
+        }),
+      );
+    const names = (count: number): string[] => Array.from({ length: count }, (_, at) => `Font ${at}`);
+    expect(parseCandidateAction(fonts(names(256)))).toMatchObject({ type: "support-settings" });
+    expect(() => parseCandidateAction(fonts(names(257)))).toThrow(
+      "A list in the settings of support-settings has 257 entries, more than the limit maxSettingListLength of 256.",
+    );
+    expect(() => parseCandidateAction(fonts(names(4)), { limits: { maxSettingListLength: 3 } })).toThrow(
+      expect.objectContaining({ name: "SecurityError", limit: "maxSettingListLength", value: 3 }),
+    );
+    expect(parseCandidateAction(fonts(names(300)), { limits: { maxSettingListLength: 300 } })).toMatchObject({
+      type: "support-settings",
+    });
+    // The limit holds before the settings are read: a long list of entries of the wrong type is refused for its length.
+    expect(() => parseCandidateAction(fonts(Array.from({ length: 257 }, () => 5)))).toThrow(SecurityError);
+    const spoken = (restrictionTypes: unknown[]): unknown =>
+      json(
+        JSON.stringify({
+          type: "support-settings",
+          settings: { name: "spoken", replaceAccessModes: [], restrictionTypes },
+        }),
+      );
+    expect(() => parseCandidateAction(spoken(Array.from({ length: 257 }, () => "word-by-word")))).toThrow(
+      /maxSettingListLength of 256\.$/,
+    );
+    const hazards = json(
+      JSON.stringify({
+        type: "support-settings",
+        settings: { name: "hazard-avoidance", hazards: Array.from({ length: 257 }, () => "flashing") },
+      }),
+    );
+    expect(() => parseCandidateAction(hazards)).toThrow(/maxSettingListLength of 256\.$/);
+    const nested = json(
+      JSON.stringify({
+        type: "support-settings",
+        settings: {
+          name: "language-of-interface",
+          languages: [{ language: "en", replaceAccessModes: Array.from({ length: 257 }, () => "visual") }],
+        },
+      }),
+    );
+    expect(() => parseCandidateAction(nested)).toThrow(/maxSettingListLength of 256\.$/);
+    const responses = json(
+      JSON.stringify({
+        type: "set-responses",
+        item: { ref: "a", instance: 1 },
+        responses: Array.from({ length: 300 }, (_, at) => [`R${at}`, null]),
+      }),
+    );
+    expect(parseCandidateAction(responses)).toMatchObject({ type: "set-responses" });
+  });
+
   it("counts the size of nested input without recursion, so deep input is refused and never overflows the stack", () => {
     let deep: unknown = [];
     for (let level = 0; level < 200_000; level++) deep = [deep];
@@ -4938,6 +5000,9 @@ describe("candidate actions", () => {
     );
     expect(() => parseCandidateAction(input, { limits: { maxPciStateLength: 0 } })).toThrow(
       "The limit maxPciStateLength must be a positive integer, found 0.",
+    );
+    expect(() => parseCandidateAction(input, json('{"limits":{"maxSettingListLength":null}}'))).toThrow(
+      "The limit maxSettingListLength must be a positive integer, found null.",
     );
   });
 
