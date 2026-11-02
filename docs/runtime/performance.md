@@ -29,8 +29,9 @@ xychart-beta
 The inputs are the 1EdTech examples that both implementations read and score (`pnpm corpus`), with the correct responses
 the oracle reports, and a test of 10 sections of 10 choice items with the sum of the scores as its outcome. A sample is the
 whole row: every item of it, once; the row of a test submits 100 times, so that a sample lasts milliseconds. Both sides run warm, after a warm-up, on a runtime built as it ships; each side prepares its
-sessions outside the time. The ratio compares the fastest samples of a run, and a gate compares the runtime with both its time
-and its ratio. `pnpm bench` runs the rows.
+sessions outside the time. The two sides take turns in five rounds of a fifth of the window each, so that a stretch of a busy
+host falls on both and not on whichever ran then; the fastest sample of each side is the fastest of its rounds. The ratio
+compares those fastest samples, and a gate compares the runtime with both its time and its ratio. `pnpm bench` runs the rows.
 
 A ratio budget is the measured ratio with headroom for the noise of a shared host, so that a slowdown of the runtime by half
 again fails the gate. The rows of parsing, of a submission and of a test also allow for work that the runtime does and

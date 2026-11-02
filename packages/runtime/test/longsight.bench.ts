@@ -117,16 +117,40 @@ interface Row {
   readonly prepareLongsight?: () => void;
 }
 
-/** Times both implementations on a row, the oracle second, and holds the runtime to its budgets. */
+/**
+ * The rounds in which a row takes turns between the two implementations. Each round gives each side a fifth of the window
+ * of {@link BENCH_OPTIONS}, so that a stretch of a busy host, which lasts a second or more on a shared runner, falls on
+ * both sides and not on whichever ran then: the fastest sample of each side comes from the quietest of its rounds, and
+ * the ratio of the two holds on a shared host as the budgets assume.
+ */
+const ROUNDS = 5;
+
+/** The statistics of the fastest sample over several rounds, and the median of the medians. */
+function overRounds(rounds: readonly { readonly min: number; readonly p50: number }[]): {
+  readonly latency: { readonly min: number; readonly p50: number };
+} {
+  const medians = rounds.map(({ p50 }) => p50).sort((a, b) => a - b);
+  return {
+    latency: { min: Math.min(...rounds.map(({ min }) => min)), p50: medians[Math.floor(medians.length / 2)] ?? 0 },
+  };
+}
+
+/** Times both implementations on a row, in turns, and holds the runtime to its budgets. */
 async function compareRow(context: Pick<TestContext, "annotate" | "bench">, row: Row): Promise<void> {
   const { annotate, bench } = context;
-  const subject = await bench(`${row.name}: runtime`, { beforeEach: row.prepareRuntime }, row.runtime).run(
-    BENCH_OPTIONS,
-  );
-  const reference = await bench(`${row.name}: Longsight`, { beforeEach: row.prepareLongsight }, row.longsight).run(
-    BENCH_OPTIONS,
-  );
-  await expectAgainst(annotate, row.name, subject, reference, row.budget);
+  const subject = bench(`${row.name}: runtime`, { beforeEach: row.prepareRuntime }, row.runtime);
+  const reference = bench(`${row.name}: Longsight`, { beforeEach: row.prepareLongsight }, row.longsight);
+  const { time, iterations } = BENCH_OPTIONS;
+  const round = { ...BENCH_OPTIONS, time: time / ROUNDS, iterations: Math.ceil(iterations / ROUNDS) };
+  const runtimeRounds = [];
+  const referenceRounds = [];
+  for (let place = 0; place < ROUNDS; place++) {
+    // The warm-up is once, in the first round: the later rounds find both sides warm.
+    const options = { ...round, warmup: place === 0 };
+    runtimeRounds.push((await subject.run(options)).latency);
+    referenceRounds.push((await reference.run(options)).latency);
+  }
+  await expectAgainst(annotate, row.name, overRounds(runtimeRounds), overRounds(referenceRounds), row.budget);
 }
 
 test("has examples that both implementations read and score", () => {
