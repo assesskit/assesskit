@@ -38,4 +38,5 @@ take, so that a port without the deployment of sections serves.
 The action `mark` marks an item instance that was presented for review, or takes the mark away; the mark is a field of the
 state (a state without it reads as before), `marked` in the navigation map, and never in the results. `validate` accepts a
 text entry bound to a record, a `ruby` with an `rp` before and after its `rt`, and a portable custom interaction whose module
-resolution files and modules lie at the root of the package, from an item in any folder.
+resolution files and modules lie at the root of the package, from an item in any folder. It warns about the pre-conditions and branch rules of a test part in nonlinear mode, which the engine ignores as it
+ignores those of the sections and items in it.

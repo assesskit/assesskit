@@ -1537,6 +1537,22 @@ describe("branch rules and pre-conditions", () => {
     ).toHaveLength(1);
   });
 
+  it("warns about the branch rules and pre-conditions of a test part navigated in nonlinear mode, which the engine ignores", () => {
+    const nonlinear = 'navigation-mode="nonlinear" submission-mode="individual"';
+    const sections = section("S", `${itemRef("I1")}${itemRef("I2")}`);
+    const condition = `<qti-pre-condition>${base("boolean", "true")}</qti-pre-condition>`;
+    for (const part of [condition, branch("EXIT_TEST")]) {
+      const issues = only(validated({ part, sections, partAttributes: nonlinear }), "assesskit/validate/ignored-rule");
+      expect(issues).toMatchObject([
+        { severity: "warning", location: { element: "qti-assessment-test/qti-test-part" } },
+      ]);
+      expect(issues[0]?.message).toBe(
+        'The qti-test-part "P" has branch rules or pre-conditions, which are ignored because the test part is navigated in nonlinear mode.',
+      );
+      expect(only(validated({ part, sections }), "assesskit/validate/ignored-rule")).toEqual([]);
+    }
+  });
+
   it("warns about items, sections and parts that a branch rule that is always true jumps over", () => {
     const items = rules(section("S", `${itemRef("I1", branch("I3"))}${itemRef("I2")}${itemRef("I3")}`));
     expect(only(validated({ sections: items }), "assesskit/validate/unreachable")).toMatchObject([

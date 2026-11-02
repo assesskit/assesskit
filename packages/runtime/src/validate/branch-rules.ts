@@ -112,9 +112,9 @@ export class BranchRuleChecks {
     }
   }
 
-  /** Warns about the rules of items and sections that the navigation mode or an adaptive section ignores. */
+  /** Warns about the rules of parts, sections and items that the navigation mode or an adaptive section ignores. */
   private ignored(node: Ruled): void {
-    if (node.kind === "part" || (node.model.branchRules.length === 0 && node.model.preConditions.length === 0)) return;
+    if (node.model.branchRules.length === 0 && node.model.preConditions.length === 0) return;
     const nonlinear = partOf(node).model.navigationMode === "nonlinear";
     if (!nonlinear && !insideAdaptive(node)) return;
     const why = nonlinear ? "the test part is navigated in nonlinear mode" : "the section selects its items adaptively";
