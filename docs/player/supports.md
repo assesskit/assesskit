@@ -85,8 +85,8 @@ itself. `mountItem` ([items in a page](delivery.md#items-in-a-page)) mounts the 
 - **The voice** of reading aloud is `hooks.voice`, by default the voice of the browser ([speech](speech.md)). It reads with
   the pronunciation lexicons of the item shown: the shell loads the files that `documents.lexicons` names, through the gate,
   and leaves out one that is missing or is not a PLS document ([speech](speech.md#lexicons)).
-- **Settings** that the candidate may change have a list in the panel while their support is on: the color theme and the amount
-  of magnification. A choice sends `{ type: "support-settings", settings }`, the state keeps it, and the next view applies it, so
+- **Settings** that the candidate may change have a list in the panel while their support is on: the color theme, the amount
+  of magnification and the preferences of reading aloud. A choice sends `{ type: "support-settings", settings }`, the state keeps it, and the next view applies it, so
   it holds for later items and after a reload ([the settings](#the-settings)).
 - **The magnification** of non-text content reaches media sized in pixels at once: the shell sets the media scale of the
   content root from `mediaScaleOf` with every change of the supports, and the item is not drawn again, so what the candidate
@@ -144,7 +144,8 @@ a magnification.
 ## The settings
 
 The profile sets the preferences of a support when the session starts, and the candidate changes them during the session, as
-CERT asks of magnification (`A-30a`, `A-30b`) and the best practices guide of the color theme. The panel has a list for each
+CERT asks of magnification (`A-30a`, `A-30b`) and of reading aloud (`A-40d`, `A-40e`), and the best practices guide of the color
+theme. The panel has a list for each
 setting that the player follows, while its support is on. A choice reports the settings whole, those of the view with the value
 chosen; the host sends them as `support-settings`, the runtime keeps them in the state, and the next view applies them to the
 content root and the frames at once, without drawing the item again.
@@ -159,12 +160,17 @@ flowchart LR
   look --> root["Content root and PCI frames"]
 ```
 
-| Support           | List           | Values                                                                                        |
-| ----------------- | -------------- | --------------------------------------------------------------------------------------------- |
-| `text-appearance` | Color theme    | The 14 terms of `color-theme`, and a theme of a program that the profile names                |
-| `magnification`   | Zoom           | 100 to 400 percent: 100, 125, 150, 175, 200, 250, 300, 350, 400; an amount of the profile too |
-|                   | Zoom of text   | The same, in place of Zoom when the profile magnifies text apart                              |
-|                   | Zoom of images | The same, in place of Zoom when the profile magnifies non-text content apart                  |
+| Support           | List                          | Values                                                                                                                                      |
+| ----------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text-appearance` | Color theme                   | The 14 terms of `color-theme`, and a theme of a program that the profile names                                                              |
+| `magnification`   | Zoom                          | 100 to 400 percent: 100, 125, 150, 175, 200, 250, 300, 350, 400; an amount of the profile too                                               |
+|                   | Zoom of text                  | The same, in place of Zoom when the profile magnifies text apart                                                                            |
+|                   | Zoom of images                | The same, in place of Zoom when the profile magnifies non-text content apart                                                                |
+| `spoken`          | Speech rate, words per minute | 100, 120, 150, 180, 210, 240, 300; a rate of the profile too; for `computer-read-aloud` only, as a screen reader has preferences of its own |
+|                   | Pitch of the voice            | 0 to 100 percent by 25, as the PNP gives the pitch from 0 to 1                                                                              |
+|                   | Volume of the voice           | 25 to 100 percent by 25                                                                                                                     |
+|                   | How links are read            | The 4 terms of `link-indication`                                                                                                            |
+|                   | Repeat what I type            | The 4 terms of `typing-echo`                                                                                                                |
 
 - **Each list** is a `select` with a label, so the pointer, the keyboard and a screen reader operate it as any list of the page:
   the first characters choose an entry, and the arrow keys move in it. It keeps the focus while views arrive, and it shows what

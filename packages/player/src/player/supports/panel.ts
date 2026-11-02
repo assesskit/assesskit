@@ -24,8 +24,8 @@ export interface SupportPanelOptions {
   /**
    * Called when the candidate changes a setting of a support that is on: the host sends
    * `{ type: "support-settings", settings }`. With it the panel has a list for each setting that the candidate may change
-   * and the player follows: the color theme while `text-appearance` is on, and the amount of magnification while
-   * `magnification` is on.
+   * and the player follows: the color theme while `text-appearance` is on, the amount of magnification while
+   * `magnification` is on, and the preferences of the voice while `spoken` reads with `computer-read-aloud`.
    *
    * @remarks
    * The settings are whole: those of the view with the value chosen. A list follows the settings of the next input, not the

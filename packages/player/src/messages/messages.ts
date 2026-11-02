@@ -728,6 +728,32 @@ export interface Messages {
   readonly settingZoomText: string;
   /** The label of the list of the amount of magnification of images and other content that is not text. */
   readonly settingZoomNonText: string;
+  /** The label of the list of the rate of the voice that reads aloud, in words per minute. */
+  readonly settingSpeechRate: string;
+  /** The label of the list of the pitch of the voice that reads aloud. */
+  readonly settingPitch: string;
+  /** The label of the list of the volume of the voice that reads aloud. */
+  readonly settingVolume: string;
+  /** The label of the list of how the voice reads a link. */
+  readonly settingLinkIndication: string;
+  /** The voice says that a link is a link. */
+  readonly linkIndicationSpeakLink: string;
+  /** The voice reads a link in another voice. */
+  readonly linkIndicationDifferentVoice: string;
+  /** The voice marks a link with a sound. */
+  readonly linkIndicationSoundEffect: string;
+  /** The voice reads a link as any other text. */
+  readonly linkIndicationNone: string;
+  /** The label of the list of what the voice repeats while the candidate types. */
+  readonly settingTypingEcho: string;
+  /** The voice repeats each character typed. */
+  readonly typingEchoCharacters: string;
+  /** The voice repeats each word typed. */
+  readonly typingEchoWords: string;
+  /** The voice repeats each character and each word typed. */
+  readonly typingEchoCharactersAndWords: string;
+  /** The voice repeats nothing that is typed. */
+  readonly typingEchoNone: string;
   /** The action that reads the content aloud. */
   readonly readAloud: string;
   /** The action that stops the reading. */

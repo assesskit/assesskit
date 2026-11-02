@@ -59,7 +59,8 @@ or a word.
 
 It throws `DataError` when `range` is not a `Range` or an option is not valid. `SpeechSettings` holds the fields of
 the runtime's `Spoken` that decide the reading, all optional: `readingType`, `restrictionTypes`, `speechRate`, `pitch`,
-`volume`, `linkIndication` and `typingEcho`.
+`volume`, `linkIndication` and `typingEcho`. The profile sets them when the session starts, and the candidate changes the last
+five during the session with the lists of the panel ([supports](supports.md#the-settings)); the next reading and typing follow.
 
 | `SpeechRequest` field | Meaning                                                                                                                                  |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |

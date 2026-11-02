@@ -7,6 +7,7 @@ import {
   type Magnification,
   PNP_COLOR_THEMES,
   readPnp,
+  type Spoken,
   type SupportSetting,
   type SupportState,
 } from "@assesskit/runtime/pnp";
@@ -645,6 +646,103 @@ describe("mountSupportPanel", () => {
         const tree = await commands.ariaSnapshot();
         expect(tree).toMatch(/- combobox "Zoom of text"/u);
         expect(tree).toMatch(/- combobox "Zoom of images"/u);
+      });
+    });
+  });
+
+  describe("the lists of the preferences of reading aloud", () => {
+    const spoken = (settings: Partial<Omit<Spoken, "name">> = {}) =>
+      supportView("spoken", {
+        state: "assigned",
+        active: true,
+        settings: {
+          name: "spoken",
+          replaceAccessModes: [],
+          restrictionTypes: ["skip-math-equations"],
+          readingType: "computer-read-aloud",
+          ...settings,
+        },
+      });
+    const labels = (host: HTMLElement): (string | null | undefined)[] =>
+      [...host.querySelectorAll("select")].map((select) => select.labels?.[0]?.firstChild?.textContent);
+
+    it("lists the rate, the pitch, the volume, the link indication and the typing echo for the voice of the player", () => {
+      const { host, panel } = adjusting();
+      panel.update([
+        spoken({ speechRate: 150, pitch: 0.5, volume: 1, linkIndication: "different-voice", typingEcho: "words" }),
+      ]);
+      expect(labels(host)).toEqual([
+        "Speech rate, words per minute",
+        "Pitch of the voice",
+        "Volume of the voice",
+        "How links are read",
+        "Repeat what I type",
+      ]);
+      expect([...host.querySelectorAll("select")].map(({ value }) => value)).toEqual([
+        "150",
+        "0.5",
+        "1",
+        "different-voice",
+        "words",
+      ]);
+      expect([...listNamed(host, "Pitch of the voice").options].map(({ textContent }) => textContent)).toEqual([
+        "0%",
+        "25%",
+        "50%",
+        "75%",
+        "100%",
+      ]);
+    });
+
+    it("selects nothing where the profile leaves a preference to the voice, and adds a rate that the list lacks", () => {
+      const { host, panel } = adjusting();
+      panel.update([spoken({ speechRate: 170 })]);
+      expect(listNamed(host, "Speech rate, words per minute").selectedOptions[0]?.textContent).toBe("170");
+      expect(listNamed(host, "Volume of the voice").selectedIndex).toBe(-1);
+    });
+
+    it("reports the settings whole with the preference chosen, the restrictions of the program kept", async () => {
+      const { host, panel, chosen } = adjusting();
+      panel.update([spoken()]);
+      await userEvent.selectOptions(listNamed(host, "Speech rate, words per minute"), "240");
+      await userEvent.selectOptions(listNamed(host, "Repeat what I type"), "characters-and-words");
+      expect(chosen).toEqual([
+        { ...spoken().settings, speechRate: 240 },
+        { ...spoken().settings, typingEcho: "characters-and-words" },
+      ]);
+    });
+
+    it("has no list for a screen reader, which has preferences of its own, nor while reading aloud is off", () => {
+      const { host, panel } = adjusting();
+      panel.update([spoken({ readingType: "screen-reader" })]);
+      expect(host.querySelector("select")).toBeNull();
+      panel.update([supportView("spoken", { state: "option" })]);
+      expect(host.querySelector("select")).toBeNull();
+    });
+
+    it("is operated by the keyboard alone: the first characters choose an entry", async () => {
+      const { host, panel, chosen } = adjusting();
+      panel.update([spoken()]);
+      listNamed(host, "How links are read").focus();
+      await userEvent.keyboard("W");
+      await waitFor(() => expect(chosen).toEqual([{ ...spoken().settings, linkIndication: "sound-effect" }]));
+    });
+
+    it("writes the names in the language of the interface", () => {
+      const { host, panel } = adjusting({ messages: ID_MESSAGES, language: "id" });
+      panel.update([spoken()]);
+      expect(labels(host)[0]).toBe("Kecepatan bicara, kata per menit");
+      expect(listNamed(host, "Ulangi yang saya ketik").options[1]?.textContent).toBe("Setiap kata");
+    });
+
+    it("passes axe, and has the names of its labels for a screen reader", async () => {
+      const { host, panel } = adjusting();
+      panel.update([spoken()]);
+      expect(await axeViolations(host)).toEqual([]);
+      await waitFor(async () => {
+        const tree = await commands.ariaSnapshot();
+        expect(tree).toMatch(/- combobox "Speech rate, words per minute"/u);
+        expect(tree).toMatch(/- combobox "Repeat what I type"/u);
       });
     });
   });

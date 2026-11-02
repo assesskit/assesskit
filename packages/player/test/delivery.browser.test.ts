@@ -1420,6 +1420,44 @@ describe("the supports in the player", () => {
     });
   });
 
+  it("reads aloud at the rate that the candidate chooses during the session, and keeps the restrictions of the profile", async () => {
+    const requests: SpeechRequest[] = [];
+    const voice = {
+      speak: async (request: SpeechRequest): Promise<void> => void requests.push(request),
+      stop: () => undefined,
+    };
+    const { sent, wrap } = recording();
+    const s = await shell({ profile: PROFILE, voice, wrap });
+    await shown(s);
+    const rate = (): HTMLSelectElement => {
+      const list = [...s.ui.querySelectorAll<HTMLSelectElement>(".ak-supports select")].find(
+        (select) => select.labels?.[0]?.firstChild?.textContent === "Speech rate, words per minute",
+      );
+      if (list === undefined) throw new Error("The panel has no list of the speech rate.");
+      return list;
+    };
+    await userEvent.selectOptions(rate(), "240");
+    await waitFor(() =>
+      expect(s.client.view.supports.find(({ name }) => name === "spoken")?.settings).toMatchObject({ speechRate: 240 }),
+    );
+    await waitFor(() => {
+      buttonNamed(s.ui, "Read aloud").click();
+      expect(requests.at(-1)?.rate).toBe(240);
+    });
+    expect(sent).toEqual([
+      {
+        type: "support-settings",
+        settings: {
+          name: "spoken",
+          replaceAccessModes: [],
+          restrictionTypes: [],
+          readingType: "computer-read-aloud",
+          speechRate: 240,
+        },
+      },
+    ]);
+  });
+
   it("says which version of the question was delivered", async () => {
     const s = await shell();
     await shown(s);

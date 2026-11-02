@@ -1,10 +1,13 @@
 import type { SupportView } from "@assesskit/runtime/delivery";
 import type {
   ColorTheme,
+  LinkIndication,
   Magnification,
+  Spoken,
   SupportName,
   SupportSetting,
   TextAppearance,
+  TypingEcho,
   Zoom,
 } from "@assesskit/runtime/pnp";
 import type { Messages } from "../../messages/index.js";
@@ -44,6 +47,15 @@ interface FieldContext {
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, magnification}
  */
 const ZOOM_AMOUNTS: readonly number[] = [1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4];
+
+/** The speech rates offered, in words per minute; the Web Speech voice reads 180 at its own rate. */
+const SPEECH_RATES: readonly number[] = [100, 120, 150, 180, 210, 240, 300];
+
+/** The pitches offered, from 0 to 1 as the PNP gives them, 0.5 being the voice's own. */
+const PITCHES: readonly number[] = [0, 0.25, 0.5, 0.75, 1];
+
+/** The volumes offered, from 0 to 1 as the PNP gives them. */
+const VOLUMES: readonly number[] = [0.25, 0.5, 0.75, 1];
 
 /** The prefix of a term of a program, which a list names by what follows it. */
 const EXTENSION_PREFIX = "ext:";
@@ -162,12 +174,70 @@ function magnificationFields(settings: Magnification, { messages, language }: Fi
   ];
 }
 
+/** The message that names each term of `link-indication`. */
+const LINK_INDICATIONS: readonly (readonly [LinkIndication, keyof Messages])[] = [
+  ["speak-link", "linkIndicationSpeakLink"],
+  ["different-voice", "linkIndicationDifferentVoice"],
+  ["sound-effect", "linkIndicationSoundEffect"],
+  ["none", "linkIndicationNone"],
+];
+
+/** The message that names each term of `typing-echo`. */
+const TYPING_ECHOES: readonly (readonly [TypingEcho, keyof Messages])[] = [
+  ["characters", "typingEchoCharacters"],
+  ["words", "typingEchoWords"],
+  ["characters-and-words", "typingEchoCharactersAndWords"],
+  ["none", "typingEchoNone"],
+];
+
+/**
+ * The lists of the preferences of reading aloud, which the voice of the player follows: the rate, the pitch, the volume, how
+ * a link is read and what typing echoes. A screen reader has preferences of its own, so they show for `computer-read-aloud`
+ * only.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, spoken}
+ */
+function spokenFields(settings: Spoken, context: FieldContext): Field[] {
+  if (settings.readingType !== "computer-read-aloud") return [];
+  const { messages, language } = context;
+  const share = percent(language);
+  return [
+    numberField(
+      "speech-rate",
+      messages.settingSpeechRate,
+      SPEECH_RATES,
+      settings.speechRate,
+      new Intl.NumberFormat(language).format,
+      (speechRate) => ({ ...settings, speechRate }),
+    ),
+    numberField("pitch", messages.settingPitch, PITCHES, settings.pitch, share, (pitch) => ({ ...settings, pitch })),
+    numberField("volume", messages.settingVolume, VOLUMES, settings.volume, share, (volume) => ({
+      ...settings,
+      volume,
+    })),
+    termField(
+      "link-indication",
+      messages.settingLinkIndication,
+      context,
+      LINK_INDICATIONS,
+      settings.linkIndication,
+      (linkIndication) => ({ ...settings, linkIndication }),
+    ),
+    termField("typing-echo", messages.settingTypingEcho, context, TYPING_ECHOES, settings.typingEcho, (typingEcho) => ({
+      ...settings,
+      typingEcho,
+    })),
+  ];
+}
+
 /** Returns the settings of a support that the profile gave none, as an empty element of the profile reads. */
 function emptySettings(name: SupportName): SupportSetting | undefined {
   switch (name) {
     case "magnification":
     case "text-appearance":
       return { name, replaceAccessModes: [] };
+    case "spoken":
+      return { name, replaceAccessModes: [], restrictionTypes: [] };
     default:
       return undefined;
   }
@@ -181,6 +251,8 @@ function fieldsOf(support: SupportView, context: FieldContext): Field[] {
       return textAppearanceFields(settings, context);
     case "magnification":
       return magnificationFields(settings, context);
+    case "spoken":
+      return spokenFields(settings, context);
     default:
       return [];
   }
@@ -229,8 +301,8 @@ export interface SettingsControls {
 }
 
 /**
- * Creates the lists of the settings that the candidate may change during the session: the color theme of the text appearance
- * and the amount of magnification.
+ * Creates the lists of the settings that the candidate may change during the session: the color theme of the text appearance,
+ * the amount of magnification and the preferences of reading aloud.
  *
  * @remarks
  * Each list is a `select` with a label, so that the keyboard, the pointer and a screen reader operate it as they operate any
@@ -240,7 +312,7 @@ export interface SettingsControls {
  * @param context - The text and the language of the interface.
  * @param onSettings - Called with the settings that the candidate chose.
  * @returns The lists.
- * @see {@link https://www.imsglobal.org/spec/qti/v3p0/conf/ | QTI 3.0 Conformance and Certification, A-30a and A-30b}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/conf/ | QTI 3.0 Conformance and Certification, A-30a, A-30b, A-40d and A-40e}
  */
 export function createSettingsControls(
   context: FieldContext,
