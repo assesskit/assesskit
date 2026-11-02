@@ -5,8 +5,10 @@ import { describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
 import { type AsiDocument, describeInteractions, ReadError, readAsi } from "../src/index.js";
 import { ACCEPTED_DIFFERENCES, showsIn } from "./differential/accepted.js";
+import { ACCEPTED_AMP_UP_DIFFERENCES } from "./differential/accepted-amp-up.js";
+import { ampUp, UNSUPPORTED } from "./differential/amp-up.js";
 import { corpusCases, SESSION_TURNS, sessionCases } from "./differential/cases.js";
-import { compare, compareSessions } from "./differential/compare.js";
+import { compare, compareSessions, isAccepted } from "./differential/compare.js";
 import { longsight } from "./differential/longsight.js";
 import { runtime } from "./differential/runtime.js";
 
@@ -17,6 +19,26 @@ const itemCases = corpusCases(examples);
 const itemReport = compare(itemCases, longsight, runtime, ACCEPTED_DIFFERENCES);
 const sessions = sessionCases(examples);
 const sessionReport = compareSessions(sessions, longsight, runtime, ACCEPTED_DIFFERENCES);
+
+// Amp-up qti3-item-player on the items it knows every element of; the other cases are outside what it supports.
+const ampUpRuns = itemCases.map((testCase) => ({ testCase, run: ampUp.run(testCase) }));
+const outsideAmpUp = ampUpRuns.flatMap(({ testCase, run }) =>
+  !run.accepted && run.reason.startsWith(UNSUPPORTED) ? [{ name: testCase.name, reason: run.reason }] : [],
+);
+const outsideNames = new Set(outsideAmpUp.map(({ name }) => name));
+const ampUpCases = itemCases.filter(({ name }) => !outsideNames.has(name));
+const ampUpReport = compare(ampUpCases, ampUp, runtime, ACCEPTED_AMP_UP_DIFFERENCES);
+
+/** The interactions that Amp-up does not have, as the comparator study lists them. */
+const AMP_UP_LACKS = [
+  "qti-associate-interaction",
+  "qti-drawing-interaction",
+  "qti-graphic-associate-interaction",
+  "qti-graphic-order-interaction",
+  "qti-position-object-interaction",
+  "qti-slider-interaction",
+  "qti-upload-interaction",
+];
 
 describe("the oracle on the corpus items", () => {
   it("builds cases from every item of the examples, named by their paths", () => {
@@ -74,9 +96,57 @@ describe("runtime against the oracle on sessions of the corpus items", () => {
 describe("the accepted differences", () => {
   it("are the only ones that the comparison finds, and each listed item of the examples shows its difference", () => {
     const reported = [...itemReport.accepted, ...sessionReport.accepted].map(({ item }) => item);
-    const listed = ACCEPTED_DIFFERENCES.filter(({ variable }) => variable === undefined).flatMap(({ items }) => items);
+    const listed = ACCEPTED_DIFFERENCES.filter(({ variable }) => variable === undefined).flatMap(
+      ({ items }) => items ?? [],
+    );
     expect(listed.filter((item) => !reported.some((name) => showsIn(item, name)))).toEqual([]);
     expect(reported.every((name) => listed.some((item) => showsIn(item, name)))).toBe(true);
+  });
+});
+
+describe("the second oracle on the corpus items", () => {
+  it("leaves out only the documents of tests and the items with an interaction that it lacks", () => {
+    expect(outsideAmpUp.length).toBe(50);
+    for (const { name, reason } of outsideAmpUp) {
+      expect(
+        reason.includes("qti-assessment-test") || AMP_UP_LACKS.some((element) => reason.includes(element)),
+        name,
+      ).toBe(true);
+    }
+    const interactions = new Set(
+      outsideAmpUp.flatMap(({ reason }) => AMP_UP_LACKS.filter((name) => reason.includes(name))),
+    );
+    expect([...interactions].sort()).toEqual(AMP_UP_LACKS);
+  });
+
+  it("repeats what it accepts", () => {
+    for (const { testCase, run } of ampUpRuns.slice(0, 40)) {
+      if (run.accepted) expect(ampUp.run(testCase), testCase.name).toEqual(run);
+    }
+  });
+
+  it("is compared on the items that it knows every element of, apart from the items that both reject", () => {
+    expect(ampUpReport.compared).toBe(442);
+    expect(ampUpReport.rejected.map(({ item }) => item)).toEqual([
+      "packaging/maxfiles/example/adaptive.xml (no responses)",
+      "packaging/test_package_minfiles/example/adaptive.xml (no responses)",
+    ]);
+  });
+
+  it("gives the outcome and template values of the runtime on every item both accept, but for the accepted differences", () => {
+    expect(ampUpReport.differences).toEqual([]);
+  });
+
+  it("has each accepted difference show in every item it lists, or in some item when it lists none", () => {
+    for (const entry of ACCEPTED_AMP_UP_DIFFERENCES) {
+      if (entry.items === undefined) expect(entry.values, entry.reason).toBeDefined();
+      for (const item of entry.items ?? [undefined]) {
+        const shows = ampUpReport.accepted.some(
+          (difference) => (item === undefined || showsIn(item, difference.item)) && isAccepted([entry], difference),
+        );
+        expect(shows, `${entry.reason} (${item ?? "every item"})`).toBe(true);
+      }
+    }
   });
 });
 

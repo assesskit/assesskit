@@ -1,11 +1,20 @@
-/** A difference from Longsight qti3-core that the specification settles in the runtime's favor, or leaves open. */
+import type { Observed } from "./model.js";
+
+/** A difference from an oracle that the specification settles in the runtime's favor, or leaves open. */
 export interface AcceptedDifference {
   /** What differs, in a sentence. */
   readonly reason: string;
-  /** The items it shows in, by the path of their files in the 1EdTech examples or by the name of a generated case. */
-  readonly items: readonly string[];
-  /** The variable that differs; absent when only one implementation accepts the item. */
+  /**
+   * The items it shows in, by the path of their files in the 1EdTech examples or by the name of a generated case; absent
+   * when it shows in every item whose values are those below.
+   */
+  readonly items?: readonly string[];
+  /** The variable that differs. */
   readonly variable?: string;
+  /** Every variable of this kind differs; with neither this nor a variable, only one implementation accepts the item. */
+  readonly kind?: "template";
+  /** The values that the oracle and the runtime report, when the entry accepts those and no others. */
+  readonly values?: { readonly reference: Observed | undefined; readonly subject: Observed | undefined };
 }
 
 /** The differences that the comparison with Longsight sets aside. Every item listed shows the difference. */
@@ -70,19 +79,6 @@ export const ACCEPTED_DIFFERENCES: readonly AcceptedDifference[] = [
     variable: "numAttempts",
   },
 ];
-
-/**
- * Tells whether a difference is one of the accepted ones: it is on a listed item, whether the case is the item without
- * responses, with its correct responses or as a session of turns, and on the variable that the entry names.
- *
- * @param item - The name of the case, or of the turn of a session, that differs.
- * @param variable - The variable that differs; empty for an item that only one implementation accepts.
- */
-export function isAccepted(accepted: readonly AcceptedDifference[], item: string, variable: string): boolean {
-  return accepted.some(
-    (entry) => (entry.variable ?? "") === variable && entry.items.some((listed) => showsIn(listed, item)),
-  );
-}
 
 /** Tells whether the name of a case or a turn is that of a listed item, followed by what the case adds in parentheses. */
 export function showsIn(listed: string, name: string): boolean {

@@ -71,11 +71,15 @@ export type Play =
   | { readonly accepted: false; readonly reason: string };
 
 /** An implementation that processes items. */
-export interface Implementation {
+export interface ItemRunner {
   /** The name in reports. */
   readonly name: string;
   /** Processes the item: template processing, then the responses, then response processing. */
   run(testCase: ItemCase): Run;
+}
+
+/** An implementation that also plays item sessions. */
+export interface Implementation extends ItemRunner {
   /** Plays an item session: template processing, then one attempt per turn, each ending in response processing. */
   play(testCase: SessionCase): Play;
 }

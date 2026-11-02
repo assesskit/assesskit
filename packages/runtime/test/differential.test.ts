@@ -16,6 +16,7 @@ import {
   type Value,
 } from "../src/index.js";
 import { ACCEPTED_DIFFERENCES } from "./differential/accepted.js";
+import { ampUp, UNSUPPORTED } from "./differential/amp-up.js";
 import { compare, compareSessions, sameValue } from "./differential/compare.js";
 import { CHOICE_ITEM, sessionItem, TEMPLATE_ITEM } from "./differential/items.js";
 import { correctResponses, longsight, longsightRandom } from "./differential/longsight.js";
@@ -620,6 +621,43 @@ describe("compare", () => {
     expect(report.differences).toEqual([]);
     expect(report.accepted).toHaveLength(1);
   });
+
+  it("sets aside the differences of one kind of variable on the items it lists", () => {
+    const reference = implementation("ref", {
+      a: accepts({ templateValues: { N: 5, M: 1 }, outcomes: { SCORE: 1 } }),
+      b: accepts({ templateValues: { N: 5 } }),
+    });
+    const subject = implementation("sub", {
+      a: accepts({ templateValues: { N: 6, M: 2 }, outcomes: { SCORE: 0 } }),
+      b: accepts({ templateValues: { N: 6 } }),
+    });
+    const accepted = [{ items: ["a"], kind: "template" as const, reason: "The draws differ." }];
+    const report = compare([testCase("a"), testCase("b")], reference, subject, accepted);
+    expect(report.accepted.map(({ item, variable }) => `${item} ${variable}`)).toEqual(["a M", "a N"]);
+    expect(report.differences.map(({ item, variable }) => `${item} ${variable}`)).toEqual(["a SCORE", "b N"]);
+  });
+
+  it("sets aside a difference in every item when the entry names the values and no items", () => {
+    const reference = implementation("ref", {
+      a: accepts({ outcomes: { SCORE: 0 } }),
+      b: accepts({ outcomes: { SCORE: 3 } }),
+    });
+    const subject = implementation("sub", { a: accepts({ outcomes: {} }), b: accepts({ outcomes: {} }) });
+    const accepted = [
+      { variable: "SCORE", values: { reference: 0, subject: undefined }, reason: "The reference declares SCORE." },
+    ];
+    const report = compare([testCase("a"), testCase("b")], reference, subject, accepted);
+    expect(report.accepted.map(({ item }) => item)).toEqual(["a"]);
+    expect(report.differences.map(({ item }) => item)).toEqual(["b"]);
+  });
+
+  it("sets aside an item that only one implementation accepts when the entry names neither a variable nor a kind", () => {
+    const reference = implementation("ref", { a: accepts({}), b: accepts({ outcomes: { SCORE: 1 } }) });
+    const subject = implementation("sub", { a: rejects("unsupported"), b: accepts({ outcomes: { SCORE: 0 } }) });
+    const report = compare([testCase("a"), testCase("b")], reference, subject, [{ items: ["a", "b"], reason: "No." }]);
+    expect(report.accepted.map(({ item }) => item)).toEqual(["a"]);
+    expect(report.differences.map(({ item }) => item)).toEqual(["b"]);
+  });
 });
 
 describe("compareSessions", () => {
@@ -690,6 +728,87 @@ describe("correctResponses", () => {
 
   it("is undefined for a document the oracle does not accept", () => {
     expect(correctResponses("<nothing/>", 1)).toBeUndefined();
+  });
+});
+
+describe("ampUp", () => {
+  it("scores a response with the item's response processing, as the player restores it", () => {
+    const run = (response: string) =>
+      ampUp.run({ name: "choice", xml: CHOICE_ITEM, responses: { RESPONSE: response }, seed: 1 });
+    expect(run("B")).toMatchObject({ accepted: true, observation: { outcomes: { SCORE: 1 } } });
+    expect(run("A")).toMatchObject({ accepted: true, observation: { outcomes: { SCORE: 0 } } });
+  });
+
+  it("scores the same item again after another, whether the document is the same or not", () => {
+    const choice = { name: "choice", xml: CHOICE_ITEM, responses: { RESPONSE: "B" }, seed: 1 };
+    const first = ampUp.run(choice);
+    ampUp.run({ name: "template", xml: TEMPLATE_ITEM, responses: {}, seed: 1 });
+    expect(ampUp.run(choice)).toEqual(first);
+    expect(ampUp.run(choice)).toEqual(first);
+  });
+
+  it("restores the template values it drew and scores a response against them", () => {
+    const run = (responses: ItemCase["responses"]) =>
+      ampUp.run({ name: "template", xml: TEMPLATE_ITEM, responses, seed: 3 });
+    const drawn = run({});
+    if (!drawn.accepted) throw new Error(drawn.reason);
+    const { N } = drawn.observation.templateValues;
+    if (typeof N !== "number") throw new Error("The template value N is not a number.");
+    expect(run({ RESPONSE: N })).toMatchObject({ observation: { outcomes: { SCORE: 1 }, templateValues: { N } } });
+    expect(run({ RESPONSE: N + 1 })).toMatchObject({
+      observation: { outcomes: { SCORE: 0 }, templateValues: { N } },
+    });
+  });
+
+  it("scores the responses of a multiple variable as a list", () => {
+    const item = `<qti-assessment-item xmlns="${NAMESPACE}" identifier="multiple" title="Multiple" time-dependent="false">
+      <qti-response-declaration identifier="RESPONSE" cardinality="multiple" base-type="identifier">
+        <qti-correct-response><qti-value>A</qti-value><qti-value>C</qti-value></qti-correct-response>
+      </qti-response-declaration>
+      <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
+      <qti-item-body>
+        <qti-choice-interaction response-identifier="RESPONSE" max-choices="2">
+          <qti-simple-choice identifier="A">A</qti-simple-choice>
+          <qti-simple-choice identifier="B">B</qti-simple-choice>
+          <qti-simple-choice identifier="C">C</qti-simple-choice>
+        </qti-choice-interaction>
+      </qti-item-body>
+      <qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct"/>
+    </qti-assessment-item>`;
+    const run = (response: string[]) =>
+      ampUp.run({ name: "multiple", xml: item, responses: { RESPONSE: response }, seed: 1 });
+    expect(run(["C", "A"])).toMatchObject({ accepted: true, observation: { outcomes: { SCORE: 1 } } });
+    expect(run(["A", "B"])).toMatchObject({ accepted: true, observation: { outcomes: { SCORE: 0 } } });
+  });
+
+  it("draws template values from the seed with the generator of the other oracle", () => {
+    const run = (seed: number) => ampUp.run({ name: "template", xml: TEMPLATE_ITEM, responses: {}, seed });
+    expect(run(7)).toMatchObject({ accepted: true });
+    expect(run(7)).toEqual(run(7));
+    expect(new Set([1, 2, 3, 4, 5].map((seed) => JSON.stringify(run(seed)))).size).toBeGreaterThan(1);
+  });
+
+  it("does not accept an item with a qti element that it does not know", () => {
+    const slider = `<qti-assessment-item xmlns="${NAMESPACE}" identifier="slider" title="Slider" time-dependent="false">
+      <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="integer"/>
+      <qti-item-body><qti-slider-interaction response-identifier="RESPONSE" lower-bound="0" upper-bound="10"/></qti-item-body>
+    </qti-assessment-item>`;
+    expect(ampUp.run({ name: "slider", xml: slider, responses: {}, seed: 1 })).toEqual({
+      accepted: false,
+      reason: `${UNSUPPORTED} qti-slider-interaction.`,
+    });
+  });
+
+  it("does not accept a document that does not load, or that throws when it is scored", () => {
+    expect(ampUp.run({ name: "broken", xml: "<qti-assessment-item", responses: {}, seed: 1 })).toMatchObject({
+      accepted: false,
+    });
+    const record = `<qti-assessment-item xmlns="${NAMESPACE}" identifier="record" title="Record" time-dependent="false">
+      <qti-outcome-declaration identifier="OUT" cardinality="record"/>
+      ${BODY}
+      <qti-response-processing/>
+    </qti-assessment-item>`;
+    expect(ampUp.run({ name: "record", xml: record, responses: {}, seed: 1 })).toMatchObject({ accepted: false });
   });
 });
 

@@ -6,7 +6,7 @@ How the runtime is tested and where the expected values come from. The claim tha
 ```mermaid
 flowchart LR
   spec["Specifications,<br/>cited by ID and section"] --> complete["Completeness tests,<br/>derived from them"]
-  oracles["Oracles: Python scripts,<br/>Longsight qti3-core, W3C suite"] --> fixtures["Fixtures"] --> tests["Tests of the runtime"]
+  oracles["Oracles: Python scripts, Longsight qti3-core,<br/>Amp-up item player, W3C suite"] --> fixtures["Fixtures"] --> tests["Tests of the runtime"]
   corpus["1EdTech examples"] --> corpusTests["Corpus tests"]
   schemas["Official XSDs"] --> xsdTests["Schema tests"]
   complete --> claim["The claim of Supported"]
@@ -36,6 +36,7 @@ A rule cites its source by an ID and a section, such as `INFO section 2.11.3.37`
 | XSD  | The schemas of the specifications                           | ASI 3.0.1 and 3.0.0                               | https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/                         |
 | EX   | The examples of 1EdTech, `qtiv3-examples/`                  | public repository, no license file                | https://github.com/1EdTech/qti-examples                                      |
 | LS   | Longsight `qti3-core`, the differential oracle for items    | `@longsightgroup/qti3-core` 0.13.3, MIT           | https://github.com/LongsightGroup/qti3                                       |
+| AU   | Amp-up `qti3-item-player`, the second oracle for items      | `qti3-item-player` 1.1.20, MIT                    | https://github.com/amp-up-io/qti3-item-player                                |
 
 The overview gives addresses for RR, UD, CERT and TERM that return 404; the table gives the addresses that serve them. PCI 1.0
 itself is not retrievable: the requirements of the runtime's `pci` module come from BPIG section 3.7.12 and its Appendices C and D, which
@@ -246,6 +247,41 @@ The oracle also reads interactions. `differential.test.ts` compares the validity
 associations, inline choices) and the record of numeric text, and `differential.corpus.test.ts` the interactions of the
 corpus items: response variables, shuffling and choices. They agree, apart from the integer value of a number that ends in
 its point (`5.`), which the information model gives and the oracle does not; the test states it.
+
+### The second oracle
+
+Longsight is not certified by 1EdTech. Amp-up `qti3-item-player` (AU) is a Vue 2 component that the Amp-up test player, certified
+by 1EdTech at Basic and Advanced delivery, is built on. `differential/amp-up.ts` runs it in jsdom, a window without a screen,
+as a scoring system uses it: the player loads the item, its interactions make their state, and the responses of the case
+replace the response values of that state, which the player restores and scores with `scoreAttempt`.
+
+```mermaid
+flowchart LR
+  load["loadItemFromXml<br/>template processing"] --> suspend["suspendAttempt<br/>state of the interactions"]
+  suspend --> replace["responses of the case<br/>replace the response values"]
+  replace --> restore["loadItemFromXml<br/>with that state"] --> score["scoreAttempt<br/>response processing"]
+  score --> observed["outcome and template values"]
+```
+
+The player has no seed: it draws with `Math.random`, which the window takes from `longsightRandom`. A case is outside what the
+player supports when the item holds a `qti-` element that it does not know, and it is left out: 50 of the 505 cases are the documents of
+tests and the items with an associate, drawing, graphic associate, graphic order, position object, slider or upload
+interaction. `compare` runs the 455 others against the runtime: 442 are accepted by both and compared, 2 are rejected by
+both, and 11 are accepted by one. Nothing differs but what `differential/accepted-amp-up.ts` pins, each with its reason:
+
+| Difference                                                                                                                   | Cases | The cause                                                                                                                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `completionStatus` is `not_attempted` after the attempt, where the runtime says `unknown`                                    | 217   | The player never sets `unknown`; INFO section 2.2.2.2 sets it when the first attempt begins                                                                                                                 |
+| `SCORE` and `MAXSCORE` are 0 in an item that does not declare them                                                           | 220   | The player declares both in every item; the specification declares only `completionStatus`                                                                                                                  |
+| Template values differ in 11 items                                                                                           | 61    | `qti-random-integer` shuffles every integer of the range and takes the first, `qti-random` shuffles the container; the specification does not say how to draw                                               |
+| `SCORE` of `template_image.xml` with its correct responses                                                                   | 1     | The correct response follows from the draw of the runtime, which the player's draw does not give                                                                                                            |
+| `FEEDBACK` stays NULL in the two items of `CC2_map_response`                                                                 | 2     | The player reads a template by the end of its name, so `CC2_map_response` runs as `map_response`                                                                                                            |
+| The player throws a TypeError in `QuizBowl-multi-geometry.xml` and `multi-input.xml`                                         | 3     | An operand of `qti-substring` is NULL, and the statement that logs the result reads the value of the NULL operand                                                                                           |
+| The player throws a TypeError in `feedback_adaptive.xml`                                                                     | 1     | It fails in the item's `qti-member`, whose operands are a container and then a single value                                                                                                                 |
+| The runtime refuses `SineRule-001.xml`                                                                                       | 2     | The custom operator `org.qtitools.mathassess.CasProcess` is not registered; the player goes on, as Longsight does                                                                                           |
+| The runtime refuses `choice_ruby.xml`, `data-attributes.xml`, `fractions1.xml`, `fractions_deps.xml`, `fractions_deps_2.xml` | 5     | The documents are invalid (a float set to an integer variable, a rubric block without `use`, a correct response that is not an identifier, an attribute the schema does not allow); the player renders them |
+
+`differential.corpus.test.ts` fails when a difference is not pinned, and when a pinned item no longer shows its difference.
 
 `differential.test.ts` runs with `pnpm test`; `differential.corpus.test.ts` needs `pnpm corpus` first and runs with
 `pnpm test:corpus`.

@@ -1,8 +1,17 @@
-import { type AcceptedDifference, isAccepted } from "./accepted.js";
-import type { Implementation, ItemCase, Observed, Play, Run, SessionCase, TurnObservation } from "./model.js";
+import { type AcceptedDifference, showsIn } from "./accepted.js";
+import type {
+  Implementation,
+  ItemCase,
+  ItemRunner,
+  Observed,
+  Play,
+  Run,
+  SessionCase,
+  TurnObservation,
+} from "./model.js";
 
 /** Where two implementations disagree about an item. */
-interface Difference {
+export interface Difference {
   /** The name of the case. */
   readonly item: string;
   /**
@@ -40,6 +49,26 @@ export function sameValue(a: Observed | undefined, b: Observed | undefined): boo
     return [...keys].every((key) => sameValue(a[key], b[key]));
   }
   return a === b;
+}
+
+/**
+ * Tells whether a difference is one of the accepted ones: it is on a listed item, whether the case is the item without
+ * responses, with its correct responses or as a session of turns, on the variable or the kind of variable that the entry
+ * names (an item that only one implementation accepts, when it names neither) and with the values that it names.
+ */
+export function isAccepted(accepted: readonly AcceptedDifference[], difference: Difference): boolean {
+  return accepted.some(
+    (entry) =>
+      (entry.variable !== undefined
+        ? entry.variable === difference.variable
+        : entry.kind !== undefined
+          ? entry.kind === difference.kind
+          : difference.kind === "acceptance") &&
+      (entry.items === undefined || entry.items.some((listed) => showsIn(listed, difference.item))) &&
+      (entry.values === undefined ||
+        (sameValue(entry.values.reference, difference.reference) &&
+          sameValue(entry.values.subject, difference.subject))),
+  );
 }
 
 /** Compares the variables of two records. */
@@ -111,7 +140,7 @@ function report(
     if (reference.accepted && subject.accepted) compared++;
     else if (!(reference.accepted || subject.accepted)) rejected.push({ item: result.item, reason: reference.reason });
     for (const difference of result.differences) {
-      (isAccepted(accepted, difference.item, difference.variable) ? accepts : differences).push(difference);
+      (isAccepted(accepted, difference) ? accepts : differences).push(difference);
     }
   }
   return { compared, rejected, differences, accepted: accepts };
@@ -124,8 +153,8 @@ function report(
  */
 export function compare(
   cases: readonly ItemCase[],
-  reference: Implementation,
-  subject: Implementation,
+  reference: ItemRunner,
+  subject: ItemRunner,
   accepted: readonly AcceptedDifference[],
 ): Report {
   const results = cases.map((testCase) => {

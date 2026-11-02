@@ -244,7 +244,7 @@ The runtime does not read QTI 2.x content.
 The runtime is not certified by 1EdTech. [Supported](https://github.com/assesskit/assesskit/blob/main/docs/runtime/supported.md) says what it reads, writes, validates and runs,
 and what it does not. The claim is
 scoped: items differentially tested; test sessions specification-tested. Items are compared with the Longsight
-`qti3-core` engine. No independent implementation of a QTI 3 test session was found to compare with, so the rules of test
+`qti3-core` engine and, for the 1EdTech examples that it supports, with the Amp-up `qti3-item-player`. No independent implementation of a QTI 3 test session was found to compare with, so the rules of test
 sessions rest on tests whose expected values are statements and worked examples of the specifications, on properties
 checked with random input, and on the 1EdTech examples. [Spec gaps](https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md) lists where the specifications
 contradict themselves or are silent, and what the runtime does.
