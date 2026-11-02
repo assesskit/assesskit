@@ -1,6 +1,6 @@
 # Spec gaps
 
-The specifications contradict themselves in places and say nothing in others. Each place is a gap, numbered `G1` to `G47`,
+The specifications contradict themselves in places and say nothing in others. Each place is a gap, numbered `G1` to `G48`,
 and the runtime resolves it the same way everywhere. Every gap has a test that fixes its
 resolution, and the TSDoc and the guide of the module name it. A change to a resolution is a breaking change.
 
@@ -9,7 +9,7 @@ listed below.
 
 ```mermaid
 flowchart LR
-  gap["The specifications contradict<br/>themselves or are silent"] --> number["A gap, numbered G1 to G47"]
+  gap["The specifications contradict<br/>themselves or are silent"] --> number["A gap, numbered G1 to G48"]
   number --> resolution["One resolution,<br/>the same everywhere"]
   decision["A decision D3 to D9<br/>that several gaps share"] --> resolution
   resolution --> test["A test fixes it"]
@@ -67,6 +67,7 @@ flowchart LR
 | G45 | The code minor for an engine that is busy is `server_busy` in the enumeration of the binding and `serverbusy` in B1.3 of the service specification                  | CAT binding section 7, service B1.3           | The wire follows the enumeration of the JSON schema, `server_busy`, which `createCatRestHandler` writes for the status 429 and 503.                                                                                                                                              |
 | G46 | A text entry binds a response of cardinality single or record; rule 1Bb of the XML binding names a base type, which a record lacks                                  | INFO 2.4.2.2, 5.162; BIND section 5.3.4       | The information model decides: a record is allowed, and the base-type rule applies to the other cardinalities.                                                                                                                                                                   |
 | G47 | A `ruby` has at most one `rp` and one `rt` or `rtc` in the XML binding, for each group in the information model; the schema limits none                             | BIND 5.1.2; INFO 5.125, 6.37; XSD `RubyDType` | The schema decides, as HTML5 does with an `rp` before and after the `rt`: `validate` limits no element of a `ruby`. A `figure` has no groups, so its `figcaption` stays limited.                                                                                                 |
+| G48 | The order of the item results of a report: `sequenceIndex` says the place in the presentation, and nothing says the order of the elements                           | RR `AssessmentResultDType`                    | Plan order, with `sequenceIndex` as the specification defines it: the nth result of a reference is its instance `n`, and the last of equal datestamps the last instance, so a report reads as the session did (G9).                                                              |
 
 ## Decisions
 
