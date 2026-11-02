@@ -56,7 +56,7 @@ import { MAX_TIMER_DELAY_MS } from "./timer-delay.js";
 export interface LocalSave {
   /** The state as the runtime's `serializeState` writes it. */
   readonly state: string;
-  /** The events of the step that made the state: those of `Engine.apply`, none for the step that starts the session. */
+  /** The events of the step that made the state, the first step of the session among them. */
   readonly events: readonly DeliveryEvent[];
 }
 
