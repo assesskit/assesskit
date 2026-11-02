@@ -33,6 +33,8 @@
     "corpus:pin": "node scripts/corpus.ts pin",
     "schemas": "node scripts/schemas.ts fetch",
     "schemas:pin": "node scripts/schemas.ts pin",
+    "conformance": "pnpm build && node scripts/conformance.ts run",
+    "conformance:pin": "node scripts/conformance.ts pin && biome format --write scripts/conformance-features.json",
     "unicode": "node scripts/unicode.ts",
     "asi-table": "node scripts/asi-table.ts",
     "changeset": "changeset",

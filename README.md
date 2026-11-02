@@ -31,8 +31,9 @@ To read, validate, process or run QTI content in your own code or pipeline, use 
 browser, use the player, which depends on the runtime.
 
 assesskit is not certified by 1EdTech. What each package supports, and what it does not, is in
-[Supported](docs/runtime/supported.md) for the runtime and [Supported](docs/player/supported.md) for the player. The claim is
-scoped: items differentially tested; test sessions specification-tested.
+[Supported](docs/runtime/supported.md) for the runtime and [Supported](docs/player/supported.md) for the player, and
+[Conformance](docs/runtime/conformance.md) takes every feature ID of the 1EdTech conformance document to its guide and its test.
+The claim is scoped: items differentially tested; test sessions specification-tested.
 
 ## How the two packages split
 

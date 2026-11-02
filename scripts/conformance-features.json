@@ -1,0 +1,752 @@
+[
+  {
+    "id": "T-1",
+    "name": "Outcome Declaration",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "T-2",
+    "name": "Assessment Time Limits",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "T-3",
+    "name": "Stylesheet",
+    "required": []
+  },
+  {
+    "id": "T-4",
+    "name": "Test Part",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "T-5",
+    "name": "Item Session Control (ISC) in Test Part",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "T-6",
+    "name": "ISC Time Limits in Test Part",
+    "required": []
+  },
+  {
+    "id": "T-7",
+    "name": "Sections in TestPart",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "T-8",
+    "name": "Test Feedback in TestPart",
+    "required": []
+  },
+  {
+    "id": "T-9",
+    "name": "Outcomes Processing for Test",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "T-10",
+    "name": "Test Feedback (test-level)",
+    "required": []
+  },
+  {
+    "id": "T-11",
+    "name": "Multiple Test Parts",
+    "required": []
+  },
+  {
+    "id": "T-12",
+    "name": "Multiple Sections in TestPart",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "T-13",
+    "name": "Rubric Block for AssessmentTest",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "T-14",
+    "name": "Record and Restore Responses",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "S-0",
+    "name": "Section Root",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "S-1",
+    "name": "Item Session Control",
+    "required": []
+  },
+  {
+    "id": "S-2",
+    "name": "Time Limits Section Level",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "S-3",
+    "name": "Selection",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "S-4",
+    "name": "Ordering",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "S-5",
+    "name": "Rubric Block",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "S-6",
+    "name": "Section Include",
+    "required": []
+  },
+  {
+    "id": "S-7",
+    "name": "Items",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "S-8",
+    "name": "Nested Sections",
+    "required": []
+  },
+  {
+    "id": "S-9",
+    "name": "Section References",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "I-0",
+    "name": "Assessment Item Root",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "I-1",
+    "name": "Response Declaration",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "I-2",
+    "name": "Outcome Declaration",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "I-3",
+    "name": "Template Declaration",
+    "required": []
+  },
+  {
+    "id": "I-4",
+    "name": "Shared Stimulus reference",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "I-5",
+    "name": "Template Processing",
+    "required": []
+  },
+  {
+    "id": "I-6",
+    "name": "stylesheet",
+    "required": []
+  },
+  {
+    "id": "I-7",
+    "name": "Item Body",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "I-8",
+    "name": "HTML5 (QTI Subset)",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "I-9a",
+    "name": "Response Processing: Full",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "I-9b",
+    "name": "Response Processing: Fixed-Template",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "I-10",
+    "name": "Modal Feedback",
+    "required": []
+  },
+  {
+    "id": "I-11",
+    "name": "Rubric Block",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "I-12",
+    "name": "Item Include",
+    "required": []
+  },
+  {
+    "id": "I-13",
+    "name": "Companion Materials",
+    "required": []
+  },
+  {
+    "id": "I-14",
+    "name": "Catalog Resources",
+    "required": ["Advanced", "Elevated"]
+  },
+  {
+    "id": "I-15",
+    "name": "Context Declarations",
+    "required": []
+  },
+  {
+    "id": "I-16",
+    "name": "Time Limits",
+    "required": []
+  },
+  {
+    "id": "I-17",
+    "name": "Composite Items",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "I-18",
+    "name": "MathML",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "I-19",
+    "name": "QTI Shared Interaction Vocabulary Subset",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "I-20",
+    "name": "QTI Shared CSS Classes",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "Q-1",
+    "name": "Associate Interaction",
+    "required": []
+  },
+  {
+    "id": "Q-2",
+    "name": "Choice Interaction",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "Q-3",
+    "name": "Drawing Interaction",
+    "required": []
+  },
+  {
+    "id": "Q-4",
+    "name": "End Attempt Interaction",
+    "required": []
+  },
+  {
+    "id": "Q-5",
+    "name": "Extended Text Interaction",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "Q-6",
+    "name": "Gap Match Interaction",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "Q-7",
+    "name": "Graphic Associate Interaction",
+    "required": []
+  },
+  {
+    "id": "Q-8",
+    "name": "Graphic Gap Match Interaction",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "Q-9",
+    "name": "Graphic Order Interaction",
+    "required": []
+  },
+  {
+    "id": "Q-10",
+    "name": "Hot-spot Interaction",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "Q-11",
+    "name": "Hot-text Interaction",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "Q-12",
+    "name": "Inline Choice Interaction",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "Q-13",
+    "name": "Match Interaction",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "Q-14",
+    "name": "Media Interaction",
+    "required": []
+  },
+  {
+    "id": "Q-15",
+    "name": "Order Interaction",
+    "required": []
+  },
+  {
+    "id": "Q-16",
+    "name": "Portable Custom Interaction (PCI)",
+    "required": []
+  },
+  {
+    "id": "Q-17",
+    "name": "Position Object Interaction",
+    "required": []
+  },
+  {
+    "id": "Q-18",
+    "name": "Selection Point Interaction",
+    "required": []
+  },
+  {
+    "id": "Q-19",
+    "name": "Slider Interaction",
+    "required": []
+  },
+  {
+    "id": "Q-20",
+    "name": "Text Entry Interaction",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "Q-21",
+    "name": "Upload Interaction",
+    "required": []
+  },
+  {
+    "id": "Q-31",
+    "name": "Custom Interaction (proprietary)",
+    "required": []
+  },
+  {
+    "id": "Q-32",
+    "name": "Custom Interaction (LTI)",
+    "required": []
+  },
+  {
+    "id": "A-1",
+    "name": "Alternate text for graphics",
+    "required": ["Basic", "Advanced", "Elevated"]
+  },
+  {
+    "id": "A-2a",
+    "name": "ARIA Subset",
+    "required": ["Elevated"]
+  },
+  {
+    "id": "A-2b",
+    "name": "ARIA Full",
+    "required": []
+  },
+  {
+    "id": "A-3a",
+    "name": "Inline Namespaced SSML",
+    "required": []
+  },
+  {
+    "id": "A-3b",
+    "name": "Inline SSML using JSON markup",
+    "required": []
+  },
+  {
+    "id": "A-4a",
+    "name": "Internationalization (bi-directional text)",
+    "required": []
+  },
+  {
+    "id": "A-4b",
+    "name": "Internationalization (Ruby)",
+    "required": []
+  },
+  {
+    "id": "A-5",
+    "name": "additional-directions",
+    "required": []
+  },
+  {
+    "id": "A-6",
+    "name": "additional-testing-time",
+    "required": ["Elevated"]
+  },
+  {
+    "id": "A-7",
+    "name": "alternative-text (PNP assignment)",
+    "required": []
+  },
+  {
+    "id": "A-8",
+    "name": "answer-masking",
+    "required": ["Elevated"]
+  },
+  {
+    "id": "A-9",
+    "name": "audio-description",
+    "required": ["Elevated"]
+  },
+  {
+    "id": "A-10a",
+    "name": "braille",
+    "required": ["Elevated"]
+  },
+  {
+    "id": "A-10b",
+    "name": "braille preferences (delivery-mode, grade, braille-type, math-type)",
+    "required": []
+  },
+  {
+    "id": "A-11",
+    "name": "breaks",
+    "required": ["Elevated"]
+  },
+  {
+    "id": "A-12",
+    "name": "calculator-on-screen",
+    "required": []
+  },
+  {
+    "id": "A-13a",
+    "name": "Captions: PNP",
+    "required": []
+  },
+  {
+    "id": "A-13b",
+    "name": "Captions: track",
+    "required": ["Advanced", "Elevated"]
+  },
+  {
+    "id": "A-15",
+    "name": "Glossary (on-screen)",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "A-16",
+    "name": "hazard-avoidance",
+    "required": []
+  },
+  {
+    "id": "A-17",
+    "name": "high-contrast",
+    "required": []
+  },
+  {
+    "id": "A-18",
+    "name": "Homophone-checker (on-screen)",
+    "required": []
+  },
+  {
+    "id": "A-19",
+    "name": "input-requirements",
+    "required": []
+  },
+  {
+    "id": "A-20",
+    "name": "invert-display-polarity",
+    "required": []
+  },
+  {
+    "id": "A-21",
+    "name": "item-translation",
+    "required": []
+  },
+  {
+    "id": "A-22",
+    "name": "keyboard-directions",
+    "required": []
+  },
+  {
+    "id": "A-23",
+    "name": "keyword-emphasis",
+    "required": []
+  },
+  {
+    "id": "A-24",
+    "name": "keyword-translation",
+    "required": []
+  },
+  {
+    "id": "A-25",
+    "name": "language-of-interface",
+    "required": []
+  },
+  {
+    "id": "A-26",
+    "name": "layout-single-column",
+    "required": []
+  },
+  {
+    "id": "A-27",
+    "name": "line-reader",
+    "required": []
+  },
+  {
+    "id": "A-28",
+    "name": "linguistic-guidance",
+    "required": []
+  },
+  {
+    "id": "A-29",
+    "name": "long-description",
+    "required": ["Elevated"]
+  },
+  {
+    "id": "A-30a",
+    "name": "Magnification",
+    "required": ["Advanced", "Elevated"]
+  },
+  {
+    "id": "A-30b",
+    "name": "Magnification Zoom-amount",
+    "required": []
+  },
+  {
+    "id": "A-31",
+    "name": "Note-taking (on-screen)",
+    "required": []
+  },
+  {
+    "id": "A-32",
+    "name": "outliner-on-screen",
+    "required": []
+  },
+  {
+    "id": "A-33",
+    "name": "Peer-interaction (on-screen)",
+    "required": []
+  },
+  {
+    "id": "A-34",
+    "name": "Prohibit set",
+    "required": []
+  },
+  {
+    "id": "A-35",
+    "name": "Pronunciation Lexicon Specification (PLS)",
+    "required": []
+  },
+  {
+    "id": "A-36",
+    "name": "sign-language",
+    "required": ["Elevated"]
+  },
+  {
+    "id": "A-37",
+    "name": "simplified-graphics",
+    "required": []
+  },
+  {
+    "id": "A-38",
+    "name": "simplified-language-portions",
+    "required": []
+  },
+  {
+    "id": "A-39",
+    "name": "Spell-checker (on-screen)",
+    "required": []
+  },
+  {
+    "id": "A-40a",
+    "name": "Spoken (reading-type = screen-reader)",
+    "required": ["Elevated"]
+  },
+  {
+    "id": "A-40b",
+    "name": "Spoken (reading-type = computer-read-aloud)",
+    "required": ["Elevated"]
+  },
+  {
+    "id": "A-40c",
+    "name": "Spoken Restriction Type",
+    "required": ["Elevated"]
+  },
+  {
+    "id": "A-40d",
+    "name": "Spoken, user preferences for speech-rate, pitch, volume, and link-indication",
+    "required": []
+  },
+  {
+    "id": "A-40e",
+    "name": "Spoken (typing-echo)",
+    "required": []
+  },
+  {
+    "id": "A-40f",
+    "name": "Text-to-Speech Suppression",
+    "required": []
+  },
+  {
+    "id": "A-41",
+    "name": "Tactile",
+    "required": ["Elevated"]
+  },
+  {
+    "id": "A-42a",
+    "name": "Text-appearance, text and background color",
+    "required": ["Advanced", "Elevated"]
+  },
+  {
+    "id": "A-42b",
+    "name": "Text-appearance, other",
+    "required": []
+  },
+  {
+    "id": "A-43",
+    "name": "Thesaurus (on-screen)",
+    "required": []
+  },
+  {
+    "id": "A-44",
+    "name": "transcript",
+    "required": ["Elevated"]
+  },
+  {
+    "id": "A-45",
+    "name": "Visual-organizer (on-screen)",
+    "required": []
+  },
+  {
+    "id": "A-46",
+    "name": "Activate-as-option",
+    "required": []
+  },
+  {
+    "id": "A-47",
+    "name": "Activate-at-initialization",
+    "required": []
+  },
+  {
+    "id": "M-1",
+    "name": "Item Template",
+    "required": []
+  },
+  {
+    "id": "M-2",
+    "name": "Time Dependent",
+    "required": []
+  },
+  {
+    "id": "M-3",
+    "name": "Composite",
+    "required": []
+  },
+  {
+    "id": "M-4",
+    "name": "Interaction Type",
+    "required": []
+  },
+  {
+    "id": "M-5",
+    "name": "Feedback Type",
+    "required": []
+  },
+  {
+    "id": "M-6",
+    "name": "Solution Available",
+    "required": []
+  },
+  {
+    "id": "M-7",
+    "name": "Tool Name",
+    "required": []
+  },
+  {
+    "id": "M-8",
+    "name": "Tool Version",
+    "required": []
+  },
+  {
+    "id": "M-9",
+    "name": "Tool Vendor",
+    "required": []
+  },
+  {
+    "id": "M-10",
+    "name": "Scoring Mode",
+    "required": []
+  },
+  {
+    "id": "P-1",
+    "name": "Test Instances",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "P-2",
+    "name": "Nested Section Instances",
+    "required": []
+  },
+  {
+    "id": "P-3",
+    "name": "Item Banks",
+    "required": []
+  },
+  {
+    "id": "P-4",
+    "name": "Item Instances",
+    "required": ["Basic", "Advanced"]
+  },
+  {
+    "id": "P-5",
+    "name": "Manifest Metadata (LOM)",
+    "required": []
+  },
+  {
+    "id": "P-6",
+    "name": "Resource Metadata (LOM)",
+    "required": []
+  },
+  {
+    "id": "P-7",
+    "name": "Resource Metadata (QTI)",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "P-8",
+    "name": "Curriculum Standards Metadata",
+    "required": []
+  },
+  {
+    "id": "P-9",
+    "name": "External Metadata",
+    "required": []
+  },
+  {
+    "id": "P-10",
+    "name": "Learning Tools Interoperability v1.1",
+    "required": []
+  },
+  {
+    "id": "P-11",
+    "name": "Stimulus Instances",
+    "required": ["Advanced"]
+  },
+  {
+    "id": "P-12",
+    "name": "Variant",
+    "required": []
+  },
+  {
+    "id": "P-13",
+    "name": "CASE",
+    "required": []
+  }
+]

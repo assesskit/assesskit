@@ -274,6 +274,7 @@ contradict themselves or are silent, and what the runtime does.
 - [CLI](https://github.com/assesskit/assesskit/blob/main/docs/runtime/cli.md): `assesskit validate` and `assesskit schemas fetch`, their checks, output, exit codes and defaults.
 - [Supported](https://github.com/assesskit/assesskit/blob/main/docs/runtime/supported.md): what the runtime supports and what it does not, and the scope of the claim.
 - [Evidence](https://github.com/assesskit/assesskit/blob/main/docs/runtime/evidence.md): how the runtime is tested, and how to refresh the corpus and the fixtures.
+- [Conformance](https://github.com/assesskit/assesskit/blob/main/docs/runtime/conformance.md): every feature ID of the 1EdTech conformance document, with its guide and its test.
 
 [SECURITY](../../SECURITY.md) lists the threat model, every default limit and how to report a vulnerability.
 [CONTRIBUTING](../../CONTRIBUTING.md) describes how to contribute.

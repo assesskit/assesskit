@@ -28,7 +28,7 @@ A rule cites its source by an ID and a section, such as `INFO section 2.11.3.37`
 | MD   | QTI 3.0 Metadata Information Model and XSD Binding          | Final Release v1.0, 1 May 2022                    | https://www.imsglobal.org/spec/qti/v3p0/md-bind/                             |
 | RR   | QTI 3.0 Results Reporting Information Model and XSD Binding | Candidate Final Public v1.0, 1 November 2022      | https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html |
 | UD   | QTI 3.0 Usage Data and Item Statistics                      | Candidate Final Public v1.0, 2 February 2022      | https://www.imsglobal.org/sites/default/files/spec/qti/v3/ud-bind/index.html |
-| CERT | QTI 3.0 Conformance and Certification                       | Final Release, document 2.0, 15 March 2022        | https://www.imsglobal.org/node/199101                                        |
+| CERT | QTI 3.0 Conformance and Certification                       | Final Release, document 2.0, 15 March 2022        | https://www.imsglobal.org/spec/qti/v3p0/conf/                                |
 | TERM | QTI 3.0 Terms and Definitions                               | Final Release, 1 May 2022                         | https://www.imsglobal.org/node/199091                                        |
 | CAT  | 1EdTech Computer Adaptive Testing (CAT) 1.0                 | Candidate Final Public, 9 November 2020           | https://www.imsglobal.org/spec/cat/v1p0/impl/                                |
 | PCI  | Portable Custom Interactions 1.0, cited by INFO section 1.1 | Candidate Final, March 2020                       | not retrievable                                                              |
@@ -55,6 +55,7 @@ source has something that the runtime does not read, write, validate or run.
 | The interactions of the ASI schema                                                                                                         | `interactions.test.ts`: each has a descriptor with its bindings                                                                                                                                                   |
 | The Schematron rule sets of the ASI schema                                                                                                 | `validate.xsd.test.ts`: each is reported by the validator under its identifier                                                                                                                                    |
 | The packages of the 1EdTech examples                                                                                                       | `examples.corpus.test.ts`: each is read, validated, and its tests run to their end; the other `*.corpus.test.ts` files read the items, results and usage data                                                     |
+| The feature IDs of Appendix A of CERT, in `scripts/conformance-features.json`                                                              | `scripts/test/conformance.test.ts`: each has a row of [Conformance](conformance.md) with a guide and a test that exist and run                                                                                    |
 
 A schema that changes fails these tests until the table is generated again (`pnpm asi-table`) and the writer covers what is new.
 
@@ -166,6 +167,7 @@ flowchart LR
 | Patterns and formats | `maxStates`, the nesting of a pattern, the width of a printed variable                                                                                                                        | `values.test.ts`, `content.test.ts`                                  |
 | Processing and plans | `maxContainerSize`, `maxPlanNodes` for a plan, a selection and a stage of an adaptive section, the depth of JSON                                                                              | `processing.test.ts`, `delivery.test.ts`, `delivery-pending.test.ts` |
 | Actions of a client  | `maxActionSize`, `maxPciStateLength`, the refusal of the actions of the host                                                                                                                  | `delivery.test.ts`                                                   |
+| Member-only material | The refusal of a directory inside the repository by `pnpm conformance`                                                                                                                        | `scripts/test/conformance.test.ts`                                   |
 
 The rules for the player's server, protocol, frames and `cat-rest` are in the same list ([the player's evidence](../player/evidence.md)).
 

@@ -75,6 +75,7 @@ Biome enforces, folder by folder.
 | `pnpm compat`                    | The built JavaScript and the CSS of the player stay inside the browser baseline                                                                                          |
 | `pnpm compat:engines`            | The smoke test in the pinned old browsers; needs Docker                                                                                                                  |
 | `pnpm corpus`, `pnpm schemas`    | Download the 1EdTech examples into `.cache/corpus` and the XSDs into `.cache/schemas`; `corpus:pin` and `schemas:pin` write new hashes                                   |
+| `pnpm conformance`               | Takes the official packages of a 1EdTech member through the runtime, outside the repository; `conformance:pin` rewrites the feature list                                 |
 | `pnpm unicode`, `pnpm asi-table` | Regenerate the Unicode tables of `values` and the element table of `asi` (needs `pnpm schemas`) from the pinned files                                                    |
 
 - A gate that reads `dist/` builds it first, so a fresh clone passes every gate.
@@ -216,6 +217,8 @@ untested in the others.
 ## Where things go
 
 - A construct of the specifications: its test, and a line of `supported.md` of the package when what is supported changes.
+- A test that a row of [conformance.md](docs/runtime/conformance.md) cites: that row changes with it, and `scripts/test/conformance.test.ts`
+  fails until it does. A row says `Implements` only for what the guide and the test show; the docs say "implements", never "certified".
 - A runtime module: a folder in `src/` with `index.ts`, a subpath in `package.json` `exports`, `export *` in `src/index.ts` unless
   it is `node` or `cli`, a test file, a guide in `docs/`, import rules in `biome.json`, its row in the table of
   [architecture.md](docs/runtime/architecture.md#layers) and in the API table of `packages/runtime/README.md`. `node` and `cli`

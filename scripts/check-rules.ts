@@ -13,13 +13,17 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { CAT_REST_RULES } from "./rules/cat-rest.ts";
 import { PLAYER_RULES } from "./rules/player.ts";
+import { REPOSITORY_RULES } from "./rules/repository.ts";
 import type { Rule } from "./rules/rule.ts";
 import { RUNTIME_RULES } from "./rules/runtime.ts";
 
 export type { Rule };
 
-/** The security-critical rules of the player, of the runtime and of the CAT binding, each with the test that guards it. */
-export const RULES: readonly Rule[] = [...PLAYER_RULES, ...RUNTIME_RULES, ...CAT_REST_RULES];
+/**
+ * The security-critical rules of the player, of the runtime and of the CAT binding, and the rule that keeps member-only material
+ * out of the repository, each with the test that guards it.
+ */
+export const RULES: readonly Rule[] = [...PLAYER_RULES, ...RUNTIME_RULES, ...CAT_REST_RULES, ...REPOSITORY_RULES];
 
 /** The folders that a scratch copy leaves out: generated output and installed packages, which it links instead. */
 const SKIPPED = new Set(["node_modules", ".git", "dist", "coverage", ".cache", ".vitest"]);

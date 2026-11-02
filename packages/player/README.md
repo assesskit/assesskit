@@ -104,3 +104,4 @@ lists what that allows and how it is tested.
 | [Tools](https://github.com/assesskit/assesskit/blob/main/docs/player/tools.md)                      | The tools of an item, how they are shown and operated                                                      |
 | [Supported](https://github.com/assesskit/assesskit/blob/main/docs/player/supported.md)              | What the player supports and what it does not, the browsers and WCAG 2.2                                   |
 | [Evidence](https://github.com/assesskit/assesskit/blob/main/docs/player/evidence.md)                | How the player is tested                                                                                   |
+| [Conformance](https://github.com/assesskit/assesskit/blob/main/docs/runtime/conformance.md)         | Every feature ID of the 1EdTech conformance document, with its guide and its test                          |
