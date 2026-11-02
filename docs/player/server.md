@@ -120,6 +120,7 @@ records.get("s1").version; // => 1
 | `gate`          | `AssetGate`                                  | Signs the prefixes of each envelope.                                                                                                                                           |
 | `packages`      | `(session, options?) => Promise<QtiPackage>` | The package that a session delivers; the gate takes the same function. It may ignore the options.                                                                              |
 | `clientActions` | `CandidateActionType[]`                      | The types of action a client may send. Default: every type but `suspend` and `resume` (`EXAM_CLIENT_ACTIONS`).                                                                 |
+| `profileBreaks` | `boolean`                                    | Whether a candidate whose profile has breaks may send `suspend` and `resume` beside `clientActions` ([the policy](#client-action-policy)). Default: `true`.                    |
 | `maxIdle`       | `number`                                     | The longest gap between steps, in milliseconds, that counts as time on task, as on `createLocalSession`. Needs `suspend` in `clientActions`; never for an exam. Default: none. |
 | `limits`        | `Partial<ActionLimits>`                      | The limits on the size of an action, as the runtime's `parseCandidateAction` takes them. Default: the runtime's.                                                               |
 | `forward`       | `ForwardOptions`                             | Where the events of each step go: the host's `log`. Default: nowhere.                                                                                                          |
@@ -206,6 +207,11 @@ first.
 The exam default lists every action of the candidate but `suspend` and `resume`, because the runtime counts suspended time nowhere
 a candidate who could suspend would stop the clock. The host filters `view.actions` through the policy, so the chrome
 never offers such an action. Practice allows every action, and so does a host that passes `CANDIDATE_ACTION_TYPES`.
+
+A candidate whose profile has breaks (`environment` with `breaks`, on) may also send `suspend` and `resume`: CERT asks that such a
+candidate can pause the assessment to take a break and return without losing a response or incurring a penalty (`A-11`). The
+session keeps every response while it is suspended and its clocks stop, so the break costs no time; the chrome offers Pause the test
+and Resume the test. A program whose breaks go through the proctor only sets `profileBreaks: false`.
 
 ### The proctor
 

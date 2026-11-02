@@ -11,6 +11,7 @@ import {
   viewToJson,
 } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
+import { type PersonalNeedsProfile, PNP_NAMESPACE, readPnp } from "@assesskit/runtime/pnp";
 import { single } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
@@ -924,6 +925,37 @@ describe("createSessionHost", () => {
     expect(viewOf(suspended).actions).toEqual(["resume"]);
     const resumed = await host.handle(ALICE, request(2, { type: "resume" }));
     expect(viewOf(resumed).status).toBe("in-progress");
+  });
+
+  it("lets a candidate whose profile has breaks suspend and resume in an exam, and keeps every response", async () => {
+    const profile = (breaks: boolean): PersonalNeedsProfile => {
+      const read = readPnp(
+        `<access-for-all-pnp xmlns="${PNP_NAMESPACE}"><environment><breaks>${breaks}</breaks></environment></access-for-all-pnp>`,
+      );
+      if (!("supports" in read)) throw new Error("The fixture profile must be one profile.");
+      return read;
+    };
+    const { host, clock } = await examHost();
+    const started = await host.start(ALICE, { seed: 7, pnp: profile(true) });
+    expect(viewOf(started).actions).toContain("suspend");
+    await host.handle(ALICE, request(1, answer("A")));
+    clock.advance(4_000);
+    const suspended = await host.handle(ALICE, request(2, { type: "suspend" }));
+    expect(viewOf(suspended).status).toBe("suspended");
+    expect(viewOf(suspended).actions).toEqual(["resume"]);
+    clock.advance(600_000);
+    const resumed = await host.handle(ALICE, request(3, { type: "resume" }));
+    expect(viewOf(resumed).status).toBe("in-progress");
+    expect(viewOf(resumed).current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+    const without = await examHost();
+    const plain = await without.host.start(ALICE, { seed: 7, pnp: profile(false) });
+    expect(viewOf(plain).actions).not.toContain("suspend");
+    await expect(without.host.handle(ALICE, request(1, { type: "suspend" }))).rejects.toThrow(DataError);
+    const proctored = await examHost({ profileBreaks: false });
+    expect(viewOf(await proctored.host.start(ALICE, { seed: 7, pnp: profile(true) })).actions).not.toContain("suspend");
+    await expect(examHost(JSON.parse('{"profileBreaks":"yes"}'))).rejects.toThrow(
+      'The options object is invalid at profileBreaks: expected true or false, found "yes".',
+    );
   });
 
   it("lets a client mark an item for review in an exam, keeps the mark in the stored session, and shows it again after a reload", async () => {

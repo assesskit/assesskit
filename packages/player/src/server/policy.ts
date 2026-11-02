@@ -1,5 +1,5 @@
 import { checkArray, checkChoice, describe } from "@assesskit/runtime/checks";
-import type { CandidateAction } from "@assesskit/runtime/delivery";
+import type { CandidateAction, DeliveryState } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 
 /** The type of an action of the candidate. */
@@ -32,6 +32,29 @@ export const CANDIDATE_ACTION_TYPES = [
 export const EXAM_CLIENT_ACTIONS: readonly CandidateActionType[] = CANDIDATE_ACTION_TYPES.filter(
   (type) => type !== "suspend" && type !== "resume",
 );
+
+/**
+ * Returns the actions a client of a session may send: those of the policy, and `suspend` and `resume` for a candidate whose
+ * profile has breaks, the support `environment` with `breaks` on.
+ *
+ * @remarks
+ * Such a candidate may pause the assessment to take a break and return to it without losing a response or time: a suspended
+ * session keeps every response, and its clocks stop.
+ *
+ * @param policy - The actions of the policy of the host.
+ * @param state - The state of the session.
+ * @returns The actions.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/conf/ | QTI 3.0 Conformance and Certification, A-11}
+ */
+export function withBreaks(
+  policy: ReadonlySet<CandidateActionType>,
+  state: DeliveryState,
+): ReadonlySet<CandidateActionType> {
+  const environment = state.supports.get("environment");
+  const settings = environment?.active === true ? environment.settings : undefined;
+  if (settings?.name !== "environment" || settings.breaks !== true) return policy;
+  return new Set<CandidateActionType>([...policy, "suspend", "resume"]);
+}
 
 /**
  * Checks a list of the types of actions a client may send.

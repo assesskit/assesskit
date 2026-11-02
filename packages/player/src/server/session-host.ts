@@ -43,6 +43,17 @@ export interface SessionHostOptions {
    */
   readonly clientActions?: readonly CandidateActionType[];
   /**
+   * Whether a candidate whose profile has breaks may send `suspend` and `resume` beside `clientActions`, so that the candidate
+   * takes a break without a proctor and comes back to every response, with the clocks stopped meanwhile.
+   *
+   * @remarks
+   * The support is `environment` with `breaks`, on. Without it the breaks of such a candidate go through the proctor too.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/conf/ | QTI 3.0 Conformance and Certification, A-11}
+   * @defaultValue `true`
+   */
+  readonly profileBreaks?: boolean;
+  /**
    * The longest gap between steps, in milliseconds, that counts as time on task, as on `createLocalSession`: a gap above
    * it counts as suspended, from the latest step to the next action of the candidate or of the host, while the session is in
    * progress.

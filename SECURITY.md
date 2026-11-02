@@ -138,7 +138,9 @@ session holds any file of the engine. Practice runs the engine on the device, so
 - The host's authentication gives `{ session, principal }` to every call. Envelopes carry no session identifier, and a
   request for a session that is not bound to the principal, or that does not exist, is the same `AccessError`: map it to 403
   and tell nothing else. `start` never rebinds a session.
-- A client may not send `suspend` or `resume` in an exam, because the runtime counts suspended time nowhere. Breaks are the proctor's.
+- A client may not send `suspend` or `resume` in an exam, because the runtime counts suspended time nowhere. Breaks are the proctor's,
+  except for a candidate whose profile has breaks (`environment` with `breaks`), who may pause as CERT asks; a program that wants
+  every break through the proctor sets `profileBreaks: false`. The profile comes from the host, never from the client.
   Keep the proctor's and the scheduler's endpoints away from candidates. `maxIdle` counts a long gap as a suspension, so
   `createSessionHost` refuses it unless `clientActions` has `suspend`; an exam never sets it.
 - The stores must make `create` and `save` atomic across processes, so that a version conflict is a conflict and a session is

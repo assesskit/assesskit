@@ -69,3 +69,7 @@ degrees, radians or gradians, π and e, squares, cubes, powers and roots, logari
 permutations, combinations and parentheses), the order of operations, and a line of the operations that wait. Each number of a
 calculator keeps all its digits for the next operation. The slot `scientific-calculator` of a host replaces the built-in one;
 the graphing calculator stays a slot of the host.
+
+A candidate whose profile has breaks may send `suspend` and `resume` to a session host beside its `clientActions`, so that the
+candidate pauses the exam and returns to every response with the clocks stopped meanwhile; `profileBreaks: false` leaves those
+breaks to the proctor.

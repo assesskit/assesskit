@@ -346,6 +346,22 @@ describe("mountDelivery", () => {
     expect(s.ui.querySelector(".ak-notice")).toBeNull();
   });
 
+  it("lets a candidate whose profile has breaks pause and resume in an exam, and comes back to the answer", async () => {
+    const breaks = `<access-for-all-pnp xmlns="${PNP_NAMESPACE}"><environment><breaks>true</breaks></environment></access-for-all-pnp>`;
+    const s = await shell({ profile: breaks });
+    await shown(s);
+    choices(s.ui)[0]?.click();
+    await waitFor(() => expect(s.client.view.current?.responses.get("RESPONSE")).not.toBeNull());
+    buttonNamed(s.ui, "Pause the test").click();
+    await waitFor(() => expect(buttons(s.ui)).toEqual(["Resume the test"]));
+    buttonNamed(s.ui, "Resume the test").click();
+    await waitFor(() => expect(buttons(s.ui)).toContain("Submit answer"));
+    expect(s.client.view.current?.responses.get("RESPONSE")).not.toBeNull();
+    const exam = await shell();
+    await shown(exam);
+    expect(buttons(exam.ui)).not.toContain("Pause the test");
+  });
+
   it("says in words why the engine refused, in the status region and without moving the focus", async () => {
     const s = await shell({ files: examFiles({ limits: '<qti-time-limits max-time="600"/>' }) });
     await shown(s);

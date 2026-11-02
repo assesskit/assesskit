@@ -58,7 +58,13 @@ import {
 } from "../protocol/internal.js";
 import type { StepSink, SuppliedGrade } from "./forward.js";
 import { type AssetGate, collectAssetPrefixes, locateDocuments } from "./gate/index.js";
-import { checkClientAction, EXAM_CLIENT_ACTIONS, readClientActions } from "./policy.js";
+import {
+  type CandidateActionType,
+  checkClientAction,
+  EXAM_CLIENT_ACTIONS,
+  readClientActions,
+  withBreaks,
+} from "./policy.js";
 import type { Scheduler } from "./scheduler.js";
 import { MAX_SAVE_RETRIES, PROCTOR_ACTIONS, type SessionHost, type SessionHostOptions } from "./session-host.js";
 import type { SessionStore, StoredSession } from "./session-store.js";
@@ -88,6 +94,7 @@ const hostOptionsSchema = v.strictObject({
   gate: methodsSchema<AssetGate>("sign"),
   packages: functionSchema<(session: string, options?: SessionCallOptions) => Promise<QtiPackage>>(),
   clientActions: v.optional(v.unknown()),
+  profileBreaks: v.optional(v.boolean()),
   maxIdle: v.optional(v.unknown()),
   limits: v.optional(recordSchema),
   forward: v.optional(v.strictObject({ log: functionSchema<StepSink>() })),
@@ -140,7 +147,10 @@ function loggedAction(action: CandidateAction | HostAction, at: number): string 
 export function createSessionHost(options: SessionHostOptions): SessionHost {
   checkHostOptions(options);
   const { engine, store, scheduler, clock, gate, packages, limits = {}, forward, cat, maxIdle } = options;
+  const { profileBreaks = true } = options;
   const policy = readClientActions(options.clientActions ?? EXAM_CLIENT_ACTIONS);
+  const policyOf = (state: DeliveryState): ReadonlySet<CandidateActionType> =>
+    profileBreaks ? withBreaks(policy, state) : policy;
   if (maxIdle !== undefined && !policy.has("suspend")) {
     throw new DataError(
       'The option maxIdle counts a long gap as a suspension, which the option clientActions does not let a client take: it has no "suspend". Add "suspend" to clientActions for a host where candidates may pause, and leave maxIdle out for an exam.',
@@ -166,7 +176,8 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
   ): Promise<ViewEnvelope> => {
     const pkg = await packages(session, { signal });
     const full = engine.view(state, now);
-    const view: CandidateView = { ...full, actions: full.actions.filter((type) => policy.has(type)) };
+    const allowed = policyOf(state);
+    const view: CandidateView = { ...full, actions: full.actions.filter((type) => allowed.has(type)) };
     return {
       seq,
       view: viewToJson(view),
@@ -323,8 +334,8 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     signal: AbortSignal | undefined,
   ): Promise<Attempt<ViewEnvelope>> => {
     const action = parseCandidateAction(envelope.action, { limits });
-    checkClientAction(policy, action.type);
     const state = deserializeState(stored.state);
+    checkClientAction(policyOf(state), action.type);
     const { step, at } = stepAfterIdle(idle, { state, action, now, maxIdle });
     const next = step.ok ? step.state : state;
     const reply = await envelopeOf(caller.session, next, now, envelope.seq, signal, step.ok ? undefined : step.refusal);

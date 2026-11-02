@@ -105,7 +105,14 @@ export const PLAYER_RULES: readonly Rule[] = [
   {
     rule: "An action of a client is checked against the policy of actions.",
     file: "packages/player/src/server/host.ts",
-    find: "checkClientAction(policy, action.type);",
+    find: "checkClientAction(policyOf(state), action.type);",
+    replace: "",
+    test: "packages/player/test/server.test.ts",
+  },
+  {
+    rule: "A client of an exam may suspend or resume only for a candidate whose profile has breaks.",
+    file: "packages/player/src/server/policy.ts",
+    find: 'if (settings?.name !== "environment" || settings.breaks !== true) return policy;',
     replace: "",
     test: "packages/player/test/server.test.ts",
   },

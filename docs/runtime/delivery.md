@@ -504,7 +504,8 @@ and a candidate who wants the answers can read them. The core uses no platform A
 **Client actions.** The engine applies every action that its rules allow, whoever sends it. Among the actions of a candidate
 are `suspend` and `resume`, and suspended time counts nowhere, so a client that may send them can stop its own clock.
 The policy about which candidate actions a client may send belongs to the player, not to the runtime. The player's exam default allows
-every candidate action except `suspend` and `resume`, and breaks go through the proctor, on the host's authority. A host that
+every candidate action except `suspend` and `resume`, and breaks go through the proctor, on the host's authority, unless the
+candidate's profile has breaks. A host that
 uses the runtime without the player filters the actions of its clients before it applies them.
 
 ## Time
