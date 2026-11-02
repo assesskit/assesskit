@@ -1053,8 +1053,7 @@ describe("tabs", () => {
 
   it("moves and selects with Left and Right, wrapping at the ends, and with Home and End", async () => {
     const root = await showBody(Tabs);
-    tab(root, "tab-email").focus();
-    await userEvent.keyboard("{ArrowRight}");
+    await userEvent.type(tab(root, "tab-email"), "{ArrowRight}");
     expect(state(root).selected).toEqual(["false", "true", "false"]);
     expect(root.root.activeElement).toBe(tab(root, "tab-memo"));
     await userEvent.keyboard("{End}");
@@ -1070,15 +1069,13 @@ describe("tabs", () => {
 
   it("leaves the keys with a modifier to the browser", async () => {
     const root = await showBody(Tabs);
-    tab(root, "tab-email").focus();
-    await userEvent.keyboard("{Shift>}{ArrowRight}{/Shift}");
+    await userEvent.type(tab(root, "tab-email"), "{Shift>}{ArrowRight}{/Shift}");
     expect(state(root).selected).toEqual(["true", "false", "false"]);
   });
 
   it("turns the arrows round where the text runs from right to left", async () => {
     const root = await showBody(Tabs.replace('role="tablist"', 'role="tablist" dir="rtl"'));
-    tab(root, "tab-email").focus();
-    await userEvent.keyboard("{ArrowLeft}");
+    await userEvent.type(tab(root, "tab-email"), "{ArrowLeft}");
     expect(root.root.activeElement).toBe(tab(root, "tab-memo"));
     await userEvent.keyboard("{ArrowRight}");
     expect(root.root.activeElement).toBe(tab(root, "tab-email"));
@@ -1203,10 +1200,10 @@ describe("sortable tables", () => {
   it("sorts from the keyboard, keeps the focus on the button that was pressed, and moves the rows themselves", async () => {
     const root = await showBody(Revenue);
     const rows = all(root, "tbody tr");
-    const button = header(root, 1).querySelector("button");
-    // Safari leaves a button out of the tab order and does not focus it on a press, so the test focuses it.
-    button?.focus();
-    await userEvent.keyboard("{Enter}");
+    const button = el(header(root, 1), "button");
+    // Safari leaves a button out of the tab order and does not focus it on a press, so the test focuses it and presses the
+    // key in one command.
+    await userEvent.type(button, "{Enter}");
     expect(column(root, 0)).toEqual(["West", "South", "North", "East"]);
     await userEvent.keyboard(" ");
     expect(column(root, 0)).toEqual(["North", "East", "South", "West"]);

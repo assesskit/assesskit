@@ -255,13 +255,13 @@ describe("the ratings and the score", () => {
   it("is operated by keyboard: the arrow keys choose within a group", async () => {
     const { shadow, mounted } = show(ESSAY);
     const [first] = radios(shadow, 0);
-    first?.focus();
-    await userEvent.keyboard("{ArrowDown}{ArrowDown}");
+    if (first === undefined) throw new Error("The first criterion has choices.");
+    await userEvent.type(first, "{ArrowDown}{ArrowDown}");
     expect(radios(shadow, 0).map((input) => input.checked)).toEqual([false, false, true]);
     expect(mounted.ratings).toEqual([{ criterion: "content", score: 2 }]);
     const [other] = radios(shadow, 1);
-    other?.focus();
-    await userEvent.keyboard("{ArrowDown}");
+    if (other === undefined) throw new Error("The second criterion has choices.");
+    await userEvent.type(other, "{ArrowDown}");
     expect(mounted.ratings).toEqual([
       { criterion: "content", score: 2 },
       { criterion: "language", score: 1 },

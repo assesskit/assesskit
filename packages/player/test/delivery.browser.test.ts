@@ -1205,11 +1205,9 @@ describe("accessibility of the chrome", () => {
       .map((element) => element.getAttribute("data-focus-id"));
     expect(order).toEqual(["item q1 1", "item q2 1", "item q3 1", "next", "submit", "skip", "end-part", "end-test"]);
     expect([...s.ui.querySelectorAll("button")].every((button) => button.tabIndex >= 0)).toBe(true);
-    buttonNamed(s.ui, "Next").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(buttonNamed(s.ui, "Next"), "{Enter}");
     await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
-    buttonNamed(s.ui, "Previous").focus();
-    await userEvent.keyboard(" ");
+    await userEvent.type(buttonNamed(s.ui, "Previous"), " ");
     await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q1"));
   });
 
@@ -1217,8 +1215,7 @@ describe("accessibility of the chrome", () => {
     const s = await shell();
     await shown(s);
     const end = buttonNamed(s.ui, "End this part");
-    end.focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(end, "{Enter}");
     await waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
     expect(s.ui.activeElement?.textContent).toBe("No, go back");
     await userEvent.keyboard("{Escape}");
@@ -1228,8 +1225,7 @@ describe("accessibility of the chrome", () => {
     await waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
     const yes = buttonNamed(s.ui, "Yes, continue");
     expect(yes.tabIndex).toBeGreaterThanOrEqual(0);
-    yes.focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(yes, "{Enter}");
     await waitFor(() => expect(dialogOf(s.ui)).toBeNull());
     await waitFor(() => expect(s.ui.querySelector(".ak-notice")?.textContent).toBe("The test has ended."));
   });
@@ -1303,8 +1299,7 @@ describe("the supports in the player", () => {
     const s = await shell({ profile: PROFILE });
     await shown(s);
     const button = buttonNamed(s.ui, "High contrast");
-    button.focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(button, "{Enter}");
     await waitFor(() => expect(button.getAttribute("aria-pressed")).toBe("true"));
     expect(s.ui.activeElement).toBe(button);
     expect(statusOf(s.ui)).toBe("");

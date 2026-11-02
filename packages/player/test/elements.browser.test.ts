@@ -141,10 +141,8 @@ describe("choice", () => {
     const inputs = scene.findAll<HTMLInputElement>("input");
     // Safari on macOS leaves the form controls out of the tab order unless the person turns that on, so the test moves the
     // focus itself and checks that the keyboard operates what has it.
-    first(inputs).focus();
-    await userEvent.keyboard(" ");
-    first(inputs, 2).focus();
-    await userEvent.keyboard(" ");
+    await userEvent.type(first(inputs), " ");
+    await userEvent.type(first(inputs, 2), " ");
     expect(scene.responses.at(-1)?.value).toEqual(container("multiple", "identifier", ["A", "C"]));
     expect(inputs.every((input) => input.tabIndex === 0)).toBe(true);
   });
@@ -451,14 +449,12 @@ describe("order", () => {
   it("puts a choice in a place with the keyboard alone, and lets it go with Escape", async () => {
     const scene = mountScene(Ordered, Body(""));
     const pool = scene.findAll<HTMLButtonElement>("qti-simple-choice > button");
-    first(pool).focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(first(pool), "{Enter}");
     expect(first(pool).getAttribute("aria-pressed")).toBe("true");
     await userEvent.keyboard("{Escape}");
     expect(first(pool).getAttribute("aria-pressed")).toBe("false");
     await userEvent.keyboard("{Enter}");
-    first(scene.findAll<HTMLButtonElement>("button.ak-drop"), 1).focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(first(scene.findAll<HTMLButtonElement>("button.ak-drop"), 1), "{Enter}");
     expect(scene.responses.at(-1)?.value).toEqual(container("ordered", "identifier", ["A"]));
     expect(scene.find(".qti-visually-hidden").textContent).toBe("Alpha placed in Position 2");
   });
@@ -904,8 +900,8 @@ describe("slider", () => {
   it("moves in steps by the keyboard, from the lower bound when there is no value", async () => {
     const scene = mountScene(declare("single", "integer"), Body('step="2"'));
     const thumb = scene.find("[role=slider]");
-    thumb.focus();
-    await userEvent.keyboard("{ArrowRight}");
+    await userEvent.type(thumb, "{ArrowRight}");
+    expect(scene.root.activeElement).toBe(thumb);
     expect(scene.responses.at(-1)?.value).toEqual(single("integer", 2));
     await userEvent.keyboard("{ArrowUp}{ArrowUp}{ArrowLeft}");
     expect(scene.responses.at(-1)?.value).toEqual(single("integer", 4));
@@ -932,8 +928,7 @@ describe("slider", () => {
       declare("single", "float"),
       Body('lower-bound="0" upper-bound="1"').replace('lower-bound="0" upper-bound="10"', ""),
     );
-    scene.find("[role=slider]").focus();
-    await userEvent.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}");
+    await userEvent.type(scene.find("[role=slider]"), "{ArrowRight}{ArrowRight}{ArrowRight}");
     expect(scene.responses.at(-1)?.value).toEqual(single("float", 0.03));
   });
 
@@ -952,8 +947,7 @@ describe("slider", () => {
     const thumb = scene.find("[role=slider]");
     expect([thumb.getAttribute("aria-valuenow"), thumb.getAttribute("aria-valuetext")]).toEqual(["7", "7"]);
     scene.interaction().disabled = true;
-    thumb.focus();
-    await userEvent.keyboard("{ArrowLeft}");
+    await userEvent.type(thumb, "{ArrowLeft}");
     expect(scene.responses).toEqual([]);
     expect(thumb.getAttribute("aria-disabled")).toBe("true");
   });
@@ -1819,10 +1813,8 @@ describe("keyboard operation", () => {
         .findAll<HTMLButtonElement>(".ak-choices :not([hidden]) > button")
         .filter((button) => button.textContent === choice),
     );
-    token.focus();
-    await userEvent.keyboard("{Enter}");
-    first(scene.findAll<HTMLButtonElement>("button.ak-drop"), place).focus();
-    await userEvent.keyboard(" ");
+    await userEvent.type(token, "{Enter}");
+    await userEvent.type(first(scene.findAll<HTMLButtonElement>("button.ak-drop"), place), " ");
   }
 
   it("makes an association without a drag, by choosing a choice and then the place", async () => {
@@ -1858,16 +1850,17 @@ describe("keyboard operation", () => {
       declare("single", "identifier"),
       `<qti-hottext-interaction response-identifier="R"><p><qti-hottext identifier="A">one</qti-hottext> <qti-hottext identifier="B">two</qti-hottext></p></qti-hottext-interaction>`,
     );
-    first(hot.findAll<HTMLInputElement>("qti-hottext > input"), 1).focus();
-    await userEvent.keyboard(" ");
+    await userEvent.type(first(hot.findAll<HTMLInputElement>("qti-hottext > input"), 1), " ");
     expect(hot.responses.at(-1)?.value).toEqual(single("identifier", "B"));
     const menu = mountScene(
       declare("single", "identifier"),
       `<p><qti-inline-choice-interaction response-identifier="R"><qti-inline-choice identifier="L">London</qti-inline-choice><qti-inline-choice identifier="P">Paris</qti-inline-choice></qti-inline-choice-interaction></p>`,
     );
-    menu.find("select").focus();
-    // The arrow keys open the menu in some systems, and the first letters choose an entry in all of them.
-    await userEvent.keyboard("Pa");
+    // The arrow keys open the menu in some systems, and the first letters choose an entry in all of them. The menu takes
+    // the focus and the keys in one command of the browser.
+    const select = menu.find("select");
+    await userEvent.type(select, "Pa");
+    expect(menu.root.activeElement).toBe(select);
     expect(menu.responses.at(-1)?.value).toEqual(single("identifier", "P"));
   });
 
@@ -1876,8 +1869,9 @@ describe("keyboard operation", () => {
       declare("single", "string"),
       `<p><qti-text-entry-interaction response-identifier="R"/></p>`,
     );
-    text.find("input").focus();
-    await userEvent.keyboard("yes");
+    const field = text.find("input");
+    await userEvent.type(field, "yes");
+    expect(text.root.activeElement).toBe(field);
     expect(text.responses.at(-1)?.value).toEqual(single("string", "yes"));
     const hint = mountScene(
       declare("single", "boolean", "H"),
@@ -1885,8 +1879,7 @@ describe("keyboard operation", () => {
     );
     const pressed: string[] = [];
     hint.root.addEventListener("ak-end-attempt", (event) => pressed.push(event.detail.responseIdentifier));
-    hint.find("button").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(hint.find("button"), "{Enter}");
     expect(pressed).toEqual(["H"]);
   });
 
@@ -1895,8 +1888,7 @@ describe("keyboard operation", () => {
       declare("multiple", "directedPair"),
       `<qti-match-interaction response-identifier="R" class="qti-match-tabular" max-associations="2"><qti-simple-match-set><qti-simple-associable-choice identifier="A" match-max="1">a</qti-simple-associable-choice></qti-simple-match-set><qti-simple-match-set><qti-simple-associable-choice identifier="X" match-max="1">x</qti-simple-associable-choice></qti-simple-match-set></qti-match-interaction>`,
     );
-    table.find("td input").focus();
-    await userEvent.keyboard(" ");
+    await userEvent.type(table.find("td input"), " ");
     expect(table.responses.at(-1)?.value).toEqual(container("multiple", "directedPair", [["A", "X"]]));
   });
 });

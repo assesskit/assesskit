@@ -355,8 +355,7 @@ describe("the rule", () => {
   it("is operated by keyboard: Enter on the button opens it, arrows move it and Page Down turns it", async () => {
     const scene = createScene();
     scene.show(items({ rules: [RULE_XML] }));
-    toolbarButton(scene, "Ruler").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(toolbarButton(scene, "Ruler"), "{Enter}");
     const rule = found(overlayOf(scene, "Ruler"), "rule");
     expect(focused()).toBe(rule);
     const start = placementOf(rule);
@@ -496,8 +495,7 @@ describe("the protractor", () => {
   it("is operated by keyboard: the arrows move it and the Page keys turn it about the base line", async () => {
     const scene = createScene();
     scene.show(items({ protractors: [PROTRACTOR_XML] }));
-    toolbarButton(scene, "Protractor").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(toolbarButton(scene, "Protractor"), "{Enter}");
     const protractor = found(overlayOf(scene, "Protractor"), "protractor");
     expect(focused()).toBe(protractor);
     const start = placementOf(protractor);
@@ -587,8 +585,7 @@ describe("the line reader", () => {
     const lineOf = (): number =>
       Math.floor((band.getBoundingClientRect().top + band.getBoundingClientRect().height / 2 - passage.top) / 24);
     expect([lineOf(), band.getAttribute("aria-valuenow"), band.getAttribute("aria-valuemax")]).toEqual([0, "1", "3"]);
-    band.focus();
-    await userEvent.keyboard("{ArrowDown}");
+    await userEvent.type(band, "{ArrowDown}");
     expect([lineOf(), band.getAttribute("aria-valuetext")]).toEqual([1, "Line 2 of 3"]);
     await userEvent.keyboard("{ArrowDown}{ArrowDown}");
     expect([lineOf(), band.getAttribute("aria-valuenow")]).toEqual([2, "3"]);
@@ -676,14 +673,12 @@ describe("the line reader", () => {
     const scene = createScene();
     setContent(scene, THREE_LINES);
     scene.show(optional());
-    toolbarButton(scene, "Line reader").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(toolbarButton(scene, "Line reader"), "{Enter}");
     const band = found(scene.stage.querySelector<HTMLElement>("[role=slider]"), "band");
     expect(focused()).toBe(band);
     await userEvent.keyboard("{ArrowDown}");
     expect(band.getAttribute("aria-valuenow")).toBe("2");
-    controlOf(found(panelOf(scene, "Line reader"), "panel"), "Close Line reader").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(controlOf(found(panelOf(scene, "Line reader"), "panel"), "Close Line reader"), "{Enter}");
     expect(scene.requests).toEqual([
       ["line-reader", true],
       ["line-reader", false],
@@ -760,8 +755,7 @@ describe("answer masking", () => {
     const scene = createScene();
     scene.show(masking(true));
     const button = found(scene.stage.querySelector<HTMLButtonElement>(".ak-mask button"), "mask button");
-    button.focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(button, "{Enter}");
     expect(choices(scene).some(isHidden)).toBe(false);
     expect(focused()).toBe(button);
     await userEvent.keyboard(" ");
@@ -953,10 +947,10 @@ describe("the highlighter", () => {
     await userEvent.click(found(scene.stage.querySelector("a"), "link"));
     await userEvent.click(found(scene.stage.querySelector("label"), "label"));
     expect(listed(scene)).toEqual([]);
-    caretOf(scene).focus();
+    const caret = caretOf(scene);
     const seen: string[] = [];
     for (let step = 0; step < 8; step++) {
-      await userEvent.keyboard("{ArrowRight}");
+      await userEvent.type(caret, "{ArrowRight}");
       seen.push(said(scene));
     }
     expect([...new Set(seen)]).toEqual(["the", "link", "then", "pick", "ok"]);
@@ -969,7 +963,7 @@ describe("the highlighter", () => {
     const caret = caretOf(scene);
     caret.focus();
     near(caret.getBoundingClientRect(), wordBox(scene.stage, "aaa"));
-    await userEvent.keyboard("{ArrowRight}");
+    await userEvent.type(caret, "{ArrowRight}");
     near(caret.getBoundingClientRect(), wordBox(scene.stage, "bbb"));
     expect(said(scene)).toBe("bbb");
     await userEvent.keyboard("{ArrowDown}");
@@ -991,8 +985,7 @@ describe("the highlighter", () => {
     const scene = createScene();
     setContent(scene, Grid);
     scene.show(highlighter());
-    caretOf(scene).focus();
-    await userEvent.keyboard("{ArrowDown}{ArrowRight}{Shift>}{ArrowDown}{/Shift}");
+    await userEvent.type(caretOf(scene), "{ArrowDown}{ArrowRight}{Shift>}{ArrowDown}{/Shift}");
     expect(bands(scene, true)).toHaveLength(2);
     expect(listed(scene)).toEqual([]);
     await userEvent.keyboard("{Escape}");
@@ -1130,10 +1123,10 @@ describe("the highlighter", () => {
     const scene = createScene();
     setContent(scene, '<p style="margin: 0; line-height: 24px;">日本語 and 文字</p>');
     scene.show(highlighter());
-    caretOf(scene).focus();
+    const caret = caretOf(scene);
     const seen: string[] = [];
     for (let step = 0; step < 6; step++) {
-      await userEvent.keyboard("{ArrowRight}");
+      await userEvent.type(caret, "{ArrowRight}");
       seen.push(said(scene));
     }
     expect(seen).toEqual(["本", "語", "and", "文", "字", "字"]);
@@ -1223,8 +1216,7 @@ describe("the answer eliminator", () => {
     setContent(scene, Choices);
     scene.show(eliminator());
     const button = crossOut(scene, "Beta");
-    button.focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(button, "{Enter}");
     expect(choices(scene)[1]?.hasAttribute("data-ak-struck")).toBe(true);
     expect(focused()).toBe(button);
     await userEvent.keyboard(" ");
@@ -1449,8 +1441,7 @@ describe("the calculators", () => {
   it("types the keys of the scientific calculator from the keyboard: the focus goes to the display", async () => {
     const scene = createScene();
     scene.show(calculators("scientific"));
-    toolbarButton(scene, "Scientific calculator").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(toolbarButton(scene, "Scientific calculator"), "{Enter}");
     const panel = found(panelOf(scene, "Scientific calculator"), "panel");
     expect(focused()).toBe(found(panel.querySelector("output"), "display"));
     await userEvent.keyboard("2+3*4=");
@@ -1474,8 +1465,7 @@ describe("the calculators", () => {
   it("is operated by keyboard: the focus goes to the display, and typing works there", async () => {
     const scene = createScene();
     scene.show(calculators("standard"));
-    toolbarButton(scene, "Standard calculator").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(toolbarButton(scene, "Standard calculator"), "{Enter}");
     const panel = found(panelOf(scene, "Standard calculator"), "panel");
     expect(focused()).toBe(found(panel.querySelector("output"), "display"));
     await userEvent.keyboard("12*3{Enter}");
@@ -1495,13 +1485,11 @@ describe("the calculators", () => {
     scene.show(calculators("basic"));
     await userEvent.click(toolbarButton(scene, "Basic calculator"));
     const panel = found(panelOf(scene, "Basic calculator"), "panel");
-    key(panel, "7").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(key(panel, "7"), "{Enter}");
     expect(display(panel)).toBe("7");
     await userEvent.keyboard("5");
     expect(display(panel)).toBe("75");
-    key(panel, "Add").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(key(panel, "Add"), "{Enter}");
     await userEvent.keyboard("1=");
     expect(display(panel)).toBe("76");
   });
@@ -1511,11 +1499,9 @@ describe("the calculators", () => {
     scene.show(calculators("basic"));
     await userEvent.click(toolbarButton(scene, "Basic calculator"));
     const panel = found(panelOf(scene, "Basic calculator"), "panel");
-    scene.before.focus();
-    await userEvent.keyboard("123");
+    await userEvent.type(scene.before, "123");
     expect(display(panel)).toBe("0");
-    key(panel, "Equals").focus();
-    await userEvent.keyboard("{Control>}5{/Control}");
+    await userEvent.type(key(panel, "Equals"), "{Control>}5{/Control}");
     expect(display(panel)).toBe("0");
   });
 
@@ -1525,8 +1511,7 @@ describe("the calculators", () => {
     await userEvent.click(toolbarButton(scene, "Basic calculator"));
     const panel = found(panelOf(scene, "Basic calculator"), "panel");
     await userEvent.keyboard("{Enter}");
-    found(panel.querySelector("output"), "display").focus();
-    await userEvent.keyboard("50%");
+    await userEvent.type(found(panel.querySelector("output"), "display"), "50%");
     expect(display(panel)).toBe("50");
   });
 
@@ -1811,12 +1796,10 @@ describe("digital and physical materials", () => {
   it("is operated by keyboard: Enter opens the viewer, with the focus on its heading, and Enter on Close closes it", async () => {
     const scene = createScene();
     scene.show(items({ digital: [material({ label: "Periodic table", mimeType: "image/png" })] }));
-    toolbarButton(scene, "Periodic table").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(toolbarButton(scene, "Periodic table"), "{Enter}");
     const panel = found(panelOf(scene, "Periodic table"), "panel");
     expect(focused()).toBe(found(panel.querySelector("h3"), "heading"));
-    controlOf(panel, "Close Periodic table").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(controlOf(panel, "Close Periodic table"), "{Enter}");
     expect(panelOf(scene, "Periodic table")).toBeNull();
     expect(focused()).toBe(toolbarButton(scene, "Periodic table"));
   });
@@ -2024,8 +2007,7 @@ describe("the tools of the host", () => {
   it("is operated by keyboard: Enter on the button turns it on and puts the focus on the heading of its panel", async () => {
     const scene = createScene({ slots: { dictionary: () => () => undefined } });
     scene.show(profile(support("dictionary-on-screen", { state: "option" })));
-    toolbarButton(scene, "Dictionary").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(toolbarButton(scene, "Dictionary"), "{Enter}");
     expect(scene.requests).toEqual([["dictionary-on-screen", true]]);
     expect(focused()).toBe(found(panelOf(scene, "Dictionary"), "panel").querySelector("h3"));
   });
@@ -2151,8 +2133,10 @@ describe("mountTools", () => {
     scene.show(profile(support("calculator-on-screen", { state: "option", active: true })));
     const button = toolbarButton(scene, "Basic calculator");
     expect(button.getAttribute("aria-pressed")).toBe("true");
-    controlOf(found(panelOf(scene, "Basic calculator"), "panel"), "Close Basic calculator").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(
+      controlOf(found(panelOf(scene, "Basic calculator"), "panel"), "Close Basic calculator"),
+      "{Enter}",
+    );
     expect(scene.requests).toEqual([["calculator-on-screen", false]]);
     expect(focused()).toBe(button);
     expect(panelOf(scene, "Basic calculator")).not.toBeNull();
@@ -2232,8 +2216,7 @@ describe("a content root with player.css", () => {
       await userEvent.click(toolbarButton(scene, name));
     const rule = found(overlayOf(scene, "Ruler"), "rule");
     const start = placementOf(rule);
-    rule.focus();
-    await userEvent.keyboard("{ArrowRight}");
+    await userEvent.type(rule, "{ArrowRight}");
     expect(placementOf(rule).x).toBe(start.x + 10);
     expect(scene.stage.querySelector<HTMLElement>("qti-simple-choice")?.getBoundingClientRect().height).toBe(0);
     expect(tooSmall(scene)).toEqual([]);

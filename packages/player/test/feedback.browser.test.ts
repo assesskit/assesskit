@@ -90,8 +90,9 @@ describe("modal feedback", () => {
     const { root, opener } = await open();
     opener.focus();
     const closed = root.showFeedback(feedbackOf(RIGHT));
-    dialogOf(root.root).querySelector("button")?.focus();
-    await userEvent.keyboard("{Enter}");
+    const close = dialogOf(root.root).querySelector("button");
+    if (close === null) throw new Error("The dialog has a Close button.");
+    await userEvent.type(close, "{Enter}");
     await closed;
     expect(root.root.querySelector("dialog")).toBeNull();
     expect(document.activeElement).toBe(opener);

@@ -169,8 +169,7 @@ describe("hotspot", () => {
 
   it("is operated by the keyboard alone", async () => {
     const shown = await show(HOTSPOT('max-choices="2"'), declare("multiple", "identifier"));
-    control(shown, "A").focus();
-    await userEvent.keyboard(" ");
+    await userEvent.type(control(shown, "A"), " ");
     await userEvent.keyboard("{Tab}{Tab}{ }");
     expect(shown.values.at(-1)).toEqual(container("multiple", "identifier", ["A", "C"]));
   });
@@ -255,7 +254,7 @@ describe("select point", () => {
     shown.find(".ak-surface").focus();
     expect(shown.find(".ak-crosshair").hidden).toBe(false);
     // The crosshair starts at the center of the image; a key press is a twentieth of its smaller side, 5 units.
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(shown.find(".ak-surface"), "{Enter}");
     await userEvent.keyboard("{ArrowRight}{ArrowDown}{Enter}");
     await userEvent.keyboard("{Shift>}{ArrowLeft}{ArrowLeft}{/Shift}{ }");
     expect(shown.values.at(-1)).toEqual(
@@ -340,8 +339,7 @@ describe("graphic order", () => {
 
   it("is operated by the keyboard alone and has no violation of WCAG 2.2 A and AA", async () => {
     const shown = await show(ORDER(), declare("ordered", "identifier"));
-    control(shown, "C").focus();
-    await userEvent.keyboard(" ");
+    await userEvent.type(control(shown, "C"), " ");
     await userEvent.keyboard("{Shift>}{Tab}{/Shift}{Shift>}{Tab}{/Shift} ");
     expect(shown.values.at(-1)).toEqual(container("ordered", "identifier", ["C", "A"]));
     expect(await axeViolations(shown.host)).toEqual([]);
@@ -437,8 +435,7 @@ describe("graphic associate", () => {
     const shown = await show(ASSOCIATE(), declare("multiple", "pair"));
     shown.setValue("RESPONSE", container("multiple", "pair", [["A", "B"]]));
     expect(shown.findAll(".ak-links line")).toHaveLength(2);
-    control(shown, "B").focus();
-    await userEvent.keyboard(" ");
+    await userEvent.type(control(shown, "B"), " ");
     await userEvent.keyboard("{Tab} ");
     expect(shown.values.at(-1)).toEqual(
       container("multiple", "pair", [
@@ -560,13 +557,10 @@ describe("graphic gap match", () => {
 
   it("places a choice with the keyboard alone: the choices first, then the gaps", async () => {
     const shown = await show(GAP_MATCH(), declare("multiple", "directedPair"));
-    token(shown, "Y").focus();
-    await userEvent.keyboard(" ");
-    drop(shown, "H2").focus();
-    await userEvent.keyboard(" ");
+    await userEvent.type(token(shown, "Y"), " ");
+    await userEvent.type(drop(shown, "H2"), " ");
     expect(shown.values).toEqual([container("multiple", "directedPair", [["Y", "H2"]])]);
-    within<HTMLButtonElement>(area(shown, "H2"), ".ak-remove").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(within<HTMLButtonElement>(area(shown, "H2"), ".ak-remove"), "{Enter}");
     expect(shown.values.at(-1)).toBeNull();
   });
 
@@ -679,8 +673,7 @@ describe("position object", () => {
 
   it("places the object with the keyboard alone: the crosshair takes the focus and Enter places it", async () => {
     const shown = await show(POSITION(), declare("multiple", "point", "R0"));
-    hand(shown).focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(hand(shown), "{Enter}");
     expect(shown.root.activeElement).toBe(shown.find(".ak-surface"));
     expect(shown.find(".ak-crosshair").hidden).toBe(false);
     await userEvent.keyboard("{ArrowRight}{ArrowRight}{ArrowDown}{Enter}");
@@ -690,8 +683,7 @@ describe("position object", () => {
 
   it("gives the object up with Escape", async () => {
     const shown = await show(POSITION(), declare("multiple", "point", "R0"));
-    hand(shown).focus();
-    await userEvent.keyboard("{Enter}{Escape}");
+    await userEvent.type(hand(shown), "{Enter}{Escape}");
     expect(hand(shown).getAttribute("aria-pressed")).toBe("false");
     expect(shown.root.activeElement).toBe(hand(shown));
     expect(shown.values).toEqual([]);
@@ -847,11 +839,9 @@ describe("drawing", () => {
   it("draws with the keyboard: a shape tool, then the crosshair for each point", async () => {
     const shown = await show(DRAWING(), declare("single", "file"));
     expect(shown.find(".ak-surface").tabIndex).toBe(-1);
-    tool(shown, "rectangle").focus();
-    await userEvent.keyboard(" ");
+    await userEvent.type(tool(shown, "rectangle"), " ");
     expect(shown.find(".ak-surface").tabIndex).toBe(0);
-    shown.find(".ak-surface").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(shown.find(".ak-surface"), "{Enter}");
     await userEvent.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}{ArrowRight}{ArrowDown}{ArrowDown}{Enter}");
     await stored(shown);
     // The crosshair starts at the center (100, 50) and a key moves it a twentieth of the smaller side, 5 units.
@@ -862,10 +852,8 @@ describe("drawing", () => {
 
   it("colors a region with the keyboard", async () => {
     const shown = await show(DRAWING("image/png", outlined(200, 100)), declare("single", "file"));
-    tool(shown, "fill").focus();
-    await userEvent.keyboard(" ");
-    shown.find(".ak-surface").focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.type(tool(shown, "fill"), " ");
+    await userEvent.type(shown.find(".ak-surface"), "{Enter}");
     await stored(shown);
     // The center of the image is inside the rectangle of the picture.
     expect(drawn(shown, 100, 50)).toEqual([0, 0, 0, 255]);

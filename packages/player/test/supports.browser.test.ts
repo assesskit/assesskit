@@ -400,10 +400,8 @@ describe("mountSupportPanel", () => {
     panel.update(offered);
     // Safari does not Tab to a button unless its settings say so, so the focus is set and the keys are pressed.
     expect([...host.querySelectorAll("button")].map(({ tabIndex }) => tabIndex)).toEqual([0, 0, 0]);
-    buttonOf(host, "Captions").focus();
-    await userEvent.keyboard("{Enter}");
-    buttonOf(host, "High contrast").focus();
-    await userEvent.keyboard(" ");
+    await userEvent.type(buttonOf(host, "Captions"), "{Enter}");
+    await userEvent.type(buttonOf(host, "High contrast"), " ");
     expect(requests).toEqual([
       ["captions", true],
       ["high-contrast", false],
@@ -1018,7 +1016,7 @@ describe("mountContentSupports", () => {
       const { trigger, popup } = popupOn(root.root, "#photo", "Glossary");
       trigger.focus();
       expect(popup.hidden).toBe(false);
-      await userEvent.keyboard("{Escape}");
+      await userEvent.type(trigger, "{Escape}");
       expect(popup.hidden).toBe(true);
       expect(focused()).toBe(trigger);
       trigger.blur();
@@ -1056,8 +1054,7 @@ describe("mountContentSupports", () => {
       supports.update([glossary]);
       const { trigger, popup } = popupOn(root.root, "#photo", "Glossary");
       await userEvent.click(trigger);
-      buttonOf(popup, "Close").focus();
-      await userEvent.keyboard("{Enter}");
+      await userEvent.type(buttonOf(popup, "Close"), "{Enter}");
       expect(popup.hidden).toBe(true);
       expect(focused()).toBe(trigger);
     });
@@ -1069,11 +1066,12 @@ describe("mountContentSupports", () => {
       expect(trigger.tabIndex).toBe(0);
       trigger.focus();
       expect(popup.hidden).toBe(false);
-      await userEvent.keyboard("{Enter}");
+      await userEvent.type(trigger, "{Enter}");
       // The focus goes into the popup and the popup stays.
-      buttonOf(popup, "Close").focus();
+      const close = buttonOf(popup, "Close");
+      close.focus();
       expect(popup.hidden).toBe(false);
-      await userEvent.keyboard("{Escape}");
+      await userEvent.type(close, "{Escape}");
       expect(popup.hidden).toBe(true);
       expect(focused()).toBe(trigger);
     });
@@ -1563,8 +1561,7 @@ describe("mountSpoken", () => {
     field.setAttribute("aria-label", "Answer");
     el(root.root, ".ak-body").append(field);
     spoken.update([reading({ typingEcho: "characters" })]);
-    field.focus();
-    await userEvent.keyboard("ab");
+    await userEvent.type(field, "ab");
     expect(voice.requests.map(({ text }) => text)).toEqual(["a", "b"]);
     spoken.update([reading({ typingEcho: "none" })]);
     await userEvent.keyboard("c");
@@ -1574,10 +1571,8 @@ describe("mountSpoken", () => {
   it("is operated by the keyboard alone, and by the pointer alone", async () => {
     const { chrome, spoken, voice } = await open();
     spoken.update([reading()]);
-    buttonOf(chrome, "Read aloud").focus();
-    await userEvent.keyboard("{Enter}");
-    buttonOf(chrome, "Stop reading").focus();
-    await userEvent.keyboard(" ");
+    await userEvent.type(buttonOf(chrome, "Read aloud"), "{Enter}");
+    await userEvent.type(buttonOf(chrome, "Stop reading"), " ");
     expect([voice.requests.length, voice.stops]).toEqual([1, 1]);
     await userEvent.click(buttonOf(chrome, "Read aloud"));
     expect(voice.requests).toHaveLength(2);
