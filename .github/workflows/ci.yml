@@ -8,12 +8,22 @@ on:
 permissions:
   contents: read
 
+# A newer push to a branch or a pull request cancels the run in progress: it holds the commits of the older run, and `changes`
+# compares with the last run that passed, so what the cancelled run did not check is checked by the newer one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  # Whether the change touches the runtime, its examples, its harness or this workflow. The xsd, corpus and bench jobs run only
-  # then. A job that is skipped passes a required check. A change that cannot be compared with its base, such as the
-  # first push of a branch, counts as touching the runtime.
+  # Whether the change touches the runtime, its guides, its examples, its harness or this workflow, since the last commit of main
+  # whose run passed, or since the base of a pull request. The xsd, corpus and bench jobs run only then. A job that is skipped
+  # passes a required check. A change that cannot be compared, such as the first push of a branch or a push before any run has
+  # passed, counts as touching the runtime.
   changes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     outputs:
       runtime: ${{ steps.filter.outputs.runtime }}
     steps:
@@ -22,13 +32,24 @@ jobs:
           fetch-depth: 0
       - id: filter
         env:
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-          # The runtime, its examples, the harness (scripts/, validation/ and the files of the root that configure
-          # it) and this workflow.
-          RUNTIME_PATHS: ^(packages/runtime/|examples/runtime/|scripts/|validation/|\.github/workflows/ci\.yml$|[^/]+\.(json|ts|ya?ml)$)
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PULL_BASE: ${{ github.event.pull_request.base.sha }}
+          BRANCH: ${{ github.ref_name }}
+          # The runtime, its guides (the tests of the runtime run their samples), its examples, the harness (scripts/,
+          # validation/ and the files of the root that configure it) and this workflow.
+          RUNTIME_PATHS: ^(packages/runtime/|docs/runtime/|examples/runtime/|scripts/|validation/|\.github/workflows/ci\.yml$|[^/]+\.(json|ts|ya?ml)$)
+          # The configuration of the linters, which only the check job reads.
+          LINTERS: ^(biome|cspell|knip|typedoc)\.json$
         run: |
+          if [ "$EVENT" = pull_request ]; then
+            BASE="$PULL_BASE"
+          else
+            BASE=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=$BRANCH&event=push&status=success&per_page=1" --jq '.workflow_runs[0].head_sha // empty') || BASE=""
+          fi
+          git cat-file -e "$BASE^{commit}" 2>/dev/null || BASE=""
           changed="$RUNNER_TEMP/changed.txt"
-          if [ -n "$BASE" ] && git diff --name-only --no-renames "$BASE" HEAD > "$changed" && ! grep -Eq "$RUNTIME_PATHS" "$changed"; then
+          if [ -n "$BASE" ] && git diff --name-only --no-renames "$BASE" HEAD > "$changed" && ! grep -Ev "$LINTERS" "$changed" | grep -Eq "$RUNTIME_PATHS"; then
             echo "runtime=false" >> "$GITHUB_OUTPUT"
           else
             echo "runtime=true" >> "$GITHUB_OUTPUT"
@@ -100,7 +121,9 @@ jobs:
           checkout measurekit "$MEASUREKIT_DEPLOY_KEY"
           checkout interopkit "$INTEROPKIT_DEPLOY_KEY"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
+      # TypeScript reads the same sources whichever Node.js runs it, so one run of it is enough.
+      - if: matrix.node == 22
+        run: pnpm typecheck
       # The coverage floors (vitest.config.ts) are checked once, on the oldest supported Node.js.
       - if: matrix.node == 22
         run: pnpm test:coverage

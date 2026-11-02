@@ -90,6 +90,8 @@ Biome enforces, folder by folder.
 
 - A gate that reads `dist/` builds it first, so a fresh clone passes every gate.
 - Run the gates that the change touches before finishing; [CONTRIBUTING.md](CONTRIBUTING.md#before-opening-a-pull-request) says which.
+- The `xsd`, `corpus` and `bench` jobs of CI run when the runtime, its guides, its examples, the harness or `ci.yml` changed since
+  the last green run of main. A newer push to the same ref cancels the run in progress; a cancelled run is not a failure.
 - Development needs Node.js 22.18+ and pnpm 12. The scripts in `compat/` and `scripts/` are TypeScript that Node runs
   directly, so their relative imports end in `.ts`. The packages run on Node.js 22 and later, and CI tests 22 and 24.
 - The Firefox of Playwright does not start on some macOS versions (it did not on macOS 27): run the browser tests in the Linux
