@@ -861,6 +861,11 @@ describe("the JSON of results and stages", () => {
     for (const [result, message] of rejects) {
       expect(() => assessmentResultFromJson(result), JSON.stringify(result)).toThrow(message);
     }
+    // valibot reads an array as an object whose entries are all optional.
+    expect(() => assessmentResultFromJson([])).toThrow("The assessmentResult is invalid: expected an object");
+    expect(() => assessmentResultFromJson({ context: [] })).toThrow(
+      "The assessmentResult is invalid at context: expected an object",
+    );
     expect(() => assessmentResultToJson(json("null"))).toThrow(DataError);
     expect(() => assessmentResultToJson(json('{"context":{},"itemResults":"x"}'))).toThrow(DataError);
   });

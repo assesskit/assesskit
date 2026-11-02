@@ -6,6 +6,7 @@ import {
   nonEmptyStringSchema,
   nonNegativeIntegerSchema,
   parseWith,
+  recordSchema,
   type Schema,
   transformWith,
 } from "../checks.js";
@@ -212,6 +213,7 @@ const testResultSchema: Schema<TestResult> = v.pipe(
 );
 
 const contextSchema: Schema<ResultContext> = v.pipe(
+  recordSchema,
   v.object({
     sourcedId: optionalString,
     sessionIdentifiers: v.optional(v.array(v.object({ sourceID: v.string(), identifier: v.string() })), []),
@@ -224,6 +226,7 @@ const contextSchema: Schema<ResultContext> = v.pipe(
 
 // An engine may leave out the context, which the model requires: the result then has no session identifiers.
 const assessmentResultSchema: Schema<AssessmentResult> = v.pipe(
+  recordSchema,
   v.object({
     context: v.optional(contextSchema, { sessionIdentifiers: [] }),
     testResult: v.optional(testResultSchema),
