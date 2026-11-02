@@ -288,4 +288,18 @@ export const RUNTIME_RULES: readonly Rule[] = [
     replace: "",
     test: DELIVERY_TEST,
   },
+  {
+    rule: "A validation lists at most maxFindings issues.",
+    file: "packages/runtime/src/validate/findings.ts",
+    find: "if (this.left === 0) {",
+    replace: "if (false) {",
+    test: "packages/runtime/test/validate.test.ts",
+  },
+  {
+    rule: "A module resolution file above its length is refused before it is parsed.",
+    file: "packages/runtime/src/pci/module-resolution.ts",
+    find: "if (text.length > MAX_LENGTH) {",
+    replace: "if (false) {",
+    test: "packages/runtime/test/pci.test.ts",
+  },
 ];
