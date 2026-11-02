@@ -105,7 +105,7 @@ const client = await createLocalSession({
   },
   session: "preview-1",
   seed: 1,
-  assets: (path) => `/package/${path}`,
+  assets: (path) => `https://assets.example/package/${path}`,
 });
 client.view.current?.title; // => "Question"
 ```
@@ -123,7 +123,7 @@ first save. A session that was saved stays, and a new call resumes it.
 | `store`      | `LocalStore`                          | Where the state is saved and restored from: `load` and `save`, which get the `signal` of the call. `save` takes `{ state, events }` in one write: the state, and the events of the step that made it, so that a store keeps a log with no event without its state. |
 | `session`    | `string`                              | The identifier of the session in the store.                                                                                                                                                                                                                        |
 | `seed`       | `number`                              | The seed of a session that the store does not have yet, a safe integer.                                                                                                                                                                                            |
-| `assets`     | `(path: string) => string`            | Turns the path of a file in the package into the URL to load it from.                                                                                                                                                                                              |
+| `assets`     | `(path: string) => string`            | Turns the path of a file in the package into the URL to load it from. An item with a portable custom interaction needs the origin of `staticUrl` or of `origins` ([PCI](pci.md)).                                                                                  |
 | `lexicons`   | `(item: string) => readonly string[]` | The paths of the pronunciation lexicons that the item whose document is at `item` depends on. Default: none.                                                                                                                                                       |
 | `clock`      | `Clock`                               | Stamps actions and times the deadlines; it answers whole milliseconds. Default: the clock of the browser.                                                                                                                                                          |
 | `onError`    | `(error: unknown) => void`            | Receives the errors that the client can only report: a listener that threw, and a failure of the timer's step or of the answer loop that no call waits for. Default: `reportError` of the page.                                                                    |
@@ -230,7 +230,7 @@ const client = await createLocalSession({
   },
   session: "practice-1",
   seed: 1,
-  assets: (path) => `/package/${path}`,
+  assets: (path) => `https://assets.example/package/${path}`,
 });
 const types = [];
 client.host.subscribeSteps((events) => types.push(...events.map((event) => event.type)));

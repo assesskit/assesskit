@@ -49,3 +49,6 @@ candidate sort a table by a column that has `aria-sort`. The custom supports `ex
 highlighter, which marks the words of the item and keeps them by item and stimulus, and an answer eliminator, which crosses out
 choices, in the toolbar. With the option `marking`, `mountDelivery` offers Mark for review in a nonlinear part, and the map names
 a marked item. The guide of the server has the recipe of a review step with a cap on changes, as a wrapper of the `Engine`.
+The frame of a portable custom interaction takes a relative URL from `assets`, resolved against the base URL of the page, and
+refuses at mount a module of the package on an origin that the frame loads no scripts from, the origin of `staticUrl` and
+`origins`.

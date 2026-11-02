@@ -98,7 +98,8 @@ also keeps a module from navigating its own frame to another site.
 ## Options
 
 `mountPciFrame(parent, options)` appends the `iframe` to `parent` and returns a `PciFrame`. It throws `DataError` when
-`parent` is not an element, an option is not valid, the interaction names no module to load, or a module has no location.
+`parent` is not an element, an option is not valid, the interaction names no module to load, a module has no location, or a
+module in the package is on an origin that the frame loads no scripts from.
 
 | Option              | Type                              | Meaning                                                                                                                                    |
 | ------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -108,7 +109,7 @@ also keeps a module from navigating its own frame to another site.
 | `language`          | `string`                          | The language of the item, a BCP 47 tag, for the document of the frame                                                                      |
 | `interaction`       | `PortableCustomInteraction`       | The `qti-portable-custom-interaction` as the runtime reads it                                                                              |
 | `configuration`     | `PciModuleConfiguration`          | The module resolution files of the interaction, parsed; a file that the package lacks is left out                                          |
-| `assets`            | `(path: string) => string`        | The absolute URL, under the asset prefix of the package, of a path in the package                                                          |
+| `assets`            | `(path: string) => string`        | The URL, under the asset prefix of the package, of a path in the package; a relative URL is resolved against the base URL of the page      |
 | `prompt`            | `string \| null`                  | The text of the interaction's prompt, which names the frame                                                                                |
 | `markup`            | `string`                          | The HTML of `qti-interaction-markup`, with the URLs in it resolved                                                                         |
 | `stylesheets`       | `string[]`                        | URLs of the item's stylesheets, loaded after `player.css`                                                                                  |
@@ -160,7 +161,7 @@ module that the interaction or the configuration files name, the primary locatio
 
 | Location                                   | The player gives RequireJS                                             |
 | ------------------------------------------ | ---------------------------------------------------------------------- |
-| A path in the package, such as `modules/x` | `assets(path)`, under the asset prefix                                 |
+| A path in the package, such as `modules/x` | `assets(path)`, absolute, under the asset prefix                       |
 | A location with a protocol                 | the location as it is, which the policy of the frame allows or refuses |
 | Any location ending in `.js`               | the location without `.js`, which RequireJS adds again                 |
 
@@ -172,7 +173,9 @@ or the directory of the primary configuration file when every location has a pro
 stylesheets that they add, stay under the prefix that the asset gate signed for the interaction.
 
 The frame loads scripts from its own origin and from `origins` only. A location on another origin fails, and so does the
-module that needs it, with the failure `modules`.
+module that needs it, with the failure `modules`. A path in the package is a location the host chooses, so `mountPciFrame`
+refuses one whose URL, a relative one resolved against the base URL of the page, is on any other origin than that of
+`staticUrl` and `origins`: serve the files of the package from the asset origin, or list their origin in `origins`.
 
 The frame calls the factory that the modules registered under the interaction's type identifier. When no factory has it
 and the modules registered exactly one, that one serves the interaction: the `pci-simple` example of 1EdTech names
@@ -287,7 +290,8 @@ prevent.
 
 `mountPciFrame` throws `DataError` for an option of the wrong type, a variable that does not have its declared type, a URL
 that is not absolute `http` or `https`, a base URL that does not end in `/`, an origin that is more than a scheme, a host
-and a port, an interaction that names no module to load, and a module without a location. The runtime's `DataError` passes
+and a port, an interaction that names no module to load, a module without a location, and a module in the package on an
+origin that the frame loads no scripts from. The runtime's `DataError` passes
 through unchanged. A message from the frame that fails its check, and a response that is not a value of its declaration,
 are dropped, not thrown. An error of the host's storage goes to `reportError`.
 

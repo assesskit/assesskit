@@ -93,7 +93,12 @@ export interface PciFrameOptions {
   readonly interaction: PortableCustomInteraction;
   /** The module resolution files of the interaction, parsed; a file that the package lacks is left out. */
   readonly configuration: PciModuleConfiguration;
-  /** Gives the URL, under the asset prefix of the package, of a path in the package. */
+  /**
+   * Gives the URL, under the asset prefix of the package, of a path in the package.
+   *
+   * @remarks
+   * A relative URL, such as `/package/q1/main.js`, is resolved against the base URL of the page (`document.baseURI`).
+   */
   readonly assets: (path: string) => string;
   /** The text of the interaction's prompt, which names the frame, or `null` for none. */
   readonly prompt: string | null;

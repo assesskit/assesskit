@@ -109,7 +109,13 @@ export interface LocalSessionOptions extends SessionCallOptions {
   readonly session: string;
   /** The seed of a session that the store does not have yet, a safe integer. */
   readonly seed: number;
-  /** Turns the path of a file in the package into the URL to load it from, such as a URL of the host's own files. */
+  /**
+   * Turns the path of a file in the package into the URL to load it from, such as a URL of the host's own files.
+   *
+   * @remarks
+   * The modules of a portable custom interaction load from the origin of `staticUrl` or of `origins` only, so an item that
+   * has one needs a URL there: a relative one is resolved against the base URL of the page.
+   */
   readonly assets: (path: string) => string;
   /**
    * Returns the paths of the pronunciation lexicons (PLS) that the item whose document is at the given path depends on,

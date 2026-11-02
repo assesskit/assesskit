@@ -335,6 +335,27 @@ describe("pciModules", () => {
     );
   });
 
+  it("refuses a location in the package on an origin that the frame loads no scripts from, and none of another kind", () => {
+    const configuration: PciModuleConfiguration = {
+      primary: resolution({ m: "modules/m", cdn: "https://cdn.example/cdn" }),
+    };
+    const interaction = interactionOf('module="m"');
+    expect(() => pciModules(interaction, configuration, assets, ["https://other.example"])).toThrow(
+      `The URL "${GATE}modules/m" of a file of the package is on the origin https://assets.example, which the frame does not load scripts from (https://other.example).`,
+    );
+    expect(pciModules(interaction, configuration, assets, ["https://assets.example"]).load).toEqual(["m"]);
+    // A location with a protocol is the frame's policy to allow or refuse, when it loads.
+    const external = interactionOf('module="cdn"');
+    expect(() => pciModules(external, configuration, assets, ["https://assets.example"])).not.toThrow();
+  });
+
+  it("refuses a relative URL of the package when there is no page to resolve it against", () => {
+    const configuration: PciModuleConfiguration = { primary: resolution({ m: "modules/m" }) };
+    expect(() => pciModules(interactionOf('module="m"'), configuration, (path) => `/package/${path}`)).toThrow(
+      'The option assets gave the URL "/package/modules/m", which is relative, and there is no page whose address could resolve it.',
+    );
+  });
+
   it("refuses arguments of other types", () => {
     const configuration: PciModuleConfiguration = { primary: resolution({ m: "m" }) };
     expect(() => pciModules(json("null") as never, configuration, assets)).toThrow(DATA_ERROR);

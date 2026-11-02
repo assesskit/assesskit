@@ -87,6 +87,31 @@ describe("mountPciFrame", () => {
       expect(element.contentDocument).toBeNull();
     });
 
+    it("resolves a relative URL of the package against the base URL of the page, so that the frame gets an absolute one", async () => {
+      const base = document.createElement("base");
+      base.href = `${asset}/`;
+      document.head.append(base);
+      let result: Mounted;
+      try {
+        result = mount({ assets: (path) => `/g/${tokenOf()}/${path}` });
+      } finally {
+        base.remove();
+      }
+      await ready(result);
+      expect(await hits(asset)).toContain("/g/modules/simple.js");
+    });
+
+    it("refuses at mount a file of the package on an origin that the frame does not load scripts from", () => {
+      // The page is not on the origin of staticUrl, so `/g/…` is a file that the policy of the frame would block.
+      const relative = (path: string): string => `/g/${tokenOf()}/${path}`;
+      expect(() => mount({ assets: relative })).toThrow(
+        new DataError(
+          `The URL ${JSON.stringify(`${window.location.origin}${relative("modules/simple")}`)} of a file of the package is on the origin ${window.location.origin}, which the frame does not load scripts from (${asset}). Serve the files of the package from the origin of staticUrl, or add its origin to origins.`,
+        ),
+      );
+      expect(() => mount({ assets: relative, origins: [window.location.origin] })).not.toThrow();
+    });
+
     it("loads the second location when the first is missing", async () => {
       const result = mount({
         configuration: {

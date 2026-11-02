@@ -30,13 +30,14 @@ async function encodeAll(
  *
  * @param options - Options that {@link checkPciFrameOptions} accepted.
  * @returns The title and the means to build the start message.
- * @throws `DataError` when the interaction names no module to load, or a module has no location.
+ * @throws `DataError` when the interaction names no module to load, a module has no location, or a location in the package
+ * is on an origin that the frame loads no scripts from.
  */
 export function describeFrame(options: PciFrameOptions): FrameDescription {
   const { messages, prompt, interaction, configuration, assets, files, state = null } = options;
   const { origins = [], templateVariables = new Map(), contextVariables = new Map() } = options;
   const title = oneLine(prompt ?? "") || messages.interactiveQuestion;
-  const modules = pciModules(interaction, configuration, assets);
+  const modules = pciModules(interaction, configuration, assets, [new URL(options.staticUrl).origin, ...origins]);
   const properties = pciProperties(interaction);
   return {
     title,

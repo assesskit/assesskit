@@ -119,8 +119,8 @@ function createFrameElement(staticUrl: string, title: string): HTMLIFrameElement
  * @param parent - The element that gets the frame.
  * @param options - See {@link PciFrameOptions}.
  * @returns The frame and the means to drive it.
- * @throws `DataError` when `parent` is not an element, an option is not valid, or the interaction names no module to load
- * or a module has no location.
+ * @throws `DataError` when `parent` is not an element, an option is not valid, the interaction names no module to load, a
+ * module has no location, or a location in the package is on an origin that the frame loads no scripts from.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, portable custom interactions}
  */
 export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): PciFrame {

@@ -89,6 +89,16 @@ export function memoryFiles(stored: ReadonlyMap<string, Uint8Array> = new Map())
   return { files, uploads };
 }
 
+/** Mounts a frame in a container, and takes the container out of the page when the mount throws. */
+function mountOrRemove(container: HTMLElement, options: PciFrameOptions): PciFrame {
+  try {
+    return mountPciFrame(container, options);
+  } catch (error) {
+    container.remove();
+    throw error;
+  }
+}
+
 /** Mounts the interaction of `simple.js` in a frame, with the options replaced by the given ones. */
 export function mount(overrides: Partial<PciFrameOptions> = {}): Mounted {
   const events: PciEvent[] = [];
@@ -96,7 +106,7 @@ export function mount(overrides: Partial<PciFrameOptions> = {}): Mounted {
   const container = document.createElement("div");
   document.body.append(container);
   const configuration: PciModuleConfiguration = { primary: resolution({ simple: "modules/simple" }) };
-  const frame = mountPciFrame(container, {
+  const frame = mountOrRemove(container, {
     staticUrl: `${asset}/static/`,
     messages: EN_MESSAGES,
     language: "en",

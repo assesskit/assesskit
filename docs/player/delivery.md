@@ -55,7 +55,7 @@ const client = await createLocalSession({
   },
   session: "preview-1",
   seed: 1,
-  assets: (path) => `/package/${path}`,
+  assets: (path) => `https://assets.example/package/${path}`,
 });
 
 const stylesheet = new CSSStyleSheet();
@@ -207,7 +207,7 @@ const client = await createLocalSession({
   },
   session: "lesson-1-q1",
   seed: 1,
-  assets: (path) => `/package/${path}`,
+  assets: (path) => `https://assets.example/package/${path}`,
 });
 
 const stylesheet = new CSSStyleSheet();
@@ -295,6 +295,13 @@ Each portable custom interaction runs in its frame ([PCI](pci.md)). The player l
 gate, mounts the frame with the response, the state `getState` gave before, the template and context values and the status
 of the item, and stores each response it gives with its state in `set-responses`, so that the interaction restores on any
 device. A `done` event is a response; the candidate decides when to submit.
+
+The frame loads the modules from the package through `client.assets`, and its policy allows scripts from the origin of
+`staticUrl` and from `origins` only. So the files of the package that an interaction loads are served from the origin of
+`staticUrl`, as in the samples, or from an origin in `origins`. A relative URL from `assets`, such as `/package/q1/main.js`,
+is resolved against the base URL of the page, which is the origin of `staticUrl` only when the page itself serves both. A
+module on any other origin is refused when the frame is mounted, with an error that names the URL and the origin, and the
+item shows "This interactive question could not start" with the error in `reportError`.
 
 ## Files
 
