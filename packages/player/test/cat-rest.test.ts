@@ -694,6 +694,28 @@ describe("createRestCatPort", () => {
     ]);
   });
 
+  it("asks once for a new token when requests under way meet the 401 of a token that expired, and they share it", async () => {
+    const service = tokenService();
+    const reference = "https://a.example/ims/cat/v1p0";
+    const port = createRestCatPort({
+      fetch: service.send,
+      engines: () => ({ endpoint: reference, credentials: CREDENTIALS }),
+    });
+    await port.endSection(reference, "s0");
+    service.revoked.add("tok1");
+    await Promise.all(["s1", "s2", "s3"].map((section) => port.endSection(reference, section)));
+    expect(service.tokenRequests).toHaveLength(2);
+    expect(service.engineRequests.map(({ authorization }) => authorization)).toEqual([
+      "Bearer tok1",
+      "Bearer tok1",
+      "Bearer tok1",
+      "Bearer tok1",
+      "Bearer tok2",
+      "Bearer tok2",
+      "Bearer tok2",
+    ]);
+  });
+
   it("reads a Map of engines once, when the port is created, so that a secret that rotates needs the function", async () => {
     const reference = "https://a.example/ims/cat/v1p0";
     let secret = "first";

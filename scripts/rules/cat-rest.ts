@@ -128,8 +128,8 @@ export const CAT_REST_RULES: readonly Rule[] = [
   {
     rule: "Engines with their own credentials never share a token.",
     file: CLIENT,
-    find: "const key = JSON.stringify([credentials.tokenUrl, credentials.clientId, credentials.scope]);",
-    replace: 'const key = "";',
+    find: "JSON.stringify([credentials.tokenUrl, credentials.clientId, credentials.scope]);",
+    replace: '"";',
     test: TEST,
   },
   {

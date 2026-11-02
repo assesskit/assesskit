@@ -143,7 +143,7 @@ function refuseRedirect(response: CatFetchResponse, what: string): void {
  *
  * @remarks
  * It keeps the bearer token of each token URL, client and scope, so that a run of requests asks once, and the requests that
- * need a token at the same time share one request for it. It keeps no clock, so it learns that a token expired from the
+ * need a token at the same time share one request for it, as do those that meet the `401` of one token. It keeps no clock, so it learns that a token expired from the
  * service's `401`, not from `expires_in`; the new token is asked for with the credentials of the call that met the `401`,
  * so that the current secret of the host is used. A failure of the token request is a `TokenEndpointError`.
  *
@@ -187,8 +187,11 @@ export function createRestClient({ fetch, timeoutMs }: RestClientOptions): RestC
     return grant.access_token;
   };
 
+  const keyOf = (credentials: OAuthClientCredentials): string =>
+    JSON.stringify([credentials.tokenUrl, credentials.clientId, credentials.scope]);
+
   const bearer = (credentials: OAuthClientCredentials): Promise<string> => {
-    const key = JSON.stringify([credentials.tokenUrl, credentials.clientId, credentials.scope]);
+    const key = keyOf(credentials);
     let token = tokens.get(key);
     if (token === undefined) {
       token = requestToken(credentials).catch((error: unknown) => {
@@ -200,8 +203,13 @@ export function createRestClient({ fetch, timeoutMs }: RestClientOptions): RestC
     return token;
   };
 
-  const forget = (credentials: OAuthClientCredentials): void => {
-    tokens.delete(JSON.stringify([credentials.tokenUrl, credentials.clientId, credentials.scope]));
+  /**
+   * Forgets the token that the service refused. A request that met the `401` after another one asked for a new token leaves
+   * that one, so that the requests under way when a token expires ask for one token together.
+   */
+  const forget = (credentials: OAuthClientCredentials, refused: Promise<string>): void => {
+    const key = keyOf(credentials);
+    if (tokens.get(key) === refused) tokens.delete(key);
   };
 
   const attempt = async (
@@ -209,11 +217,12 @@ export function createRestClient({ fetch, timeoutMs }: RestClientOptions): RestC
     method: string,
     url: string,
     body: string | undefined,
-  ): Promise<CatFetchResponse> => {
+  ): Promise<{ readonly response: CatFetchResponse; readonly token: Promise<string> }> => {
+    const token = bearer(credentials);
     const response = await fetch(url, {
       method,
       headers: {
-        Authorization: `Bearer ${await bearer(credentials)}`,
+        Authorization: `Bearer ${await token}`,
         Accept: "application/json",
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
@@ -222,16 +231,16 @@ export function createRestClient({ fetch, timeoutMs }: RestClientOptions): RestC
       signal: AbortSignal.timeout(timeoutMs),
     });
     refuseRedirect(response, `The CAT engine at ${url}`);
-    return response;
+    return { response, token };
   };
 
   return {
     async send(credentials, method, url, body) {
       const text = body === undefined ? undefined : JSON.stringify(body);
-      let response = await attempt(credentials, method, url, text);
+      let { response, token } = await attempt(credentials, method, url, text);
       if (response.status === 401) {
-        forget(credentials);
-        response = await attempt(credentials, method, url, text);
+        forget(credentials, token);
+        ({ response } = await attempt(credentials, method, url, text));
       }
       const answer = await response.text();
       const what = `The CAT engine at ${url}`;

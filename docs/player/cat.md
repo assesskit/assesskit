@@ -228,6 +228,8 @@ requests; // => ["POST https://auth.example/token", "POST https://gateway.intern
   reference, because the port sends the client secret and the candidate's data to the engine it returns.
 - **One port, many engines.** The port keeps a token for each token URL, client and scope, so engines with their own
   credentials never share a token. A gateway maps its public reference to the upstream endpoint, as the sample does.
+- **An expired token.** An engine that answers `401` gets the request once more with a new token. The requests under way
+  when a token expires ask for one new token together, so the token endpoint sees one request and not one per candidate.
 
 | Request        | HTTP                                                       | Body                                                       |
 | -------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
