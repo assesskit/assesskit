@@ -115,7 +115,7 @@ describe("recording", () => {
     const recording = await startRecording(stream, { kind: "recorder", mimeType: type ?? "" }, WORKLET);
     await heardFor(0.2);
     const recorder = started.mock.contexts[0];
-    if (recorder === undefined) throw new Error("The recorder did not start.");
+    if (!(recorder instanceof MediaRecorder)) throw new Error("The recorder did not start.");
     const inactive = new Promise((resolve) => recorder.addEventListener("stop", resolve, { once: true }));
     for (const track of stream.getTracks()) track.stop();
     await inactive;
