@@ -16,15 +16,15 @@ flowchart LR
   engine --> view
 ```
 
-| Part                                  | What it does                                                                                 |
-| ------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `presentationOf`, `applyPresentation` | The look: themes, colors, text size and face, spacing, zoom, single column, keyword emphasis |
-| `mountSupportPanel`                   | The buttons that turn the supports that are options on and off                               |
-| `mountContentSupports`                | Cards of the catalog, text tracks of media and the alternative text of images                |
-| `mountSpoken`                         | Reading aloud: the controls, the word-by-word cursor, the typing echo and the reading type   |
-| `mountVariantNotice`                  | The variant that the runtime delivered, and its language                                     |
-| `PciFrame.setPresentation`            | The look inside the frame of a portable custom interaction ([PCI](pci.md))                   |
-| `mountTools`                          | The tools that supports put on the screen ([tools](tools.md))                                |
+| Part                                  | What it does                                                                                               |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `presentationOf`, `applyPresentation` | The look: themes, color themes, colors, text size and face, spacing, zoom, single column, keyword emphasis |
+| `mountSupportPanel`                   | The buttons that turn the supports that are options on and off, and the list of color themes               |
+| `mountContentSupports`                | Cards of the catalog, text tracks of media and the alternative text of images                              |
+| `mountSpoken`                         | Reading aloud: the controls, the word-by-word cursor, the typing echo and the reading type                 |
+| `mountVariantNotice`                  | The variant that the runtime delivered, and its language                                                   |
+| `PciFrame.setPresentation`            | The look inside the frame of a portable custom interaction ([PCI](pci.md))                                 |
+| `mountTools`                          | The tools that supports put on the screen ([tools](tools.md))                                              |
 
 The parts do not navigate and do not build the chrome. The chrome mounts them, calls `update` with `view.supports` for every
 view, and sends the `support` action when a part asks for one ([in the player](#in-the-player)).
@@ -112,7 +112,8 @@ frame, and takes off those that an earlier presentation set. Other attributes an
 | ------------------------- | ------------------------------------------------------------------------------------------------ |
 | `high-contrast`           | `data-ak-contrast="high"`                                                                        |
 | `invert-display-polarity` | `data-ak-polarity="inverted"`; `--ak-fg` and `--ak-bg` from `foreground` and `background`        |
-| `text-appearance`         | `--ak-fg` (`fontColor`), `--ak-bg` (`backgroundColor`), `--ak-font-scale` (`fontSize` over 12)   |
+| `text-appearance`         | `data-ak-theme` and the attributes above ([color theme](#the-color-theme))                       |
+|                           | `--ak-fg` (`fontColor`), `--ak-bg` (`backgroundColor`), `--ak-font-scale` (`fontSize` over 12)   |
 |                           | `--ak-font-family` (`fontFace`), `--ak-line-height`, `--ak-line-spacing`                         |
 |                           | `--ak-letter-spacing` and `--ak-word-spacing` in ems; `data-ak-uniform-font`, `data-ak-wrapping` |
 | `magnification`           | `--ak-text-zoom` from `allContent`, or from `text`                                               |
@@ -123,15 +124,50 @@ frame, and takes off those that an earlier presentation set. Other attributes an
 option of the content root and the argument of `setMediaScale` ([content](content.md#the-media-scale)), and it is 1 without
 a magnification.
 
-| Case                                                              | Reading                                                                                                             |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| A support that is off, or prohibited                              | Sets nothing                                                                                                        |
-| `text-appearance` and `invert-display-polarity` both give a color | The color of `text-appearance` wins                                                                                 |
-| A magnification without a positive `zoomAmount`                   | 200 percent, the enlargement that WCAG 1.4.4 asks the text to survive                                               |
-| `fontSize`                                                        | Points, with 12 as 1: the PNP schema gives 12 as the default size and no unit; a size of 0 or less asks for nothing |
-| `letterSpacing` and `wordSpacing`                                 | Ems: the schema gives a float and no unit                                                                           |
-| `lineHeight` and `lineSpacing`                                    | A multiple of the base height of 1.5, and ems added to it                                                           |
-| A font name                                                       | Quoted as a CSS string, with the backslash and the quote escaped and control characters turned into spaces          |
+| Case                                                                  | Reading                                                                                                             |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| A support that is off, or prohibited                                  | Sets nothing                                                                                                        |
+| `text-appearance` and `invert-display-polarity` both give a color     | The color of `text-appearance` wins                                                                                 |
+| A color theme with high contrast, polarity or the colors of a profile | The theme decides the colors, and the others set nothing of them                                                    |
+| A magnification without a positive `zoomAmount`                       | 200 percent, the enlargement that WCAG 1.4.4 asks the text to survive                                               |
+| `fontSize`                                                            | Points, with 12 as 1: the PNP schema gives 12 as the default size and no unit; a size of 0 or less asks for nothing |
+| `letterSpacing` and `wordSpacing`                                     | Ems: the schema gives a float and no unit                                                                           |
+| `lineHeight` and `lineSpacing`                                        | A multiple of the base height of 1.5, and ems added to it                                                           |
+| A font name                                                           | Quoted as a CSS string, with the backslash and the quote escaped and control characters turned into spaces          |
+
+## The color theme
+
+The best practices guide says that a candidate whose profile has the color theme must be able to change it at any time and to go
+back to the default colors, and CERT asks the same of `text-appearance` as a whole (`A-42a`). So the panel lists the themes while
+`text-appearance` is on, with or without `colorTheme` in the profile, and the content changes at once and is not drawn again.
+A program that offers the themes to everyone gives every candidate `text-appearance`.
+
+```mermaid
+flowchart LR
+  profile["colorTheme of the profile"] --> look["presentationOf"]
+  list["List in the panel"] --> set["setColorTheme"]
+  host["Control of a host,<br/>chrome: false or mountItem"] --> set
+  set --> look
+  look --> root["Content root and PCI frames"]
+```
+
+| Term                                                                                                                                                       | Look                                                          |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `default`                                                                                                                                                  | The default colors                                            |
+| `default-reverse`                                                                                                                                          | `data-ak-polarity="inverted"`                                 |
+| `high-contrast`                                                                                                                                            | `data-ak-contrast="high"`                                     |
+| `high-contrast-reverse`                                                                                                                                    | Both                                                          |
+| `yellow-blue`, `blue-yellow`, `black-rose`, `rose-black`, `black-cyan`, `cyan-black`, `black-cream`, `cream-black`, `medgray-darkgray`, `darkgray-medgray` | `data-ak-theme`, a palette of [player.css](styling.md#themes) |
+| `ext:` and a name                                                                                                                                          | `data-ak-theme`; the stylesheet of the host gives the palette |
+
+- **`presentationOf(supports, { colorTheme })`** takes the choice of the candidate, which goes before the theme of the profile. A
+  theme decides the colors: high contrast, polarity and the colors of `text-appearance` set none of theirs while it is in force, so
+  that `default` is the default colors whatever the profile asks for.
+- **`Mounted.setColorTheme(theme)`** applies a choice to the content root and the frames. The list calls it in a player with chrome.
+  A host with `chrome: false`, or with `mountItem`, draws its control and calls it.
+- **The choice** sends no action: it is the look of this page and not a rule of the session. It holds for later items and lasts as
+  long as the mount. What a candidate needs every time belongs in the profile.
+- **The chrome** stays in the system colors, as it does for high contrast and inverted polarity.
 
 ## The panel
 
@@ -140,13 +176,14 @@ support whose state is `option`, and a line of text with the state of each suppo
 "Additional testing time: on" or "Additional testing time: off". The line has no control. It adopts its stylesheet into the
 document or shadow root of `host`.
 
-| Option      | Type                                           | Meaning                                                            |
-| ----------- | ---------------------------------------------- | ------------------------------------------------------------------ |
-| `messages`  | `Messages`                                     | The text of the interface; the supports are named in its language. |
-| `onSupport` | `(name: SupportName, active: boolean) => void` | Called when the candidate asks to turn a support on or off.        |
+| Option         | Type                                           | Meaning                                                                                        |
+| -------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `messages`     | `Messages`                                     | The text of the interface; the supports are named in its language.                             |
+| `onSupport`    | `(name: SupportName, active: boolean) => void` | Called when the candidate asks to turn a support on or off.                                    |
+| `onColorTheme` | `(theme: ColorTheme) => void`                  | Called when the candidate chooses a color theme. With it the panel has the list. Default: none |
 
-`update(supports)` shows the buttons and the lines for the supports of the view, in their order, and keeps the focus on the
-button that has it. A prohibited support is not shown. A custom support is named by the local name of its element. `destroy()` takes the panel away.
+`update(supports, colorTheme)` shows the buttons and the lines for the supports of the view, in their order, and keeps the focus on the
+control that has it. The list of color themes selects `colorTheme`, then the theme of the profile, and nothing when neither names one. A prohibited support is not shown. A custom support is named by the local name of its element. `destroy()` takes the panel away.
 
 ## Cards
 
@@ -300,12 +337,14 @@ A support that is wrong for the candidate is not an error of the player: the run
 
 ## Where the sources differ
 
-| Case                                                                       | Reading                                                                               |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| The design lists `captions` and `alternative-text` with the cards          | The schema gives a `qti-card` no such `support`; they act on text tracks and on `alt` |
-| The best practices guide leaves the presentation of a card to the platform | The table above                                                                       |
-| `item-translation` has a language but no card                              | Its language chooses the entry of the cards of supports that have none of their own   |
-| The PNP schema gives no unit for sizes and spacing                         | Points over 12 for the font size, ems for the spacing                                 |
+| Case                                                                       | Reading                                                                                     |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| The design lists `captions` and `alternative-text` with the cards          | The schema gives a `qti-card` no such `support`; they act on text tracks and on `alt`       |
+| The best practices guide leaves the presentation of a card to the platform | The table above                                                                             |
+| `item-translation` has a language but no card                              | Its language chooses the entry of the cards of supports that have none of their own         |
+| The PNP schema gives no unit for sizes and spacing                         | Points over 12 for the font size, ems for the spacing                                       |
+| The guide has `color-theme`, and the PNP schema does not                   | The runtime reads it ([spec gaps](../runtime/spec-gaps.md), G49), and the player acts on it |
+| The two gray themes are below the contrast of the other themes             | The guide asks for 3:1 to 4:1, as a choice of the candidate (G51)                           |
 
 ## Evidence
 
@@ -323,6 +362,7 @@ Each file of `src/player/supports/`, `src/player/presentation/` holds one concep
 | `supports/appearance.ts`       | The look and the media scale of the supports                                  |
 | `supports/cards.ts`            | Showing the cards of the supports                                             |
 | `supports/check.ts`            | The check of the supports of a view                                           |
+| `supports/color-theme.ts`      | The list of color themes                                                      |
 | `supports/content.ts`          | `mountContentSupports`                                                        |
 | `supports/index.ts`            | The public API                                                                |
 | `supports/internal.ts`         | Helpers that other folders and tests share, which the package does not export |

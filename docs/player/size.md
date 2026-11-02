@@ -9,21 +9,21 @@ xychart-beta
   title "Entry points after gzip, in kilobytes"
   x-axis ["root", "protocol", "client", "player", "mountItem", "engine (on demand)"]
   y-axis "kB" 0 --> 140
-  bar [11.9, 7.1, 21.4, 123.6, 87.6, 125.2]
+  bar [12.4, 7.1, 21.6, 127.4, 90.8, 127.4]
 ```
 
 | File                          | Bytes   | Gzip    | Budget  | What it holds                                                                                                                 |
 | ----------------------------- | ------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `@assesskit/player`           | 36,737  | 11,874  | 14,500  | The errors, the checks of the player, valibot, and the interface messages in English and Indonesian                           |
+| `@assesskit/player`           | 38,704  | 12,399  | 14,500  | The errors, the checks of the player, valibot, and the interface messages in English and Indonesian                           |
 | `@assesskit/player/protocol`  | 22,112  | 7,067   | 7,500   | The envelopes and their schemas, and the check of a scoring rubric; valibot is 10.9 kB of it                                  |
-| `@assesskit/player/client`    | 66,539  | 21,407  | 25,000  | The remote and the local session, and the decoders of a view and of an action that they take from the runtime                 |
-| `@assesskit/player/player`    | 386,277 | 123,577 | 140,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions |
-| `mountItem`                   | 271,245 | 87,568  | 107,500 | The content, the interactions, the supports, speech and the host of portable custom interactions; no chrome and no tools      |
-| `@assesskit/runtime/delivery` | 529,076 | 125,213 | 152,000 | The engine, which `createLocalSession` loads with `import()` for practice on a device                                         |
+| `@assesskit/player/client`    | 67,226  | 21,647  | 25,000  | The remote and the local session, and the decoders of a view and of an action that they take from the runtime                 |
+| `@assesskit/player/player`    | 397,985 | 127,410 | 140,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions |
+| `mountItem`                   | 281,138 | 90,835  | 107,500 | The content, the interactions, the supports, speech and the host of portable custom interactions; no chrome and no tools      |
+| `@assesskit/runtime/delivery` | 536,408 | 127,395 | 152,000 | The engine, which `createLocalSession` loads with `import()` for practice on a device                                         |
 | `pci-frame/bridge.js`         | 10,026  | 3,735   | 5,000   | The script of the frame of a portable custom interaction                                                                      |
 | `pci-frame/require.js`        | 17,781  | 6,863   | 9,000   | RequireJS, which the frame loads                                                                                              |
 | `recorder-worklet.js`         | 322     | 270     | 500     | The script of the audio worklet of a WAV recording                                                                            |
-| `player.css`                  | 61,800  | 12,993  | 16,000  | The stylesheet of a content root                                                                                              |
+| `player.css`                  | 64,823  | 13,593  | 16,000  | The stylesheet of a content root                                                                                              |
 
 The sizes are bytes of the minified file. The first load of a client holds none of the engine: the engine is a chunk that
 the client loads on demand, and the test fails when the first load holds a file of the runtime's processing. The entry points of

@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   DataError,
   extensionName,
+  isColorTheme,
   isSetSupportName,
   isSupportName,
   type PersonalNeedsProfile,
   PNP_ALTERNATE_NAMESPACES,
+  PNP_COLOR_THEMES,
   PNP_NAMESPACE,
   type PnpRecord,
   parseXml,
@@ -405,6 +407,49 @@ describe("supports", () => {
         breaks: false,
       },
     );
+  });
+
+  it("text-appearance: reads every term of the color theme of the guide, and writes none", () => {
+    expect(PNP_COLOR_THEMES).toHaveLength(14);
+    for (const term of PNP_COLOR_THEMES) {
+      const profile = profileOf(`<text-appearance><color-theme>${term}</color-theme></text-appearance>`);
+      expect(profile.supports.get("text-appearance")).toEqual({
+        name: "text-appearance",
+        replaceAccessModes: [],
+        colorTheme: term,
+      });
+      expect(writePnp(profile)).toBe(written("<text-appearance/>"));
+    }
+  });
+
+  it("text-appearance: an empty color theme asks only for the choice, and reads as the default", () => {
+    expect(profileOf("<text-appearance><color-theme/></text-appearance>").supports.get("text-appearance")).toEqual({
+      name: "text-appearance",
+      replaceAccessModes: [],
+      colorTheme: "default",
+    });
+  });
+
+  it("text-appearance: a color theme of a program is ext: and at most 256 characters, hyphens too", () => {
+    const longest = `ext:${"a".repeat(256)}`;
+    for (const term of ["ext:school-green", longest]) {
+      const profile = profileOf(`<text-appearance><color-theme> ${term} </color-theme></text-appearance>`);
+      expect(profile.supports.get("text-appearance")).toMatchObject({ colorTheme: term });
+    }
+    for (const text of ["ext:", `${longest}a`, "pink-black", "yellow blue"]) {
+      const document = `<text-appearance><color-theme>${text}</color-theme></text-appearance>`;
+      expect(issueOf(() => profileOf(document)).code, text).toBe("assesskit/pnp/invalid-text");
+    }
+    expect(["black-cream", "ext:school-green", longest].map(isColorTheme)).toEqual([true, true, true]);
+    const others: unknown[] = JSON.parse('[null, 5, " default", "ext: ", {}, "default "]');
+    expect(others.map(isColorTheme)).toEqual(others.map(() => false));
+  });
+
+  it("text-appearance: refuses the empty parameters of the guide, which the schema gives a type", () => {
+    for (const name of ["font-size", "font-color", "background-color", "line-spacing", "word-spacing"]) {
+      const document = `<text-appearance><${name}/></text-appearance>`;
+      expect(issueOf(() => profileOf(document)).code, name).toBe("assesskit/pnp/invalid-text");
+    }
   });
 
   it("text-appearance: colors, size, face, spacing and wrapping", () => {
@@ -947,6 +992,9 @@ describe("errors", () => {
     );
     expect(() => write({ name: "text-appearance", replaceAccessModes: [], uniformFontSizing: false })).toThrow(
       "The parameter uniform-font-sizing must be true or absent, found false.",
+    );
+    expect(() => write({ name: "text-appearance", replaceAccessModes: [], colorTheme: json("5") })).toThrow(
+      "The color theme must be a term of color-theme, found 5.",
     );
     expect(() => write({ name: "text-appearance", replaceAccessModes: [], fontFace: json("5") })).toThrow(
       "The fontFace of text-appearance must be an object, found 5.",

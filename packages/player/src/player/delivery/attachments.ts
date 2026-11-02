@@ -1,3 +1,4 @@
+import type { ColorTheme } from "@assesskit/runtime/pnp";
 import { mountSupportPanel } from "../supports/index.js";
 import type { Body } from "./body.js";
 import { type ContentAttachments, mountContentAttachments } from "./content-attachments.js";
@@ -50,7 +51,10 @@ export function mountAttachments(context: AttachmentsContext): Attachments {
     contentHost: shell.contentHost,
     body,
     ...(chrome
-      ? { panel: (slot: HTMLElement) => mountSupportPanel(slot, { messages, onSupport: sender.request }) }
+      ? {
+          panel: (slot: HTMLElement, onColorTheme: (theme: ColorTheme) => void) =>
+            mountSupportPanel(slot, { messages, onSupport: sender.request, onColorTheme }),
+        }
       : {}),
   });
   const tools = chrome

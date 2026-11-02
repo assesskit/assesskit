@@ -5,6 +5,7 @@ import type {
   BrailleMathType,
   BrailleType,
   CalculatorType,
+  ColorTheme,
   GenericFontFace,
   HazardTerm,
   InputRequirement,
@@ -200,10 +201,21 @@ export interface FontFace {
   readonly genericFontFace?: GenericFontFace;
 }
 
-/** How text looks. */
+/**
+ * How text looks. An empty element of a parameter that the schema types is a `ReadError`, though the guide requests a preference
+ * that way (spec gaps, G50).
+ */
 export interface TextAppearance extends ReplacesAccessModes {
   /** The name of the support. */
   readonly name: "text-appearance";
+  /**
+   * The color theme that the candidate prefers; an empty element reads as `default`.
+   *
+   * @remarks
+   * The best practices guide has it and the PNP schema does not, so `readPnp` reads it, `writePnp` leaves it out and
+   * `validatePnp` warns about it (spec gaps, G49).
+   */
+  readonly colorTheme?: ColorTheme;
   /** The background color, `#RGB` or `#RRGGBB`. */
   readonly backgroundColor?: string;
   /** The font color, `#RGB` or `#RRGGBB`. */

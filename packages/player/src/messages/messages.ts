@@ -638,6 +638,36 @@ export interface Messages {
   readonly supportTextAppearance: string;
   /** The name of the support that explains terms of the content; also the name of the button that opens the explanation of a term. */
   readonly supportGlossaryOnScreen: string;
+  /** The label of the list of the colors of text and background. */
+  readonly colorTheme: string;
+  /** The color theme of the default colors of the interface. */
+  readonly colorThemeDefault: string;
+  /** The color theme of the default colors, with light text on a dark background. */
+  readonly colorThemeDefaultReverse: string;
+  /** The color theme of black text on white. */
+  readonly colorThemeHighContrast: string;
+  /** The color theme of white text on black. */
+  readonly colorThemeHighContrastReverse: string;
+  /** The color theme of yellow text on blue. */
+  readonly colorThemeYellowBlue: string;
+  /** The color theme of blue text on yellow. */
+  readonly colorThemeBlueYellow: string;
+  /** The color theme of black text on rose. */
+  readonly colorThemeBlackRose: string;
+  /** The color theme of rose text on black. */
+  readonly colorThemeRoseBlack: string;
+  /** The color theme of black text on light blue. */
+  readonly colorThemeBlackCyan: string;
+  /** The color theme of light blue text on black. */
+  readonly colorThemeCyanBlack: string;
+  /** The color theme of black text on cream. */
+  readonly colorThemeBlackCream: string;
+  /** The color theme of cream text on black. */
+  readonly colorThemeCreamBlack: string;
+  /** The color theme of medium gray text on dark gray, of low contrast on purpose. */
+  readonly colorThemeMedgrayDarkgray: string;
+  /** The color theme of dark gray text on medium gray, of low contrast on purpose. */
+  readonly colorThemeDarkgrayMedgray: string;
   /** The action that reads the content aloud. */
   readonly readAloud: string;
   /** The action that stops the reading. */

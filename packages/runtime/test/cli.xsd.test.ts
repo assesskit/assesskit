@@ -228,6 +228,17 @@ describe("assesskit validate: documents", () => {
     expect(contradictory.report.issues).toMatchObject([
       { code: "assesskit/validate/pnp-prohibited", severity: "error" },
     ]);
+    const themed = await report(
+      write(
+        "pnp-color-theme.xml",
+        profile("<text-appearance><color-theme>black-cream</color-theme></text-appearance>"),
+      ),
+    );
+    expect(themed.code).toBe(1);
+    expect(themed.report.issues).toMatchObject([
+      { code: "assesskit/node/xsd-invalid", severity: "error" },
+      { code: "assesskit/validate/pnp-color-theme", severity: "warning" },
+    ]);
     const alternate = write(
       "pnp-alternate.xml",
       profile("<spoken/>", "http://www.imsglobal.org/xsd/qt/qtiv3p0/imsafa3p0pnp_v1p0"),

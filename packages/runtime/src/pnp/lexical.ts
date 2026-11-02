@@ -1,6 +1,6 @@
 import { describe } from "../checks.js";
 import { DataError } from "../errors.js";
-import type { PnpExtensionTerm } from "./vocabularies.js";
+import { type ColorTheme, PNP_COLOR_THEMES, type PnpExtensionTerm } from "./vocabularies.js";
 
 /** `xs:float` and `xs:double` apart from `INF`, `-INF` and `NaN`, which a support has no use for. */
 const FLOAT = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
@@ -12,6 +12,14 @@ const HEX_COLOR = /^#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/;
 const EXTENSION_TERM = /^ext:[A-Za-z|._]+$/;
 /** The greatest `VolumeDType`. */
 const MAX_VOLUME = 1;
+/** The prefix of an extension of `color-theme`. */
+const COLOR_THEME_EXTENSION = "ext:";
+/**
+ * The most characters of an extension of `color-theme` after its prefix.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, color-theme}
+ */
+const MAX_COLOR_THEME_EXTENSION = 256;
 
 function isExtensionTerm(text: string): text is PnpExtensionTerm {
   return EXTENSION_TERM.test(text);
@@ -114,6 +122,40 @@ export function termOrExtension<T extends string>(
     const list = terms.map((candidate) => JSON.stringify(candidate)).join(", ");
     throw new DataError(`${label} must be one of ${list}, or ext: and letters, found ${describe(text)}.`);
   };
+}
+
+/**
+ * Tells whether a value is a color theme: a term of `color-theme`, or `ext:` and 1 to 256 characters. The schema has no such
+ * element, so the rule of the guide holds and not the pattern of the extension terms of the schema (spec gaps, G49).
+ *
+ * @param value - The value.
+ * @returns Whether it is one.
+ */
+export function isColorTheme(value: unknown): value is ColorTheme {
+  if (typeof value !== "string") return false;
+  if (PNP_COLOR_THEMES.some((term) => term === value)) return true;
+  const length = value.length - COLOR_THEME_EXTENSION.length;
+  return (
+    value.startsWith(COLOR_THEME_EXTENSION) &&
+    value === value.trim() &&
+    length > 0 &&
+    length <= MAX_COLOR_THEME_EXTENSION
+  );
+}
+
+/**
+ * Reads a color theme, with white space around it dropped. An empty element asks only for the choice of a theme, so it reads
+ * as the term `default` (spec gaps, G49).
+ *
+ * @param text - The text of the element.
+ * @returns The color theme.
+ * @throws `DataError` when the text is neither a term nor an extension term.
+ */
+export function toColorTheme(text: string): ColorTheme {
+  const token = text.trim();
+  if (token === "") return "default";
+  if (isColorTheme(token)) return token;
+  throw new DataError(`The text ${describe(text)} is not a term of color-theme or ext: and at most 256 characters.`);
 }
 
 /**

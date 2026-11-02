@@ -38,8 +38,8 @@
   --ak-leading: calc(1.5 * var(--ak-line-height, 1) + var(--ak-line-spacing, 0));
 }
 
-/* 2. Themes: invert display polarity and high contrast (display supports of the best practices guide). Each pair of text and background has at least
-   7:1, and the accent at least 4.5:1 against the background. */
+/* 2. Themes: invert display polarity, high contrast and color themes (display supports of the best practices guide). Each pair of
+   text and background but the low contrast themes has at least 7:1, and the accent at least 4.5:1 against the background. */
 
 :root[data-ak-polarity="inverted"],
 :host([data-ak-polarity="inverted"]) {
@@ -69,6 +69,112 @@
   --ak-accent: #ffff00;
   --ak-on-accent: #000000;
   --ak-invalid: #ff9a9a;
+}
+
+/* The color themes of the PNP that are a pair of colors (color-theme of the best practices guide). The first color is the
+   text, and the samples of the guide are the source. The themes above serve default-reverse, high-contrast and
+   high-contrast-reverse. A theme of a program, ext: and its name, gets its palette from the stylesheet of the host. */
+
+:root[data-ak-theme="yellow-blue"],
+:host([data-ak-theme="yellow-blue"]) {
+  --ak-fg: #fbeb5b;
+  --ak-bg: #000080;
+  --ak-accent: #a8d8ff;
+  --ak-on-accent: #000080;
+  --ak-invalid: #ffb4ab;
+}
+
+:root[data-ak-theme="blue-yellow"],
+:host([data-ak-theme="blue-yellow"]) {
+  --ak-fg: #000080;
+  --ak-bg: #fbeb5b;
+  --ak-accent: #5a0f8c;
+  --ak-on-accent: #ffffff;
+  --ak-invalid: #9b0000;
+}
+
+:root[data-ak-theme="black-rose"],
+:host([data-ak-theme="black-rose"]) {
+  --ak-fg: #000000;
+  --ak-bg: #ffd0ff;
+  --ak-accent: #5a0f8c;
+  --ak-on-accent: #ffffff;
+  --ak-invalid: #8c0000;
+}
+
+:root[data-ak-theme="rose-black"],
+:host([data-ak-theme="rose-black"]) {
+  --ak-fg: #ffd0ff;
+  --ak-bg: #000000;
+  --ak-accent: #ff9ee6;
+  --ak-on-accent: #000000;
+  --ak-invalid: #ff9a9a;
+}
+
+:root[data-ak-theme="black-cyan"],
+:host([data-ak-theme="black-cyan"]) {
+  --ak-fg: #000000;
+  --ak-bg: #add8e6;
+  --ak-accent: #00366e;
+  --ak-on-accent: #ffffff;
+  --ak-invalid: #7a0000;
+}
+
+:root[data-ak-theme="cyan-black"],
+:host([data-ak-theme="cyan-black"]) {
+  --ak-fg: #add8e6;
+  --ak-bg: #000000;
+  --ak-accent: #7fdbff;
+  --ak-on-accent: #000000;
+  --ak-invalid: #ff9a9a;
+}
+
+:root[data-ak-theme="black-cream"],
+:host([data-ak-theme="black-cream"]) {
+  --ak-fg: #000000;
+  --ak-bg: #fffacd;
+  --ak-accent: #0b3fb3;
+  --ak-on-accent: #ffffff;
+  --ak-invalid: #a50000;
+}
+
+:root[data-ak-theme="cream-black"],
+:host([data-ak-theme="cream-black"]) {
+  --ak-fg: #fffacd;
+  --ak-bg: #000000;
+  --ak-accent: #ffd866;
+  --ak-on-accent: #000000;
+  --ak-invalid: #ff9a9a;
+}
+
+/* The low contrast themes. The guide asks for 3:1 to 4:1 between text and background, below WCAG on purpose (spec gaps, G51), so
+   nothing else may fall under 3:1: the borders and the muted text are the text color, and a surface or a selection moves the background
+   away from the text. */
+
+:root[data-ak-theme="medgray-darkgray"],
+:host([data-ak-theme="medgray-darkgray"]) {
+  --ak-fg: #b1b8ad;
+  --ak-bg: #606060;
+  --ak-accent: #e6ecff;
+  --ak-on-accent: #303030;
+  --ak-invalid: #ffc4bd;
+  --ak-muted: var(--ak-fg);
+  --ak-border: var(--ak-fg);
+  --ak-surface: color-mix(in srgb, #000000 6%, var(--ak-bg));
+  --ak-accent-surface: color-mix(in srgb, #000000 16%, var(--ak-bg));
+}
+
+:root[data-ak-theme="darkgray-medgray"],
+:host([data-ak-theme="darkgray-medgray"]) {
+  --ak-fg: #606060;
+  --ak-bg: #b1b8ad;
+  --ak-accent: #2c3f7a;
+  --ak-on-accent: #ffffff;
+  --ak-invalid: #6e1414;
+  --ak-muted: var(--ak-fg);
+  --ak-border: var(--ak-fg);
+  --ak-surface: color-mix(in srgb, #ffffff 6%, var(--ak-bg));
+  --ak-accent-surface: color-mix(in srgb, #ffffff 16%, var(--ak-bg));
 }
 
 /* 3. The content root. Paint containment clips at the border box, so the padding keeps the focus ring of an item at the

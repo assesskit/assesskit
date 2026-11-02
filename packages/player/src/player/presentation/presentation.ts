@@ -19,6 +19,7 @@ export interface Presentation {
 const PRESENTATION_ATTRIBUTES = [
   "data-ak-polarity",
   "data-ak-contrast",
+  "data-ak-theme",
   "data-ak-single-column",
   "data-ak-keyword-emphasis",
   "data-ak-uniform-font",

@@ -1,7 +1,14 @@
 import { readAsi } from "@assesskit/runtime/asi";
 import { createEngine, type SupportView, stamp, viewFromJson, viewToJson } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import { readPnp, SUPPORT_NAMES, type SupportName, type SupportSetting } from "@assesskit/runtime/pnp";
+import {
+  type ColorTheme,
+  PNP_COLOR_THEMES,
+  readPnp,
+  SUPPORT_NAMES,
+  type SupportName,
+  type SupportSetting,
+} from "@assesskit/runtime/pnp";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
@@ -248,6 +255,98 @@ describe("appearance", () => {
     });
   });
 
+  describe("the color theme", () => {
+    const themed = (colorTheme: ColorTheme): SupportView =>
+      onSupport("text-appearance", { name: "text-appearance", replaceAccessModes: [], colorTheme });
+
+    it("gives each term of the guide its attribute, and the default none", () => {
+      const looks = PNP_COLOR_THEMES.map((term) => [term, entries(presentationOf([themed(term)]).attributes)]);
+      expect(Object.fromEntries(looks)).toEqual({
+        "yellow-blue": { "data-ak-theme": "yellow-blue" },
+        "blue-yellow": { "data-ak-theme": "blue-yellow" },
+        "black-rose": { "data-ak-theme": "black-rose" },
+        "rose-black": { "data-ak-theme": "rose-black" },
+        "black-cyan": { "data-ak-theme": "black-cyan" },
+        "cyan-black": { "data-ak-theme": "cyan-black" },
+        "black-cream": { "data-ak-theme": "black-cream" },
+        "cream-black": { "data-ak-theme": "cream-black" },
+        "medgray-darkgray": { "data-ak-theme": "medgray-darkgray" },
+        "darkgray-medgray": { "data-ak-theme": "darkgray-medgray" },
+        default: {},
+        "default-reverse": { "data-ak-polarity": "inverted" },
+        "high-contrast": { "data-ak-contrast": "high" },
+        "high-contrast-reverse": { "data-ak-contrast": "high", "data-ak-polarity": "inverted" },
+      });
+    });
+
+    it("names a theme of a program, whose palette the stylesheet of the host gives", () => {
+      expect(lookOf(themed("ext:school"))).toEqual({ attributes: { "data-ak-theme": "ext:school" }, properties: {} });
+    });
+
+    it("decides the colors in place of high contrast, inverted polarity and the colors of the text appearance", () => {
+      const appearance: SupportSetting = {
+        name: "text-appearance",
+        replaceAccessModes: [],
+        colorTheme: "black-cream",
+        fontColor: "#ff0",
+        backgroundColor: "#000",
+        fontSize: 18,
+      };
+      expect(
+        lookOf(
+          onSupport("text-appearance", appearance),
+          onSupport("high-contrast"),
+          onSupport("invert-display-polarity", {
+            name: "invert-display-polarity",
+            replaceAccessModes: [],
+            foreground: "#eee",
+          }),
+        ),
+      ).toEqual({ attributes: { "data-ak-theme": "black-cream" }, properties: { "--ak-font-scale": "1.5" } });
+    });
+
+    it("lets the choice of the candidate go before the profile, and back to the default colors", () => {
+      const supports = [themed("yellow-blue"), onSupport("high-contrast")];
+      expect(entries(presentationOf(supports, { colorTheme: "cream-black" }).attributes)).toEqual({
+        "data-ak-theme": "cream-black",
+      });
+      expect(entries(presentationOf(supports, { colorTheme: "default" }).attributes)).toEqual({});
+    });
+
+    it("leaves the look alone while the text appearance is off, prohibited or absent", () => {
+      const settings: SupportSetting = { name: "text-appearance", replaceAccessModes: [], colorTheme: "black-rose" };
+      for (const fields of [{ state: "option" }, { state: "prohibited" }] as const) {
+        const support = supportView("text-appearance", { ...fields, settings });
+        expect(lookOf(support).attributes).toEqual({});
+        expect(entries(presentationOf([support], { colorTheme: "black-rose" }).attributes)).toEqual({});
+      }
+      expect(entries(presentationOf([], { colorTheme: "black-rose" }).attributes)).toEqual({});
+    });
+
+    it("rejects options of other types, as JavaScript or JSON gives them", () => {
+      const supports = [themed("default")];
+      expect(() => presentationOf(supports, json({ colorTheme: "pink" }))).toThrow(
+        new DataError(
+          'The option colorTheme must be a term of color-theme or ext: and at most 256 characters, found "pink".',
+        ),
+      );
+      expect(() => presentationOf(supports, JSON.parse('{"colorTheme": null}'))).toThrow(
+        new DataError(
+          "The option colorTheme must be a term of color-theme or ext: and at most 256 characters, found null.",
+        ),
+      );
+      expect(() => presentationOf(supports, JSON.parse("null"))).toThrow(
+        new DataError("The options must be an object, found null."),
+      );
+      expect(() => presentationOf(supports, json({ extra: 1 }))).toThrow(DataError);
+    });
+
+    it("rejects a theme of a profile that is not one", () => {
+      const settings = json({ name: "text-appearance", replaceAccessModes: [], colorTheme: "pink" });
+      expect(() => presentationOf([onSupport("text-appearance", settings)])).toThrow(DataError);
+    });
+  });
+
   it("zooms the text by the amount of the magnification, and non-text content by its own", () => {
     const zoom = (settings: SupportSetting): ReturnType<typeof lookOf> => lookOf(onSupport("magnification", settings));
     const base = { name: "magnification", replaceAccessModes: [] } as const;
@@ -354,7 +453,7 @@ describe("presentation", () => {
     );
     rejects(
       { attributes: new Map([["onclick", "x"]]), properties: empty },
-      'The option presentation property attributes has the names data-ak-polarity, data-ak-contrast, data-ak-single-column, data-ak-keyword-emphasis, data-ak-uniform-font, data-ak-wrapping, found "onclick".',
+      'The option presentation property attributes has the names data-ak-polarity, data-ak-contrast, data-ak-theme, data-ak-single-column, data-ak-keyword-emphasis, data-ak-uniform-font, data-ak-wrapping, found "onclick".',
     );
     rejects(
       { attributes: empty, properties: new Map([["--ak-fg", 1]]) },

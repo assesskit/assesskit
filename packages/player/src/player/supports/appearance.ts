@@ -1,7 +1,8 @@
+import { checkProperties, checkRecord } from "@assesskit/runtime/checks";
 import type { SupportView } from "@assesskit/runtime/delivery";
-import type { FontFace, GenericFontFace, SupportName, Zoom } from "@assesskit/runtime/pnp";
+import type { ColorTheme, FontFace, GenericFontFace, SupportName, Zoom } from "@assesskit/runtime/pnp";
 import type { Presentation } from "../presentation/index.js";
-import { activeSupport, checkSupportViews } from "./check.js";
+import { activeSupport, checkColorTheme, checkSupportViews, colorThemeOf } from "./check.js";
 
 /** The font size that scales to 1: the default of `font-size` in the PNP schema, in points. */
 const BASE_FONT_SIZE = 12;
@@ -123,25 +124,72 @@ const APPLIERS: ReadonlyMap<SupportName, Applier> = new Map<SupportName, Applier
   ["keyword-emphasis", (_, { attributes }) => attributes.set("data-ak-keyword-emphasis", "")],
 ]);
 
+/** The terms of `color-theme` that are a look of the interface: the attributes of each. The others have a palette of `player.css`. */
+const INTERFACE_THEMES: ReadonlyMap<ColorTheme, readonly (readonly [string, string])[]> = new Map<
+  ColorTheme,
+  readonly (readonly [string, string])[]
+>([
+  ["default", []],
+  ["default-reverse", [["data-ak-polarity", "inverted"]]],
+  ["high-contrast", [["data-ak-contrast", "high"]]],
+  [
+    "high-contrast-reverse",
+    [
+      ["data-ak-contrast", "high"],
+      ["data-ak-polarity", "inverted"],
+    ],
+  ],
+]);
+
+/**
+ * Applies a color theme, which decides the colors: what the other supports asked for goes, so that the candidate can go back to
+ * the default colors at any time.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, color-theme}
+ */
+function applyColorTheme(theme: ColorTheme, { attributes, properties }: Writer): void {
+  for (const name of ["data-ak-polarity", "data-ak-contrast"]) attributes.delete(name);
+  for (const name of ["--ak-fg", "--ak-bg"]) properties.delete(name);
+  for (const [name, value] of INTERFACE_THEMES.get(theme) ?? [["data-ak-theme", theme]]) attributes.set(name, value);
+}
+
+/** The options of {@link presentationOf}. */
+export interface PresentationOptions {
+  /**
+   * The color theme that the candidate chose, which goes before the one of the profile while `text-appearance` is on.
+   *
+   * @defaultValue None, so that the profile decides
+   */
+  readonly colorTheme?: ColorTheme;
+}
+
 /**
  * Builds the look that the supports that are on ask for.
  *
  * @remarks
- * The look has the theme of high contrast and of inverted polarity, the colors, size, face and spacing of text
+ * The look has the theme of high contrast and of inverted polarity, the color theme, the colors, size, face and spacing of text
  * appearance, the zoom of text, the single column and keyword emphasis. The zoom of non-text content is
  * {@link mediaScaleOf}.
  *
  * @param supports - The supports of the view; those that are off or change nothing of the look are ignored.
+ * @param options - See {@link PresentationOptions}.
  * @returns The presentation.
- * @throws `DataError` when `supports` is not a list of the runtime's `SupportView`s.
+ * @throws `DataError` when `supports` is not a list of the runtime's `SupportView`s, or an option is not valid.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, display supports}
  */
-export function presentationOf(supports: readonly SupportView[]): Presentation {
+export function presentationOf(supports: readonly SupportView[], options: PresentationOptions = {}): Presentation {
   checkSupportViews(supports, "The list of supports");
+  checkRecord(options, "The options must be an object");
+  checkProperties(options, "The options", ["colorTheme"]);
+  const { colorTheme = colorThemeOf(supports) } = options;
+  if (colorTheme !== undefined) checkColorTheme(colorTheme, "The option colorTheme");
   const out: Writer = { attributes: new Map(), properties: new Map() };
   for (const [name, apply] of APPLIERS) {
     const support = activeSupport(supports, name);
     if (support !== undefined) apply(support, out);
+  }
+  if (colorTheme !== undefined && activeSupport(supports, "text-appearance") !== undefined) {
+    applyColorTheme(colorTheme, out);
   }
   return out;
 }

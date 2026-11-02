@@ -11,7 +11,10 @@ import {
   strictRecord,
 } from "@assesskit/runtime/checks";
 import type { SupportView } from "@assesskit/runtime/delivery";
+import { DataError } from "@assesskit/runtime/errors";
 import {
+  type ColorTheme,
+  isColorTheme,
   isSupportName,
   PNP_BRAILLE_DELIVERY_MODES,
   PNP_GENERIC_FONT_FACES,
@@ -65,6 +68,7 @@ const SETTING_SCHEMAS: ReadonlyMap<string, Schema<unknown>> = new Map<string, Sc
   [
     "text-appearance",
     looseRecord({
+      colorTheme: v.optional(guardSchema(isColorTheme, "a term of color-theme or ext: and at most 256 characters")),
       backgroundColor: optionalColor,
       fontColor: optionalColor,
       fontSize: optionalNumber,
@@ -135,4 +139,30 @@ export function checkSupportViews(value: unknown, label: string): asserts value 
  */
 export function activeSupport(supports: readonly SupportView[], name: SupportName): SupportView | undefined {
   return supports.find((support) => support.name === name && support.active);
+}
+
+/**
+ * Returns the color theme of the profile, while the support of the text appearance is on.
+ *
+ * @param supports - The supports of the view.
+ * @returns The term, or `undefined` when the profile names none.
+ */
+export function colorThemeOf(supports: readonly SupportView[]): ColorTheme | undefined {
+  const settings = activeSupport(supports, "text-appearance")?.settings;
+  return settings?.name === "text-appearance" ? settings.colorTheme : undefined;
+}
+
+/**
+ * Checks a color theme, as a host passes it from JavaScript.
+ *
+ * @param value - The value to check.
+ * @param label - Names the value in the error message, such as `The option colorTheme`.
+ * @throws `DataError` when it is neither a term of `color-theme` nor an extension.
+ */
+export function checkColorTheme(value: unknown, label: string): asserts value is ColorTheme {
+  if (!isColorTheme(value)) {
+    throw new DataError(
+      `${label} must be a term of color-theme or ext: and at most 256 characters, found ${describe(value)}.`,
+    );
+  }
 }

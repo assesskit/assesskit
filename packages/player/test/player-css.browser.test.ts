@@ -1,7 +1,20 @@
+import { type ColorTheme, PNP_COLOR_THEMES } from "@assesskit/runtime/pnp";
 import { beforeEach, describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { channels, computed, contrast, mount, nth, PLAYER_CSS, stylesheet } from "./css-fixture.js";
+import { presentationOf } from "../src/player/supports/index.js";
+import {
+  COLOR_THEME_PAIRS,
+  channels,
+  computed,
+  contrast,
+  LOW_CONTRAST_THEMES,
+  mount,
+  nth,
+  PLAYER_CSS,
+  stylesheet,
+} from "./css-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
+import { onSupport } from "./supports-fixture.js";
 
 /** The style of every rule of `player.css` with its selectors, to check the declared values of the large scales against the specification. */
 const rules: { readonly selector: string; readonly style: CSSStyleDeclaration }[] = [];
@@ -979,12 +992,16 @@ const REPRESENTATIVE = `
   <div class='qti-width-96 qti-bordered'>A wide class</div>
   <p><input type='text' aria-label='Plain' aria-invalid='true'> <button type='button'>Button</button></p>`;
 
-/** The four themes: default, inverted, high contrast, and both. */
+/** The themes that keep the contrast of WCAG: default, inverted, high contrast, both, and the pairs of colors of the PNP. */
 const THEMES = new Map<string, Readonly<Record<string, string>>>([
   ["default", {}],
   ["inverted", { "data-ak-polarity": "inverted" }],
   ["high contrast", { "data-ak-contrast": "high" }],
   ["high contrast inverted", { "data-ak-contrast": "high", "data-ak-polarity": "inverted" }],
+  ...Array.from(COLOR_THEME_PAIRS.keys(), (term): [string, Record<string, string>] => [
+    term,
+    { "data-ak-theme": term },
+  ]),
 ]);
 
 /** Returns the color that a token has in a content root, as the engine resolves it. */
@@ -1011,6 +1028,105 @@ function clipped(host: HTMLElement): string[] {
   if (host.scrollWidth > host.clientWidth + 1) found.push("host");
   return found;
 }
+
+describe("the color themes of the PNP", () => {
+  /** Returns the attributes that a term sets, as the player builds them from a profile. */
+  const attributesOf = (colorTheme: ColorTheme): Record<string, string> =>
+    Object.fromEntries(
+      presentationOf([onSupport("text-appearance", { name: "text-appearance", replaceAccessModes: [], colorTheme })])
+        .attributes,
+    );
+
+  /** The ratios of a theme, as a candidate reads it: the text, then the colors around it. */
+  const ratiosOf = (term: ColorTheme) => {
+    const { host, find } = mount(
+      `<input type='text' aria-label='a'><qti-gap></qti-gap>${hotspots("", "qti-hotspot-interaction")}`,
+      attributesOf(term),
+    );
+    const background = computed(host, "background-color");
+    return {
+      text: contrast(tokenColor(host, "ak-fg"), background),
+      muted: contrast(tokenColor(host, "ak-muted"), background),
+      accent: contrast(tokenColor(host, "ak-accent"), background),
+      invalid: contrast(tokenColor(host, "ak-invalid"), background),
+      onAccent: contrast(tokenColor(host, "ak-on-accent"), tokenColor(host, "ak-accent")),
+      onSurface: contrast(tokenColor(host, "ak-fg"), tokenColor(host, "ak-surface")),
+      onSelection: contrast(tokenColor(host, "ak-fg"), tokenColor(host, "ak-accent-surface")),
+      lines: [
+        computed(find("input"), "border-top-color"),
+        computed(find("qti-gap"), "border-top-color"),
+        computed(find(".ak-face"), "border-top-color"),
+        tokenColor(host, "ak-focus"),
+      ].map((color) => contrast(color, background)),
+    };
+  };
+
+  /** Returns a color as the engine computes it. */
+  const rgb = (color: string): string =>
+    `rgb(${[1, 3, 5].map((start) => Number.parseInt(color.slice(start, start + 2), 16)).join(", ")})`;
+
+  it("has a palette or a look for each of the 14 terms of the guide", () => {
+    expect(PNP_COLOR_THEMES).toHaveLength(14);
+    const named = [...COLOR_THEME_PAIRS.keys(), ...LOW_CONTRAST_THEMES.keys()];
+    expect(named).toHaveLength(10);
+    for (const term of named) {
+      expect(PNP_COLOR_THEMES).toContain(term);
+      expect(attributesOf(term)).toEqual({ "data-ak-theme": term });
+      const { host } = mount("<p>x</p>", attributesOf(term));
+      expect(computed(host, "background-color"), term).not.toBe(computed(mount("<p>x</p>").host, "background-color"));
+    }
+  });
+
+  it("shows the default, its reverse, high contrast and its reverse as the themes of the supports", () => {
+    expect(attributesOf("default")).toEqual({});
+    expect(attributesOf("default-reverse")).toEqual({ "data-ak-polarity": "inverted" });
+    expect(attributesOf("high-contrast")).toEqual({ "data-ak-contrast": "high" });
+    expect(attributesOf("high-contrast-reverse")).toEqual({
+      "data-ak-contrast": "high",
+      "data-ak-polarity": "inverted",
+    });
+  });
+
+  it.for([...COLOR_THEME_PAIRS, ...LOW_CONTRAST_THEMES])(
+    "draws %s in the colors of the samples of the guide, the first as the text",
+    ([term, [text, background]]) => {
+      const { host, find } = mount("<p>x</p>", attributesOf(term));
+      expect(computed(find("p"), "color")).toBe(rgb(text));
+      expect(computed(host, "background-color")).toBe(rgb(background));
+    },
+  );
+
+  it.for(PNP_COLOR_THEMES.filter((term) => !LOW_CONTRAST_THEMES.has(term)))(
+    "keeps %s at the contrast of the player: 7:1 for text, 4.5:1 for the rest of the text, 3:1 for lines",
+    (term) => {
+      const { text, muted, accent, invalid, onAccent, onSurface, onSelection, lines } = ratiosOf(term);
+      expect(text).toBeGreaterThanOrEqual(7);
+      expect(onSurface).toBeGreaterThanOrEqual(7);
+      expect(onSelection).toBeGreaterThanOrEqual(7);
+      for (const ratio of [muted, accent, invalid, onAccent]) expect(ratio).toBeGreaterThanOrEqual(4.5);
+      for (const ratio of lines) expect(ratio).toBeGreaterThanOrEqual(3);
+    },
+  );
+
+  it.for([...LOW_CONTRAST_THEMES.keys()])(
+    "keeps %s between the 3:1 and 4:1 that the guide asks for, and everything else at 3:1 or more",
+    (term) => {
+      const { text, muted, accent, invalid, onAccent, onSurface, onSelection, lines } = ratiosOf(term);
+      expect(text).toBeGreaterThanOrEqual(3);
+      expect(text).toBeLessThanOrEqual(4);
+      for (const ratio of [muted, accent, invalid, onAccent, onSurface, onSelection, ...lines]) {
+        expect(ratio).toBeGreaterThanOrEqual(3);
+      }
+    },
+  );
+
+  it("gives a theme of a program the palette of the stylesheet of the host", () => {
+    const sheet = stylesheet(':host([data-ak-theme="ext:school"]) { --ak-fg: #002200; --ak-bg: #e0ffe0; }');
+    const { host, find } = mount("<p>x</p>", attributesOf("ext:school"), {}, [sheet]);
+    expect(computed(find("p"), "color")).toBe(rgb("#002200"));
+    expect(computed(host, "background-color")).toBe(rgb("#e0ffe0"));
+  });
+});
 
 describe("the PNP single column", () => {
   const columns = `<div class='qti-layout-row'><div class='qti-layout-col6' id='a'>a</div><div class='qti-layout-col6' id='b'>b</div></div>`;

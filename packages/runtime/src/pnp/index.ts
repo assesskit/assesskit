@@ -4,6 +4,7 @@
  *
  * @module @assesskit/runtime/pnp
  */
+export { isColorTheme } from "./lexical.js";
 export type { PersonalNeedsProfile, PersonSourcedId, PnpRecord, SupportState } from "./model.js";
 export { PNP_ALTERNATE_NAMESPACES, PNP_NAMESPACE } from "./namespace.js";
 export { readPnp } from "./read-pnp.js";
@@ -55,6 +56,7 @@ export {
   type BrailleMathType,
   type BrailleType,
   type CalculatorType,
+  type ColorTheme,
   type GenericFontFace,
   type HazardTerm,
   type InputRequirement,
@@ -64,6 +66,7 @@ export {
   PNP_BRAILLE_MATH_TYPES,
   PNP_BRAILLE_TYPES,
   PNP_CALCULATOR_TYPES,
+  PNP_COLOR_THEMES,
   PNP_GENERIC_FONT_FACES,
   PNP_HAZARDS,
   PNP_INPUT_REQUIREMENTS,

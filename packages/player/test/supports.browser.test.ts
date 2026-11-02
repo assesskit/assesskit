@@ -2,7 +2,13 @@ import { readAsi } from "@assesskit/runtime/asi";
 import { createEngine, type DeliveryState, type SupportView, stamp } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { describeInteractions } from "@assesskit/runtime/interactions";
-import { readPnp, type SupportSetting } from "@assesskit/runtime/pnp";
+import {
+  type ColorTheme,
+  PNP_COLOR_THEMES,
+  readPnp,
+  type SupportSetting,
+  type SupportState,
+} from "@assesskit/runtime/pnp";
 import { afterEach, beforeEach, describe, expect, inject, it } from "vitest";
 import { userEvent } from "vitest/browser";
 import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
@@ -417,6 +423,114 @@ describe("mountSupportPanel", () => {
     expect(await axeViolations(host)).toEqual([]);
   });
 
+  describe("the list of color themes", () => {
+    const appearance = (
+      fields: { readonly state?: SupportState; readonly active?: boolean; readonly colorTheme?: ColorTheme } = {},
+    ): SupportView => {
+      const { state = "active", active = true, colorTheme } = fields;
+      return supportView("text-appearance", {
+        state,
+        active,
+        settings: {
+          name: "text-appearance",
+          replaceAccessModes: [],
+          ...(colorTheme === undefined ? {} : { colorTheme }),
+        },
+      });
+    };
+    const themed = () => {
+      const chosen: ColorTheme[] = [];
+      return { chosen, ...mountPanel({ onColorTheme: (theme) => chosen.push(theme) }) };
+    };
+
+    it("lists every term of the guide while the text appearance is on, under a label, the default first", () => {
+      const { host, panel } = themed();
+      panel.update([appearance()]);
+      const select = el(host, "select") as HTMLSelectElement;
+      expect(select.labels?.[0]?.textContent).toContain("Color theme");
+      const options = [...select.options];
+      expect(options.map(({ value }) => value).toSorted()).toEqual([...PNP_COLOR_THEMES].toSorted());
+      expect(options[0]?.textContent).toBe("Default colors");
+      expect(new Set(options.map(({ textContent }) => textContent)).size).toBe(14);
+    });
+
+    it("selects the theme of the profile, and nothing when the profile names none", () => {
+      const { host, panel } = themed();
+      const select = (): HTMLSelectElement => el(host, "select") as HTMLSelectElement;
+      panel.update([appearance({ colorTheme: "black-cream" })]);
+      expect(select().value).toBe("black-cream");
+      panel.update([appearance()]);
+      expect(select().selectedIndex).toBe(-1);
+    });
+
+    it("selects the theme that the candidate chose in place of the one of the profile", () => {
+      const { host, panel } = themed();
+      panel.update([appearance({ colorTheme: "black-cream" })], "cyan-black");
+      expect((el(host, "select") as HTMLSelectElement).value).toBe("cyan-black");
+    });
+
+    it("says which theme the candidate chooses, and shows what the next update says, not the request", async () => {
+      const { host, panel, chosen } = themed();
+      panel.update([appearance({ colorTheme: "black-cream" })]);
+      const select = el(host, "select") as HTMLSelectElement;
+      await userEvent.selectOptions(select, "yellow-blue");
+      expect(chosen).toEqual(["yellow-blue"]);
+      panel.update([appearance({ colorTheme: "black-cream" })], "yellow-blue");
+      expect(select.value).toBe("yellow-blue");
+      await userEvent.selectOptions(select, "default");
+      expect(chosen).toEqual(["yellow-blue", "default"]);
+    });
+
+    it("keeps the focus on the list when an update arrives", async () => {
+      const { host, panel } = themed();
+      panel.update([appearance(), supportView("captions", { state: "option" })]);
+      const select = el(host, "select") as HTMLSelectElement;
+      select.focus();
+      panel.update([appearance(), supportView("captions", { state: "option", active: true })], "default");
+      expect(document.activeElement).toBe(select);
+    });
+
+    it("adds a theme of a program under the name that follows ext:", () => {
+      const { host, panel } = themed();
+      panel.update([appearance({ colorTheme: "ext:school-green" })]);
+      panel.update([appearance({ colorTheme: "ext:school-green" })]);
+      const select = el(host, "select") as HTMLSelectElement;
+      expect(select.options).toHaveLength(15);
+      expect(select.selectedOptions[0]?.textContent).toBe("school-green");
+    });
+
+    it("has no list while the text appearance is off, prohibited or absent, and without the option", () => {
+      const { host, panel } = themed();
+      panel.update([appearance()]);
+      expect(host.querySelector("select")).not.toBeNull();
+      for (const supports of [
+        [appearance({ state: "option", active: false })],
+        [appearance({ state: "prohibited", active: false })],
+        [],
+      ]) {
+        panel.update(supports);
+        expect(host.querySelector("select")).toBeNull();
+      }
+      const plain = mountPanel();
+      plain.panel.update([appearance()]);
+      expect(plain.host.querySelector("select")).toBeNull();
+    });
+
+    it("writes the names of the themes in the language of the interface", () => {
+      const { host, panel } = mountPanel({ messages: ID_MESSAGES, onColorTheme: () => undefined });
+      panel.update([appearance()]);
+      expect((el(host, "select") as HTMLSelectElement).labels?.[0]?.textContent).toContain("Tema warna");
+      expect(el(host, "option").textContent).toBe("Warna bawaan");
+    });
+
+    it("passes axe, and gives the list the target size of the panel", async () => {
+      const { host, panel } = themed();
+      panel.update([appearance({ colorTheme: "default" })]);
+      expect(await axeViolations(host)).toEqual([]);
+      expect(el(host, "select").getBoundingClientRect().height).toBeGreaterThanOrEqual(24);
+    });
+  });
+
   it("takes the panel away", () => {
     const { host, panel } = mountPanel();
     panel.update(offered);
@@ -439,12 +553,18 @@ describe("mountSupportPanel", () => {
     expect(() => mountSupportPanel(host, { ...valid, onSupport: JSON.parse("1") })).toThrow(
       new DataError("The option onSupport must be a function, found 1."),
     );
+    expect(() => mountSupportPanel(host, { ...valid, onColorTheme: JSON.parse("1") })).toThrow(
+      new DataError("The option onColorTheme must be a function, found 1."),
+    );
     expect(() => mountSupportPanel(host, { ...valid, ...JSON.parse('{"extra": 1}') })).toThrow(
-      new DataError('The options has the properties "messages" and "onSupport", found "extra".'),
+      new DataError('The options has the properties "messages", "onSupport" and "onColorTheme", found "extra".'),
     );
     const panel = mountSupportPanel(host, valid);
     expect(() => panel.update(JSON.parse("{}"))).toThrow(
       new DataError("The list of supports is invalid: expected an array, found an object."),
+    );
+    expect(() => panel.update([], JSON.parse('"pink"'))).toThrow(
+      new DataError('The color theme must be a term of color-theme or ext: and at most 256 characters, found "pink".'),
     );
     panel.destroy();
   });

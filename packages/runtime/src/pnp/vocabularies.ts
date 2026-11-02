@@ -95,3 +95,29 @@ export const PNP_CALCULATOR_TYPES = ["basic", "standard", "scientific", "graphin
 
 /** The kind of calculator: a term of `calculator-type`, or an extension term. */
 export type CalculatorType = (typeof PNP_CALCULATOR_TYPES)[number] | PnpExtensionTerm;
+
+/**
+ * The terms of `color-theme`, which the best practices guide lists and the PNP schema does not have. In a pair of colors the
+ * first is the text and the second the background.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, color-theme}
+ */
+export const PNP_COLOR_THEMES = [
+  "yellow-blue",
+  "blue-yellow",
+  "black-rose",
+  "rose-black",
+  "black-cyan",
+  "cyan-black",
+  "black-cream",
+  "cream-black",
+  "medgray-darkgray",
+  "darkgray-medgray",
+  "default",
+  "default-reverse",
+  "high-contrast",
+  "high-contrast-reverse",
+] as const;
+
+/** The colors of text and background that a candidate prefers: a term of `color-theme`, or an extension term. */
+export type ColorTheme = (typeof PNP_COLOR_THEMES)[number] | PnpExtensionTerm;

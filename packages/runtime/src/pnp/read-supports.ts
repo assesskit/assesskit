@@ -1,6 +1,6 @@
 import { checkChoice } from "../checks.js";
 import type { ElementReader } from "../xml/index.js";
-import { termOrExtension, toBoolean, toFloat, toHexColor, toInteger, toVolume } from "./lexical.js";
+import { termOrExtension, toBoolean, toColorTheme, toFloat, toHexColor, toInteger, toVolume } from "./lexical.js";
 import type {
   AdditionalTestingTime,
   Braille,
@@ -374,6 +374,7 @@ function readTextAppearance(reader: ElementReader): TextAppearance {
     reader,
     new Map<string, ChildHandler>([
       ...modeHandlers(modes),
+      ["color-theme", store(draft, "colorTheme", text(toColorTheme))],
       ["background-color", store(draft, "backgroundColor", text(toHexColor))],
       ["font-color", store(draft, "fontColor", text(toHexColor))],
       ["font-size", store(draft, "fontSize", text(toFloat))],

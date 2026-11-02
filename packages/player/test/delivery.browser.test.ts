@@ -1264,6 +1264,87 @@ describe("the supports in the player", () => {
     await waitFor(async () => expect(await look()).toBeUndefined(), { timeout: 15_000 });
   });
 
+  describe("the color theme", () => {
+    const Themed = `<access-for-all-pnp xmlns="${PNP_NAMESPACE}">
+      <text-appearance><color-theme>black-cream</color-theme></text-appearance>
+      <activate-at-initialization-set><text-appearance/></activate-at-initialization-set>
+    </access-for-all-pnp>`;
+    const themeList = (ui: ShadowRoot): HTMLSelectElement =>
+      ui.querySelector(".ak-supports select") as HTMLSelectElement;
+
+    it("starts in the theme of the profile, and lets the candidate change it at any time without drawing the item again", async () => {
+      const s = await shell({ profile: Themed });
+      await shown(s);
+      const host = contentHostOf(s.ui);
+      await waitFor(() => expect(host.getAttribute("data-ak-theme")).toBe("black-cream"));
+      const paragraph = contentOf(s.ui).querySelector("p");
+      await userEvent.selectOptions(themeList(s.ui), "yellow-blue");
+      await waitFor(() => expect(host.getAttribute("data-ak-theme")).toBe("yellow-blue"));
+      expect(themeList(s.ui).value).toBe("yellow-blue");
+      expect(contentOf(s.ui).querySelector("p")).toBe(paragraph);
+    });
+
+    it("returns to the default colors at any time", async () => {
+      const s = await shell({ profile: Themed });
+      await shown(s);
+      const host = contentHostOf(s.ui);
+      await userEvent.selectOptions(themeList(s.ui), "default");
+      await waitFor(() => expect(host.hasAttribute("data-ak-theme")).toBe(false));
+      expect(themeList(s.ui).value).toBe("default");
+    });
+
+    it("keeps the choice on the next item and through the views that answers bring", async () => {
+      const s = await shell({ profile: Themed });
+      await shown(s);
+      const host = contentHostOf(s.ui);
+      await userEvent.selectOptions(themeList(s.ui), "cream-black");
+      await s.client.dispatch({ type: "move", to: "next" });
+      await waitFor(() => expect(s.client.view.current?.key.ref).not.toBe("q1"));
+      expect(host.getAttribute("data-ak-theme")).toBe("cream-black");
+      expect(themeList(s.ui).value).toBe("cream-black");
+    });
+
+    it("sends no action, because the choice is the presentation of this page", async () => {
+      const { sent, wrap } = recording();
+      const s = await shell({ profile: Themed, wrap });
+      await shown(s);
+      await userEvent.selectOptions(themeList(s.ui), "rose-black");
+      await waitFor(() => expect(contentHostOf(s.ui).getAttribute("data-ak-theme")).toBe("rose-black"));
+      expect(sent).toEqual([]);
+    });
+
+    it("gives a host without chrome the same change, through the mount", async () => {
+      const s = await shell({ profile: Themed, chrome: false });
+      await shown(s);
+      const host = contentHostOf(s.ui);
+      expect(s.ui.querySelector("select")).toBeNull();
+      s.mounted.setColorTheme("blue-yellow");
+      expect(host.getAttribute("data-ak-theme")).toBe("blue-yellow");
+      expect(() => s.mounted.setColorTheme(JSON.parse('"pink"'))).toThrow(
+        new DataError(
+          'The color theme must be a term of color-theme or ext: and at most 256 characters, found "pink".',
+        ),
+      );
+      expect(host.getAttribute("data-ak-theme")).toBe("blue-yellow");
+    });
+
+    it("changes the look inside the frame of a portable custom interaction", async () => {
+      const s = await shell({
+        files: pciFiles(),
+        profile: Themed,
+        wrap: (client) =>
+          Object.create(client, { assets: { value: (path: string) => `${inject("fixtures").asset}/g/pci/${path}` } }),
+      });
+      await shown(s);
+      await s.client.dispatch({ type: "move", to: { ref: "q3", instance: 1 } });
+      await waitFor(() => expect(contentOf(s.ui).querySelector("iframe")).not.toBeNull());
+      const look = async () => (await commands.frameTheme("Press the button")).attributes["data-ak-theme"];
+      await waitFor(async () => expect(await look()).toBe("black-cream"), { timeout: 15_000 });
+      await userEvent.selectOptions(themeList(s.ui), "default");
+      await waitFor(async () => expect(await look()).toBeUndefined(), { timeout: 15_000 });
+    });
+  });
+
   it("says which version of the question was delivered", async () => {
     const s = await shell();
     await shown(s);

@@ -43,3 +43,6 @@ state (a state without it reads as before), `marked` in the navigation map, and 
 text entry bound to a record, a `ruby` with an `rp` before and after its `rt`, and a portable custom interaction whose module
 resolution files and modules lie at the root of the package, from an item in any folder. It warns about the pre-conditions and branch rules of a test part in nonlinear mode, which the engine ignores as it
 ignores those of the sections and items in it.
+
+`readPnp` reads the color theme of the best practices guide into `TextAppearance.colorTheme`, with the terms of `PNP_COLOR_THEMES`
+and `isColorTheme`. The PNP schema has no such element, so `writePnp` leaves it out and `validatePnp` warns.

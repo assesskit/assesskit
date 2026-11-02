@@ -110,6 +110,12 @@ describe("writePnp", () => {
     expect(unusedNames(declared, usedNames(documents, [PNP_NAMESPACE]))).toEqual([]);
   });
 
+  it("shows that the schema refuses a color theme, and that what the writer makes of one passes", async () => {
+    const document = `<access-for-all-pnp xmlns="${PNP_NAMESPACE}"><text-appearance><color-theme>yellow-blue</color-theme></text-appearance></access-for-all-pnp>`;
+    expect(await issuesOf(document)).toMatchObject([{ code: "assesskit/node/xsd-invalid" }]);
+    expect(await issuesOf(writePnp(readPnp(document)))).toEqual([]);
+  });
+
   it("writes the three sets", async () => {
     const profile: PersonalNeedsProfile = {
       ...profileWith(),

@@ -2,7 +2,7 @@ import { checkArray, checkChoice, checkRecord, checkString, describe } from "../
 import { DataError } from "../errors.js";
 import { isXmlLanguage, type XmlElement } from "../xml/index.js";
 import { elementBuilder } from "../xml/internal.js";
-import { booleanText, floatText, hexColorText, integerText, termText, volumeText } from "./lexical.js";
+import { booleanText, floatText, hexColorText, integerText, isColorTheme, termText, volumeText } from "./lexical.js";
 import { PNP_NAMESPACE } from "./namespace.js";
 import type {
   AdditionalTestingTime,
@@ -260,6 +260,10 @@ function fontFaceElement(face: FontFace): XmlElement {
 
 function writeTextAppearance(setting: TextAppearance): XmlElement {
   const number = (label: string) => (value: unknown) => floatText(value, label);
+  // The theme is checked and left out, because the schema has no such element (spec gaps, G49).
+  if (setting.colorTheme !== undefined && !isColorTheme(setting.colorTheme)) {
+    throw new DataError(`The color theme must be a term of color-theme, found ${describe(setting.colorTheme)}.`);
+  }
   return element(setting.name, {}, [
     ...modeElements(setting, setting.name),
     ...parameter("background-color", setting.backgroundColor, (value) => hexColorText(value, "The background color")),

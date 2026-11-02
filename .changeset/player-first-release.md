@@ -54,3 +54,8 @@ refuses at mount a module of the package on an origin that the frame loads no sc
 `origins`. The counters of an extended text are labels before the number (`Words: 1`), so that no noun has to agree with it.
 
 A WAV recording that has not started in 5 seconds, because the audio context stays suspended where the device has no audio output or the worklet does not load, stops waiting: the player says that the recording could not start (`uploadNotStarted`), reports an `AssesskitError` to `hooks.onError`, lets go of the context and the microphone, and leaves Record available.
+
+The panel of the supports lists the 14 color themes of the best practices guide while `text-appearance` is on, so that a candidate
+can change the theme at any time and go back to the default colors. `presentationOf` takes `colorTheme`, `mountSupportPanel` takes
+`onColorTheme`, `Mounted.setColorTheme` serves a host that draws its own control, and `player.css` has the palettes under
+`data-ak-theme`. The two gray themes keep the 3:1 to 4:1 of the guide, below WCAG on purpose.

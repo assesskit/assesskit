@@ -1,8 +1,33 @@
+import type { ColorTheme } from "@assesskit/runtime/pnp";
 import { afterEach } from "vitest";
 import playerCss from "../player.css?inline";
 
 /** The text of `player.css`. */
 export const PLAYER_CSS = playerCss;
+
+/** The terms of `color-theme` that are a pair of colors and keep the contrast of WCAG, each with the colors of its palette: text, then background, samples of the best practices guide. */
+export const COLOR_THEME_PAIRS: ReadonlyMap<ColorTheme, readonly [string, string]> = new Map<
+  ColorTheme,
+  readonly [string, string]
+>([
+  ["yellow-blue", ["#fbeb5b", "#000080"]],
+  ["blue-yellow", ["#000080", "#fbeb5b"]],
+  ["black-rose", ["#000000", "#ffd0ff"]],
+  ["rose-black", ["#ffd0ff", "#000000"]],
+  ["black-cyan", ["#000000", "#add8e6"]],
+  ["cyan-black", ["#add8e6", "#000000"]],
+  ["black-cream", ["#000000", "#fffacd"]],
+  ["cream-black", ["#fffacd", "#000000"]],
+]);
+
+/** The terms of `color-theme` of low contrast on purpose, each with its text and background, samples of the best practices guide. */
+export const LOW_CONTRAST_THEMES: ReadonlyMap<ColorTheme, readonly [string, string]> = new Map<
+  ColorTheme,
+  readonly [string, string]
+>([
+  ["medgray-darkgray", ["#b1b8ad", "#606060"]],
+  ["darkgray-medgray", ["#606060", "#b1b8ad"]],
+]);
 
 /** A content root: a host element whose shadow root has adopted `player.css`, as the player makes it. */
 export interface ContentRoot {

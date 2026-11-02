@@ -2351,6 +2351,18 @@ describe("personal needs profiles", () => {
     expect(both).toMatchObject([{ code: "assesskit/validate/pnp-sets", severity: "warning" }]);
   });
 
+  it("warns about a color theme, which the guide has and the schema does not", () => {
+    const themed = validatePnp(profile("<text-appearance><color-theme>black-cream</color-theme></text-appearance>"));
+    expect(themed).toMatchObject([
+      {
+        code: "assesskit/validate/pnp-color-theme",
+        severity: "warning",
+        location: { element: "access-for-all-pnp/text-appearance/color-theme" },
+      },
+    ]);
+    expect(validatePnp(profile("<text-appearance><font-size>14</font-size></text-appearance>"))).toEqual([]);
+  });
+
   it("reports the two namespaces that 1EdTech's own documents use, reads them and writes the namespace of the schema", () => {
     const alternates = [
       "http://www.imsglobal.org/xsd/qtiv3p0/imsafa3p0pnp_v1p0",

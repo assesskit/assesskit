@@ -8,13 +8,15 @@ import { checkMaxFindings, type ValidateOptions } from "./options.js";
 /**
  * Validates a personal needs profile: a support in the prohibit set is listed only there. A support that the
  * profile also assigns is a recommendation broken, and one that an activate set also lists is a contradiction. A support
- * in both activate sets is on from the start and also an option, which the profile cannot mean.
+ * in both activate sets is on from the start and also an option, which the profile cannot mean. A color theme is in the best
+ * practices guide and not in the PNP schema, so a document with one does not pass the schema (spec gaps, G49).
  *
- * | Code                           | Severity | Reported when                                  |
- * | ------------------------------ | -------- | ---------------------------------------------- |
- * | `assesskit/validate/pnp-prohibited` | error    | a prohibited support is in an activate set     |
- * | `assesskit/validate/pnp-prohibited` | warning  | a prohibited support is also assigned          |
- * | `assesskit/validate/pnp-sets`       | warning  | a support is in both activate sets             |
+ * | Code                                  | Severity | Reported when                                  |
+ * | ------------------------------------- | -------- | ---------------------------------------------- |
+ * | `assesskit/validate/pnp-prohibited`   | error    | a prohibited support is in an activate set     |
+ * | `assesskit/validate/pnp-prohibited`   | warning  | a prohibited support is also assigned          |
+ * | `assesskit/validate/pnp-sets`         | warning  | a support is in both activate sets             |
+ * | `assesskit/validate/pnp-color-theme`  | warning  | `text-appearance` has a color theme            |
  *
  * @param profile - The profile, as `readPnp` reads it.
  * @returns The issues; none when the profile is valid.
@@ -22,7 +24,7 @@ import { checkMaxFindings, type ValidateOptions } from "./options.js";
  */
 export function validatePnp(profile: PersonalNeedsProfile): readonly Issue[] {
   checkRecord(profile, "The profile must be an object of the model of a personal needs profile");
-  // The issues are at most three for each support name of the vocabulary, far below the default limit.
+  // The issues are at most three for each support name of the vocabulary and one for the color theme, far below the default limit.
   const findings = new Findings();
   const element = "access-for-all-pnp";
   for (const name of profile.prohibited) {
@@ -39,6 +41,11 @@ export function validatePnp(profile: PersonalNeedsProfile): readonly Issue[] {
     if (!profile.activateAtInitialization.has(name)) continue;
     const message = `The support ${name} is in the activate-as-option set and the activate-at-initialization set; it is either on from the start or an option the candidate turns on.`;
     findings.warning("assesskit/validate/pnp-sets", message, element);
+  }
+  const appearance = profile.supports.get("text-appearance");
+  if (appearance?.name === "text-appearance" && appearance.colorTheme !== undefined) {
+    const message = `The support text-appearance has the color theme ${appearance.colorTheme}. The best practices guide has color-theme and the PNP schema does not, so a validator of the schema refuses the document, and writePnp leaves the theme out.`;
+    findings.warning("assesskit/validate/pnp-color-theme", message, `${element}/text-appearance/color-theme`);
   }
   return findings.list();
 }

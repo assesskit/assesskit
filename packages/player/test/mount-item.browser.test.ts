@@ -236,6 +236,20 @@ describe("mountItem", () => {
     expect(s.ui.querySelector(".ak-supports")).toBeNull();
   });
 
+  it("takes the color theme of the profile, and the choice that the host makes for the candidate", async () => {
+    const s = await embed("l1", {
+      profile: `<access-for-all-pnp xmlns="${PNP_NAMESPACE}">
+        <text-appearance><color-theme>black-rose</color-theme></text-appearance>
+        <activate-at-initialization-set><text-appearance/></activate-at-initialization-set>
+      </access-for-all-pnp>`,
+    });
+    await shown(s);
+    const contentHost = s.ui.querySelector(".ak-content-host") as HTMLElement;
+    await waitFor(() => expect(contentHost.getAttribute("data-ak-theme")).toBe("black-rose"));
+    s.mounted.setColorTheme("default");
+    expect(contentHost.hasAttribute("data-ak-theme")).toBe(false);
+  });
+
   it("keeps the content and the answers when a view arrives that answers an earlier request", async () => {
     const s = await embed("l1");
     await shown(s);

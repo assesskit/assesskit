@@ -6,7 +6,7 @@ import { EN_MESSAGES } from "../src/index.js";
 import { type ContentRootOptions, createContentRoot, createMathTypesetter } from "../src/player/index.js";
 import { HOST_SHADOW_RULE } from "../src/player/internal.js";
 import { sanitizeStylesheet } from "../src/player/roots/internal.js";
-import { computed, PLAYER_CSS, stylesheet } from "./css-fixture.js";
+import { COLOR_THEME_PAIRS, computed, PLAYER_CSS, stylesheet } from "./css-fixture.js";
 import { axeViolations, ITEM_PATH, itemBody } from "./renderer-fixture.js";
 
 const { asset, stranger } = inject("fixtures");
@@ -432,6 +432,7 @@ describe("themes", () => {
     { "data-ak-polarity": "inverted" },
     { "data-ak-contrast": "high" },
     { "data-ak-contrast": "high", "data-ak-polarity": "inverted" },
+    ...Array.from(COLOR_THEME_PAIRS.keys(), (term) => ({ "data-ak-theme": term })),
   ];
 
   it("keeps the contrast of the hazard notice, the rubric and the test feedback in every theme", async () => {

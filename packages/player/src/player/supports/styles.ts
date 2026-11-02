@@ -25,6 +25,9 @@ const SUPPORTS_CSS = `
   padding: 0 0.75rem; border: 2px dashed CanvasText; border-radius: 0.375rem; }
 .ak-support-button[aria-pressed="true"] { color: Canvas; background: CanvasText; font-weight: 700;
   box-shadow: inset 0 -0.25rem 0 currentColor; }
+.ak-support-field { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.ak-support-select { box-sizing: border-box; min-height: 2.75rem; padding: 0 0.5rem; font: inherit; color: CanvasText;
+  background: Canvas; border: 2px solid CanvasText; border-radius: 0.375rem; }
 .ak-supports :focus-visible, .ak-read-aloud :focus-visible {
   outline: 3px solid CanvasText; outline-offset: 2px; box-shadow: 0 0 0 2px Canvas; }
 .ak-read-aloud-word { min-width: 6rem; padding: 0.25rem 0.5rem; border: 1px solid CanvasText; border-radius: 0.375rem; }

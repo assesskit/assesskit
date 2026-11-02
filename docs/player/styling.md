@@ -6,7 +6,7 @@ one file, without `@import`, so that a constructed stylesheet can hold it.
 
 ```mermaid
 flowchart TD
-  tokens["Tokens: palette and sizes"] --> themes["Themes: light, dark,<br/>high contrast, inverted"]
+  tokens["Tokens: palette and sizes"] --> themes["Themes: light, dark,<br/>high contrast, inverted, color themes"]
   themes --> base["Base look of the content root"]
   base --> vocabulary["Classes of the shared vocabulary"]
   vocabulary --> interactions["Classes of the interactions"]
@@ -44,15 +44,31 @@ long as the player does.
 A theme is a palette. The other colors derive from it with `color-mix()`, so a color that the player sets stays in step.
 Set the attributes on the host of the root, or on `<html>` of a frame.
 
-| Attribute                     | Text on background     | Accent    | Borders and focus ring            |
-| ----------------------------- | ---------------------- | --------- | --------------------------------- |
-| none                          | `#1a1a1a` on white     | `#0b57d0` | the text, 62% over the background |
-| `data-ak-polarity="inverted"` | `#f2f2f2` on `#121212` | `#8ab4f8` | as above                          |
-| `data-ak-contrast="high"`     | black on white         | `#0000b3` | the text, 2px borders, 4px ring   |
-| both                          | white on black         | `#ffff00` | as above                          |
+| Attribute                          | Text on background     | Accent    | Borders and focus ring            |
+| ---------------------------------- | ---------------------- | --------- | --------------------------------- |
+| none                               | `#1a1a1a` on white     | `#0b57d0` | the text, 62% over the background |
+| `data-ak-polarity="inverted"`      | `#f2f2f2` on `#121212` | `#8ab4f8` | as above                          |
+| `data-ak-contrast="high"`          | black on white         | `#0000b3` | the text, 2px borders, 4px ring   |
+| both                               | white on black         | `#ffff00` | as above                          |
+| `data-ak-theme="yellow-blue"`      | `#fbeb5b` on `#000080` | `#a8d8ff` | the text, 62% over the background |
+| `data-ak-theme="blue-yellow"`      | `#000080` on `#fbeb5b` | `#5a0f8c` | as above                          |
+| `data-ak-theme="black-rose"`       | black on `#ffd0ff`     | `#5a0f8c` | as above                          |
+| `data-ak-theme="rose-black"`       | `#ffd0ff` on black     | `#ff9ee6` | as above                          |
+| `data-ak-theme="black-cyan"`       | black on `#add8e6`     | `#00366e` | as above                          |
+| `data-ak-theme="cyan-black"`       | `#add8e6` on black     | `#7fdbff` | as above                          |
+| `data-ak-theme="black-cream"`      | black on `#fffacd`     | `#0b3fb3` | as above                          |
+| `data-ak-theme="cream-black"`      | `#fffacd` on black     | `#ffd866` | as above                          |
+| `data-ak-theme="medgray-darkgray"` | `#b1b8ad` on `#606060` | `#e6ecff` | the text                          |
+| `data-ak-theme="darkgray-medgray"` | `#606060` on `#b1b8ad` | `#2c3f7a` | the text                          |
 
-In every theme the text has at least 7:1 against the background, the accent and the muted text at least 4.5:1, and the
-borders, the focus ring and the selection lines at least 3:1 (WCAG 1.4.3, 1.4.11). The tests check each pair.
+In every theme but the last two the text has at least 7:1 against the background, the accent and the muted text at least 4.5:1,
+and the borders, the focus ring and the selection lines at least 3:1 (WCAG 1.4.3, 1.4.11). The last two are low contrast on
+purpose: the best practices guide suggests 3:1 to 4:1 for a candidate who needs it, which is below WCAG, so they are a choice and
+never a default, and every other color keeps 3:1. The tests check each pair of each theme, and the text and background of a color
+theme are samples of the guide.
+
+A `data-ak-theme` of a program, `ext:` and its name, has no palette here. The host adds one to the stylesheet that it gives
+the player, with a rule such as `:host([data-ak-theme="ext:school"]) { --ak-fg: #002200; --ak-bg: #e0ffe0; }`, and keeps these contrasts.
 
 ## What the player sets
 
@@ -61,22 +77,23 @@ property that is not set has its default. `presentationOf` builds them from a ca
 sets them ([supports](supports.md)); a frame of a portable custom interaction gets them on its `html` element
 ([PCI](pci.md)).
 
-| PNP support                            | Property or attribute                    | Value, default                                               |
-| -------------------------------------- | ---------------------------------------- | ------------------------------------------------------------ |
-| `invert-display-polarity`              | `data-ak-polarity`; `--ak-fg`, `--ak-bg` | `inverted`; the colors of the profile. Default: off          |
-| `high-contrast`                        | `data-ak-contrast`                       | `high`. Default: off                                         |
-| `text-appearance` colors               | `--ak-fg`, `--ak-bg`                     | Colors. Default: the theme's                                 |
-| `text-appearance` font size            | `--ak-font-scale`                        | A number that multiplies the size. Default: `1`              |
-| `text-appearance` font face            | `--ak-font-family`                       | A font family list. Default: `system-ui, sans-serif`         |
-| `text-appearance` line height          | `--ak-line-height`                       | A number that multiplies the base of 1.5. Default: `1`       |
-| `text-appearance` line spacing         | `--ak-line-spacing`                      | Ems added to the line height. Default: `0`                   |
-| `text-appearance` letter spacing       | `--ak-letter-spacing`                    | A length. Default: `normal`                                  |
-| `text-appearance` word spacing         | `--ak-word-spacing`                      | A length. Default: `normal`                                  |
-| `text-appearance` uniform sizing       | `data-ak-uniform-font`                   | Present: every size is the body size. Default: absent        |
-| `text-appearance` wrapping             | `data-ak-wrapping`                       | Present: text wraps, whatever the item says. Default: absent |
-| `magnification` of text or all content | `--ak-text-zoom`                         | A number that multiplies the size. Default: `1`              |
-| `layout-single-column`                 | `data-ak-single-column`                  | Present: one column. Default: absent                         |
-| `keyword-emphasis`                     | `data-ak-keyword-emphasis`               | Present: `.qti-keyword-emphasis` shows. Default: absent      |
+| PNP support                            | Property or attribute                    | Value, default                                                                  |
+| -------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------- |
+| `invert-display-polarity`              | `data-ak-polarity`; `--ak-fg`, `--ak-bg` | `inverted`; the colors of the profile. Default: off                             |
+| `high-contrast`                        | `data-ak-contrast`                       | `high`. Default: off                                                            |
+| `text-appearance` color theme          | `data-ak-theme`                          | A term of `color-theme`. Default: off ([supports](supports.md#the-color-theme)) |
+| `text-appearance` colors               | `--ak-fg`, `--ak-bg`                     | Colors. Default: the theme's                                                    |
+| `text-appearance` font size            | `--ak-font-scale`                        | A number that multiplies the size. Default: `1`                                 |
+| `text-appearance` font face            | `--ak-font-family`                       | A font family list. Default: `system-ui, sans-serif`                            |
+| `text-appearance` line height          | `--ak-line-height`                       | A number that multiplies the base of 1.5. Default: `1`                          |
+| `text-appearance` line spacing         | `--ak-line-spacing`                      | Ems added to the line height. Default: `0`                                      |
+| `text-appearance` letter spacing       | `--ak-letter-spacing`                    | A length. Default: `normal`                                                     |
+| `text-appearance` word spacing         | `--ak-word-spacing`                      | A length. Default: `normal`                                                     |
+| `text-appearance` uniform sizing       | `data-ak-uniform-font`                   | Present: every size is the body size. Default: absent                           |
+| `text-appearance` wrapping             | `data-ak-wrapping`                       | Present: text wraps, whatever the item says. Default: absent                    |
+| `magnification` of text or all content | `--ak-text-zoom`                         | A number that multiplies the size. Default: `1`                                 |
+| `layout-single-column`                 | `data-ak-single-column`                  | Present: one column. Default: absent                                            |
+| `keyword-emphasis`                     | `data-ak-keyword-emphasis`               | Present: `.qti-keyword-emphasis` shows. Default: absent                         |
 
 The base size is `1rem`, so a root inside a root does not multiply a zoom twice. Magnification of non-text content has no
 form in CSS inside the baseline, because `zoom` needs Firefox 126: the renderer multiplies the pixel sizes it gives media by the
