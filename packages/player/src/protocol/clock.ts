@@ -6,6 +6,13 @@ import {
   type Schema,
 } from "@assesskit/runtime/checks";
 
+/**
+ * The longest delay in milliseconds that `setTimeout` and `setInterval` take, 2^31 - 1; a longer one fires at once.
+ *
+ * @see {@link https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers | HTML Standard, timers}
+ */
+export const MAX_TIMER_DELAY_MS = 2_147_483_647;
+
 /** The source of the current time. The caller passes it, so that a page, a server and a test control the time. */
 export interface Clock {
   /**

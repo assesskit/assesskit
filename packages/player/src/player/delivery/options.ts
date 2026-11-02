@@ -16,6 +16,7 @@ import { DataError } from "@assesskit/runtime/errors";
 import type { FileValue } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { SessionCallOptions, SessionClient } from "../../protocol/index.js";
+import { MAX_TIMER_DELAY_MS } from "../../protocol/internal.js";
 import { readOrigins } from "../content/internal.js";
 import type { CustomInteractionHook } from "../elements/index.js";
 import { canMount, HOST_SHADOW_RULE } from "../internal.js";
@@ -180,7 +181,8 @@ export interface DeliveryOptions extends MountOptions {
    * @remarks
    * A proctor pauses a test and resumes it; the candidate has no action, so the client learns of the resume only when it
    * asks (`SessionClient.refresh`). The player also asks when the page becomes visible and on a button. A remote client
-   * sends one request for each check, so a host with many paused candidates sets a longer time, or 0 for none.
+   * sends one request for each check, so a host with many paused candidates sets a longer time, or 0 for none. The longest
+   * is 2,147,483,647, the longest delay of a timer of the browser, which fires at once after a longer one.
    *
    * @defaultValue `30000`
    */
@@ -371,6 +373,12 @@ export function checkDeliveryOptions(host: unknown, options: unknown): asserts o
   if (options.marking !== undefined) checkBoolean(options.marking, "The option marking");
   if (options.resumeCheckMs !== undefined) {
     checkNonNegativeInteger(options.resumeCheckMs, "The option resumeCheckMs");
+    // A longer delay would fire at once, and a remote client would send a check after each answer.
+    if (options.resumeCheckMs > MAX_TIMER_DELAY_MS) {
+      throw new DataError(
+        `The option resumeCheckMs must be at most ${MAX_TIMER_DELAY_MS}, the longest delay of a timer, found ${options.resumeCheckMs}.`,
+      );
+    }
   }
   if (options.hooks !== undefined) checkDeliveryHooks(options.hooks);
 }

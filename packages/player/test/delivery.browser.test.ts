@@ -897,6 +897,9 @@ describe("mountDelivery", () => {
     expect(() => mount(fresh(), { resumeCheckMs: "30" })).toThrow(
       "The option resumeCheckMs must be a non-negative integer",
     );
+    expect(() => mount(fresh(), { resumeCheckMs: 2 ** 31 })).toThrow(
+      "The option resumeCheckMs must be at most 2147483647, the longest delay of a timer, found 2147483648.",
+    );
     expect(() => mount(fresh(), { hooks: { voice: {} } })).toThrow("The method speak of the hook voice");
     expect(() => mount(fresh(), { hooks: { voice: "robot" } })).toThrow("The hook voice must be an object");
     expect(() => mount(fresh(), { hooks: { tools: { dictionary: 1 } } })).toThrow(

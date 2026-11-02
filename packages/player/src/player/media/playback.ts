@@ -1,3 +1,14 @@
+import { MAX_TIMER_DELAY_MS } from "../../protocol/internal.js";
+
+/** The milliseconds in a second. */
+const MS_PER_SECOND = 1000;
+
+/**
+ * Returns the delay of a timer for seconds of the item, at most the longest that a timer takes: a longer one would fire at
+ * once.
+ */
+const timerDelay = (seconds: number): number => Math.min(seconds * MS_PER_SECOND, MAX_TIMER_DELAY_MS);
+
 /** What the candidate is told while the player waits or refuses. */
 export type PlaybackNotice = "no-pauses" | "no-plays" | "resumes" | "starts-soon";
 
@@ -125,7 +136,7 @@ export class Playback {
     this.#timer = setTimeout(() => {
       this.#waiting = false;
       this.#start();
-    }, delay * 1000);
+    }, timerDelay(delay));
     this.#host.changed();
   }
 
@@ -149,7 +160,7 @@ export class Playback {
     this.#timer = setTimeout(() => {
       this.#host.notify(undefined);
       this.#start();
-    }, duration * 1000);
+    }, timerDelay(duration));
   }
 
   /** Takes the recording back to its start; the next play counts as a new one. */

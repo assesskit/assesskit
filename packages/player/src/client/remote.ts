@@ -15,11 +15,10 @@ import {
   type ViewEnvelope,
   type ViewRequest,
 } from "../protocol/index.js";
-import { checkCallOptions, clockSchema } from "../protocol/internal.js";
+import { checkCallOptions, clockSchema, MAX_TIMER_DELAY_MS } from "../protocol/internal.js";
 import { assetResolver } from "./assets.js";
 import { BROWSER_CLOCK } from "./clock.js";
 import { notifyListeners } from "./notify.js";
-import { MAX_TIMER_DELAY_MS } from "./timer-delay.js";
 
 /** How long in milliseconds the client waits after the last change of a response before it sends the responses. */
 export const AUTOSAVE_MS = 1000;

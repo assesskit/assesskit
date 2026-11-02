@@ -221,8 +221,9 @@ or stop would break WCAG 1.4.2. Captions and audio description appear when the r
 | Pause duration | `…-pause-duration`: a pause ends by itself after that many seconds.                                                                                                                        |
 | Pause count    | `…-pause-count`: the most pauses in one play; then pause says so and playback goes on. The count starts again with each play.                                                              |
 
-A value of a pause attribute that is not a number above 0 is ignored. A pause by the keys of the system is not limited, because
-the player cannot stop it. `coords` is not read: the player does not place the recording.
+A value of a pause attribute that is not a number above 0 is ignored, and a delay or a duration above 2,147,483 seconds, the
+longest timer of a browser, lasts that long. A pause by the keys of the system is not limited, because the player cannot stop
+it. `coords` is not read: the player does not place the recording.
 
 ### Upload and recording
 

@@ -182,6 +182,15 @@ describe("media", () => {
     }
   });
 
+  it("waits for a pause delay longer than a timer takes, where the timer of the browser would fire at once", async () => {
+    holdTimers();
+    const scene = mountScene(DECLARATION, BODY('data-qti-media-player-pause-delay="3000000"'));
+    await userEvent.click(button(scene, "Play"));
+    vi.advanceTimersByTime(1000);
+    expect(idle(audioOf(scene))).toBe(true);
+    expect(scene.find(".ak-media-notice").textContent).toBe("Playback starts in a moment.");
+  });
+
   it("cancels a start that waits for its delay when the candidate presses pause", async () => {
     holdTimers();
     const play = vi.spyOn(HTMLMediaElement.prototype, "play");

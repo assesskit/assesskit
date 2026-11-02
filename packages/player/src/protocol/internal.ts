@@ -4,7 +4,7 @@
  * @module
  */
 export { type CatAnswerer, type CatLoopFailure, createCatLoops } from "./answer-cat-requests.js";
-export { checkClock, clockSchema, readClock } from "./clock.js";
+export { checkClock, clockSchema, MAX_TIMER_DELAY_MS, readClock } from "./clock.js";
 export { checkHostAction } from "./host-action.js";
 export { checkCallOptions, checkHostApplyOptions } from "./host-session.js";
 export { stepAfterIdle } from "./idle.js";

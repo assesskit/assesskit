@@ -45,12 +45,12 @@ import {
   checkHostApplyOptions,
   clockSchema,
   createCatLoops,
+  MAX_TIMER_DELAY_MS,
   readClock,
   stepAfterIdle,
 } from "../protocol/internal.js";
 import { BROWSER_CLOCK } from "./clock.js";
 import { notifyListeners } from "./notify.js";
-import { MAX_TIMER_DELAY_MS } from "./timer-delay.js";
 
 /** What a {@link LocalStore} saves for a step: the state, and the events of the step. */
 export interface LocalSave {
