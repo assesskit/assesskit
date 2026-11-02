@@ -107,13 +107,14 @@ rather than at each frame, in turns over 5 samples; the gate compares the fastes
 
 | Row                                             | The player | Amp-up  | Ratio | Budget (ratio) |
 | ----------------------------------------------- | ---------- | ------- | ----- | -------------- |
-| A lesson page of ten items from their documents | 26.1 ms    | 16.0 ms | 1.63  | 2.5            |
+| A lesson page of ten items from their documents | 26.5 ms    | 13.8 ms | 1.92  | 3              |
 
-The times are those of the laptop. The player draws each item in shadow roots of its own, with the stylesheet of a content
-root, a status region and the controls of the supports, where the Amp-up player draws plain elements; with the sessions made,
-the player takes 21 ms for the same page (the lesson row above), so the drawing is most of its time, and the runtime's reading,
-gate and start of the ten items the rest. A local session loads the engine with `import()` once for a page, not once for each
-session. The budget is the measured ratio with the headroom of the [rows against Longsight](../runtime/performance.md#against-the-references).
+The times are those of the laptop, from the run whose ratio is the median of six; the ratios of the six runs were 1.4 to 2.1,
+and the budget is the median with the headroom of the [rows against Longsight](../runtime/performance.md#against-the-references).
+The player draws each item in shadow roots of its own, with the stylesheet of a content root, a status region and the controls
+of the supports, where the Amp-up player draws plain elements; with the sessions made, the player takes 21 ms for the same page
+(the lesson row above), so the drawing is most of its time, and the runtime's reading, gate and start of the ten items the
+rest. A local session loads the engine with `import()` once for a page, not once for each session.
 
 The times do not include loading and parsing the bundle, which `size.test.ts` bounds by bytes: with the CPU slowed 4 times
 the bundle of `mountDelivery` loaded, parsed and evaluated in 47 ms, and that of `mountItem` in 46 ms.
