@@ -102,6 +102,8 @@ samples use is a `ReadError` ([spec gaps](spec-gaps.md): namespaces of the sampl
 | Every `dependency` and `variant` `identifierref` names a resource.                                                                                                                                             | `assesskit/package/dangling-reference`                  |
 | The elements come in the order of the schema, required ones and attributes are there, and nothing is outside the schema.                                                                                       | `assesskit/package/*`                                   |
 
+The `ReadError` of the identifiers lists the first 1,000 problems, and its message counts them all.
+
 The reader does not check that files exist; the manifest of a package can list a file that the archive lacks (the 1EdTech `pci`
 example does), and `file(path)` then returns `undefined`.
 

@@ -24,6 +24,9 @@ import {
   type Variant,
 } from "./manifest.js";
 
+/** The most issues that a `ReadError` of the identifiers of a manifest lists, so that a manifest cannot make millions of them. */
+const MAX_IDENTIFIER_ISSUES = 1000;
+
 const RULES: ReaderRules = {
   module: "package",
   namespaces: [CP_NAMESPACE, CPX_NAMESPACE, DRD_NAMESPACE, QTI_METADATA_NAMESPACE, CSM_NAMESPACE, LOM_NAMESPACE],
@@ -143,27 +146,42 @@ class ManifestReader {
     reader.done();
   }
 
-  /** Checks that identifiers are unique and that every `identifierref` names a resource (`xs:ID` and `xs:IDREF` in the CP schema). */
+  /**
+   * Checks that identifiers are unique and that every `identifierref` names a resource (`xs:ID` and `xs:IDREF` in the CP
+   * schema). The error lists at most {@link MAX_IDENTIFIER_ISSUES} of them and counts them all.
+   */
   private checkIdentifiers(): void {
     const issues: Issue[] = [];
+    let count = 0;
+    const report = (reader: ElementReader, code: string, message: string): void => {
+      count += 1;
+      if (count > MAX_IDENTIFIER_ISSUES) return;
+      for (const issue of reader.fail(code, message).issues) issues.push(issue);
+    };
     const seen = new Set<string>();
     for (const { reader, identifier } of this.declared) {
       if (seen.has(identifier)) {
-        const message = `The identifier ${JSON.stringify(identifier)} is declared twice in the manifest.`;
-        for (const issue of reader.fail("duplicate-identifier", message).issues) issues.push(issue);
+        report(
+          reader,
+          "duplicate-identifier",
+          `The identifier ${JSON.stringify(identifier)} is declared twice in the manifest.`,
+        );
       }
       seen.add(identifier);
     }
     for (const { reader, identifier } of this.references) {
       if (!this.resourceIds.has(identifier)) {
-        const message = `The identifierref ${JSON.stringify(identifier)} names no resource of the manifest.`;
-        for (const issue of reader.fail("dangling-reference", message).issues) issues.push(issue);
+        report(
+          reader,
+          "dangling-reference",
+          `The identifierref ${JSON.stringify(identifier)} names no resource of the manifest.`,
+        );
       }
     }
     const [first] = issues;
     if (first !== undefined) {
-      const count = issues.length === 1 ? "" : ` The manifest has ${issues.length} such problems.`;
-      throw new ReadError(`${first.message}${count}`, issues);
+      const total = count === 1 ? "" : ` The manifest has ${count} such problems.`;
+      throw new ReadError(`${first.message}${total}`, issues);
     }
   }
 

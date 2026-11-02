@@ -845,6 +845,15 @@ describe("reading manifests", () => {
     expect(error.message).toContain("2 such problems");
   });
 
+  it("lists the first 1,000 problems of the identifiers of a manifest, and counts them all", () => {
+    const many = '<dependency identifierref="x"/>'.repeat(1002);
+    const error = thrownAs(ReadError, () =>
+      readManifest(manifestXml(resources(resourceXml("a", "webcontent", "a", many)))),
+    );
+    expect(error.issues).toHaveLength(1000);
+    expect(error.message).toContain("1002 such problems");
+  });
+
   it("rejects an identifier declared twice, among the manifest, the resources and the variants", () => {
     const duplicate = thrownAs(ReadError, () =>
       readManifest(manifestXml(resources(resourceXml("a", "webcontent", "a"), resourceXml("a", "webcontent", "b")))),
