@@ -61,7 +61,9 @@ class Writer {
         throw this.fail(`The property ${definition.property} of ${name} is invalid: ${error.message}`);
       }
     }
-    if (info.def.attributeWildcard !== undefined) attributes.push(...this.writeExtensions(info, name, model));
+    if (info.def.attributeWildcard !== undefined) {
+      for (const attribute of this.writeExtensions(info, name, model)) attributes.push(attribute);
+    }
     return attributes;
   }
 
@@ -172,11 +174,11 @@ class Writer {
     for (const slot of info.slots) {
       const written = this.writeSlot(slot, name, model);
       if (written.length > 0) present.add(slot.def.property);
-      children.push(...written);
+      for (const child of written) children.push(child);
     }
     this.checkExclusions(info, name, present);
     if (info.def.content.kind === "slots" && info.def.content.wildcard !== undefined) {
-      children.push(...this.writeForeign(name, info.def.content.wildcard, model));
+      for (const child of this.writeForeign(name, info.def.content.wildcard, model)) children.push(child);
     }
     return children;
   }

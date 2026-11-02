@@ -46,6 +46,11 @@ describe("geometry", () => {
     ]);
   });
 
+  it("gives the box of a polygon with more corners than a call can take as arguments", () => {
+    const corners = Array.from({ length: 150_000 }, (_, index) => `${index % 200},${index % 100}`).join(",");
+    expect(parseArea("poly", corners, SIZE).box).toEqual({ x: 0, y: 0, width: 199, height: 99 });
+  });
+
   it("reads a percentage against the width for x, the height for y, and the smaller side for a radius", () => {
     expect(parseArea("rect", "10%,20%,50%,100%", SIZE).box).toEqual({ x: 20, y: 20, width: 80, height: 80 });
     // The radius is the smaller of the two values: 10% of 100, not of 200.

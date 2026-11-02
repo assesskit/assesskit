@@ -4181,6 +4181,11 @@ describe("walking a document", () => {
 });
 
 describe("writing documents", () => {
+  it("writes an element with more children than a call can take as arguments, as readAsi reads it", () => {
+    const xml = `<qti-assessment-item ${NAMESPACE} identifier="a" title="a" time-dependent="false"><qti-item-body><div>${"<span/>".repeat(200_000)}</div></qti-item-body></qti-assessment-item>`;
+    expect(readAsi(writeAsi(readAsi(xml)))).toEqual(readAsi(xml));
+  });
+
   it("writes attributes and child elements in the order of the schema, whatever the order of the properties", () => {
     const written = writeAsi({
       kind: "item",

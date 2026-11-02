@@ -179,7 +179,8 @@ export function lcm(operands: readonly (Value | null)[]): Value | null {
 export function extremum(operator: "min" | "max", operands: readonly (Value | null)[]): Value | null {
   const all = allNumbers(operands);
   if (all === undefined || all.numbers.some(Number.isNaN)) return null;
-  const value = operator === "min" ? Math.min(...all.numbers) : Math.max(...all.numbers);
+  let value = operator === "min" ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+  for (const number of all.numbers) value = operator === "min" ? Math.min(value, number) : Math.max(value, number);
   return all.integers ? integerResult(value) : floatResult(value);
 }
 

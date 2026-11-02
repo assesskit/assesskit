@@ -257,7 +257,7 @@ function mergeReport(
   for (const result of report.itemResults) {
     const merged = mergeItem(course, next, session, result);
     next = merged.state;
-    kept.push(...merged.kept);
+    for (const each of merged.kept) kept.push(each);
   }
   return {
     state: next,

@@ -37,7 +37,7 @@ export function markMoving(step: StepContext, here: Placement): void {
 export function applyCat(step: StepContext, change: CatChange): Refusal | undefined {
   if (!change.ok) return change.refusal;
   step.state = change.state;
-  step.events.push(...change.events);
+  for (const event of change.events) step.events.push(event);
   if (change.outcomes) step.submitted = true;
   return undefined;
 }

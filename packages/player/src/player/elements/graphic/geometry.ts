@@ -88,10 +88,17 @@ export function parseArea(shape: AreaShape, coords: string, size: Size): Area {
         { length: lengths.length / 2 },
         (_, i): Point => [lengths[2 * i] ?? 0, lengths[2 * i + 1] ?? 0],
       );
-      const xs = corners.map(([x]) => x);
-      const ys = corners.map(([, y]) => y);
-      const [x, y] = [Math.min(...xs), Math.min(...ys)];
-      return { shape, box: { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y }, corners };
+      let [x, y, right, bottom] = [
+        Number.POSITIVE_INFINITY,
+        Number.POSITIVE_INFINITY,
+        Number.NEGATIVE_INFINITY,
+        Number.NEGATIVE_INFINITY,
+      ];
+      for (const [cornerX, cornerY] of corners) {
+        [x, y] = [Math.min(x, cornerX), Math.min(y, cornerY)];
+        [right, bottom] = [Math.max(right, cornerX), Math.max(bottom, cornerY)];
+      }
+      return { shape, box: { x, y, width: right - x, height: bottom - y }, corners };
     }
   }
 }

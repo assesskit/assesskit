@@ -1212,6 +1212,19 @@ describe("sortable tables", () => {
     expect(column(invalid, 0)).toHaveLength(5);
   });
 
+  it("draws and sorts a table with more rows than a call can take as arguments", async () => {
+    // A body with 150,000 children, which a spread into append would refuse with a RangeError in Chromium and WebKit.
+    const count = 150_000;
+    const rows = Array.from({ length: count }, (_, index) => `<tr><td>${count - index}</td></tr>`).join("");
+    const root = await showBody(
+      `<table><thead><tr><th aria-sort="none">N</th></tr></thead><tbody>${rows}</tbody></table>`,
+    );
+    expect(all(root, "tbody tr")).toHaveLength(count);
+    await press(root, 0);
+    const sorted = all(root, "tbody tr");
+    expect([sorted[0]?.textContent, sorted.at(-1)?.textContent]).toEqual(["1", String(count)]);
+  });
+
   it("orders a column by value when every key is a number, and by the text when one is not", async () => {
     const numbers = (cells: readonly string[]): string =>
       `<table><thead><tr><th aria-sort="none">N</th></tr></thead><tbody>${cells.map((cell) => `<tr><td>${cell}</td></tr>`).join("")}</tbody></table>`;

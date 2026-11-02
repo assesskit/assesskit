@@ -50,11 +50,17 @@ const SCHEME = /^[A-Za-z][A-Za-z0-9+.-]*:/;
 
 const HEX = /^[0-9A-Fa-f]{2}$/;
 
+const ENCODER = new TextEncoder();
+
+/** Appends the UTF-8 octets of a code point. */
+function pushOctets(bytes: number[], codePoint: number): void {
+  for (const byte of ENCODER.encode(String.fromCodePoint(codePoint))) bytes.push(byte);
+}
+
 /** Decodes the percent-encoded octets of a segment as UTF-8; `undefined` when an escape or the UTF-8 is invalid. */
 function decodeSegment(segment: string): string | undefined {
   if (!segment.includes("%")) return segment;
   const bytes: number[] = [];
-  const encoder = new TextEncoder();
   for (let index = 0; index < segment.length; ) {
     const char = segment.codePointAt(index) ?? 0;
     if (segment[index] === "%") {
@@ -63,7 +69,7 @@ function decodeSegment(segment: string): string | undefined {
       bytes.push(Number.parseInt(hex, 16));
       index += 3;
     } else {
-      bytes.push(...encoder.encode(String.fromCodePoint(char)));
+      pushOctets(bytes, char);
       index += char > 0xffff ? 2 : 1;
     }
   }
@@ -77,7 +83,12 @@ function decodeSegment(segment: string): string | undefined {
 /** Returns the path of a URI reference: what precedes the first `?` or `#`. */
 function pathOf(reference: string): string {
   const ends = [reference.indexOf("?"), reference.indexOf("#")].filter((index) => index >= 0);
-  return ends.length === 0 ? reference : reference.slice(0, Math.min(...ends));
+  return ends.length === 0
+    ? reference
+    : reference.slice(
+        0,
+        ends.reduce((first, index) => Math.min(first, index)),
+      );
 }
 
 /**

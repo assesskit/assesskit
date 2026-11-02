@@ -126,7 +126,7 @@ function buildFrames(nodes: readonly (PlannedPart | PlannedChild)[], parent: Fra
     build.next += 1;
     const identifier = identifierOf(node);
     build.named.set(identifier, [...(build.named.get(identifier) ?? []), frame]);
-    if (node.kind !== "item") children.push(...buildFrames(node.children, frame, build));
+    if (node.kind !== "item") for (const child of buildFrames(node.children, frame, build)) children.push(child);
     frame.last = build.next - 1;
     return frame;
   });

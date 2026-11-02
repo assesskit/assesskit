@@ -150,14 +150,14 @@ class ManifestReader {
     for (const { reader, identifier } of this.declared) {
       if (seen.has(identifier)) {
         const message = `The identifier ${JSON.stringify(identifier)} is declared twice in the manifest.`;
-        issues.push(...reader.fail("duplicate-identifier", message).issues);
+        for (const issue of reader.fail("duplicate-identifier", message).issues) issues.push(issue);
       }
       seen.add(identifier);
     }
     for (const { reader, identifier } of this.references) {
       if (!this.resourceIds.has(identifier)) {
         const message = `The identifierref ${JSON.stringify(identifier)} names no resource of the manifest.`;
-        issues.push(...reader.fail("dangling-reference", message).issues);
+        for (const issue of reader.fail("dangling-reference", message).issues) issues.push(issue);
       }
     }
     const [first] = issues;

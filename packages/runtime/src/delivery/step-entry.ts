@@ -80,7 +80,7 @@ function open(step: StepContext, key: ItemKey, at: number): Refusal | undefined 
     templateDefaults: templateDefaults(step, key, entry, candidate.item, at),
   });
   if (!started.ok) return started.refusal;
-  step.events.push(...started.events);
+  for (const event of started.events) step.events.push(event);
   const variant = candidate === entry.candidates[0] ? {} : { variant: candidate.resource };
   store(step, { session: started.session, ...variant, supports: [] });
   return undefined;

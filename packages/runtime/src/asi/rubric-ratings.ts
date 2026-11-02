@@ -84,9 +84,14 @@ export function rubricScoreRange(rubric: ScoringRubric): RubricScoreRange {
   let minimum = 0;
   let maximum = 0;
   for (const { weight, levels } of rubric.criteria) {
-    const scores = levels.map(({ score }) => score);
-    minimum += weight * Math.min(...scores);
-    maximum += weight * Math.max(...scores);
+    let low = Number.POSITIVE_INFINITY;
+    let high = Number.NEGATIVE_INFINITY;
+    for (const { score } of levels) {
+      low = Math.min(low, score);
+      high = Math.max(high, score);
+    }
+    minimum += weight * low;
+    maximum += weight * high;
   }
   return { minimum, maximum };
 }

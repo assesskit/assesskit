@@ -169,6 +169,9 @@ Biome enforces, folder by folder.
 - Validation returns `Issue`s with a stable `code` and a message and does not throw. A refusal of the engine has a `code` and a
   message too, listed in the [delivery guide](docs/runtime/delivery.md).
 - Identifier-keyed data lives in `Map`s, never in plain objects, so that an identifier such as `__proto__` stays data.
+- An array whose length a document, a response or a request decides is never spread into the arguments of a call (`push`,
+  `append`, `Math.max`): above about 100,000 values that throws a `RangeError`. `biome/no-spread-arguments.grit` holds the
+  runtime and the server folders of the player to it for `push`, `unshift`, `Math.min` and `Math.max`.
 - Every semantic rule names its specification with `@see` in the TSDoc of the code that applies it, and not in an issue.
 
 ## The state format

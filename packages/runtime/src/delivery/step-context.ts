@@ -124,7 +124,7 @@ export function store(step: StepContext, item: DeliveredItem): void {
 export function settle(step: StepContext, item: DeliveredItem, result: ItemStep): Refusal | undefined {
   if (!result.ok) return result.refusal;
   const { session, events } = result;
-  step.events.push(...events);
+  for (const event of events) step.events.push(event);
   const ended = events.find((event) => event.type === "attempt-ended");
   store(step, { ...item, session, ...(ended === undefined ? {} : { submittedAt: ended.at }) });
   if (ended !== undefined) {

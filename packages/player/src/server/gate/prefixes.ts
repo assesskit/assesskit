@@ -39,7 +39,7 @@ function referencesOf(node: ModelNode): string[] {
   for (const property of REFERENCE_PROPERTIES) {
     const value: unknown = Reflect.get(node, property);
     if (typeof value !== "string") continue;
-    if (property === "srcset") references.push(...srcsetUrls(value));
+    if (property === "srcset") for (const url of srcsetUrls(value)) references.push(url);
     else references.push(value);
   }
   const value: unknown = Reflect.get(node, "value");
@@ -123,21 +123,20 @@ function rootFiles(view: CandidateView, pkg: QtiPackage, documents: ViewDocument
   const present = pathsOf(pkg);
   const files = referencedPaths(pkg, documents.test, [...view.rubric, ...view.testFeedback]);
   if (current === undefined) return files.filter((path) => present.has(path));
-  files.push(
-    documents.item,
-    ...documents.stimuli,
-    ...referencedPaths(pkg, documents.item, [
+  const more = [
+    [documents.item],
+    documents.stimuli,
+    referencedPaths(pkg, documents.item, [
       ...current.body,
       ...current.modalFeedback,
       ...current.catalogs,
       ...(current.companionMaterials === undefined ? [] : [current.companionMaterials]),
     ]),
-    ...current.stimuli.flatMap((stimulus, index) =>
-      referencedPaths(pkg, documents.stimuli[index] ?? "", stimulus.body),
-    ),
-    ...current.stylesheets,
-    ...manifestFiles(pkg, documents.item, current.variant?.resource),
-  );
+    ...current.stimuli.map((stimulus, index) => referencedPaths(pkg, documents.stimuli[index] ?? "", stimulus.body)),
+    current.stylesheets,
+    manifestFiles(pkg, documents.item, current.variant?.resource),
+  ];
+  for (const paths of more) for (const path of paths) files.push(path);
   return files.filter((path) => present.has(path));
 }
 

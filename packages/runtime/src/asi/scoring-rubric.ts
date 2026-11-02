@@ -183,7 +183,7 @@ export function rubricIssues(rubric: ScoringRubric): RubricIssue[] {
       const message = `the weight of the criterion of a holistic rubric is ${DEFAULT_WEIGHT}, found ${criterion.weight}, because the score is the score of the chosen level`;
       issues.push({ code: "shape", path: `${at}.weight`, message });
     }
-    issues.push(...levelIssues(rubric.kind, criterion, at));
+    for (const issue of levelIssues(rubric.kind, criterion, at)) issues.push(issue);
   }
   return issues;
 }

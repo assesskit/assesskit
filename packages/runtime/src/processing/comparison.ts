@@ -62,12 +62,12 @@ export function equal(a: Value | null, b: Value | null, tolerance: Tolerance | n
   if (pair === undefined || tolerance === null) return null;
   const [x, y] = pair;
   if (tolerance.mode === "exact") return booleanResult(x === y);
-  const ends =
+  const [first, second] =
     tolerance.mode === "absolute"
       ? [x - tolerance.lower, x + tolerance.upper]
       : [x * (1 - tolerance.lower / 100), x * (1 + tolerance.upper / 100)];
-  const low = Math.min(...ends);
-  const high = Math.max(...ends);
+  const low = Math.min(first, second);
+  const high = Math.max(first, second);
   const aboveLow = tolerance.includeLower ? y >= low : y > low;
   const belowHigh = tolerance.includeUpper ? y <= high : y < high;
   return booleanResult(aboveLow && belowHigh);

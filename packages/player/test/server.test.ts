@@ -110,6 +110,18 @@ describe("collectAssetPrefixes", () => {
     expect(collectAssetPrefixes(viewOf(await host.view(ALICE)), pkg)).toEqual(new Set());
   });
 
+  it("reads a srcset with more candidates than a call can take as arguments", async () => {
+    const files = examFiles();
+    const srcset = Array.from({ length: 200_000 }, () => "images/map.png 1x").join(", ");
+    const item = String(files["items/q1/item.xml"]).replace(
+      /<img [^>]*\/>/u,
+      (img) => `<picture><source srcset="${srcset}" type="image/png"/>${img}</picture>`,
+    );
+    const { host, pkg } = await examHost({}, { ...files, "items/q1/item.xml": item });
+    const started = await host.start(ALICE, { seed: 1 });
+    expect(collectAssetPrefixes(viewOf(started), pkg)).toEqual(new Set(["items/q1/"]));
+  });
+
   it("climbs to the directory that holds the files that the manifest lists for the resource", async () => {
     const files = examFiles();
     const manifest = String(files["imsmanifest.xml"]).replace(

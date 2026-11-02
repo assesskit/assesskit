@@ -158,7 +158,8 @@ export class BranchRuleChecks {
       if (index >= count || reached.has(index)) continue;
       reached.add(index);
       const { next, jumps } = leaving(index);
-      open.push(...jumps, ...(next ? [index + 1] : []));
+      for (const jump of jumps) open.push(jump);
+      if (next) open.push(index + 1);
     }
     return reached;
   }

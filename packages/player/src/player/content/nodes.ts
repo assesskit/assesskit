@@ -68,7 +68,8 @@ export function buildElement(
 ): Element {
   const element = document.createElementNS(XHTML_NAMESPACE, name);
   setAttributes(element, node, context);
-  element.append(...children);
+  // One call each: a spread of the children of a wide element throws a RangeError above about 100,000.
+  for (const child of children) element.append(child);
   return element;
 }
 

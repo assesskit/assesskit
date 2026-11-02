@@ -228,6 +228,24 @@ describe("arithmetic", () => {
     expect(op("max", [bv("float", 3), bv("float", "NaN")])).toBeNull();
   });
 
+  it("takes the extremes of a response larger than a call can take as arguments", () => {
+    // A candidate's response is bounded by the size of an action, not by maxContainerSize, and reaches the operators whole.
+    const values = Array.from({ length: 200_000 }, (_, index) => index - 1000);
+    const declarations = `<qti-response-declaration identifier="RESPONSE" cardinality="multiple" base-type="integer"/>
+      <qti-outcome-declaration identifier="LOW" cardinality="single" base-type="integer"/>
+      <qti-outcome-declaration identifier="HIGH" cardinality="single" base-type="integer"/>`;
+    const rules = `<qti-set-outcome-value identifier="LOW"><qti-min>${v("RESPONSE")}</qti-min></qti-set-outcome-value>
+      <qti-set-outcome-value identifier="HIGH"><qti-max>${v("RESPONSE")}</qti-max></qti-set-outcome-value>`;
+    const outcomes = processed(declarations, rules, (item) => {
+      const variables = createItemVariables(item);
+      return {
+        ...variables,
+        responses: new Map(variables.responses).set("RESPONSE", list("multiple", "integer", values)),
+      };
+    }).outcomes;
+    expect([outcomes.get("LOW"), outcomes.get("HIGH")]).toEqual([int(-1000), int(198_999)]);
+  });
+
   it("rounds to n for [n − 0.5, n + 0.5) and truncates toward zero as the specification's examples do", () => {
     expect([6.8, 6.5, 6.49, -6.5].map((x) => opPrimitive("round", [bv("float", x)]))).toEqual([7, 7, 6, -6]);
     expect([6.8, -6.8].map((x) => opPrimitive("truncate", [bv("float", x)]))).toEqual([6, -6]);

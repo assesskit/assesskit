@@ -108,13 +108,13 @@ export class Reader {
       if (!this.range.intersectsNode(child)) continue;
       const read = this.child(child, inline);
       if (!read.block) {
-        run.push(...read.nodes);
+        for (const node of read.nodes) run.push(node);
         continue;
       }
       const made = paragraph(run);
       if (made !== undefined) out.push(made);
       run = [];
-      out.push(...read.nodes);
+      for (const node of read.nodes) out.push(node);
     }
     if (inline) return run;
     const made = paragraph(run);

@@ -170,15 +170,15 @@ function pairViolations(descriptor: InteractionDescriptor, value: Value | null):
   const gaps = descriptor.kind === "gap-match-interaction" ? toSet : new Set<string>();
   const violations: ResponseViolation[] = [];
   if (pairs.some(([first, second]) => !(fromSet.has(first) && toSet.has(second)))) violations.push("unknown-choice");
-  violations.push(
-    ...bounds(
-      pairs.length,
-      descriptor.constraints.minAssociations,
-      descriptor.constraints.maxAssociations,
-      "min-associations",
-      "max-associations",
-    ),
-  );
+  for (const violation of bounds(
+    pairs.length,
+    descriptor.constraints.minAssociations,
+    descriptor.constraints.maxAssociations,
+    "min-associations",
+    "max-associations",
+  )) {
+    violations.push(violation);
+  }
   const overused = descriptor.choices.some((choice) => {
     const limit = gaps.has(choice.identifier) ? GAP_CAPACITY : choice.matchMax;
     return limit !== undefined && (uses.get(choice.identifier) ?? 0) > limit;

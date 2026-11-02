@@ -79,7 +79,7 @@ function sortBy(
   const keys = new Map(rows.map((row) => [row, keyOf(cellAt(row, column))]));
   const compare = comparison([...keys.values()], header.closest("[lang]")?.getAttribute("lang") ?? undefined);
   rows.sort((a, b) => direction * compare(keys.get(a) ?? "", keys.get(b) ?? ""));
-  body.append(...rows);
+  for (const row of rows) body.append(row);
   for (const each of table.tHead?.querySelectorAll("th[aria-sort]") ?? []) {
     const state = each !== header ? "none" : direction === 1 ? "ascending" : "descending";
     each.setAttribute("aria-sort", state);
