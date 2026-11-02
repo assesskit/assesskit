@@ -54,17 +54,21 @@ const TOOLS_CSS = `
 .ak-move-right { grid-area: 2 / 3; }
 .ak-move-down { grid-area: 3 / 2; }
 .ak-field { display: flex; align-items: center; gap: 0.5rem; }
-.ak-field input { box-sizing: border-box; width: 5rem; min-height: 2.75rem; font: inherit; color: CanvasText;
+.ak-field input, .ak-field select { box-sizing: border-box; min-height: 2.75rem; font: inherit; color: CanvasText;
   background: Canvas; border: 2px solid CanvasText; border-radius: 0.375rem; }
+.ak-field input { width: 5rem; }
 .ak-viewer img, .ak-viewer video, .ak-viewer iframe { display: block; max-width: 100%; }
 .ak-viewer iframe { width: 100%; height: 24rem; border: 1px solid CanvasText; }
 .ak-viewer audio { width: 100%; }
 .ak-calculator { display: grid; gap: 0.5rem; width: 16rem; max-width: 100%; }
 .ak-screen { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: Canvas;
   border: 2px solid CanvasText; }
-.ak-display { flex: 1; min-height: 2rem; font: 1.5rem monospace; text-align: right; overflow-wrap: anywhere; }
+.ak-readout { flex: 1; display: grid; min-width: 0; }
+.ak-calculation { min-height: 1.25rem; font: 0.875rem monospace; text-align: right; overflow-wrap: anywhere; }
+.ak-display { min-height: 2rem; font: 1.5rem monospace; text-align: right; overflow-wrap: anywhere; }
 .ak-memory { font-weight: 700; }
-.ak-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.25rem; }
+.ak-scientific { width: 20rem; }
+.ak-keys { display: grid; grid-template-columns: repeat(20, 1fr); gap: 0.25rem; }
 .ak-keys .ak-button { padding: 0; }
 `;
 

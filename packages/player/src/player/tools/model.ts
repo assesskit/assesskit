@@ -23,8 +23,8 @@ export const CALCULATOR_TYPES = [
 /** A type of calculator that an item asks for. */
 export type CalculatorType = (typeof CALCULATOR_TYPES)[number];
 
-/** The types of calculator that the player builds in: the host provides the others. */
-export type BuiltInCalculator = Extract<CalculatorType, "basic" | "standard">;
+/** The types of calculator that the player builds in: the host provides the graphing one. */
+export type BuiltInCalculator = Extract<CalculatorType, "basic" | "standard" | "scientific">;
 
 /**
  * A file of the package that the item offers to the candidate: a digital material, or the file of a calculator.
@@ -161,7 +161,10 @@ export interface ToolsInput {
 /** The names of the content shown, as {@link ToolsInput.content} gives them. */
 export type ToolContent = NonNullable<ToolsInput["content"]>;
 
-/** The tools that the host provides in place of built-in ones, by name. */
+/**
+ * The tools that the host provides, by name: the graphing calculator and the elective tools, which the player does not build,
+ * and the scientific calculator, which replaces the built-in one when the host gives it.
+ */
 export const SLOT_TOOLS = [
   "scientific-calculator",
   "graphing-calculator",

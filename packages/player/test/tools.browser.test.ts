@@ -2,7 +2,7 @@ import type { SupportView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { CalculatorType, SupportName, SupportState } from "@assesskit/runtime/pnp";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { userEvent } from "vitest/browser";
+import { commands, userEvent } from "vitest/browser";
 import { EN_MESSAGES, ID_MESSAGES, type Messages } from "../src/messages/index.js";
 import {
   mountTools,
@@ -27,6 +27,7 @@ import {
   RULE_XML,
   ruleXml,
 } from "./tools-fixture.js";
+import { waitFor } from "./wait.js";
 
 // --- Fixtures ----------------------------------------------------------------------------------------------------
 
@@ -1294,7 +1295,7 @@ describe("the answer eliminator", () => {
 });
 
 describe("the calculators", () => {
-  const calculators = (...types: ("basic" | "standard")[]): ToolsInput =>
+  const calculators = (...types: ("basic" | "standard" | "scientific")[]): ToolsInput =>
     items({ calculators: types.map((type) => calculatorXml(type, `The ${type} calculator of the item.`)) });
   const display = (panel: Element): string => found(panel.querySelector("output"), "display").textContent ?? "";
   const key = (panel: Element, name: string): HTMLElement => {
@@ -1376,6 +1377,99 @@ describe("the calculators", () => {
     expect(display(panel)).toBe("-5");
   });
 
+  it("opens the scientific calculator that the profile names, with the keys of the best practices guide in their order", async () => {
+    const scene = createScene();
+    scene.show(
+      profile(support("calculator-on-screen", { calculatorType: "scientific", state: "active", active: true })),
+    );
+    const panel = found(panelOf(scene, "Scientific calculator"), "panel");
+    expect(panel.querySelectorAll(".ak-keys button")).toHaveLength(46);
+    await press(
+      panel,
+      "2",
+      "Add",
+      "3",
+      "Multiply",
+      "Open parenthesis",
+      "4",
+      "Subtract",
+      "1",
+      "Close parenthesis",
+      "Equals",
+    );
+    expect(display(panel)).toBe("11");
+    await press(panel, "C, clear", "2", "xʸ, power", "1", "0", "Equals");
+    expect(display(panel)).toBe("1024");
+    await press(panel, "C, clear", "5", "nCr, combinations", "2", "Equals", "x!, factorial");
+    expect(display(panel)).toBe("3628800");
+    await press(panel, "C, clear", "1", "0", "0", "0", "log, logarithm to base 10");
+    expect(display(panel)).toBe("3");
+  });
+
+  it("works in degrees, radians and gradians, with the inverse and hyperbolic functions shown as pressed while they wait", async () => {
+    const scene = createScene();
+    scene.show(calculators("scientific"));
+    await userEvent.click(toolbarButton(scene, "Scientific calculator"));
+    const panel = found(panelOf(scene, "Scientific calculator"), "panel");
+    const unit = found(panel.querySelector("select"), "angle unit");
+    expect(unit.labels?.[0]?.firstChild?.textContent).toBe("Angle unit");
+    expect(unit.value).toBe("degree");
+    await press(panel, "3", "0", "sin, sine");
+    expect(display(panel)).toBe("0.5");
+    const inverse = key(panel, "Inv, inverse function");
+    expect(inverse.getAttribute("aria-pressed")).toBe("false");
+    await press(panel, "C, clear", "Inv, inverse function");
+    expect(inverse.getAttribute("aria-pressed")).toBe("true");
+    await press(panel, "1", "tan, tangent");
+    expect(display(panel)).toBe("45");
+    expect(inverse.getAttribute("aria-pressed")).toBe("false");
+    await userEvent.selectOptions(unit, "radian");
+    await press(panel, "π, pi", "cos, cosine");
+    expect(display(panel)).toBe("-1");
+    await press(panel, "Hyp, hyperbolic function", "0", "cos, cosine");
+    expect(display(panel)).toBe("1");
+    await press(panel, "C, clear");
+    expect(unit.value).toBe("radian");
+  });
+
+  it("shows the operations that wait above the display", async () => {
+    const scene = createScene();
+    scene.show(calculators("scientific"));
+    await userEvent.click(toolbarButton(scene, "Scientific calculator"));
+    const panel = found(panelOf(scene, "Scientific calculator"), "panel");
+    const line = found(panel.querySelector(".ak-calculation"), "calculation");
+    await press(panel, "2", "Add", "3", "Multiply", "Open parenthesis");
+    expect(line.textContent).toBe("2 + 3 × (");
+    await press(panel, "4", "Close parenthesis", "Equals");
+    expect(line.textContent).toBe("");
+    expect(display(panel)).toBe("14");
+  });
+
+  it("types the keys of the scientific calculator from the keyboard: the focus goes to the display", async () => {
+    const scene = createScene();
+    scene.show(calculators("scientific"));
+    toolbarButton(scene, "Scientific calculator").focus();
+    await userEvent.keyboard("{Enter}");
+    const panel = found(panelOf(scene, "Scientific calculator"), "panel");
+    expect(focused()).toBe(found(panel.querySelector("output"), "display"));
+    await userEvent.keyboard("2+3*4=");
+    expect(display(panel)).toBe("14");
+    await userEvent.keyboard("{Escape}2^(1+2)=");
+    expect(display(panel)).toBe("8");
+    await userEvent.keyboard("4!");
+    expect(display(panel)).toBe("24");
+  });
+
+  it("gives the Indonesian names of the keys and the units", async () => {
+    const scene = createScene({ messages: ID_MESSAGES });
+    scene.show(calculators("scientific"));
+    await userEvent.click(toolbarButton(scene, "Kalkulator ilmiah"));
+    const panel = found(panelOf(scene, "Kalkulator ilmiah"), "panel");
+    expect(key(panel, "x², kuadrat")).toBeTruthy();
+    const unit = found(panel.querySelector("select"), "angle unit");
+    expect([...unit.options].map(({ textContent }) => textContent)).toEqual(["Derajat", "Radian", "Gradian"]);
+  });
+
   it("is operated by keyboard: the focus goes to the display, and typing works there", async () => {
     const scene = createScene();
     scene.show(calculators("standard"));
@@ -1437,8 +1531,15 @@ describe("the calculators", () => {
 
   it("names every key that shows letters with a name that starts with them, so that the label is in the name, as WCAG asks", async () => {
     const scene = createScene();
-    scene.show(calculators("standard"));
+    scene.show(calculators("standard", "scientific"));
     await userEvent.click(toolbarButton(scene, "Standard calculator"));
+    await userEvent.click(toolbarButton(scene, "Scientific calculator"));
+    const scientific = found(panelOf(scene, "Scientific calculator"), "panel");
+    for (const button of scientific.querySelectorAll(".ak-keys button")) {
+      const name = button.getAttribute("aria-label") ?? button.textContent ?? "";
+      if (/[\p{L}\p{N}]/u.test(button.textContent ?? ""))
+        expect(name.startsWith(button.textContent ?? ""), name).toBe(true);
+    }
     const panel = found(panelOf(scene, "Standard calculator"), "panel");
     const lettered = [...panel.querySelectorAll(".ak-keys button")].filter((button) =>
       /[\p{L}\p{N}]/u.test(button.textContent ?? ""),
@@ -1553,19 +1654,35 @@ describe("the calculators", () => {
 
   it("has keys of at least 24 by 24 CSS pixels", async () => {
     const scene = createScene();
-    scene.show(calculators("basic", "standard"));
+    scene.show(calculators("basic", "standard", "scientific"));
     await userEvent.click(toolbarButton(scene, "Basic calculator"));
     await userEvent.click(toolbarButton(scene, "Standard calculator"));
-    expect(targetsOf(scene).length).toBeGreaterThan(40);
+    await userEvent.click(toolbarButton(scene, "Scientific calculator"));
+    expect(targetsOf(scene).length).toBeGreaterThan(80);
     expect(tooSmall(scene)).toEqual([]);
   });
 
-  it("passes axe at WCAG 2.2 A and AA, both calculators open", async () => {
+  it("passes axe at WCAG 2.2 A and AA, the three calculators open, a mode of the scientific one pressed", async () => {
     const scene = createScene();
-    scene.show(calculators("basic", "standard"));
+    scene.show(calculators("basic", "standard", "scientific"));
     await userEvent.click(toolbarButton(scene, "Basic calculator"));
     await userEvent.click(toolbarButton(scene, "Standard calculator"));
+    await userEvent.click(toolbarButton(scene, "Scientific calculator"));
+    await press(found(panelOf(scene, "Scientific calculator"), "panel"), "Inv, inverse function", "2", "Add");
     expect(await violations()).toEqual([]);
+  });
+
+  it("exposes the keys of the scientific calculator to a screen reader by their names", async () => {
+    const scene = createScene();
+    scene.show(calculators("scientific"));
+    await userEvent.click(toolbarButton(scene, "Scientific calculator"));
+    await waitFor(async () => {
+      const tree = await commands.ariaSnapshot();
+      expect(tree).toMatch(/- group "Scientific calculator"/u);
+      expect(tree).toMatch(/- button "sin, sine"/u);
+      expect(tree).toMatch(/- button "Inv, inverse function"/u);
+      expect(tree).toMatch(/- combobox "Angle unit"/u);
+    });
   });
 });
 
@@ -1765,7 +1882,7 @@ describe("the tools of the host", () => {
     expect(scene.host.querySelectorAll(".ak-panel")).toHaveLength(0);
   });
 
-  it("builds the scientific and the graphing calculator that an item asks for with the functions of the host", async () => {
+  it("builds the scientific calculator of the host in place of the built-in one, and the graphing calculator, with the functions of the host", async () => {
     const slots: ToolSlots = {
       "scientific-calculator": (host) => {
         host.textContent = "Scientific";

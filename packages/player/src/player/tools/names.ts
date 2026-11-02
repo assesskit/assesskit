@@ -1,5 +1,5 @@
 import type { Messages } from "../../messages/index.js";
-import type { FileMaterial, SlotTool, ToolSpec } from "./model.js";
+import type { BuiltInCalculator, FileMaterial, SlotTool, ToolSpec } from "./model.js";
 
 /** The messages that name the tools that the host provides. */
 const SLOT_NAMES: Readonly<Record<SlotTool, keyof Messages>> = {
@@ -13,6 +13,13 @@ const SLOT_NAMES: Readonly<Record<SlotTool, keyof Messages>> = {
   outliner: "toolOutliner",
   "peer-interaction": "toolPeerInteraction",
   "spell-checker": "toolSpellChecker",
+};
+
+/** The messages that name the built-in calculators. */
+const CALCULATOR_NAMES: Readonly<Record<BuiltInCalculator, keyof Messages>> = {
+  basic: "toolBasicCalculator",
+  standard: "toolStandardCalculator",
+  scientific: "toolScientificCalculator",
 };
 
 /**
@@ -47,7 +54,7 @@ export function toolName(spec: ToolSpec, messages: Messages): string {
     case "eliminator":
       return messages.toolEliminator;
     case "calculator":
-      return spec.type === "basic" ? messages.toolBasicCalculator : messages.toolStandardCalculator;
+      return messages[CALCULATOR_NAMES[spec.type]];
     case "slot":
       return messages[SLOT_NAMES[spec.tool]];
     case "digital":

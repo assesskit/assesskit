@@ -136,6 +136,58 @@ export interface Messages {
   readonly calculatorMemoryAdd: string;
   /** The name of the key that subtracts the number from the memory; it starts with the symbols on the key. */
   readonly calculatorMemorySubtract: string;
+  /** The name of the key that makes the next function the inverse one; it starts with the text on the key. */
+  readonly calculatorInverse: string;
+  /** The name of the key that makes the next trigonometric function the hyperbolic one; it starts with the text on the key. */
+  readonly calculatorHyperbolic: string;
+  /** The name of the key that opens a parenthesis. */
+  readonly calculatorOpen: string;
+  /** The name of the key that closes a parenthesis. */
+  readonly calculatorClose: string;
+  /** The name of the key of the sine; it starts with the text on the key. */
+  readonly calculatorSine: string;
+  /** The name of the key of the cosine; it starts with the text on the key. */
+  readonly calculatorCosine: string;
+  /** The name of the key of the tangent; it starts with the text on the key. */
+  readonly calculatorTangent: string;
+  /** The name of the key of the number π; it starts with the symbol on the key. */
+  readonly calculatorPi: string;
+  /** The name of the key of the number e; it starts with the text on the key. */
+  readonly calculatorEuler: string;
+  /** The name of the key that squares the number; it starts with the symbols on the key. */
+  readonly calculatorSquare: string;
+  /** The name of the key that cubes the number; it starts with the symbols on the key. */
+  readonly calculatorCube: string;
+  /** The name of the key that raises the number to a power; it starts with the symbols on the key. */
+  readonly calculatorPower: string;
+  /** The name of the key of the cube root. */
+  readonly calculatorCubeRoot: string;
+  /** The name of the key of the root of a degree that the next number gives; it starts with the symbols on the key. */
+  readonly calculatorRoot: string;
+  /** The name of the key of the logarithm to base 10; it starts with the text on the key. */
+  readonly calculatorLog: string;
+  /** The name of the key of the natural logarithm; it starts with the text on the key. */
+  readonly calculatorLn: string;
+  /** The name of the key that raises 10 to the number; it starts with the symbols on the key. */
+  readonly calculatorTenPower: string;
+  /** The name of the key that raises e to the number; it starts with the symbols on the key. */
+  readonly calculatorExp: string;
+  /** The name of the key of the reciprocal; it starts with the symbols on the key. */
+  readonly calculatorReciprocal: string;
+  /** The name of the key of the factorial; it starts with the symbols on the key. */
+  readonly calculatorFactorial: string;
+  /** The name of the key of the permutations; it starts with the text on the key. */
+  readonly calculatorPermutations: string;
+  /** The name of the key of the combinations; it starts with the text on the key. */
+  readonly calculatorCombinations: string;
+  /** The label of the list of the unit of angle of the trigonometric functions. */
+  readonly calculatorAngle: string;
+  /** The unit of angle of a full turn of 360. */
+  readonly calculatorDegrees: string;
+  /** The unit of angle of a full turn of 2π. */
+  readonly calculatorRadians: string;
+  /** The unit of angle of a full turn of 400. */
+  readonly calculatorGradians: string;
   /** The word that read-aloud says before a link, when the candidate's link indication is to speak it. */
   readonly speechLink: string;
   /** The word that the typing echo says for the space character. */

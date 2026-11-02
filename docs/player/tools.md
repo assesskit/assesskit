@@ -18,8 +18,8 @@ flowchart LR
 | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------- | -------- |
 | Rule                                                                                                         | `qti-rule`                               | yes      |
 | Protractor                                                                                                   | `qti-protractor`                         | yes      |
-| Basic and standard calculators                                                                               | `qti-calculator`, `calculator-on-screen` | yes      |
-| Scientific and graphing calculators                                                                          | the same                                 | host     |
+| Basic, standard and scientific calculators                                                                   | `qti-calculator`, `calculator-on-screen` | yes      |
+| Graphing calculator                                                                                          | the same                                 | host     |
 | Digital material                                                                                             | `qti-digital-material`                   | a viewer |
 | Physical material                                                                                            | `qti-physical-material`                  | a notice |
 | Line reader                                                                                                  | `line-reader`                            | yes      |
@@ -235,34 +235,53 @@ The cross-outs stay in the mount by item and come back with the item; the button
 
 ### Calculators
 
-The basic calculator has the digits, the decimal point, the four operations, equals and clear. The standard calculator adds
-memory (MC, MR, M+, M−), percent, square root and change of sign. Operations run as they are entered, from
-left to right, so 2 + 3 × 4 = gives 20. Results are rounded to 12 significant digits, and at most 12 digits can be typed.
+The type of a calculator comes from the item's `qti-calculator-type` or from the `calculator-type` of the candidate's
+`calculator-on-screen`, which the candidate gets even when the item has no calculator; a profile that names no type gets the
+basic calculator. The basic calculator has the digits, the decimal point, the four operations, equals and clear. The standard
+calculator adds memory (MC, MR, M+, M−), percent, square root and change of sign. The scientific calculator adds the keys that
+the best practices guide lists for it. Results are rounded to 12 significant digits on the display, each number keeps all its
+digits for the next operation, and at most 12 digits can be typed.
 
-| Key    | Result                                                                                                       |
-| ------ | ------------------------------------------------------------------------------------------------------------ |
-| %      | After + or −, that percent of the left operand (200 + 10 % is 200 + 20); after × or ÷, or alone, a hundredth |
-| √, ÷   | An error for a negative number and for a division by zero; only clear takes the error away                   |
-| ±      | Changes the sign of the number typed, or of the result                                                       |
-| C      | Clears the calculation and keeps the memory                                                                  |
-| M+, M− | Adds to or subtracts from the memory; a sign "Memory in use" shows while the memory is not 0                 |
+| Calculator | Order of operations                                                                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Basic      | As entered, from left to right, as on a desktop calculator: 2 + 3 × 4 = gives 20                                                                 |
+| Standard   | The same                                                                                                                                         |
+| Scientific | Powers and roots (grouped from the right: 2 ^ 3 ^ 2 is 512), then nPr and nCr, then × and ÷, then + and −, and parentheses: 2 + 3 × 4 = gives 14 |
 
-The display is an `output` element, so that assistive technology reads each result. Typing works anywhere in the panel
-except that Enter presses a focused button:
+| Key                | Result                                                                                                                                                     |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| %                  | After + or −, that percent of the left operand (200 + 10 % is 200 + 20); after × or ÷, or alone, a hundredth                                               |
+| √, ÷               | An error for a negative number and for a division by zero; only clear takes the error away                                                                 |
+| ±                  | Changes the sign of the number typed, or of the result                                                                                                     |
+| C                  | Clears the calculation and keeps the memory, and on the scientific calculator the unit of angle                                                            |
+| M+, M−             | Adds to or subtracts from the memory; a sign "Memory in use" shows while the memory is not 0                                                               |
+| sin, cos, tan      | In the unit of angle of the list above the keys: degrees, radians or gradians; a right angle gives an exact result, and the tangent of 90 degrees an error |
+| Inv, Hyp           | The next trigonometric function is the inverse one, the hyperbolic one, or both; they show as pressed, and a function turns them off                       |
+| π, e               | The number, with all its digits                                                                                                                            |
+| x², x³, xʸ, ∛, ʸ√x | Square, cube, power and roots; ʸ√x takes the root of the degree typed after it, and a negative number has a root of an odd degree only                     |
+| log, ln, 10ˣ, eˣ   | The logarithms to base 10 and e, and their inverses; an error for the logarithm of a number that is not positive                                           |
+| 1/x, x!            | The reciprocal, and the factorial of a whole number from 0 to 170                                                                                          |
+| nPr, nCr           | Permutations and combinations of the number typed after the key out of the one before it; an error unless both are whole and the second is not larger      |
+| ( and )            | A parenthesis starts a number of its own, so an operation comes before it; equals closes those left open                                                   |
 
-| Typed            | Key                |
-| ---------------- | ------------------ |
-| `0` to `9`       | digits             |
-| `.` or `,`       | decimal point      |
-| `+` `-` `*` `/`  | the operations     |
-| `=` or Enter     | equals             |
-| `%`              | percent (standard) |
-| Escape or Delete | clear              |
+The display is an `output` element, so that assistive technology reads each result. Above it a line shows the operations that
+wait, such as `2 + 3 × (`. Typing works anywhere in the panel except that Enter presses a focused button:
+
+| Typed            | Key                                           |
+| ---------------- | --------------------------------------------- |
+| `0` to `9`       | digits                                        |
+| `.` or `,`       | decimal point                                 |
+| `+` `-` `*` `/`  | the operations                                |
+| `=` or Enter     | equals                                        |
+| `%`              | percent (standard)                            |
+| Escape or Delete | clear                                         |
+| `^` `(` `)` `!`  | power, parentheses and factorial (scientific) |
 
 The item can say where a calculator is available: `qti-calculator-info` names a file of the package, which is content for
 the candidate. The panel of a built-in calculator shows that file below the keys, in the viewer of
 the digital materials, and the panel of a host's tool that has no function shows it below the notice. The tool that the
-host builds gets it in `options.file`. The `description` of the calculator is shown above the keys.
+host builds gets it in `options.file`. The `description` of the calculator is shown above the keys. A host whose program
+requires a scientific calculator of its own gives it as the slot `scientific-calculator`, which then replaces the built-in one.
 
 ### Digital materials
 
@@ -286,7 +305,7 @@ The descriptions are listed under the heading "Materials to have ready", as text
 ### Tools of the host
 
 Each tool of the host has a button and a panel, and `slots[name](host, options)` builds the tool in the panel.
-The names are `scientific-calculator`, `graphing-calculator`, `dictionary`, `thesaurus`, `homophone-checker`,
+The names are `scientific-calculator` (in place of the built-in one), `graphing-calculator`, `dictionary`, `thesaurus`, `homophone-checker`,
 `note-taking`, `visual-organizer`, `outliner`, `peer-interaction` and `spell-checker`. The function returns the function
 that takes the tool down, which runs when the tool closes and on `destroy`. A tool without a function says that it is not
 available. Host tools are not built in: the player does not test them.
@@ -315,7 +334,7 @@ The stylesheet uses system colors, so that the tools follow the color scheme and
 - A rule is exactly `minimumLength` long, in the unit of the major increment.
 - The numbers of a rule and a protractor are in the unit of the major increment; the unit symbols are not translated.
 - A protractor measures 180 degrees.
-- `qti-calculator-info` is content for the candidate: the information model says that the calculator is available at the location it names, and that the file is information "to be made available to the learner". The player builds the basic and standard calculators in and takes the other types from the host, so it shows the file and gives it to the host's tool, and never runs it. It is not metadata, and it does not change the type of calculator.
+- `qti-calculator-info` is content for the candidate: the information model says that the calculator is available at the location it names, and that the file is information "to be made available to the learner". The player builds the basic, standard and scientific calculators in and takes the graphing one from the host, so it shows the file and gives it to the host's tool, and never runs it. It is not metadata, and it does not change the type of calculator.
 - QTI names no highlighter and no answer eliminator: they are custom supports, `ext:highlighter` and `ext:eliminator`, which `universalSupports` of the engine can give every candidate of a form as an option.
 - Only `qti-choice-interaction` is masked: the best practices guide requires masks for choice interactions only.
 - A digital material that is an LTI resource is a file here; the launch belongs to the host ([LTI items](lti-items.md)).
@@ -334,12 +353,13 @@ The stylesheet uses system colors, so that the tools follow the color scheme and
 
 ## Not included
 
-| Not included                                                                                                                                                 | Why                                                                                                                                                         |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Scientific and graphing calculators, and the dictionary, thesaurus, homophone checker, notes, visual organizer, outliner, peer interaction and spell checker | The host provides them through `slots`; the player has a slot, a button and a panel for each, and tests none of them                                        |
-| A viewer for every file type of a digital material                                                                                                           | The viewer shows the types in [Digital materials](#digital-materials) and runs nothing of the file; any other type is a link that opens in a tab of its own |
-| Physical materials                                                                                                                                           | They are things to have ready: the player lists their descriptions under a heading                                                                          |
-| Deciding which candidate has which tool                                                                                                                      | The profile decides; the player shows the tools in force                                                                                                    |
+| Not included                                                                                                                                     | Why                                                                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The graphing calculator, and the dictionary, thesaurus, homophone checker, notes, visual organizer, outliner, peer interaction and spell checker | The host provides them through `slots`; the player has a slot, a button and a panel for each, and tests none of them. No open comparator ships a graphing calculator                                                                                            |
+| Metric conversion, and a key that converts the number on the display between units of angle                                                      | The guide says the functions of a scientific calculator "may include" them. The calculator has every other key it names, and its list sets the unit in which the functions read and give angles; a program that needs more gives its own calculator in the slot |
+| A viewer for every file type of a digital material                                                                                               | The viewer shows the types in [Digital materials](#digital-materials) and runs nothing of the file; any other type is a link that opens in a tab of its own                                                                                                     |
+| Physical materials                                                                                                                               | They are things to have ready: the player lists their descriptions under a heading                                                                                                                                                                              |
+| Deciding which candidate has which tool                                                                                                          | The profile decides; the player shows the tools in force                                                                                                                                                                                                        |
 
 ## Files
 
@@ -349,7 +369,7 @@ Each file of `src/player/tools/` holds one concept.
 | ---------------------- | ----------------------------------------------------------------------------- |
 | `answer-masking.ts`    | Answer masking                                                                |
 | `calculator-engine.ts` | The state and the keys of the calculators                                     |
-| `calculator.ts`        | The panel of the basic and standard calculators                               |
+| `calculator.ts`        | The panel of the basic, standard and scientific calculators                   |
 | `check-input.ts`       | The check of the input of the tools                                           |
 | `context.ts`           | What a tool needs from the mount                                              |
 | `digital.ts`           | A digital material                                                            |

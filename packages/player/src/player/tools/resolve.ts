@@ -42,11 +42,9 @@ function isCalculatorType(value: string): value is CalculatorType {
   return CALCULATOR_TYPES.some((type) => type === value);
 }
 
-/** Returns the tool for a calculator type: the built-in basic and standard calculators, and a slot for the others. */
+/** Returns the tool for a calculator type: the built-in basic, standard and scientific calculators, and a slot for graphing. */
 function calculatorSpec(type: CalculatorType): ToolSpec {
-  return type === "basic" || type === "standard"
-    ? { kind: "calculator", type }
-    : { kind: "slot", tool: `${type}-calculator` };
+  return type === "graphing" ? { kind: "slot", tool: "graphing-calculator" } : { kind: "calculator", type };
 }
 
 /** Adds a tool; a tool that is in force already keeps its place and takes the support when it had none. */

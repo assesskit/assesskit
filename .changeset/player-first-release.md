@@ -62,3 +62,10 @@ the amount of magnification from 100 to 400 percent, of all content or of text a
 `mountSupportPanel` takes `onSettings` and `language`, a host that draws its own control sends the action through the session
 client, and `player.css` has the palettes under `data-ak-theme`. The two gray themes keep the 3:1 to 4:1 of the guide, below WCAG
 on purpose. At 400 percent the content reflows in a page 1280 pixels wide with no scrolling in two directions.
+
+The tools build in the scientific calculator beside the basic and standard ones, for an item's `qti-calculator-type` or the
+`calculator-type` of the profile: the keys of the best practices guide (inverse and hyperbolic functions, trigonometry in
+degrees, radians or gradians, π and e, squares, cubes, powers and roots, logarithms, the reciprocal, the factorial,
+permutations, combinations and parentheses), the order of operations, and a line of the operations that wait. Each number of a
+calculator keeps all its digits for the next operation. The slot `scientific-calculator` of a host replaces the built-in one;
+the graphing calculator stays a slot of the host.

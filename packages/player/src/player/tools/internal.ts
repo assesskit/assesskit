@@ -7,14 +7,19 @@
  * @module
  */
 export {
+  ANGLE_MODES,
   BASIC_KEYS,
   type CalculatorKey,
   type CalculatorState,
+  calculation,
   DIGIT_KEYS,
   INITIAL_STATE,
   KEYBOARD_KEYS,
   press,
+  SCIENTIFIC_ONLY_KEYS,
+  SCIENTIFIC_STATE,
   STANDARD_ONLY_KEYS,
+  setAngle,
 } from "./calculator-engine.js";
 export { checkToolsInput } from "./check-input.js";
 export { ANGLE_UNITS, LENGTH_UNITS, type ProtractorSpec, type RuleSpec } from "./model.js";

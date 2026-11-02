@@ -5,11 +5,13 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import type { ToolsInput } from "../src/player/tools/index.js";
 import {
+  ANGLE_MODES,
   ANGLE_UNITS,
   BASIC_KEYS,
   type CalculatorKey,
   type CalculatorState,
   CSS_PX_PER_MM,
+  calculation,
   checkToolsInput,
   DIGIT_KEYS,
   degrees,
@@ -26,7 +28,10 @@ import {
   type RuleSpec,
   resolveTools,
   ruleScale,
+  SCIENTIFIC_ONLY_KEYS,
+  SCIENTIFIC_STATE,
   STANDARD_ONLY_KEYS,
+  setAngle,
   unitSymbol,
 } from "../src/player/tools/internal.js";
 import { fuzzJson } from "./fuzz.js";
@@ -139,7 +144,7 @@ describe("calculator-engine", () => {
   it("clears the calculation and keeps the memory", () => {
     const cleared = type("5m3+C");
     expect(cleared.display).toBe("0");
-    expect(cleared.operator).toBeNull();
+    expect(cleared.pending).toEqual([]);
     expect(cleared.memory).toBe(5);
   });
 
@@ -203,6 +208,137 @@ describe("calculator-engine", () => {
   });
 });
 
+describe("calculator-engine: the scientific calculator", () => {
+  /** Presses keys on a scientific calculator, from one just switched on or from a state. */
+  const scientific = (keys: readonly CalculatorKey[], from: CalculatorState = SCIENTIFIC_STATE): CalculatorState =>
+    keys.reduce(press, from);
+  /** What the display shows after keys, which the test writes as the characters of `type` and key names apart. */
+  const reads = (...parts: readonly (string | CalculatorKey)[]): string => {
+    let state = SCIENTIFIC_STATE;
+    for (const part of parts) {
+      const key = SCIENTIFIC_ONLY_KEYS.find((each) => each === part);
+      state = key === undefined ? type(part, state) : press(state, key);
+    }
+    return state.error ? "error" : state.display;
+  };
+
+  it("follows the order of operations, where the basic and standard calculators run them as entered", () => {
+    expect(reads("2+3*4=")).toBe("14");
+    expect(shows("2+3*4=")).toBe("20");
+    expect(reads("2*3+4=")).toBe("10");
+    expect(reads("10-4/2=")).toBe("8");
+    expect(reads("2+3*")).toBe("3");
+    expect(reads("2*3+")).toBe("6");
+  });
+
+  it("groups with parentheses, and closes those left open at equals", () => {
+    expect(reads("2*", "open", "3+4", "close", "=")).toBe("14");
+    expect(reads("2*", "open", "3+4=")).toBe("14");
+    expect(reads("open", "open", "1+2", "close", "*3", "close", "=")).toBe("9");
+    expect(reads("5", "close", "=")).toBe("5");
+  });
+
+  it("raises to a power and takes a root, grouping powers from the right and before the other operations", () => {
+    expect(reads("2", "power", "10=")).toBe("1024");
+    expect(reads("2", "power", "3", "power", "2=")).toBe("512");
+    expect(reads("2+3", "power", "2=")).toBe("11");
+    expect(reads("27", "root", "3=")).toBe("3");
+    expect(reads("8~", "root", "3=")).toBe("-2");
+    expect(reads("16~", "root", "2=")).toBe("error");
+    expect(reads("8~", "power", "0.5=")).toBe("error");
+  });
+
+  it("squares, cubes and takes square and cube roots, reciprocals and factorials", () => {
+    expect(reads("12", "square")).toBe("144");
+    expect(reads("3", "cube")).toBe("27");
+    expect(reads("27~", "cube-root")).toBe("-3");
+    expect(reads("8", "reciprocal")).toBe("0.125");
+    expect(reads("0", "reciprocal")).toBe("error");
+    expect(reads("5", "factorial")).toBe("120");
+    expect(reads("0", "factorial")).toBe("1");
+    expect(reads("170", "factorial")).toBe("7.25741561531e+306");
+    expect(reads("171", "factorial")).toBe("error");
+    expect(reads("2.5", "factorial")).toBe("error");
+  });
+
+  it("counts permutations and combinations, and refuses what they do not count", () => {
+    expect(reads("5", "permutations", "2=")).toBe("20");
+    expect(reads("5", "combinations", "2=")).toBe("10");
+    expect(reads("52", "combinations", "5=")).toBe("2598960");
+    expect(reads("10", "combinations", "0=")).toBe("1");
+    expect(reads("2", "combinations", "5=")).toBe("error");
+    expect(reads("5.5", "permutations", "2=")).toBe("error");
+    expect(reads("2+5", "combinations", "2=")).toBe("12");
+  });
+
+  it("ends the loops of a large count at once, where the result has no number", () => {
+    expect(reads("999999999999", "permutations", "999999999=")).toBe("error");
+    expect(reads("999999999999", "combinations", "499999999=")).toBe("error");
+    expect(reads("999999999999", "combinations", "1=")).toBe("999999999999");
+  });
+
+  it("takes logarithms and their inverses, and refuses the logarithm of a number that is not positive", () => {
+    expect(reads("1000", "log")).toBe("3");
+    expect(reads("euler", "ln")).toBe("1");
+    expect(reads("3", "ten-power")).toBe("1000");
+    expect(reads("1", "exp")).toBe("2.71828182846");
+    expect(reads("0", "log")).toBe("error");
+    expect(reads("1~", "ln")).toBe("error");
+  });
+
+  it("gives exact values for right angles in each unit, and no tangent where the cosine is 0", () => {
+    expect(reads("30", "sin")).toBe("0.5");
+    expect(reads("180", "sin")).toBe("0");
+    expect(reads("90", "cos")).toBe("0");
+    expect(reads("45", "tan")).toBe("1");
+    expect(reads("90", "tan")).toBe("error");
+    expect(reads("270~", "sin")).toBe("1");
+    const radians = setAngle(SCIENTIFIC_STATE, "radian");
+    expect(scientific(["pi", "sin"], radians).display).toBe("0");
+    expect(scientific(["pi", "divide", "2", "equals", "tan"], radians).error).toBe(true);
+    expect(scientific(["1", "cos"], radians).display).toBe("0.540302305868");
+    expect(scientific(["1", "0", "0", "sin"], setAngle(SCIENTIFIC_STATE, "gradian")).display).toBe("1");
+  });
+
+  it("gives the inverse and the hyperbolic functions, in the unit of angle, and turns the modes off after a function", () => {
+    expect(reads("inverse", "0.5", "sin")).toBe("30");
+    expect(reads("inverse", "1", "tan")).toBe("45");
+    expect(reads("inverse", "2", "sin")).toBe("error");
+    expect(scientific(["inverse", "1", "cos"], setAngle(SCIENTIFIC_STATE, "radian")).display).toBe("0");
+    expect(scientific(["inverse", "0", "cos"], setAngle(SCIENTIFIC_STATE, "gradian")).display).toBe("100");
+    expect(reads("hyperbolic", "0", "cos")).toBe("1");
+    expect(reads("hyperbolic", "inverse", "0", "tan")).toBe("0");
+    const used = scientific(["inverse", "hyperbolic", "1", "sin"]);
+    expect([used.inverse, used.hyperbolic]).toEqual([false, false]);
+    expect(scientific(["inverse", "inverse"]).inverse).toBe(false);
+  });
+
+  it("keeps the digits behind the display, so that the next operation takes them all", () => {
+    expect(reads("1/3=*3=")).toBe("1");
+    expect(reads("pi")).toBe("3.14159265359");
+    expect(scientific(["pi"]).value).toBe(Math.PI);
+  });
+
+  it("keeps the unit of angle and the memory through clear and an error, and nothing else", () => {
+    const radians = setAngle(SCIENTIFIC_STATE, "radian");
+    const failed = scientific(["5", "memory-add", "1", "divide", "0", "equals"], radians);
+    expect(failed.error).toBe(true);
+    expect([failed.angle, failed.memory, failed.ordered]).toEqual(["radian", 5, true]);
+    expect(scientific(["clear"], failed)).toEqual({ ...radians, memory: 5 });
+  });
+
+  it("writes the operations that wait as a line", () => {
+    expect(calculation(scientific(["2", "add", "3", "multiply", "open", "4", "power"]))).toBe("2 + 3 \u00d7 ( 4 ^");
+    expect(calculation(scientific(["2", "add", "3", "equals"]))).toBe("");
+  });
+
+  it("has the keys of the standard calculator and its own, which the keyboard reaches with ^, (, ) and !", () => {
+    expect(SCIENTIFIC_ONLY_KEYS).toHaveLength(22);
+    expect(new Set([...BASIC_KEYS, ...STANDARD_ONLY_KEYS, ...SCIENTIFIC_ONLY_KEYS]).size).toBe(46);
+    expect(["^", "(", ")", "!"].map((key) => KEYBOARD_KEYS.get(key))).toEqual(["power", "open", "close", "factorial"]);
+  });
+});
+
 describe("calculator-engine properties", () => {
   const anyKey = fc.constantFrom<CalculatorKey>(...BASIC_KEYS, ...STANDARD_ONLY_KEYS);
 
@@ -213,6 +349,19 @@ describe("calculator-engine properties", () => {
         expect(Number.isFinite(Number(state.display))).toBe(true);
         expect(Number.isFinite(state.memory)).toBe(true);
         if (state.error) expect(state.display).toBe("0");
+      }),
+    );
+  });
+
+  it("never throws in the scientific calculator either, and shows the number it holds", () => {
+    const scientificKey = fc.constantFrom<CalculatorKey>(...BASIC_KEYS, ...STANDARD_ONLY_KEYS, ...SCIENTIFIC_ONLY_KEYS);
+    fc.assert(
+      fc.property(fc.array(scientificKey, { maxLength: 60 }), fc.constantFrom(...ANGLE_MODES), (keys, angle) => {
+        const state = keys.reduce(press, setAngle(SCIENTIFIC_STATE, angle));
+        expect(Number.isFinite(state.value)).toBe(true);
+        expect(Number.isFinite(Number(state.display))).toBe(true);
+        expect(Number(state.display) === Number(formatNumber(state.value)), state.display).toBe(true);
+        if (state.error) expect([state.display, state.pending]).toEqual(["0", []]);
       }),
     );
   });
@@ -637,7 +786,7 @@ describe("resolve", () => {
     expect(resolveTools({ companion: companion({ rules: [RULE_XML, RULE_XML] }), supports: [] }).tools).toHaveLength(1);
   });
 
-  it("builds in the basic and standard calculators and leaves the others to the host", () => {
+  it("builds in the basic, standard and scientific calculators and leaves the graphing one to the host", () => {
     const kinds = (types: readonly string[]) =>
       resolveTools({
         companion: companion({ calculators: types.map((type) => calculatorXml(type, type)) }),
@@ -648,7 +797,7 @@ describe("resolve", () => {
     expect(kinds(["basic", "standard", "scientific", "graphing"])).toEqual([
       "basic",
       "standard",
-      "scientific-calculator",
+      "scientific",
       "graphing-calculator",
     ]);
   });
@@ -711,7 +860,7 @@ describe("resolve", () => {
       ],
     });
     expect(set.tools).toHaveLength(1);
-    expect(set.tools[0]?.spec).toEqual({ kind: "slot", tool: "scientific-calculator" });
+    expect(set.tools[0]?.spec).toEqual({ kind: "calculator", type: "scientific" });
     expect(set.tools[0]?.support).toMatchObject({ name: "calculator-on-screen", active: true });
   });
 
@@ -759,9 +908,9 @@ describe("resolve", () => {
     const set = resolveTools({
       companion: companion({
         calculators: [
-          calculatorXml("scientific", "Scientific", {
+          calculatorXml("graphing", "Graphing", {
             href: "tools/sci.html",
-            label: "Scientific file",
+            label: "Graphing file",
             mimeType: "text/html",
           }),
           calculatorXml("basic", "Basic"),
@@ -772,7 +921,7 @@ describe("resolve", () => {
     expect(set.tools.map(({ spec }) => spec.kind)).toEqual(["slot", "calculator"]);
     expect(set.tools[0]?.file).toMatchObject({
       kind: "calculator-info",
-      label: "Scientific file",
+      label: "Graphing file",
       mimeType: "text/html",
       fileHref: { value: "tools/sci.html" },
     });

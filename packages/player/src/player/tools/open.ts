@@ -33,7 +33,10 @@ export function openTool(context: ToolContext, { spec, description, file }: Tool
     case "eliminator":
       return openEliminator(context);
     case "calculator":
-      return openCalculator(context, spec.type, description, file, close);
+      // A scientific calculator of the host, such as the one a program requires, replaces the built-in one.
+      return spec.type === "scientific" && context.slots["scientific-calculator"] !== undefined
+        ? openSlot(context, "scientific-calculator", file, close)
+        : openCalculator(context, spec.type, description, file, close);
     case "slot":
       return openSlot(context, spec.tool, file, close);
     case "digital":
