@@ -56,6 +56,13 @@ describe("the markup of tabs and sortable tables", () => {
     expect(await issues(Table)).toEqual([]);
   });
 
+  it("accepts the attributes of a timed recording and of a count of words, which QTI leaves to the player", async () => {
+    const upload =
+      '<qti-upload-interaction response-identifier="R" type="audio/webm" data-ak-record-start="15" data-ak-record-limit="45" data-ak-record-once="true"/>';
+    expect(await issues(upload)).toEqual([]);
+    expect(await issues('<qti-extended-text-interaction response-identifier="R" data-ak-count="words"/>')).toEqual([]);
+  });
+
   it("makes a tab a span, because the schema has no button", async () => {
     expect(await issues('<div role="tablist"><button role="tab" aria-controls="p">One</button></div>')).not.toEqual([]);
   });
