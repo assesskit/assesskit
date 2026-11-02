@@ -94,11 +94,28 @@ export function trackAudioContexts(): void {
 }
 
 /**
+ * Gives the page a user activation by pressing a button that it adds and removes. WebKit keeps an audio context suspended
+ * unless a gesture of the person came a few seconds before, as a microphone that is not capturing does not excuse, and the
+ * oscillator that stands for the microphone does not capture.
+ */
+async function activate(): Promise<void> {
+  const button = document.createElement("button");
+  button.style.cssText = "position: fixed; top: 0; left: 0; width: 8px; height: 8px; z-index: 2147483647;";
+  document.body.append(button);
+  try {
+    await userEvent.click(button);
+  } finally {
+    button.remove();
+  }
+}
+
+/**
  * A stream of an oscillator, which a test gives in place of the microphone. It needs an audio context that runs, so a test
  * that uses it waits for {@link audioContextRuns} first. It returns once sound reaches the end of the context: a device that
  * has just been opened takes a while to start, and a recording made before that holds a header and no sound.
  */
 export async function fakeMicrophone(): Promise<MediaStream> {
+  await activate();
   const context = new AudioContext();
   await context.resume();
   const oscillator = context.createOscillator();

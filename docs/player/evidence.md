@@ -71,6 +71,8 @@ when the output is missing, and does not skip; without it the test skips, so tha
 CI and the container below set it. Two tests skip in WebKit on Linux, for a reason that is not the device: the WebKit of
 Playwright there has no `MediaRecorder`, so the test of the recorder of the browser and the test of a recording in a type that
 the interaction accepts run in Chromium and Firefox, and the WAV recording through the worklet runs in all three.
+WebKit also keeps an audio context suspended unless a gesture of the person came a few seconds before, and the oscillator that stands for
+the microphone does not capture, so the fake microphone presses a button of its own before it makes its context.
 
 The tests of the graphic interactions ([graphics](graphics.md)) show items through `graphic-fixture.ts`, which waits for the
 pictures, keeps what a drawing uploads in memory and gives the interactions of `interactions-fixture.ts` their pictures as
