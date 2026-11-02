@@ -1,4 +1,5 @@
 import { DataError } from "@assesskit/runtime/errors";
+import { hasMoreTokensThan } from "./json-tokens.js";
 
 /** The media type of every body of the binding. */
 const JSON_MEDIA_TYPE = "application/json";
@@ -14,18 +15,26 @@ function join(chunks: readonly Uint8Array[], length: number): Uint8Array {
   return bytes;
 }
 
+/** The limits of a body: its bytes, counted as it arrives, and the tokens of its JSON, counted before it is parsed. */
+export interface BodyLimits {
+  readonly maxBytes: number;
+  readonly maxTokens: number;
+}
+
 /**
- * Reads the JSON body of a request, within a limit on its size, for as long as the caller waits.
+ * Reads the JSON body of a request, within limits on its size, for as long as the caller waits.
  *
  * @param request - The request, whose body is read once.
- * @param maxBytes - The most bytes of body; the read stops at the first byte above it.
+ * @param limits - The most bytes of body, where the read stops at the first byte above it, and the most tokens of its JSON,
+ * which bound the memory of the parse.
  * @param signal - The signal of the caller: when it aborts, the stream is cancelled with its reason and nothing more is read.
  * @returns The parsed JSON.
- * @throws `DataError` when the content type is not `application/json`, the body is larger than the limit, empty, not UTF-8,
+ * @throws `DataError` when the content type is not `application/json`, the body is larger than a limit, empty, not UTF-8,
  * or not JSON.
  * @throws `signal.reason` when the signal aborts.
  */
-export async function readJsonBody(request: Request, maxBytes: number, signal: AbortSignal): Promise<unknown> {
+export async function readJsonBody(request: Request, limits: BodyLimits, signal: AbortSignal): Promise<unknown> {
+  const { maxBytes, maxTokens } = limits;
   const mediaType = request.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
   if (mediaType !== JSON_MEDIA_TYPE) {
     throw new DataError(`The request must have the content type ${JSON_MEDIA_TYPE}, found ${mediaType ?? "none"}.`);
@@ -59,6 +68,11 @@ export async function readJsonBody(request: Request, maxBytes: number, signal: A
     text = new TextDecoder("utf-8", { fatal: true }).decode(join(chunks, length));
   } catch {
     throw new DataError("The body of the request is not valid UTF-8.");
+  }
+  if (hasMoreTokensThan(text, maxTokens)) {
+    throw new DataError(
+      `The JSON of the request has more than ${maxTokens} tokens, above the limit of the option maxTokens.`,
+    );
   }
   try {
     return JSON.parse(text);

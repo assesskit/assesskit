@@ -55,6 +55,13 @@ export const CAT_REST_RULES: readonly Rule[] = [
     test: TEST,
   },
   {
+    rule: "A body whose JSON has more tokens than maxTokens is refused before it is parsed.",
+    file: BODY,
+    find: "if (hasMoreTokensThan(text, maxTokens)) {",
+    replace: "if (false) {",
+    test: TEST,
+  },
+  {
     rule: "A declared length above maxBodyBytes is refused before the body is read.",
     file: BODY,
     find: 'if (Number(request.headers.get("content-length")) > maxBytes) throw tooLarge;',

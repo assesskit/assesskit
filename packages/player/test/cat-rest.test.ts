@@ -1073,6 +1073,42 @@ describe("createCatRestHandler", () => {
     expect(calls()).toEqual([]);
   });
 
+  it("answers 400 for a body with more tokens of JSON than the limit, before it parses it", async () => {
+    const { port, calls } = stubPort();
+    // Five tokens: the braces, the name, the colon and the value; white space and the escaped quote count nothing.
+    const exact = ' { "sectionConfiguration" : "x\\"y" } ';
+    const handler = handlerOf(port, { maxTokens: 5 });
+    expect((await handler(requestOf("POST", "/sections", { body: exact }))).status).toBe(201);
+    const many = '{"sectionConfiguration":"x","qtiUsagedata":null}';
+    await expectFailure(
+      await handler(requestOf("POST", "/sections", { body: many })),
+      400,
+      "invaliddata",
+      "The JSON of the request has more than 5 tokens, above the limit of the option maxTokens.",
+    );
+    // A run of a number counts once, and the count stops at the first token above the limit.
+    await expectFailure(
+      await handler(requestOf("POST", "/sections", { body: `[${"123,".repeat(1000)}1]` })),
+      400,
+      "invaliddata",
+      /^The JSON of the request has more than 5 tokens/,
+    );
+    // Only the body within the limit reached the port.
+    expect(calls()).toHaveLength(1);
+    // The default is a million: a body of 2 MiB of empty objects is refused before the parse would build them.
+    await expectFailure(
+      await handlerOf(port)(requestOf("POST", "/sections", { body: `[${"{},".repeat(700_000)}{}]` })),
+      400,
+      "invaliddata",
+      "The JSON of the request has more than 1000000 tokens, above the limit of the option maxTokens.",
+    );
+    for (const maxTokens of [0, -1, 1.5, json<number>("null"), json<number>('"big"')]) {
+      expect(() => createCatRestHandler(port, { authorize, maxTokens }), String(maxTokens)).toThrow(
+        /^The options object is invalid at maxTokens/,
+      );
+    }
+  });
+
   it("answers 400 for a body above the limit without reading it to its end", async () => {
     const { port, calls } = stubPort();
     const exact = JSON.stringify({ sectionConfiguration: "x" });

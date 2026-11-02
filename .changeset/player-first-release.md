@@ -7,7 +7,7 @@ interaction, hosts portable custom interactions in a sandboxed frame, applies pe
 session with navigation, timers, review and feedback, in English and Indonesian. For exams it has the session host, the asset
 gate that serves package files, scoring for raters with an accessible rating form for a scoring rubric (`mountRatingForm`), and adaptive testing. The
 subpath `@assesskit/player/cat-rest` has both sides of the REST binding of CAT 1.0, `createRestCatPort` for the client of the remote
-CAT engines that the host configured, which it reaches by the reference that a package names, and `createCatRestHandler` for the engine side, over web `Request` and `Response`, whose `authorize` step answers 401, 403 or with the port of the caller. It stays on servers, because the client holds an OAuth
+CAT engines that the host configured, which it reaches by the reference that a package names, and `createCatRestHandler` for the engine side, over web `Request` and `Response`, whose `authorize` step answers 401, 403 or with the port of the caller, and which refuses a body above `maxBodyBytes` as it arrives and one with more JSON tokens than `maxTokens` before it parses it. It stays on servers, because the client holds an OAuth
 client secret. The session host and a practice session offer the host side of a session (`HostSession`) alike, through
 `session(id)` and `host`: the host supplies external scores and reads pending work, scorer views and results, and a practice
 session reports the events of each step to a listener. Session calls take an `AbortSignal`. With the option `cat`, a session host and a local session answer their own CAT

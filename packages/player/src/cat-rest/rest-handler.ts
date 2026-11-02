@@ -61,6 +61,15 @@ export interface CatRestHandlerOptions {
    */
   readonly maxBodyBytes?: number;
   /**
+   * The most tokens of the JSON of a request body, counted before it is parsed: a structural character, a string, a number
+   * or a literal each count one. A body with more answers 400. The memory of a parse follows its tokens, not its bytes:
+   * 32 MiB of empty objects parse into more than a gigabyte, and a million tokens into tens of megabytes. A base64 file is
+   * one token, and a report of a section of a hundred items a few tens of thousands.
+   *
+   * @defaultValue `1000000`
+   */
+  readonly maxTokens?: number;
+  /**
    * Receives the error behind every answer of 500, with the request and the operation, so that an operator sees what failed.
    * It is not called for a refusal of the caller (4xx), for an engine that is busy (429, 503), or after an abort, when
    * nothing is answered. An error or a rejection of the callback is ignored, and it is not awaited. What it receives may hold
@@ -77,6 +86,9 @@ const DEFAULT_ROOT = "/ims/cat/v1p0";
 /** The default size limit of a request body, in bytes: that of an XML file in the runtime, 32 MiB. */
 const DEFAULT_MAX_BODY_BYTES = 33_554_432;
 
+/** The default limit on the tokens of the JSON of a request body. */
+const DEFAULT_MAX_TOKENS = 1_000_000;
+
 const rootSchema = v.pipe(
   v.string(),
   v.check(
@@ -90,6 +102,7 @@ const optionsSchema = v.strictObject({
   root: v.optional(rootSchema, DEFAULT_ROOT),
   prefix: v.optional(httpsUrlSchema),
   maxBodyBytes: v.optional(positiveIntegerSchema, DEFAULT_MAX_BODY_BYTES),
+  maxTokens: v.optional(positiveIntegerSchema, DEFAULT_MAX_TOKENS),
   onError: v.optional(functionSchema<NonNullable<CatRestHandlerOptions["onError"]>>()),
 });
 
@@ -140,7 +153,7 @@ type Invocation = () => Promise<() => unknown>;
  * - **Session end.** A stage without items is sent as no `nextItems`, which is how the binding ends a session.
  *
  * @param port - The engine, for a request that `authorize` answers with `true`.
- * @param options - Authorization, the root path, the reference, the size limit of a body and the callback for faults.
+ * @param options - Authorization, the root path, the reference, the size limits of a body and the callback for faults.
  * @returns The handler.
  * @throws `DataError` when `port` lacks a method or an option has the wrong type.
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding}
@@ -150,7 +163,12 @@ export function createCatRestHandler(
   options: CatRestHandlerOptions,
 ): (request: Request) => Promise<Response> {
   parseWith(portSchema, port, "The port");
-  const { authorize, root, prefix, maxBodyBytes, onError } = parseWith(optionsSchema, options, "The options object");
+  const { authorize, root, prefix, maxBodyBytes, maxTokens, onError } = parseWith(
+    optionsSchema,
+    options,
+    "The options object",
+  );
+  const limits = { maxBytes: maxBodyBytes, maxTokens };
   const reference = prefix === undefined ? undefined : withoutTrailingSlashes(prefix);
 
   /** Tells the operator about a fault, never after an abort, and never lets the callback change the answer. */
@@ -171,7 +189,7 @@ export function createCatRestHandler(
     engineReference: string,
     request: Request,
   ): Promise<Invocation> => {
-    const body = (): Promise<unknown> => readJsonBody(request, maxBodyBytes, request.signal);
+    const body = (): Promise<unknown> => readJsonBody(request, limits, request.signal);
     switch (operation) {
       case "createSection": {
         const data = readSectionBody(await body());

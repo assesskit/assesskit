@@ -180,7 +180,8 @@ items to present. It trusts nothing it is sent.
 - The handler does not know who a client is. A host that serves several clients on one root answers with the port of the
   caller, built over the shared engine with a check of the owner of every section and session. Without it every client with a
   valid token can read and end every section, and the guide shows the pattern.
-- A body must be `application/json`, at most `maxBodyBytes` (32 MiB by default), counted as it arrives, and valid UTF-8 and
+- A body must be `application/json`, at most `maxBodyBytes` (32 MiB by default), counted as it arrives, with at most
+  `maxTokens` tokens of JSON (a million by default), counted before the parse, whose memory follows the tokens, and valid UTF-8 and
   JSON. Each body is read with a strict schema of the binding, so an unknown property is a 400; the assessment result is read
   by the runtime's codec.
 - The status follows the origin of an error. What the caller sent wrong is a 400 that names the path of the caller's own value.
