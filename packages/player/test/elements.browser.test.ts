@@ -854,6 +854,18 @@ describe("extended text", () => {
     expect(scene.find("[role=textbox]").textContent).toBe("<p>broken");
   });
 
+  it("leaves out the characters that XML forbids, such as the form feed of text pasted from a PDF, so that the answer reads back", () => {
+    const scene = mountScene(declare("single", "string"), Body('format="xhtml"'));
+    const area = scene.find("[role=textbox]");
+    area.textContent = "one\f two\u0001 \ud800three \u{1f600}";
+    area.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    const answer = scene.responses.at(-1)?.value ?? null;
+    expect(answer).toEqual(single("string", "<p>one two three \u{1f600}</p>"));
+    const again = mountScene(declare("single", "string"), Body('format="xhtml"'));
+    again.setValue("R", answer);
+    expect(again.find("[role=textbox]").innerHTML).toBe("<p>one two three \u{1f600}</p>");
+  });
+
   it("formats the selected text with the buttons of the toolbar", async () => {
     const scene = mountScene(declare("single", "string"), Body('format="xhtml"'));
     const area = scene.find("[role=textbox]");

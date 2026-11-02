@@ -48,8 +48,18 @@ const COMMANDS: readonly (readonly [keyof Messages, string])[] = [
   ["editorNumberedList", "insertOrderedList"],
 ];
 
+/**
+ * The characters that XML does not allow in a document, which a paste can bring, such as the form feed of text from a PDF:
+ * an answer that held one would not read back as XHTML. With the flag `u`, the surrogates match only where they are alone.
+ *
+ * @see {@link https://www.w3.org/TR/xml/#charsets | XML 1.0, characters}
+ */
+// biome-ignore lint/suspicious/noControlCharactersInRegex: the control characters are what the pattern finds.
+const NOT_XML = /[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿\uD800-\uDFFF]/gu;
+
+/** Writes text as XHTML: the characters that XML forbids are left out, and those of markup escaped. */
 const escapeText = (text: string): string =>
-  text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  text.replaceAll(NOT_XML, "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 
 /** Writes a node of the editor as XHTML of the kept elements. */
 function write(node: Node): string {
