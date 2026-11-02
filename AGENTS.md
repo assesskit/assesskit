@@ -82,7 +82,7 @@ Biome enforces, folder by folder.
 | `pnpm check:licenses`            | Fails on a production dependency whose license is not MIT, Apache-2.0, BSD or ISC                                                                                        |
 | `pnpm check:audit`               | `pnpm audit` of the production dependencies at any severity and of all dependencies at high; needs the network                                                           |
 | `pnpm check:rules`               | Removes each security rule of `scripts/rules/` from a copy of the code and fails when its test still passes; needs Chromium; takes the source files whose rules to check |
-| `pnpm docs:api`                  | TypeDoc into `docs/api`; fails on undocumented exports                                                                                                                   |
+| `pnpm docs:api`                  | TypeDoc into `docs/api`, with the pinned Mermaid copied in so that no page loads a script from elsewhere; fails on undocumented exports                                  |
 | `pnpm compat`                    | The built JavaScript and the CSS of the player stay inside the browser baseline                                                                                          |
 | `pnpm compat:engines`            | The smoke test in the pinned old browsers; needs Docker                                                                                                                  |
 | `pnpm corpus`, `pnpm schemas`    | Download the 1EdTech examples into `.cache/corpus` and the XSDs into `.cache/schemas`; `corpus:pin` and `schemas:pin` write new hashes                                   |
