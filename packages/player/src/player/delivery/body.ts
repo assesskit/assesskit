@@ -44,7 +44,10 @@ export interface Body {
   readonly content: ContentRoot;
   /** The host of the portable custom interactions in the content. */
   readonly pci: PciHost;
-  /** Resolves when the interactions have handed over what the candidate gave, and the responses are on their way to the session. */
+  /**
+   * Resolves when the interactions, portable custom interactions included, have handed over what the candidate gave, and
+   * the responses are on their way to the session.
+   */
   settled(): Promise<void>;
   /** Sends an action that submits or leaves the item once its interactions have settled, so that a pending drawing is in what goes. */
   sendSettled(action: CandidateAction): Promise<void>;
@@ -150,7 +153,7 @@ export function createBody(context: BodyContext): Body {
   const interactionElements = (): InteractionElement[] =>
     [...content.root.querySelectorAll("*")].filter((element) => element instanceof InteractionElement);
   const settled = async (): Promise<void> => {
-    await Promise.all(interactionElements().map((element) => element.settled()));
+    await Promise.all([pci.settled(), ...interactionElements().map((element) => element.settled())]);
   };
   const sendSettled = async (action: CandidateAction): Promise<void> => {
     await settled();

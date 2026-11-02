@@ -289,9 +289,10 @@ was mounted for: a view that presents another item arrives before that item is d
 content still shown goes to the item it belongs to, which the engine refuses once the candidate has left it.
 
 A request that submits or leaves the item (`submit`, `skip`, `next-attempt`, `end-attempt`, `end-part`, `end-test` and every
-`move`) waits first for `settled()` of each interaction element, after the candidate has confirmed it. An interaction that
-stores its response in the background, such as a drawing whose picture is being uploaded, hands it over by then, and the
-`set-responses` that carries it goes before the request. Without this the request would reach the engine first, and the
+`move`) waits first for `settled()` of each interaction element and of each portable custom interaction of an item that is
+interacting, after the candidate has confirmed it. An interaction that stores its response in the background, such as a
+drawing whose picture is being uploaded, hands it over by then, and so does a portable custom interaction that fires no
+`qti-interaction-changed`, whose `getResponse()` the player reads; the `set-responses` that carries it goes before the request. Without this the request would reach the engine first, and the
 drawing would be missing from what is submitted or lost with the item.
 
 Each portable custom interaction runs in its frame ([PCI](pci.md)). The player loads its module resolution files from the

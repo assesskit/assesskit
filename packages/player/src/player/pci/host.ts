@@ -4,7 +4,7 @@ import type { Presentation } from "../presentation/index.js";
 import { checkPresentation } from "../presentation/internal.js";
 import { checkPciFrameOptions } from "./check-options.js";
 import { describeFrame } from "./describe-frame.js";
-import { createResponseDecoder } from "./files.js";
+import { createResponseDecoder, responseKey } from "./files.js";
 import type { PciEvent, PciFrameOptions } from "./options.js";
 import type { PciCommand, PciFrameMessage, PciValidityMethod, PciValidityResult } from "./protocol.js";
 import { readFrameMessage } from "./read-message.js";
@@ -68,6 +68,18 @@ export interface PciFrame {
    */
   setPresentation(presentation: Presentation): void;
   /**
+   * Has the interaction hand over its response and state, and resolves when the events of the frame have been delivered.
+   *
+   * @remarks
+   * An interaction need not fire `qti-interaction-changed`: the player reads `getResponse()` and `getState()`, and delivers
+   * them as a `changed` event when they differ from what the frame last told. Call it before an action that submits or
+   * leaves the item. It waits at most two seconds for a frozen module, and resolves at once for a frame that is not running.
+   *
+   * @returns A promise that resolves when the response is delivered, its files stored.
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, portable custom interactions}
+   */
+  settled(): Promise<void>;
+  /**
    * Hands over the final response and state as a `completed` event, lets the interaction call `oncompleted`, and removes the
    * frame.
    *
@@ -83,9 +95,12 @@ export interface PciFrame {
 
 type Phase = "waiting" | "started" | "closing" | "closed";
 
+/** A message of the frame that answers a request of the player. */
+type Answer = Extract<PciFrameMessage, { readonly type: "validity" | "snapshot" }>;
+
 /** An event as the frame sent it: a response that is JSON and not yet a value. */
 type RawEvent =
-  | Exclude<PciFrameMessage, { readonly type: "loaded" | "height" | "validity" | "completed" }>
+  | Exclude<PciFrameMessage, { readonly type: "loaded" | "height" | "validity" | "snapshot" | "completed" }>
   | { readonly type: "completed"; readonly response: unknown; readonly state: string };
 
 function createFrameElement(staticUrl: string, title: string): HTMLIFrameElement {
@@ -138,13 +153,19 @@ export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): Pc
     onError(error);
     return undefined;
   });
-  const asked = new Map<number, (value: PciValidityResult) => void>();
+  const asked = new Map<number, (answer: Answer | undefined) => void>();
   let presentation: Presentation = options.presentation ?? { attributes: new Map(), properties: new Map() };
   let phase: Phase = "waiting";
   let nextId = 0;
   let finishClosing: (() => void) | undefined;
   let closing: Promise<void> | undefined;
   let delivery: Promise<void> = Promise.resolve();
+  // The response and the state that the frame last told, as text that compares, so that `settled` hands over only what
+  // changed; the frame starts with the response it is bound to.
+  let heard: string | undefined;
+  let boundTo: unknown;
+  const heardOf = (response: unknown, state: string): string =>
+    JSON.stringify([responseKey(response, options.response.declaration) ?? null, state]);
 
   // The target origin is "*" because an opaque origin cannot be named.
   const post = (command: PciCommand): void => frame.contentWindow?.postMessage(command, "*");
@@ -176,21 +197,37 @@ export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): Pc
     });
   };
 
+  /** Sends the frame its start once it runs, or fails it when the files of the variables could not be read. */
+  const begin = (): void => {
+    phase = "started";
+    void starting.then((start) => {
+      if (start === undefined) {
+        deliver({ type: "failed", reason: "files" });
+      } else {
+        boundTo = start.boundTo;
+        post({ ...start, presentation });
+      }
+    });
+  };
+
+  /** Delivers an event of the running interaction, and notes the response and the state it tells. */
+  const tell = (message: RawEvent): void => {
+    if (message.type === "ready") heard = heardOf(boundTo, message.state);
+    else if (message.type !== "failed") heard = heardOf(message.response, message.state);
+    deliver(message);
+  };
+
   const handle = (message: PciFrameMessage): void => {
     switch (message.type) {
       case "loaded":
-        if (phase === "waiting") {
-          phase = "started";
-          void starting.then((start) =>
-            start === undefined ? deliver({ type: "failed", reason: "files" }) : post({ ...start, presentation }),
-          );
-        }
+        if (phase === "waiting") begin();
         break;
       case "height":
         setHeight(message.height);
         break;
       case "validity":
-        asked.get(message.id)?.(message.value);
+      case "snapshot":
+        asked.get(message.id)?.(message);
         break;
       case "completed":
         if (phase === "closing") {
@@ -199,7 +236,7 @@ export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): Pc
         }
         break;
       default:
-        if (phase === "started") deliver(message);
+        if (phase === "started") tell(message);
     }
   };
 
@@ -215,19 +252,40 @@ export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): Pc
     handle(message);
   };
 
-  const ask = (method: PciValidityMethod, message?: string): Promise<PciValidityResult> => {
+  /** Sends a request that the frame answers with a message of its `id`; `undefined` when it does not run or answer in time. */
+  const request = (command: (id: number) => PciCommand): Promise<Answer | undefined> => {
     if (phase !== "started") return Promise.resolve(undefined);
     const id = nextId++;
     return new Promise((resolve) => {
-      const answer = (value: PciValidityResult): void => {
+      const answer = (value: Answer | undefined): void => {
         clearTimeout(timer);
         asked.delete(id);
         resolve(value);
       };
       const timer = setTimeout(answer, REPLY_TIMEOUT_MS, undefined);
       asked.set(id, answer);
-      post({ type: "validity", id, method, ...(message === undefined ? {} : { message }) });
+      post(command(id));
     });
+  };
+
+  const ask = async (method: PciValidityMethod, message?: string): Promise<PciValidityResult> => {
+    const answer = await request((id) => ({
+      type: "validity",
+      id,
+      method,
+      ...(message === undefined ? {} : { message }),
+    }));
+    return answer?.type === "validity" ? answer.value : undefined;
+  };
+
+  const settled = async (): Promise<void> => {
+    const answer = await request((id) => ({ type: "snapshot", id }));
+    const flushed = answer?.type === "snapshot" ? answer.flushed : null;
+    if (phase === "started" && flushed !== null && heardOf(flushed.response, flushed.state) !== heard) {
+      heard = heardOf(flushed.response, flushed.state);
+      deliver({ type: "changed", ...flushed, valid: undefined });
+    }
+    await delivery;
   };
 
   const close = async (): Promise<void> => {
@@ -270,6 +328,7 @@ export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): Pc
       const message = await ask("getCustomValidity");
       return typeof message === "string" ? message : undefined;
     },
+    settled,
     setPresentation: (next) => {
       checkPresentation(next, "The presentation");
       presentation = next;

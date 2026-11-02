@@ -136,6 +136,12 @@ export type PciCommand =
     }
   /** Sets the look that the candidate's supports ask for on the frame's `html` element, in place of the earlier one. */
   | { readonly type: "presentation"; readonly presentation: Presentation }
+  /** Asks for the response and the state; the frame answers with a `snapshot` message of the same `id`. */
+  | {
+      readonly type: "snapshot";
+      /** Pairs the answer with the request. */
+      readonly id: number;
+    }
   /** Asks the frame to hand over the response and state and to call `oncompleted`. */
   | { readonly type: "complete" };
 
@@ -163,6 +169,12 @@ export type PciFrameMessage =
   | { readonly type: "height"; readonly height: number }
   /** The answer to a `validity` command. */
   | { readonly type: "validity"; readonly id: number; readonly value: PciValidityResult }
+  /** The answer to a `snapshot` command: the response and the state, or `null` when no interaction runs. */
+  | {
+      readonly type: "snapshot";
+      readonly id: number;
+      readonly flushed: { readonly response: unknown; readonly state: string } | null;
+    }
   /** The answer to `complete`: the final response and state, or `null` when no interaction existed. */
   | {
       readonly type: "completed";

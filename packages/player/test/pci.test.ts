@@ -18,6 +18,7 @@ import {
   type PciFrameMessage,
   pciModules,
   readFrameMessage,
+  responseKey,
   toJson,
 } from "../src/player/pci/internal.js";
 
@@ -149,6 +150,32 @@ describe("encodeVariable", () => {
     };
     const value = single("file", { reference: "stored-1", mimeType: "text/plain" });
     await expect(encodeVariable({ value, declaration: FILE }, files)).rejects.toThrow("The storage is down.");
+  });
+});
+
+describe("responseKey", () => {
+  const record: ValueDeclaration = { cardinality: "record" };
+
+  it("gives one text for every JSON of a value, and another for another value", () => {
+    expect(responseKey(null, INTEGER)).toBe(responseKey({ base: null }, INTEGER));
+    expect(responseKey({ base: { integer: 3 } }, INTEGER)).not.toBe(responseKey({ base: { integer: 4 } }, INTEGER));
+    expect(responseKey({ record: [{ name: "a", base: { integer: 1 } }] }, record)).not.toBe(
+      responseKey({ record: [{ name: "a", base: { integer: 2 } }] }, record),
+    );
+  });
+
+  it("counts a file by its type, its name and its bytes, and stores none", () => {
+    const file = (data: string, name: string) => ({ base: { file: { data, mime: "text/plain", name } } });
+    expect(responseKey(file(PLEASURE.base64, "a.txt"), FILE)).toBe(responseKey(file(PLEASURE.base64, "a.txt"), FILE));
+    expect(responseKey(file(PLEASURE.base64, "a.txt"), FILE)).not.toBe(responseKey(file("", "a.txt"), FILE));
+    expect(responseKey(file(PLEASURE.base64, "a.txt"), FILE)).not.toBe(
+      responseKey(file(PLEASURE.base64, "b.txt"), FILE),
+    );
+  });
+
+  it("gives undefined for JSON that is no value of the declaration", () => {
+    expect(responseKey({ base: { string: "x" } }, INTEGER)).toBeUndefined();
+    expect(responseKey(json("5"), INTEGER)).toBeUndefined();
   });
 });
 
@@ -671,6 +698,12 @@ describe("readFrameMessage", () => {
       flushed: { response: { base: null }, state: "s" },
     });
     expect(read('{"type":"completed","flushed":null}')).toEqual({ type: "completed", flushed: null });
+    expect(read('{"type":"snapshot","id":2,"flushed":{"response":{"base":{"integer":1}},"state":"s"}}')).toEqual({
+      type: "snapshot",
+      id: 2,
+      flushed: { response: { base: { integer: 1 } }, state: "s" },
+    });
+    expect(read('{"type":"snapshot","id":0,"flushed":null}')).toEqual({ type: "snapshot", id: 0, flushed: null });
     expect(read('{"type":"failed","reason":"register"}')).toEqual({ type: "failed", reason: "register" });
   });
 
@@ -730,6 +763,8 @@ describe("readFrameMessage", () => {
     expect(() => read('{"type":"completed","flushed":5}')).toThrow(
       new DataError("The final state of an interaction must be an object or null, found 5."),
     );
+    expect(() => read('{"type":"snapshot","id":"1","flushed":null}')).toThrow("The identifier of a snapshot request");
+    expect(() => read('{"type":"snapshot","id":1,"flushed":{"state":5}}')).toThrow("The state of an interaction");
   });
 
   it("rejects a response that has a cycle", () => {
@@ -744,9 +779,17 @@ describe("properties", () => {
     fc.assert(
       fc.property(fc.anything(), (value) => {
         try {
-          expect(["loaded", "ready", "changed", "done", "height", "validity", "completed", "failed"]).toContain(
-            readFrameMessage(value).type,
-          );
+          expect([
+            "loaded",
+            "ready",
+            "changed",
+            "done",
+            "height",
+            "validity",
+            "snapshot",
+            "completed",
+            "failed",
+          ]).toContain(readFrameMessage(value).type);
         } catch (error) {
           expect(error).toBeInstanceOf(DataError);
         }

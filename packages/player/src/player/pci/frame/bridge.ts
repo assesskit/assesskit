@@ -254,6 +254,17 @@ function answer(command: Extract<PciCommand, { readonly type: "validity" }>): vo
   send({ type: "validity", id: command.id, value });
 }
 
+/** Answers a snapshot request with the response and the state; an interaction that throws, or none, gives `null`. */
+function answerSnapshot(id: number): void {
+  let flushed: { readonly response: unknown; readonly state: string } | null = null;
+  try {
+    if (instance !== undefined && !completing) flushed = snapshot(instance);
+  } catch {
+    // The interaction threw; the player keeps the last response it has.
+  }
+  send({ type: "snapshot", id, flushed });
+}
+
 /** Hands over the response and state, then lets the interaction clean up: getResponse and getState come before oncompleted. */
 function complete(): void {
   completing = true;
@@ -280,6 +291,8 @@ window.addEventListener("message", (event: MessageEvent<PciCommand>) => {
     applyPresentation(document.documentElement, command.presentation);
   } else if (command.type === "validity") {
     answer(command);
+  } else if (command.type === "snapshot") {
+    answerSnapshot(command.id);
   } else if (command.type === "complete") {
     complete();
   }

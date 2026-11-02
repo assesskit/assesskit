@@ -54,10 +54,21 @@ export interface PciHost {
    */
   setPresentation(presentation: Presentation): void;
   /**
-   * Closes the frames: each one hands over its final response and state first.
+   * Has the interactions of an item that is interacting hand over their responses, which go to the player as responses.
    *
    * @remarks
-   * Called before the content changes.
+   * Called before an action that submits or leaves the item, so that the response of an interaction that fires no
+   * `qti-interaction-changed` goes too. A frame that has not started yet holds no interaction and is not waited for.
+   *
+   * @returns A promise that resolves when the responses are on their way to the session.
+   */
+  settled(): Promise<void>;
+  /**
+   * Closes the frames.
+   *
+   * @remarks
+   * Called before the content changes, once the view has moved on, so what the frames hand over as they close is dropped:
+   * `settled` collects the responses before an action leaves the item.
    *
    * @returns A promise that resolves when the frames are closed.
    */
@@ -116,8 +127,10 @@ function promptOf(interaction: PortableCustomInteraction, renderer: BodyRenderer
  * The renderer it gives the content root draws each interaction as a container, loads the module resolution files through
  * the gate and mounts the frame in it with the state of the session: the response, the state `getState` gave before, the
  * template and context values, and the status of the item. What the interaction does reaches the player as `respond`: a
- * `changed` or `completed` event is a response with its state, which the session stores so that the interaction restores
- * on any device. A `done` event is a response too; it does not submit, since the candidate decides that.
+ * `changed` event is a response with its state, which the session stores so that the interaction restores on any device.
+ * A `done` event is a response too; it does not submit, since the candidate decides that. `settled` reads the response of
+ * an interaction that fires no event, before an action leaves the item; the `completed` event of a frame that closes comes
+ * after the view has moved on, and is dropped.
  *
  * @param context - See {@link PciContext}.
  * @returns The host.
@@ -125,6 +138,8 @@ function promptOf(interaction: PortableCustomInteraction, renderer: BodyRenderer
  */
 export function createPciHost(context: PciContext): PciHost {
   let frames: Promise<PciFrame | undefined>[] = [];
+  // The frames of an item that is interacting, whose responses `settled` collects.
+  const interacting = new Set<PciFrame>();
   let generation = 0;
   let presentation: Presentation = { attributes: new Map(), properties: new Map() };
 
@@ -173,14 +188,16 @@ export function createPciHost(context: PciContext): PciHost {
       onError: context.report,
       onEvent: (event) => {
         if (mine !== generation) return;
-        if (event.type === "changed" || event.type === "done" || event.type === "completed") {
+        if (event.type === "changed" || event.type === "done") {
           context.respond(item.key, identifier, event.response, event.state);
         } else if (event.type === "failed") {
           container.replaceChildren(html("p", { class: "ak-notice", role: "note" }, context.messages.pciFailed));
         }
       },
     };
-    return mountPciFrame(container, options);
+    const frame = mountPciFrame(container, options);
+    if (options.status === "interacting") interacting.add(frame);
+    return frame;
   };
 
   return {
@@ -202,8 +219,12 @@ export function createPciHost(context: PciContext): PciHost {
       presentation = next;
       for (const frame of frames) void frame.then((open) => open?.setPresentation(next));
     },
+    settled: async () => {
+      await Promise.all([...interacting].map((frame) => frame.settled()));
+    },
     reset: async () => {
       generation += 1;
+      interacting.clear();
       const closing = frames;
       frames = [];
       await Promise.all(closing.map(async (frame) => (await frame)?.destroy()));

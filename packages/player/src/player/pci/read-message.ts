@@ -99,13 +99,16 @@ export function readFrameMessage(data: unknown): PciFrameMessage {
     case "validity":
       checkNonNegativeInteger(data.id, "The identifier of a validity request");
       return { type: "validity", id: data.id, value: readValidityResult(data.value) };
+    case "snapshot":
+      checkNonNegativeInteger(data.id, "The identifier of a snapshot request");
+      return { type: "snapshot", id: data.id, flushed: readFlushed(data.flushed) };
     case "completed":
       return { type: "completed", flushed: readFlushed(data.flushed) };
     case "failed":
       return { type: "failed", reason: readFailure(data.reason) };
     default:
       throw new DataError(
-        `A message from the frame has the type "loaded", "ready", "changed", "done", "height", "validity", "completed" or "failed", found ${describe(data.type)}.`,
+        `A message from the frame has the type "loaded", "ready", "changed", "done", "height", "validity", "snapshot", "completed" or "failed", found ${describe(data.type)}.`,
       );
   }
 }

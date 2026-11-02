@@ -10,7 +10,7 @@
 export { checkPciFrameOptions } from "./check-options.js";
 export { buildFrameCsp } from "./csp.js";
 export { describeFrame } from "./describe-frame.js";
-export { checkVariable, createResponseDecoder, encodeVariable } from "./files.js";
+export { checkVariable, createResponseDecoder, encodeVariable, responseKey } from "./files.js";
 export { pciModules } from "./modules.js";
 export { isRequestedStatus, type PciFrameMessage } from "./protocol.js";
 export { readFrameMessage, toJson } from "./read-message.js";

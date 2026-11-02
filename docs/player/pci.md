@@ -20,6 +20,8 @@ sequenceDiagram
   F->>P: changed: response and state
   I->>F: ondone
   F->>P: done with the status asked for
+  P->>F: snapshot, on settled
+  F->>P: getResponse and getState, as changed when they differ
   P->>F: complete, on destroy
   F->>P: completed: final response and state
 ```
@@ -197,13 +199,13 @@ failed, the frame calls the registered factory with `getInstance(dom, configurat
 
 ## Events
 
-| `type`      | Fields                        | When                                                                                                                             |
-| ----------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `ready`     | `state`                       | The interaction called `onready`                                                                                                 |
-| `changed`   | `response`, `state`, `valid`  | The interaction fired `qti-interaction-changed`; the frame reads `getResponse()` and `getState()` then                           |
-| `done`      | `response`, `state`, `status` | The interaction called `ondone`; `status` is the one it asks for (`interacting` when it gives none), which the player may refuse |
-| `completed` | `response`, `state`           | `destroy` collected the final response and state of an interaction that exists                                                   |
-| `failed`    | `reason`                      | The interaction did not start                                                                                                    |
+| `type`      | Fields                        | When                                                                                                                                                                                 |
+| ----------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ready`     | `state`                       | The interaction called `onready`                                                                                                                                                     |
+| `changed`   | `response`, `state`, `valid`  | The interaction fired `qti-interaction-changed`, or `settled` found a response or a state that differs from what it told last; the frame reads `getResponse()` and `getState()` then |
+| `done`      | `response`, `state`, `status` | The interaction called `ondone`; `status` is the one it asks for (`interacting` when it gives none), which the player may refuse                                                     |
+| `completed` | `response`, `state`           | `destroy` collected the final response and state of an interaction that exists                                                                                                       |
+| `failed`    | `reason`                      | The interaction did not start                                                                                                                                                        |
 
 `response` is a `Value` of the runtime, or `null` for NULL: the interaction gave no response (`getResponse()` gave `undefined`),
 or gave the NULL of App. C. It is read against the declaration of the response variable, and its files are stored.
@@ -232,11 +234,18 @@ may honor. A `failed` reason is one of:
 | `setCustomValidity(text)` | Sets the custom validity message; `""` clears it                                              |
 | `getCustomValidity()`     | Resolves with the message, or `undefined`                                                     |
 | `setPresentation(look)`   | Sets the look on the `html` of the frame, in place of the earlier one ([The look](#the-look)) |
+| `settled()`               | Has the interaction hand over its response and state, and resolves once they are delivered    |
 | `destroy()`               | Sends the event `completed`, lets the interaction call `oncompleted`, and removes the frame   |
 
 A validity method resolves with `undefined` when the interaction is not running, lacks the method, throws, or does not
 answer within two seconds. `destroy` waits at most two seconds for a frozen module and returns the same promise when
 called again.
+
+An interaction need not fire `qti-interaction-changed`: the examples of 1EdTech do not, and leave the response to
+`getResponse()`. `settled` has the frame call `getResponse()` and `getState()` and delivers them as a `changed` event when they
+differ from the response the frame was started with, or the last one it told; it resolves once every event of the frame has
+been delivered, the files of the response stored. Call it before an action that submits or leaves the item, as the player
+does. It waits at most two seconds for a frozen module, and resolves at once when the interaction is not running.
 
 Before it removes the frame, `destroy` has the frame call `getResponse()` and `getState()`, send them, and then call
 `oncompleted()`, so a listener flushes the final response before the module cleans up. It resolves

@@ -139,6 +139,31 @@ function next(references: string[]): string {
 }
 
 /**
+ * Writes the JSON of a response as text that compares as the value it holds, without storing its files.
+ *
+ * @remarks
+ * Either form of NULL gives the same text, and a file counts by its type, its name and its bytes.
+ *
+ * @param json - The parsed JSON, or `null` when the interaction has no response.
+ * @param declaration - The cardinality and base type of the variable.
+ * @returns The text, or `undefined` for JSON that is not a value of the declaration.
+ */
+export function responseKey(json: unknown, declaration: ValueDeclaration): string | undefined {
+  try {
+    const value =
+      json === null
+        ? null
+        : decodePciValue(json, declaration, {
+            store: (data, mimeType, fileName) => JSON.stringify([mimeType, fileName ?? null, data]),
+          });
+    return JSON.stringify(value, (_key, member: unknown) => (member instanceof Map ? [...member] : member));
+  } catch (error) {
+    if (error instanceof DataError) return undefined;
+    throw error;
+  }
+}
+
+/**
  * Reads the JSON that an interaction gave for a variable, and stores its inline files.
  *
  * @param json - The parsed JSON, or `null` when the interaction has no response.

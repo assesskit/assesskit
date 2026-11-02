@@ -1024,6 +1024,37 @@ describe("a portable custom interaction in the player", () => {
   });
 });
 
+describe("a portable custom interaction that fires no event in the player", () => {
+  /** The fixture with q3 on `quiet.js`, which counts presses and fires no `qti-interaction-changed`. */
+  const quietFiles = (): Readonly<Record<string, string | Uint8Array>> => {
+    const files = { ...pciFiles() };
+    files["items/q3/item.xml"] = String(files["items/q3/item.xml"])
+      .replace('module="simple"', 'module="quiet"')
+      .replace("urn:test:simple", "urn:test:quiet")
+      .replace('id="simple" primary-path="modules/simple"', 'id="quiet" primary-path="modules/quiet"');
+    return files;
+  };
+
+  it("stores the response and the state that the interaction holds before the candidate leaves the item", async () => {
+    const s = await shell({
+      files: quietFiles(),
+      wrap: (client) =>
+        Object.create(client, { assets: { value: (path: string) => `${inject("fixtures").asset}/g/pci/${path}` } }),
+    });
+    await shown(s);
+    await s.client.dispatch({ type: "move", to: { ref: "q3", instance: 1 } });
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q3"));
+    await waitFor(async () => {
+      await commands.clickInFrame("Press the button", "[data-ready] #press");
+    });
+    buttonNamed(s.ui, "Previous").click();
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await s.client.dispatch({ type: "move", to: { ref: "q3", instance: 1 } });
+    expect(s.client.view.current?.responses.get("PCI")).toEqual(single("integer", 1));
+    expect(s.client.view.current?.pci.get("PCI")?.state).toBe('{"count":1}');
+  });
+});
+
 /** The radio buttons of the choice interaction of the item shown, in the order of the choices. */
 const choices = (ui: ShadowRoot): HTMLInputElement[] => [
   ...contentOf(ui).querySelectorAll<HTMLInputElement>("qti-choice-interaction input.ak-control"),

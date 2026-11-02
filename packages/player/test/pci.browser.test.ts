@@ -454,6 +454,40 @@ describe("mountPciFrame", () => {
       expect(result.container.querySelector("iframe")).toBeNull();
     });
 
+    it("reads on settled the response of an interaction that fires no event, and delivers it once while it is the same", async () => {
+      const result = mount({
+        interaction: interactionOf('module="quiet" custom-interaction-type-identifier="urn:test:quiet"'),
+        configuration: { primary: resolution({ quiet: "modules/quiet" }) },
+      });
+      await ready(result);
+      await result.frame.settled();
+      expect(result.events).toEqual([{ type: "ready", state: '{"count":0}' }]);
+      await commands.clickInFrame(TITLE, "#press");
+      await waitFor(async () => {
+        await result.frame.settled();
+        expect(eventOf(result.events, "changed")).toEqual({
+          type: "changed",
+          response: single("integer", 1),
+          state: '{"count":1}',
+          valid: undefined,
+        });
+      });
+      await result.frame.settled();
+      expect(result.events.map(({ type }) => type)).toEqual(["ready", "changed"]);
+      await result.frame.destroy();
+      await result.frame.settled();
+      expect(result.events.map(({ type }) => type)).toEqual(["ready", "changed", "completed"]);
+    });
+
+    it("delivers on settled nothing that an event of the interaction told already", async () => {
+      const result = mount();
+      await ready(result);
+      await commands.clickInFrame(TITLE, "#press");
+      await waitFor(() => expect(eventOf(result.events, "changed")).toBeDefined());
+      await result.frame.settled();
+      expect(result.events.map(({ type }) => type)).toEqual(["ready", "changed"]);
+    });
+
     it("removes a frame that never started, and does it once", async () => {
       const result = mount();
       const first = result.frame.destroy();
