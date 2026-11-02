@@ -722,6 +722,8 @@ export interface Messages {
   readonly colorThemeMedgrayDarkgray: string;
   /** The color theme of dark gray text on medium gray, of low contrast on purpose. */
   readonly colorThemeDarkgrayMedgray: string;
+  /** The label of the list of the size of text, in points. */
+  readonly settingFontSize: string;
   /** The label of the list of the amount of magnification of all content. */
   readonly settingZoom: string;
   /** The label of the list of the amount of magnification of text. */

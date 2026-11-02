@@ -164,6 +164,7 @@ flowchart LR
 | Support           | List                          | Values                                                                                                                                      |
 | ----------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `text-appearance` | Color theme                   | The 14 terms of `color-theme`, and a theme of a program that the profile names                                                              |
+|                   | Text size, points             | 10, 12, 14, 16, 18, 20, 24, 28, 32, 36; a size of the profile too; 12 is the size of the player                                             |
 | `magnification`   | Zoom                          | 100 to 400 percent: 100, 125, 150, 175, 200, 250, 300, 350, 400; an amount of the profile too                                               |
 |                   | Zoom of text                  | The same, in place of Zoom when the profile magnifies text apart                                                                            |
 |                   | Zoom of images                | The same, in place of Zoom when the profile magnifies non-text content apart                                                                |
@@ -194,6 +195,10 @@ back to the default colors, and CERT asks the same of `text-appearance` as a who
 `text-appearance` is on, with or without `colorTheme` in the profile. A theme decides the colors: high contrast, polarity and the
 colors of `text-appearance` set none of theirs while it is in force, so that `default` is the default colors whatever the profile
 asks for. The chrome stays in the system colors, as it does for high contrast and inverted polarity.
+
+The guide also says that the candidate must be able to change the color of the text and of the background, and the size of
+text, at any time, and to go back to the original colors. The themes change both colors and `default` takes them back; the list
+of the size of text sets `fontSize`, which multiplies the text with the zoom. The player has no picker of any color.
 
 | Term                                                                                                                                                       | Look                                                          |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
@@ -383,13 +388,14 @@ A support that is wrong for the candidate is not an error of the player: the run
 
 ## Not included
 
-| Not included                                                                                                          | Why                                                                                     |
-| --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Deciding which candidate has which support                                                                            | The system that administers the test decides; the runtime reads the profile             |
-| Choosing the variant of an item                                                                                       | The runtime chooses it; the player shows the notice                                     |
-| Dictionary, thesaurus, homophone checker, note taking, visual organizer, outliner, peer interaction and spell checker | Tools of the host: the player has a slot for each ([tools](tools.md#tools-of-the-host)) |
-| A control for a support that is on from the start or assigned                                                         | The runtime would refuse it; the panel lists the support with its state                 |
-| Live captions and media that the content does not provide                                                             | The player shows the media and tracks of the content                                    |
+| Not included                                                                                                          | Why                                                                                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Deciding which candidate has which support                                                                            | The system that administers the test decides; the runtime reads the profile                                                                         |
+| Choosing the variant of an item                                                                                       | The runtime chooses it; the player shows the notice                                                                                                 |
+| Dictionary, thesaurus, homophone checker, note taking, visual organizer, outliner, peer interaction and spell checker | Tools of the host: the player has a slot for each ([tools](tools.md#tools-of-the-host))                                                             |
+| A control for a support that is on from the start or assigned                                                         | The runtime would refuse it; the panel lists the support with its state                                                                             |
+| A picker of any color for the text and the background                                                                 | The 14 color themes change both at the contrast that the guide asks for; a host that needs any color sends the settings of `text-appearance` itself |
+| Live captions and media that the content does not provide                                                             | The player shows the media and tracks of the content                                                                                                |
 
 ## Where the sources differ
 

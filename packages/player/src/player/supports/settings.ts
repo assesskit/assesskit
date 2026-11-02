@@ -18,7 +18,7 @@ import type {
 } from "@assesskit/runtime/pnp";
 import type { Messages } from "../../messages/index.js";
 import { html } from "../internal.js";
-import { DEFAULT_ZOOM } from "./appearance.js";
+import { BASE_FONT_SIZE, DEFAULT_ZOOM } from "./appearance.js";
 
 /** A value of a list as the `value` of its option, and the text that names it. */
 type Choice = readonly [value: string, text: string];
@@ -53,6 +53,9 @@ interface FieldContext {
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, magnification}
  */
 const ZOOM_AMOUNTS: readonly number[] = [1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4];
+
+/** The sizes of text offered, in points, as the PNP gives `font-size`; 12 is the size of the player. */
+const FONT_SIZES: readonly number[] = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36];
 
 /** The speech rates offered, in words per minute; the Web Speech voice reads 180 at its own rate. */
 const SPEECH_RATES: readonly number[] = [100, 120, 150, 180, 210, 240, 300];
@@ -150,12 +153,15 @@ const THEMES: readonly (readonly [ColorTheme, keyof Messages])[] = [
 ];
 
 /**
- * The list of the color theme, which the candidate can change at any time and set back to the default colors.
+ * The lists of the text appearance: the color theme, which the candidate can change at any time and set back to the default
+ * colors, and the size of text, which the candidate can change at any time.
  *
- * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, color-theme}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, color-theme and font-size}
  */
 function textAppearanceFields(settings: TextAppearance, context: FieldContext): Field[] {
-  const { messages } = context;
+  const { messages, language } = context;
+  // A size of 0 or less asks for nothing, so the text keeps the size of the player.
+  const size = settings.fontSize !== undefined && settings.fontSize > 0 ? settings.fontSize : BASE_FONT_SIZE;
   return [
     termField(
       "color-theme",
@@ -165,6 +171,14 @@ function textAppearanceFields(settings: TextAppearance, context: FieldContext): 
       settings.colorTheme,
       (colorTheme) => ({ ...settings, colorTheme }),
       extensionTerm,
+    ),
+    numberField(
+      "font-size",
+      messages.settingFontSize,
+      FONT_SIZES,
+      size,
+      new Intl.NumberFormat(language).format,
+      (fontSize) => ({ ...settings, fontSize }),
     ),
   ];
 }

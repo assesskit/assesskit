@@ -1357,6 +1357,18 @@ describe("the supports in the player", () => {
       expect(s.client.view.supports.find(({ name }) => name === "text-appearance")?.settings).toEqual(settings);
     });
 
+    it("lets the candidate change the size of text at any time, as the guide asks", async () => {
+      const s = await shell({ profile: Themed });
+      await shown(s);
+      const size = [...s.ui.querySelectorAll<HTMLSelectElement>(".ak-supports select")].find(
+        (select) => select.labels?.[0]?.firstChild?.textContent === "Text size, points",
+      );
+      if (size === undefined) throw new Error("The panel has no list of the size of text.");
+      await userEvent.selectOptions(size, "24");
+      await waitFor(() => expect(contentHostOf(s.ui).style.getPropertyValue("--ak-font-scale")).toBe("2"));
+      expect(contentHostOf(s.ui).getAttribute("data-ak-theme")).toBe("black-cream");
+    });
+
     it("gives a host without chrome the same change, through the session", async () => {
       const s = await shell({ profile: Themed, chrome: false });
       await shown(s);

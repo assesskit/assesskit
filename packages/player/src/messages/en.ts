@@ -366,6 +366,7 @@ export const EN_MESSAGES: Messages = {
   colorThemeCreamBlack: "Cream on black",
   colorThemeMedgrayDarkgray: "Medium gray on dark gray",
   colorThemeDarkgrayMedgray: "Dark gray on medium gray",
+  settingFontSize: "Text size, points",
   settingZoom: "Zoom",
   settingZoomText: "Zoom of text",
   settingZoomNonText: "Zoom of images",

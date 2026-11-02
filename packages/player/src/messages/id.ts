@@ -366,6 +366,7 @@ export const ID_MESSAGES: Messages = {
   colorThemeCreamBlack: "Krem di atas hitam",
   colorThemeMedgrayDarkgray: "Abu-abu sedang di atas abu-abu tua",
   colorThemeDarkgrayMedgray: "Abu-abu tua di atas abu-abu sedang",
+  settingFontSize: "Ukuran teks, poin",
   settingZoom: "Tingkat pembesaran",
   settingZoomText: "Pembesaran teks",
   settingZoomNonText: "Pembesaran gambar",

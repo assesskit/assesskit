@@ -4,7 +4,7 @@ import type { Presentation } from "../presentation/index.js";
 import { activeSupport, checkSupportViews, colorThemeOf } from "./check.js";
 
 /** The font size that scales to 1: the default of `font-size` in the PNP schema, in points. */
-const BASE_FONT_SIZE = 12;
+export const BASE_FONT_SIZE = 12;
 
 /**
  * The zoom of a magnification that names no amount: 200 percent, the enlargement that the text has to survive.

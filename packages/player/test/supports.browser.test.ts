@@ -537,6 +537,30 @@ describe("mountSupportPanel", () => {
       expect(plain.host.querySelector("select")).toBeNull();
     });
 
+    it("lists the size of text in points beside the theme, at the size of the profile or 12, and reports the size chosen", async () => {
+      const { host, panel, chosen } = adjusting();
+      panel.update([appearance()]);
+      const size = listNamed(host, "Text size, points");
+      expect(size.value).toBe("12");
+      expect([...size.options].map(({ value }) => value)).toEqual([
+        "10",
+        "12",
+        "14",
+        "16",
+        "18",
+        "20",
+        "24",
+        "28",
+        "32",
+        "36",
+      ]);
+      await userEvent.selectOptions(size, "24");
+      expect(chosen).toEqual([{ name: "text-appearance", replaceAccessModes: [], fontSize: 24 }]);
+      size.focus();
+      await userEvent.keyboard("3");
+      await waitFor(() => expect(chosen.at(-1)).toMatchObject({ fontSize: 32 }));
+    });
+
     it("writes the names of the themes in the language of the interface", () => {
       const { host, panel } = adjusting({ messages: ID_MESSAGES });
       panel.update([appearance()]);

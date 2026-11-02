@@ -9,16 +9,16 @@ xychart-beta
   title "Entry points after gzip, in kilobytes"
   x-axis ["root", "protocol", "client", "player", "mountItem", "engine (on demand)"]
   y-axis "kB" 0 --> 140
-  bar [13.7, 7.1, 21.7, 132.6, 92.9, 128.4]
+  bar [13.7, 7.1, 21.7, 132.7, 93.0, 128.4]
 ```
 
 | File                          | Bytes   | Gzip    | Budget  | What it holds                                                                                                                 |
 | ----------------------------- | ------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `@assesskit/player`           | 42,907  | 13,678  | 14,500  | The errors, the checks of the player, valibot, and the interface messages in English and Indonesian                           |
+| `@assesskit/player`           | 42,979  | 13,704  | 14,500  | The errors, the checks of the player, valibot, and the interface messages in English and Indonesian                           |
 | `@assesskit/player/protocol`  | 22,149  | 7,083   | 7,500   | The envelopes and their schemas, and the check of a scoring rubric; valibot is 10.9 kB of it                                  |
 | `@assesskit/player/client`    | 67,553  | 21,734  | 25,000  | The remote and the local session, and the decoders of a view and of an action that they take from the runtime                 |
-| `@assesskit/player/player`    | 412,482 | 132,578 | 140,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions |
-| `mountItem`                   | 286,632 | 92,918  | 107,500 | The content, the interactions, the supports, speech and the host of portable custom interactions; no chrome and no tools      |
+| `@assesskit/player/player`    | 412,823 | 132,730 | 140,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions |
+| `mountItem`                   | 286,704 | 92,955  | 107,500 | The content, the interactions, the supports, speech and the host of portable custom interactions; no chrome and no tools      |
 | `@assesskit/runtime/delivery` | 539,882 | 128,356 | 152,000 | The engine, which `createLocalSession` loads with `import()` for practice on a device                                         |
 | `pci-frame/bridge.js`         | 10,026  | 3,735   | 5,000   | The script of the frame of a portable custom interaction                                                                      |
 | `pci-frame/require.js`        | 17,781  | 6,863   | 9,000   | RequireJS, which the frame loads                                                                                              |
@@ -55,16 +55,17 @@ scientific calculator, adds 2.7 kB after gzip with its messages, 2 percent of th
 tools that draw its button. The lists of the panel are chrome, so `mountItem` grows by their messages and by what the content
 root shares, such as the choice of braille files. Bytes after gzip:
 
-| Addition                                                                        | `player` | `mountItem` | Root | Engine |
-| ------------------------------------------------------------------------------- | -------- | ----------- | ---- | ------ |
-| `support-settings`, the lists of the zoom and of the color theme (A-30a, A-30b) | +611     | +45         | +119 | +587   |
-| The scientific calculator (A-12)                                                | +2,687   | +723        | +512 | 0      |
-| The breaks of a profile in the session host (A-11)                              | 0        | 0           | 0    | 0      |
-| The lists of reading aloud (A-40d, A-40e)                                       | +710     | +386        | +367 | 0      |
-| The lists of braille and the choice of braille files (A-10b)                    | +868     | +678        | +281 | 0      |
-| The stylesheets of the test (T-3)                                               | +57      | +39         | 0    | 0      |
+| Addition                                                                               | `player` | `mountItem` | Root | Engine |
+| -------------------------------------------------------------------------------------- | -------- | ----------- | ---- | ------ |
+| `support-settings`, the lists of the zoom and of the color theme (A-30a, A-30b)        | +611     | +45         | +119 | +587   |
+| The scientific calculator (A-12)                                                       | +2,687   | +723        | +512 | 0      |
+| The breaks of a profile in the session host (A-11)                                     | 0        | 0           | 0    | 0      |
+| The lists of reading aloud (A-40d, A-40e)                                              | +710     | +386        | +367 | 0      |
+| The lists of braille and the choice of braille files (A-10b)                           | +868     | +678        | +281 | 0      |
+| The stylesheets of the test (T-3)                                                      | +57      | +39         | 0    | 0      |
+| The list of the size of text, which the guide asks the candidate to change at any time | +152     | +37         | +26  | 0      |
 
-The root holds the two catalogs, and it is at 13,678 of its 14,500 bytes: the next messages need the catalogs out of the root, or
+The root holds the two catalogs, and it is at 13,704 of its 14,500 bytes: the next messages need the catalogs out of the root, or
 a budget with its reason.
 
 ## Running it

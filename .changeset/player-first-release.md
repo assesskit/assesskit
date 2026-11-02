@@ -57,7 +57,8 @@ A WAV recording that has not started in 5 seconds, because the audio context sta
 
 The panel of the supports has a list for each setting that the candidate may change while its support is on, and sends the
 choice as the runtime's `support-settings` action, so that the state keeps it for later items and after a reload: the 14 color
-themes of the best practices guide, so that a candidate can change the theme at any time and go back to the default colors, and
+themes of the best practices guide and the size of text, so that a candidate can change them at any time and go back to the
+default colors, and
 the amount of magnification from 100 to 400 percent, of all content or of text and of images apart, as the guide asks, and the
 rate, pitch, volume, link indication and typing echo of the voice that reads aloud, and the delivery, grade, kind and mathematics
 of braille, which choose the files of a braille or tactile card through `ContentRoot.card`.
