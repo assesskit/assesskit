@@ -1,5 +1,5 @@
 // cspell:ignore Ärlig
-import { readAsi } from "@assesskit/runtime/asi";
+import { type BodyNode, readAsi } from "@assesskit/runtime/asi";
 import { resolveContent } from "@assesskit/runtime/content";
 import { createItemVariables } from "@assesskit/runtime/processing";
 import { single } from "@assesskit/runtime/values";
@@ -8,6 +8,7 @@ import { afterEach, describe, expect, inject, it } from "vitest";
 import { userEvent } from "vitest/browser";
 import { createLocalSession } from "../src/client/index.js";
 import { EN_MESSAGES } from "../src/index.js";
+import { enableSorting } from "../src/player/content/internal.js";
 import {
   buildSpeechRequest,
   type ContentRoot,
@@ -165,6 +166,21 @@ describe("body", () => {
     expect(interaction.innerHTML).toBe("Which <em>one</em>?[filled]");
     expect(interaction.className).toBe("mine");
     expect(interaction.hasAttribute("data-ak-placeholder")).toBe(false);
+  });
+});
+
+describe("wide content", () => {
+  it("draws an element with more children than a call can take as arguments", () => {
+    // 130,000 children, which a spread into append refuses with a RangeError in Chromium and WebKit; the model is built
+    // as readAsi reads it, so that the test times the drawing and not the reading.
+    const count = 130_000;
+    const wide: BodyNode = {
+      kind: "div",
+      extensions: [],
+      children: Array.from({ length: count }, () => ({ kind: "text", value: "a" }) as const),
+    };
+    const [drawn] = testRenderer(ASSETS).nodes([wide]);
+    expect(drawn?.childNodes.length).toBe(count);
   });
 });
 
@@ -1212,17 +1228,31 @@ describe("sortable tables", () => {
     expect(column(invalid, 0)).toHaveLength(5);
   });
 
-  it("draws and sorts a table with more rows than a call can take as arguments", async () => {
-    // A body with 150,000 children, which a spread into append would refuse with a RangeError in Chromium and WebKit.
-    const count = 150_000;
-    const rows = Array.from({ length: count }, (_, index) => `<tr><td>${count - index}</td></tr>`).join("");
-    const root = await showBody(
-      `<table><thead><tr><th aria-sort="none">N</th></tr></thead><tbody>${rows}</tbody></table>`,
-    );
-    expect(all(root, "tbody tr")).toHaveLength(count);
-    await press(root, 0);
-    const sorted = all(root, "tbody tr");
-    expect([sorted[0]?.textContent, sorted.at(-1)?.textContent]).toEqual(["1", String(count)]);
+  it("sorts a table with more rows than a call can take as arguments", () => {
+    // 130,000 rows, which a spread into append refuses with a RangeError in Chromium and WebKit. The table is built in the
+    // page, as the renderer would build it, so that the test times the sort and not the reading of an item that large.
+    const count = 130_000;
+    const container = document.createElement("div");
+    const table = document.createElement("table");
+    const head = table.createTHead().insertRow();
+    const header = document.createElement("th");
+    header.setAttribute("aria-sort", "none");
+    header.textContent = "N";
+    head.append(header);
+    const body = table.createTBody();
+    // insertRow counts the rows on each call, so the rows are made and appended instead.
+    for (let index = 0; index < count; index += 1) {
+      const row = document.createElement("tr");
+      row.append(Object.assign(document.createElement("td"), { textContent: String(count - index) }));
+      body.append(row);
+    }
+    container.append(table);
+    document.body.append(container);
+    hosts.push(container);
+    enableSorting(container);
+    // A click of the page, not of the driver, whose checks wait for the layout of so many rows.
+    header.querySelector("button")?.click();
+    expect([body.rows[0]?.textContent, body.rows[count - 1]?.textContent]).toEqual(["1", String(count)]);
   });
 
   it("orders a column by value when every key is a number, and by the text when one is not", async () => {
