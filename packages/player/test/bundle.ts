@@ -1,25 +1,34 @@
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { build, type Metafile, type OutputFile } from "esbuild";
 import { TARGETS } from "../scripts/build-static.js";
 
 const SRC = resolve(import.meta.dirname, "../src");
-const RUNTIME = resolve(import.meta.dirname, "../../runtime/src");
+const PACKAGES = resolve(import.meta.dirname, "../..");
 
-/** The subpaths of the runtime that the player imports, each a folder of its sources with an `index.ts`. */
-const RUNTIME_FOLDERS = [
-  "asi",
-  "cat",
-  "content",
-  "delivery",
-  "interactions",
-  "metadata",
-  "package",
-  "pci",
-  "pnp",
-  "processing",
-  "values",
-  "xml",
-] as const;
+/**
+ * Returns the source file of each subpath of a package that exports code, by its specifier, from the `exports` of the
+ * package's manifest: `./dist/<path>.js` is built from `src/<path>.ts`.
+ *
+ * @param folder - The folder of the package in `packages/`.
+ */
+export function entrySources(folder: "runtime" | "player"): ReadonlyMap<string, string> {
+  const manifest: { name: string; exports: Record<string, string | { default: string }> } = JSON.parse(
+    readFileSync(resolve(PACKAGES, folder, "package.json"), "utf8"),
+  );
+  return new Map(
+    Object.entries(manifest.exports).flatMap(([subpath, target]) =>
+      typeof target === "string"
+        ? []
+        : [
+            [
+              `${manifest.name}${subpath.slice(1)}`,
+              resolve(PACKAGES, folder, target.default.replace(/^\.\/dist\//, "src/").replace(/\.js$/, ".ts")),
+            ] as const,
+          ],
+    ),
+  );
+}
 
 /** The options of {@link bundle}. */
 export interface BundleOptions {
@@ -35,6 +44,12 @@ export interface BundleOptions {
    * @defaultValue false
    */
   readonly lazy?: boolean;
+  /**
+   * The platform the bundle runs on: `node` for the entry points that only Node.js loads, whose imports of Node.js stay out.
+   *
+   * @defaultValue "browser"
+   */
+  readonly platform?: "browser" | "node";
 }
 
 /** What a bundle made of a program holds. */
@@ -48,34 +63,27 @@ export interface Bundled {
 }
 
 /**
- * Bundles a program of the sources of the player for a browser, as a host's bundler would, with the runtime from its
+ * Bundles a program of the sources of the player or of the runtime, as a host's bundler would, with the runtime from its
  * sources.
  *
  * @param program - The module to bundle, which resolves relative imports from `src/` of the player.
  * @param options - See {@link BundleOptions}.
  */
 export async function bundle(program: string, options: BundleOptions = {}): Promise<Bundled> {
-  const { minify = false, lazy = false } = options;
+  const { minify = false, lazy = false, platform = "browser" } = options;
   const result = await build({
     stdin: { contents: program, resolveDir: SRC, loader: "ts" },
     bundle: true,
     write: false,
     metafile: true,
     format: "esm",
-    platform: "browser",
-    target: TARGETS,
+    platform,
+    target: platform === "browser" ? TARGETS : "node22",
     minify,
     legalComments: "none",
     logLevel: "silent",
     outdir: "out",
-    alias: {
-      "@assesskit/runtime": `${RUNTIME}/index.ts`,
-      "@assesskit/runtime/checks": `${RUNTIME}/checks.ts`,
-      "@assesskit/runtime/errors": `${RUNTIME}/errors.ts`,
-      ...Object.fromEntries(
-        RUNTIME_FOLDERS.map((folder) => [`@assesskit/runtime/${folder}`, `${RUNTIME}/${folder}/index.ts`]),
-      ),
-    },
+    alias: Object.fromEntries(entrySources("runtime")),
     plugins: lazy
       ? [
           {

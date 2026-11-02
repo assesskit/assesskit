@@ -219,12 +219,13 @@ untested in the others.
 - A construct of the specifications: its test, and a line of `supported.md` of the package when what is supported changes.
 - A test that a row of [conformance.md](docs/runtime/conformance.md) cites: that row changes with it, and `scripts/test/conformance.test.ts`
   fails until it does. A row says `Implements` only for what the guide and the test show; the docs say "implements", never "certified".
-- A runtime module: a folder in `src/` with `index.ts`, a subpath in `package.json` `exports`, `export *` in `src/index.ts` unless
-  it is `node` or `cli`, a test file, a guide in `docs/`, import rules in `biome.json`, its row in the table of
-  [architecture.md](docs/runtime/architecture.md#layers) and in the API table of `packages/runtime/README.md`. `node` and `cli`
-  also get an entry point in `packages/runtime/typedoc.json`.
+- A runtime module: a folder in `src/` with `index.ts`, a subpath in `package.json` `exports` with its budget in
+  `packages/player/test/size-budgets.ts`, `export *` in `src/index.ts` unless it is `node` or `cli`, a test file, a guide in
+  `docs/`, import rules in `biome.json`, its row in the table of [architecture.md](docs/runtime/architecture.md#layers) and in the
+  API table of `packages/runtime/README.md`. `node` and `cli` also get an entry point in `packages/runtime/typedoc.json`.
 - A player folder: its row in the table of [architecture.md](docs/player/architecture.md#layers), its Biome overrides and its entry in
-  `lint.test.ts`, a subpath in `package.json` `exports` and in `typedoc.json` when the host imports it, a test file and a guide in `docs/`.
+  `lint.test.ts`, a subpath in `package.json` `exports` with its budget in `test/size-budgets.ts` and in `typedoc.json` when the host
+  imports it, a test file and a guide in `docs/`.
 - A check shared by modules: of a value of a JavaScript type in `checks.ts`; of a value that a module defines, in the `internal.ts` of
   that module.
 - A place where the specifications contradict themselves or are silent: as CONTRIBUTING says, and a mention in the guide of the module.

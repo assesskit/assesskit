@@ -1,36 +1,43 @@
 # Size
 
 What a browser loads from the player, and the budgets that keep it from growing. `packages/player/test/size.test.ts` bundles
-each entry point as a host's bundler does (esbuild, minified, for the browsers of the [baseline](baseline.md)), and fails when a
-file is above its budget after gzip.
+every entry point of both packages alone, as a host's bundler does: esbuild, minified, for the browsers of the
+[baseline](baseline.md), with what the entry point loads by `import()` left out. It fails when an entry point is above its
+budget after gzip, or when it holds a module that its budget in `size-budgets.ts` does not list, so that an import which pulls
+one module into another shows in the change that makes it. The runtime's entry points are in
+[performance](../runtime/performance.md#entry-points).
 
 ```mermaid
 xychart-beta
   title "Entry points after gzip, in kilobytes"
-  x-axis ["root", "protocol", "client", "player", "mountItem", "engine (on demand)", "messages/id"]
+  x-axis ["root", "messages/id", "protocol", "client", "player", "mountItem", "scoring", "cat", "cat-rest", "server", "engine (on demand)"]
   y-axis "kB" 0 --> 140
-  bar [9.1, 7.1, 21.8, 126.3, 86.3, 128.8, 6.1]
+  bar [9.1, 6.1, 7.1, 21.7, 125.9, 86.1, 10.2, 19.4, 14.3, 49.4, 117.3]
 ```
 
-| File                            | Bytes   | Gzip    | Budget  | What it holds                                                                                                                 |
-| ------------------------------- | ------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `@assesskit/player`             | 25,963  | 9,077   | 10,000  | The errors, the checks of the player, valibot, and the interface messages in English                                          |
-| `@assesskit/player/messages/id` | 16,977  | 6,121   | 8,000   | The interface messages in Indonesian, which a host that shows Indonesian loads beside the player                              |
-| `@assesskit/player/protocol`    | 22,149  | 7,109   | 7,500   | The envelopes and their schemas, and the check of a scoring rubric; valibot is 10.9 kB of it                                  |
-| `@assesskit/player/client`      | 67,553  | 21,779  | 25,000  | The remote and the local session, and the decoders of a view and of an action that they take from the runtime                 |
-| `@assesskit/player/player`      | 395,823 | 126,269 | 134,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions |
-| `mountItem`                     | 269,704 | 86,307  | 101,000 | The content, the interactions, the supports, speech and the host of portable custom interactions; no chrome and no tools      |
-| `@assesskit/runtime/delivery`   | 539,882 | 128,808 | 152,000 | The engine, which `createLocalSession` loads with `import()` for practice on a device                                         |
-| `pci-frame/bridge.js`           | 10,026  | 3,735   | 5,000   | The script of the frame of a portable custom interaction                                                                      |
-| `pci-frame/require.js`          | 17,781  | 6,863   | 9,000   | RequireJS, which the frame loads                                                                                              |
-| `recorder-worklet.js`           | 322     | 270     | 500     | The script of the audio worklet of a WAV recording                                                                            |
-| `player.css`                    | 64,823  | 13,593  | 16,000  | The stylesheet of a content root                                                                                              |
+| File                            | Bytes   | Gzip    | Budget  | What it holds                                                                                                                                                                                                     |
+| ------------------------------- | ------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@assesskit/player`             | 25,963  | 9,066   | 10,000  | The errors, the checks of the player and the interface messages in English                                                                                                                                        |
+| `@assesskit/player/messages/id` | 16,977  | 6,147   | 8,000   | The interface messages in Indonesian, which a host that shows Indonesian loads beside the player, and nothing else                                                                                                |
+| `@assesskit/player/protocol`    | 22,149  | 7,083   | 7,500   | The envelopes and their schemas, and the check of a scoring rubric (`asi`, `values`); valibot is 10.5 kB of it                                                                                                    |
+| `@assesskit/player/client`      | 67,553  | 21,734  | 25,000  | The remote and the local session, and the decoders of a view and of an action (`delivery`, `interactions`, `package`, `pnp`, `values`, `xml`), without the engine                                                 |
+| `@assesskit/player/player`      | 395,823 | 125,889 | 134,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions (`asi`, `content`, `interactions`, `package`, `pci`, `pnp`, `values`, `xml`, saxes) |
+| `mountItem`                     | 269,704 | 86,134  | 101,000 | The content, the interactions, the supports, speech and the host of portable custom interactions; no chrome, no tools and no XML parser                                                                           |
+| `@assesskit/player/scoring`     | 33,485  | 10,226  | 13,000  | The actions that score and supply scores, with the protocol (`asi`, `processing`, `values`)                                                                                                                       |
+| `@assesskit/player/cat`         | 64,248  | 19,435  | 24,500  | The deployment of adaptive sections, which reads their files (`cat`, `delivery`, `metadata`, `package`, `values`, `xml`, saxes)                                                                                   |
+| `@assesskit/player/cat-rest`    | 45,868  | 14,330  | 18,000  | The client and the handler of the REST binding of a CAT engine (`cat`, `metadata`, `results`, `values`)                                                                                                           |
+| `@assesskit/player/server`      | 157,854 | 49,410  | 62,000  | The session host, the asset gate and the stores, with the protocol, jose and the readers and JSON of the runtime; not the engine, which the host passes in                                                        |
+| `@assesskit/runtime/delivery`   | 501,195 | 117,274 | 140,500 | The engine, which `createLocalSession` loads with `import()` for practice on a device                                                                                                                             |
+| `pci-frame/bridge.js`           | 9,915   | 3,685   | 5,000   | The script of the frame of a portable custom interaction                                                                                                                                                          |
+| `pci-frame/require.js`          | 17,781  | 6,852   | 9,000   | RequireJS, which the frame loads                                                                                                                                                                                  |
+| `recorder-worklet.js`           | 322     | 250     | 500     | The script of the audio worklet of a WAV recording                                                                                                                                                                |
+| `player.css`                    | 64,840  | 13,610  | 16,000  | The stylesheet of a content root                                                                                                                                                                                  |
 
-The sizes are bytes of the minified file. The first load of a client holds none of the engine: the engine is a chunk that
-the client loads on demand, and the test fails when the first load holds a file of the runtime's processing. The entry points of
-the shared folders `scoring` and `cat` and of the server side (`cat-rest`, `server`) have no budget, as none
-of the entry points above loads them; the root, the protocol and the client hold no `jose` or XML parser, and the
-player holds no `jose`.
+The sizes are bytes of the minified file. The names in brackets are the modules of the runtime that an entry point holds;
+every entry point but the Indonesian catalog also holds the runtime's `checks` and `errors` and valibot, and
+`size-budgets.ts` lists every module of each. The first load of a client holds none of the engine: the engine is a chunk that
+the client loads on demand, and the test fails when the first load holds a file of the runtime's processing. The root, the
+protocol and the client hold no `jose` or XML parser, and the player holds no `jose`.
 
 `mountItem` is `mountDelivery` without the chrome, the tools, the panel of the supports and the frame of an LTI item, so it
 loads the content and the interactions that every mount shares. `bundle.test.ts` fails when a file of the chrome is in a bundle
@@ -80,8 +87,10 @@ The root holds the English catalog and is at 9,077 of its 10,000 bytes.
 
 ## Running it
 
-`pnpm test` runs the size test with the other tests of the player, and needs no build. A new budget is 1.25 times the size
-measured, rounded up to the next 500 bytes, and a budget changes only with the reason in the commit that changes it. The static files
+`pnpm test` runs the size test with the other tests of the player, and needs no build. A new entry point fails the test until
+`size-budgets.ts` has its budget. A new budget is 1.25 times the size measured, rounded up to the next 500 bytes, and a budget
+changes only with the reason in the commit that changes it; a change that takes bytes out of an entry point lowers its
+budget by as much, rounded up to the next 500 bytes, so that the room for growth stays what it was. The static files
 are built by `scripts/build-static.ts`, which the test calls, so it measures what `pnpm build` writes.
 
 ## Mount time

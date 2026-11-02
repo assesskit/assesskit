@@ -1,6 +1,12 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { CANDIDATE_ACTION_TYPES, itemSessionFromJson, itemSessionToJson } from "../src/delivery/internal.js";
+import {
+  CANDIDATE_ACTION_TYPES,
+  itemSessionFromJson,
+  itemSessionToJson,
+  ltiItem,
+  standaloneTest,
+} from "../src/delivery/internal.js";
 import {
   type AccessForAllResource,
   type Action,
@@ -5316,6 +5322,25 @@ describe("the structure of a test", () => {
     expect(partOf(item).model.identifier).toBe("P");
     const top = structure.section("outer") ?? fail("No outer.");
     expect(partOf(top)).toBe(structure.part("P"));
+  });
+
+  it("builds the test of an item delivered alone and the item of a link to a tool as readAsi reads their documents", () => {
+    const item = itemOf('time-dependent="false"', "");
+    const read = readAsi(`<qti-assessment-test xmlns="${ASI_NAMESPACE}" identifier="item" title="item">
+  <qti-test-part identifier="item-part" navigation-mode="nonlinear" submission-mode="individual">
+    <qti-assessment-section identifier="item-section" title="item" visible="true">
+      <qti-assessment-item-ref identifier="item" href="item"/>
+    </qti-assessment-section>
+  </qti-test-part>
+</qti-assessment-test>`);
+    if (read.kind !== "test") fail("Not a test.");
+    expect(standaloneTest(item).test.model).toEqual(read.test);
+    const link =
+      readAsi(`<qti-assessment-item xmlns="${ASI_NAMESPACE}" identifier="tool" title="tool" time-dependent="false">
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float" external-scored="externalMachine"/>
+  <qti-outcome-declaration identifier="MAXSCORE" cardinality="single" base-type="float" external-scored="externalMachine"/>
+</qti-assessment-item>`);
+    expect(ltiItem("tool")).toEqual(link.kind === "item" ? link.item : fail("Not an item."));
   });
 
   it("refuses arguments of other types", () => {

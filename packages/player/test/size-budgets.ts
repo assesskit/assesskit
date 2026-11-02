@@ -1,24 +1,316 @@
+/** The budget of an entry point bundled alone: the most it may take after gzip, and the modules other than its own it holds. */
+export interface EntryBudget {
+  /** The most that the entry point may take after gzip, in bytes. */
+  readonly gzip: number;
+  /**
+   * The modules other than its own that have code in the bundle, in order: `runtime/<folder>` and `player/<folder>` for the
+   * sources of either package, and the name of a package for a dependency.
+   */
+  readonly holds: readonly string[];
+}
+
 /**
- * The most that a file may take after gzip, in bytes, for each file that a browser loads: the entry points of the browser
- * side as a bundler makes them, the runtime's engine that a client loads for practice on a device, and the static files that
- * `pnpm build` writes. Each is 1.25 times the size measured, rounded up to the next 500 bytes; docs/player/size.md lists
- * the sizes. A budget changes only with the reason in the commit that changes it.
+ * The budget of every entry point of both packages, bundled alone as a host's bundler makes it: minified, for the browsers
+ * of the baseline (Node.js for `node` and `cli` of the runtime), with what it loads by `import()` left out. The size is
+ * 1.25 times the size measured, rounded up to the next 500 bytes; the modules are those it holds, so that an import which
+ * pulls another module into an entry point fails until the list says so. docs/player/size.md and docs/runtime/performance.md
+ * list them. A budget changes only with the reason in the commit that changes it.
+ */
+export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
+  "@assesskit/runtime": {
+    gzip: 208_000,
+    holds: [
+      "fflate",
+      "runtime/asi",
+      "runtime/cat",
+      "runtime/checks",
+      "runtime/content",
+      "runtime/delivery",
+      "runtime/errors",
+      "runtime/interactions",
+      "runtime/metadata",
+      "runtime/package",
+      "runtime/pci",
+      "runtime/pnp",
+      "runtime/processing",
+      "runtime/random",
+      "runtime/results",
+      "runtime/usage",
+      "runtime/validate",
+      "runtime/values",
+      "runtime/xml",
+      "saxes",
+      "valibot",
+      "xmlchars",
+    ],
+  },
+  "@assesskit/runtime/asi": {
+    gzip: 49_000,
+    holds: ["runtime/checks", "runtime/errors", "runtime/values", "runtime/xml", "saxes", "valibot", "xmlchars"],
+  },
+  "@assesskit/runtime/cat": {
+    gzip: 12_000,
+    holds: ["runtime/checks", "runtime/errors", "runtime/metadata", "runtime/results", "runtime/values", "valibot"],
+  },
+  "@assesskit/runtime/checks": { gzip: 5_500, holds: ["runtime/errors", "valibot"] },
+  "@assesskit/runtime/content": {
+    gzip: 10_500,
+    holds: ["runtime/asi", "runtime/checks", "runtime/errors", "runtime/values", "valibot"],
+  },
+  "@assesskit/runtime/delivery": {
+    gzip: 140_500,
+    holds: [
+      "runtime/asi",
+      "runtime/cat",
+      "runtime/checks",
+      "runtime/content",
+      "runtime/errors",
+      "runtime/interactions",
+      "runtime/package",
+      "runtime/pnp",
+      "runtime/processing",
+      "runtime/random",
+      "runtime/validate",
+      "runtime/values",
+      "runtime/xml",
+      "valibot",
+      "xmlchars",
+    ],
+  },
+  "@assesskit/runtime/errors": { gzip: 500, holds: [] },
+  "@assesskit/runtime/interactions": {
+    gzip: 21_500,
+    holds: ["runtime/asi", "runtime/checks", "runtime/errors", "runtime/random", "runtime/values", "valibot"],
+  },
+  "@assesskit/runtime/pci": { gzip: 11_000, holds: ["runtime/checks", "runtime/errors", "runtime/values", "valibot"] },
+  "@assesskit/runtime/pnp": {
+    gzip: 27_500,
+    holds: ["runtime/checks", "runtime/errors", "runtime/xml", "saxes", "valibot", "xmlchars"],
+  },
+  "@assesskit/runtime/results": {
+    gzip: 27_500,
+    holds: ["runtime/checks", "runtime/errors", "runtime/values", "runtime/xml", "saxes", "valibot", "xmlchars"],
+  },
+  "@assesskit/runtime/usage": {
+    gzip: 24_000,
+    holds: ["runtime/checks", "runtime/errors", "runtime/values", "runtime/xml", "saxes", "valibot", "xmlchars"],
+  },
+  "@assesskit/runtime/validate": {
+    gzip: 91_000,
+    holds: [
+      "runtime/asi",
+      "runtime/checks",
+      "runtime/errors",
+      "runtime/interactions",
+      "runtime/metadata",
+      "runtime/package",
+      "runtime/pci",
+      "runtime/pnp",
+      "runtime/processing",
+      "runtime/results",
+      "runtime/values",
+      "runtime/xml",
+      "saxes",
+      "valibot",
+      "xmlchars",
+    ],
+  },
+  "@assesskit/runtime/metadata": {
+    gzip: 23_500,
+    holds: ["runtime/asi", "runtime/checks", "runtime/errors", "runtime/xml", "saxes", "valibot", "xmlchars"],
+  },
+  "@assesskit/runtime/package": {
+    gzip: 64_000,
+    holds: [
+      "fflate",
+      "runtime/asi",
+      "runtime/checks",
+      "runtime/errors",
+      "runtime/metadata",
+      "runtime/values",
+      "runtime/xml",
+      "saxes",
+      "valibot",
+      "xmlchars",
+    ],
+  },
+  "@assesskit/runtime/processing": {
+    gzip: 33_500,
+    holds: ["runtime/asi", "runtime/checks", "runtime/errors", "runtime/random", "runtime/values", "valibot"],
+  },
+  "@assesskit/runtime/values": { gzip: 23_500, holds: ["runtime/checks", "runtime/errors", "valibot"] },
+  "@assesskit/runtime/xml": {
+    gzip: 21_000,
+    holds: ["runtime/checks", "runtime/errors", "saxes", "valibot", "xmlchars"],
+  },
+  "@assesskit/runtime/node": {
+    gzip: 626_000,
+    holds: [
+      "fflate",
+      "libxml2-wasm",
+      "runtime/asi",
+      "runtime/checks",
+      "runtime/errors",
+      "runtime/metadata",
+      "runtime/package",
+      "runtime/validate",
+      "runtime/values",
+      "runtime/xml",
+      "saxes",
+      "valibot",
+      "xmlchars",
+    ],
+  },
+  "@assesskit/runtime/cli": {
+    gzip: 682_500,
+    holds: [
+      "fflate",
+      "libxml2-wasm",
+      "runtime/asi",
+      "runtime/checks",
+      "runtime/errors",
+      "runtime/interactions",
+      "runtime/metadata",
+      "runtime/node",
+      "runtime/package",
+      "runtime/pci",
+      "runtime/pnp",
+      "runtime/processing",
+      "runtime/results",
+      "runtime/usage",
+      "runtime/validate",
+      "runtime/values",
+      "runtime/xml",
+      "saxes",
+      "valibot",
+      "xmlchars",
+    ],
+  },
+  "@assesskit/player": {
+    gzip: 10_000,
+    holds: ["player/errors", "player/messages", "runtime/checks", "runtime/errors", "valibot"],
+  },
+  "@assesskit/player/player": {
+    gzip: 134_500,
+    holds: [
+      "player/errors",
+      "player/messages",
+      "player/protocol",
+      "runtime/asi",
+      "runtime/checks",
+      "runtime/content",
+      "runtime/errors",
+      "runtime/interactions",
+      "runtime/package",
+      "runtime/pci",
+      "runtime/pnp",
+      "runtime/values",
+      "runtime/xml",
+      "saxes",
+      "valibot",
+      "xmlchars",
+    ],
+  },
+  "@assesskit/player/client": {
+    gzip: 25_000,
+    holds: [
+      "player/errors",
+      "player/protocol",
+      "runtime/checks",
+      "runtime/delivery",
+      "runtime/errors",
+      "runtime/interactions",
+      "runtime/package",
+      "runtime/pnp",
+      "runtime/values",
+      "runtime/xml",
+      "valibot",
+      "xmlchars",
+    ],
+  },
+  "@assesskit/player/protocol": {
+    gzip: 7_500,
+    holds: ["runtime/asi", "runtime/checks", "runtime/errors", "runtime/values", "valibot"],
+  },
+  "@assesskit/player/scoring": {
+    gzip: 13_000,
+    holds: [
+      "player/protocol",
+      "runtime/asi",
+      "runtime/checks",
+      "runtime/errors",
+      "runtime/processing",
+      "runtime/values",
+      "valibot",
+    ],
+  },
+  "@assesskit/player/cat": {
+    gzip: 24_500,
+    holds: [
+      "runtime/cat",
+      "runtime/checks",
+      "runtime/delivery",
+      "runtime/errors",
+      "runtime/metadata",
+      "runtime/package",
+      "runtime/values",
+      "runtime/xml",
+      "saxes",
+      "valibot",
+      "xmlchars",
+    ],
+  },
+  "@assesskit/player/cat-rest": {
+    gzip: 18_000,
+    holds: [
+      "player/checks",
+      "player/errors",
+      "runtime/cat",
+      "runtime/checks",
+      "runtime/errors",
+      "runtime/metadata",
+      "runtime/results",
+      "runtime/values",
+      "valibot",
+    ],
+  },
+  "@assesskit/player/server": {
+    gzip: 62_000,
+    holds: [
+      "jose",
+      "player/errors",
+      "player/protocol",
+      "runtime/asi",
+      "runtime/cat",
+      "runtime/checks",
+      "runtime/delivery",
+      "runtime/errors",
+      "runtime/interactions",
+      "runtime/metadata",
+      "runtime/package",
+      "runtime/pci",
+      "runtime/pnp",
+      "runtime/random",
+      "runtime/results",
+      "runtime/usage",
+      "runtime/values",
+      "runtime/xml",
+      "saxes",
+      "valibot",
+      "xmlchars",
+    ],
+  },
+  "@assesskit/player/messages/id": { gzip: 8_000, holds: [] },
+};
+
+/**
+ * The most that a file may take after gzip, in bytes, for the files that a browser loads besides the entry points: the first
+ * load of `mountItem`, and the static files that `pnpm build` writes. Each is 1.25 times the size measured, rounded up to
+ * the next 500 bytes; docs/player/size.md lists the sizes. A budget changes only with the reason in the commit that changes it.
  */
 export const SIZE_BUDGETS = {
-  /** `@assesskit/player`: the errors and the English messages. */
-  root: 10_000,
-  /** `@assesskit/player/protocol`. */
-  protocol: 7_500,
-  /** `@assesskit/player/client`, without the engine that `createLocalSession` loads on demand. */
-  client: 25_000,
-  /** `@assesskit/player/messages/id`, the messages in Indonesian, which a host that shows Indonesian loads beside the player. */
-  catalog: 8_000,
-  /** `@assesskit/player/player`. */
-  player: 134_500,
   /** `mountItem` of `@assesskit/player/player`, with the code that it shares with `mountDelivery` and none of the chrome. */
   item: 101_000,
-  /** `@assesskit/runtime/delivery`, which `createLocalSession` loads for practice on a device. */
-  engine: 152_000,
   /** The script of the frame of a portable custom interaction. */
   bridge: 5_000,
   /** RequireJS, which the frame loads. */

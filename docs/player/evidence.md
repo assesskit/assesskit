@@ -154,8 +154,9 @@ parses as a document of QTI data, the references of adaptive sections and every 
 other files are `200`.
 
 `bundle.test.ts` bundles the player and the remote session with esbuild and reads the metafile of the output: no file of the runtime's
-engine has code in it, and a bundle that makes a local session has (so the check can see it). `size.test.ts` bundles each
-entry point of the browser side, minified, and fails when a file is above its budget after gzip ([size](size.md)).
+engine has code in it, and a bundle that makes a local session has (so the check can see it). `size.test.ts` bundles every
+entry point of both packages alone, minified, and fails when one is above its budget after gzip or holds a module that its budget
+does not list ([size](size.md)).
 
 The browser tests of the shell and the clients (`delivery.browser.test.ts`, `client.browser.test.ts`) run a session host in the
 page with the wire between them: every envelope goes through JSON. The shell tests with a profile press the panel and read the next view, so that the `support` action goes through the session
