@@ -68,9 +68,9 @@ interactions, answers each, and runs axe on it.
 stream need an audio output. A Linux host with no sound card has none, so `scripts/linux-audio.sh` starts PulseAudio with a
 sink that plays to nowhere, and all three engines then play and record. With `REQUIRE_AUDIO=1` a test that needs audio fails
 when the output is missing, and does not skip; without it the test skips, so that a laptop with no device still runs the rest.
-CI and the container below set it. Two tests skip in WebKit on Linux, for a reason that is not the device: the WebKit of
-Playwright there has no `MediaRecorder`, so the test of the recorder of the browser and the test of a recording in a type that
-the interaction accepts run in Chromium and Firefox, and the WAV recording through the worklet runs in all three.
+CI and the container below set it. Three tests skip in WebKit on Linux, for a reason that is not the device: the WebKit of
+Playwright there has no `MediaRecorder`, so the two tests of the recorder of the browser and the test of a recording in a type
+that the interaction accepts run in Chromium and Firefox, and the WAV recording through the worklet runs in all three.
 WebKit also keeps an audio context suspended unless a gesture of the person came a few seconds before, and the oscillator that stands for
 the microphone does not capture, so the fake microphone presses a button of its own before it makes its context.
 
