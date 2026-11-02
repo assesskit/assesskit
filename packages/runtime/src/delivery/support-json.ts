@@ -1,15 +1,21 @@
 import * as v from "valibot";
-import { describe, isRecord, type Schema, transformWith } from "../checks.js";
+import { describe, isRecord, parseWith, type Schema, transformWith } from "../checks.js";
 import { DataError } from "../errors.js";
 import {
+  type Braille,
+  type FontFace,
   isSupportName,
+  type Magnification,
   type PredefinedSupportName,
+  type Spoken,
   SUPPORT_NAMES,
   type SupportName,
   type SupportSetting,
   type SupportState,
+  type TextAppearance,
   writePnp,
 } from "../pnp/index.js";
+import { ADJUSTABLE_SETTINGS } from "./adjustable-settings.js";
 import type { SupportView } from "./candidate-view.js";
 import type { SessionSupport } from "./delivery-state.js";
 import { entriesSchema } from "./entries-json.js";
@@ -49,9 +55,89 @@ function readSupportSetting(json: unknown, name: string): SupportSetting {
   return setting;
 }
 
+/** A schema for each property of the settings of a support, so that the compiler finds a property left out. */
+type Properties<TSetting> = { readonly [TName in keyof Required<TSetting>]: v.GenericSchema };
+
+/** A parameter of a support, whose value `writePnp` checks. */
+const parameter = v.optional(v.unknown());
+
+/** A zoom of magnification, with nothing but its amount. */
+const zoom = v.optional(v.strictObject({ zoomAmount: parameter }));
+
+const braille = {
+  name: v.literal("braille"),
+  replaceAccessModes: parameter,
+  language: parameter,
+  deliveryMode: parameter,
+  grade: parameter,
+  brailleType: parameter,
+  mathType: parameter,
+} satisfies Properties<Braille>;
+
+const magnification = {
+  name: v.literal("magnification"),
+  replaceAccessModes: parameter,
+  allContent: zoom,
+  text: zoom,
+  nonText: zoom,
+} satisfies Properties<Magnification>;
+
+const spoken = {
+  name: v.literal("spoken"),
+  replaceAccessModes: parameter,
+  readingType: parameter,
+  restrictionTypes: parameter,
+  speechRate: parameter,
+  pitch: parameter,
+  volume: parameter,
+  linkIndication: parameter,
+  typingEcho: parameter,
+} satisfies Properties<Spoken>;
+
+const textAppearance = {
+  name: v.literal("text-appearance"),
+  replaceAccessModes: parameter,
+  colorTheme: parameter,
+  backgroundColor: parameter,
+  fontColor: parameter,
+  fontSize: parameter,
+  fontFace: v.optional(
+    v.strictObject({ fontNames: parameter, genericFontFace: parameter } satisfies Properties<FontFace>),
+  ),
+  lineSpacing: parameter,
+  lineHeight: parameter,
+  letterSpacing: parameter,
+  uniformFontSizing: parameter,
+  wordSpacing: parameter,
+  wordWrapping: parameter,
+} satisfies Properties<TextAppearance>;
+
+/** The supports whose settings a candidate may change, which `ADJUSTABLE_SETTINGS` names. */
+const ADJUSTABLE_NAMES: readonly string[] = Object.keys(ADJUSTABLE_SETTINGS);
+
+/**
+ * The schema of the settings of a support in an action: those of the support that their `name` names. The settings of a
+ * support whose settings the candidate may change hold its parameters and nothing else, nested objects included, so that an
+ * action cannot carry other data into the state; the engine refuses the settings of any other support.
+ */
+export const supportSettingSchema: Schema<SupportSetting> = v.pipe(
+  v.variant(
+    "name",
+    [
+      v.strictObject(braille),
+      v.strictObject(magnification),
+      v.strictObject(spoken),
+      v.strictObject(textAppearance),
+      v.looseObject({ name: v.picklist(SUPPORT_NAMES.filter((name) => !ADJUSTABLE_NAMES.includes(name))) }),
+    ],
+    "The name of the settings must be a predefined support.",
+  ),
+  transformWith((json) => readSupportSetting(json, json.name)),
+);
+
 /**
  * Checks the settings of a support, as an action carries them: an object whose `name` is a predefined support and whose
- * parameters `writePnp` accepts for that support.
+ * parameters `writePnp` accepts for that support, as {@link supportSettingSchema} reads them.
  *
  * @param value - The value to check.
  * @param label - Names the value in the message, such as `The settings of support-settings`.
@@ -64,14 +150,8 @@ export function checkSupportSetting(value: unknown, label: string): asserts valu
       `${label} must be an object whose name is a predefined support, found ${describe(isRecord(value) ? name : value)}.`,
     );
   }
-  readSupportSetting(value, name);
+  parseWith(supportSettingSchema, value, label);
 }
-
-/** The schema of the settings of a support in an action: those of the support that their `name` names. */
-export const supportSettingSchema: Schema<SupportSetting> = v.pipe(
-  v.looseObject({ name: v.picklist(SUPPORT_NAMES, "The name of the settings must be a predefined support.") }),
-  transformWith((json) => readSupportSetting(json, json.name)),
-);
 
 /** The schema of a support in a view; its settings are those of its name. */
 export const supportViewSchema: Schema<SupportView> = v.pipe(

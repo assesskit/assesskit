@@ -355,9 +355,10 @@ leaves without it.
   reports `hazard-unavoidable`. A choice among variants reports `variant-selected`.
 - Settings: the profile sets the preferences of a support when the session starts, and `support-settings` changes them while
   the support is on, whatever its state, as CERT asks of braille, magnification and reading aloud (`A-10b`, `A-30b`, `A-40d`,
-  `A-40e`). The action carries the settings whole; only those of `ADJUSTABLE_SETTINGS` may differ from the settings in force,
-  so the program's own, such as the restrictions of reading aloud, stay. The state keeps the new settings, so a session read
-  back on another device has them, and the step reports `support-changed` with the detail `<name> settings`.
+  `A-40e`). The action carries the settings whole, with the parameters of the support and no other property; only those of
+  `ADJUSTABLE_SETTINGS` may differ from the settings in force, so the program's own, such as the restrictions of reading
+  aloud, stay. The state keeps the new settings, so a session read back on another device has them, and the step reports
+  `support-changed` with the detail `<name> settings`.
 
 | Support           | Settings the candidate changes                                             |
 | ----------------- | -------------------------------------------------------------------------- |

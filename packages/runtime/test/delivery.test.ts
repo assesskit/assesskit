@@ -1561,6 +1561,14 @@ describe("applying actions", () => {
       ),
     ).toThrow(DataError);
     expect(() =>
+      engine.apply(
+        state,
+        json(
+          '{"type":"support-settings","settings":{"name":"spoken","replaceAccessModes":[],"restrictionTypes":[],"note":[]},"at":1}',
+        ),
+      ),
+    ).toThrow('The settings of support-settings is invalid: unexpected property "note".');
+    expect(() =>
       engine.apply(state, json('{"type":"set-responses","item":{"ref":"a","instance":1},"responses":{},"at":1}')),
     ).toThrow("The responses of set-responses must be a Map from response identifier to value, found an object.");
     expect(() => engine.apply(state, json('{"type":"jump","at":1}'))).toThrow(
@@ -4836,6 +4844,18 @@ describe("candidate actions", () => {
       /zoom/i,
     );
     refuses('{"type":"support-settings","settings":"magnification"}', /settings/);
+    refuses(
+      '{"type":"support-settings","settings":{"name":"magnification","replaceAccessModes":[],"allContent":{"zoomAmount":3},"note":[]}}',
+      'The action is invalid at settings: unexpected property "note".',
+    );
+    refuses(
+      '{"type":"support-settings","settings":{"name":"magnification","replaceAccessModes":[],"allContent":{"zoomAmount":3,"note":{"any":"data"}}}}',
+      'The action is invalid at settings.allContent: unexpected property "note".',
+    );
+    refuses(
+      '{"type":"support-settings","settings":{"name":"text-appearance","replaceAccessModes":[],"fontFace":{"fontNames":[],"note":1}}}',
+      'The action is invalid at settings.fontFace: unexpected property "note".',
+    );
     refuses(
       '{"type":"set-responses","item":{"ref":"a","instance":1},"responses":{}}',
       "The action is invalid at responses: expected an array, found an object.",
