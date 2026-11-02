@@ -39,6 +39,11 @@ const TEST_TIMEOUT_MS = 30_000;
 const BROWSER_TEST_TIMEOUT_MS = 30_000;
 /** The longest a run of one test file may take in all, in milliseconds, before it is stopped. */
 const RUN_TIMEOUT_MS = 300_000;
+/**
+ * The most that a run may print, in bytes. Node.js stops a run at 1 MiB of output by default and cuts the summary off, and a
+ * copy without a rule can fail every test of a file with a long message each.
+ */
+const REPORT_MAX_BYTES = 64 * 1024 * 1024;
 
 /**
  * What checking one rule found: the rule is guarded, it is not, or a run took longer than its limit and nothing is known.
@@ -137,6 +142,7 @@ function runTest(root: string, scratch: string, test: string, browser: boolean, 
       encoding: "utf8",
       env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0", BROWSERS: "chromium" },
       timeout: limit,
+      maxBuffer: REPORT_MAX_BYTES,
     },
   );
   const report = `${run.stdout}${run.stderr}`;

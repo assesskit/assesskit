@@ -115,6 +115,10 @@ describe("checkRule", () => {
       'import { it } from "vitest";\nit("never ends", async () => { await new Promise((resolve) => setTimeout(resolve, 120_000)); }, 180_000);\n',
     );
     writeFileSync(
+      join(repository, "test/loud.test.ts"),
+      'import { expect, it } from "vitest";\nimport { above } from "../src/limit.ts";\nit("is above 3", () => { if (!above(4)) console.log("x".repeat(2_000_000)); expect(above(4)).toBe(true); });\n',
+    );
+    writeFileSync(
       join(repository, "test/failing.test.ts"),
       'import { expect, it } from "vitest";\nit("fails", () => { expect(1).toBe(2); });\n',
     );
@@ -130,6 +134,11 @@ describe("checkRule", () => {
 
   it("reports a rule as guarded when its test fails without it", () => {
     const verdict = checkRule(repository, rule);
+    expect(verdict).toStrictEqual({ outcome: "guarded", message: "1 test fails without the rule." });
+  });
+
+  it("reads the verdict of a run that prints more than 1 MiB, as many failures with long messages do", () => {
+    const verdict = checkRule(repository, { ...rule, test: "test/loud.test.ts" });
     expect(verdict).toStrictEqual({ outcome: "guarded", message: "1 test fails without the rule." });
   });
 
