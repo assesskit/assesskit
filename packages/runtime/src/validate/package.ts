@@ -112,7 +112,7 @@ function checkResource(
 export function validatePackage(pkg: QtiPackage, options: ValidateOptions = {}): readonly Issue[] {
   const checked = checkValidateOptions(options);
   checkRecord(pkg, "The package must be an object");
-  const reports = new Reports();
+  const reports = new Reports(checked.maxFindings);
   const manifestFindings = reports.of(MANIFEST_PATH);
   const contents = new Contents(pkg);
   checkListedFiles(pkg, manifestFindings);

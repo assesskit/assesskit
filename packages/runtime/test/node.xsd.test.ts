@@ -180,6 +180,22 @@ describe("validating documents", () => {
     expect(issues.map(({ location }) => location?.path)).toEqual(["second.xml", "third.xml"]);
   });
 
+  it("keeps the first maxFindings issues of all files, and ends a list that stopped with an error", async () => {
+    const files = ["first.xml", "second.xml", "third.xml"].map((path) => ({ ...item("<qti-nothing/>"), path }));
+    const issues = await validateXmlFiles(schemas, files, { maxFindings: 2 });
+    expect(issues.map(({ code }) => code)).toEqual([
+      "assesskit/node/xsd-invalid",
+      "assesskit/node/xsd-invalid",
+      "assesskit/validate/findings-stopped",
+    ]);
+    // libxml2 reports each printed variable without an identifier, more than the default limit of 1,000 holds.
+    const many = item(`<p>${"<qti-printed-variable/>".repeat(1005)}</p>`);
+    expect(await validateXmlFiles(schemas, [many])).toHaveLength(1001);
+    await expect(validateXmlFiles(schemas, [], JSON.parse('{"maxFindings":0}'))).rejects.toThrow(
+      "The option maxFindings must be a positive integer, found 0.",
+    );
+  });
+
   it("reads bytes in the encodings the runtime decodes, and text as it is", async () => {
     const utf16 = new Uint8Array(
       Buffer.from(`﻿<?xml version="1.0" encoding="UTF-16"?>${item("<p>é€</p>").content}`, "utf16le"),

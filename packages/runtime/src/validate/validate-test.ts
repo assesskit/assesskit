@@ -45,7 +45,7 @@ export function validateTest(
   }
   // The checks read the model by its properties, so the shape of the whole model is checked first.
   walkDocument({ kind: "test", test }, () => undefined);
-  const reports = new Reports();
+  const reports = new Reports(checked.maxFindings);
   checkTest(test, reports, checked, { base, resolvers });
   return reports.issues;
 }

@@ -2,7 +2,8 @@ import { checkRecord } from "../checks.js";
 import type { Issue } from "../errors.js";
 import { type PersonalNeedsProfile, PNP_ALTERNATE_NAMESPACES, PNP_NAMESPACE } from "../pnp/index.js";
 import type { XmlElement } from "../xml/index.js";
-import { Findings } from "./findings.js";
+import { Findings, FindingsLimit } from "./findings.js";
+import { checkMaxFindings, type ValidateOptions } from "./options.js";
 
 /**
  * Validates a personal needs profile: a support in the prohibit set is listed only there. A support that the
@@ -21,6 +22,7 @@ import { Findings } from "./findings.js";
  */
 export function validatePnp(profile: PersonalNeedsProfile): readonly Issue[] {
   checkRecord(profile, "The profile must be an object of the model of a personal needs profile");
+  // The issues are at most three for each support name of the vocabulary, far below the default limit.
   const findings = new Findings();
   const element = "access-for-all-pnp";
   for (const name of profile.prohibited) {
@@ -38,7 +40,7 @@ export function validatePnp(profile: PersonalNeedsProfile): readonly Issue[] {
     const message = `The support ${name} is in the activate-as-option set and the activate-at-initialization set; it is either on from the start or an option the candidate turns on.`;
     findings.warning("assesskit/validate/pnp-sets", message, element);
   }
-  return findings.issues;
+  return findings.list();
 }
 
 /**
@@ -48,12 +50,17 @@ export function validatePnp(profile: PersonalNeedsProfile): readonly Issue[] {
  * is reported for each element whose parent is not in such a namespace.
  *
  * @param root - The root element of the document, as `parseXml` returns it.
- * @returns One error for each part of the document in an alternate namespace; none when it uses the namespace of the schema.
- * @throws `DataError` when `root` is not an element.
+ * @param options - `maxFindings`, as {@link ValidateOptions} has it.
+ * @returns One error for each part of the document in an alternate namespace, up to `maxFindings`; none when it uses the
+ * namespace of the schema.
+ * @throws `DataError` when `root` is not an element, or `maxFindings` is not a positive integer.
  */
-export function validatePnpNamespace(root: XmlElement): readonly Issue[] {
+export function validatePnpNamespace(
+  root: XmlElement,
+  options: Pick<ValidateOptions, "maxFindings"> = {},
+): readonly Issue[] {
   checkRecord(root, "The root must be an element as parseXml returns it");
-  const findings = new Findings();
+  const findings = new Findings(undefined, new FindingsLimit(checkMaxFindings(options)));
   const visit = (element: XmlElement, parent: string, parentAlternate: boolean): void => {
     const alternate = PNP_ALTERNATE_NAMESPACES.includes(element.namespace);
     const path = `${parent}${element.name}`;
@@ -64,5 +71,5 @@ export function validatePnpNamespace(root: XmlElement): readonly Issue[] {
     for (const child of element.children) if (child.kind === "element") visit(child, `${path}/`, alternate);
   };
   visit(root, "", false);
-  return findings.issues;
+  return findings.list();
 }

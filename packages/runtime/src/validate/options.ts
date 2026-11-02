@@ -1,7 +1,8 @@
 import type { ResponseProcessing } from "../asi/index.js";
-import { checkFunction, checkOptions, checkString, describe } from "../checks.js";
+import { checkFunction, checkOptions, checkPositiveInteger, checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import type { CustomOperator } from "../processing/index.js";
+import { DEFAULT_MAX_FINDINGS } from "./findings.js";
 
 /** Options of the validation functions that run the static checks of processing. */
 export interface ValidateOptions {
@@ -25,6 +26,13 @@ export interface ValidateOptions {
    * @defaultValue `undefined`, so only the standard templates are known
    */
   readonly resolveTemplate?: (uri: string) => ResponseProcessing | undefined;
+  /**
+   * The most issues to list. When the checks find more, the list ends with the error
+   * `assesskit/validate/findings-stopped`, so that content that is wrong in a million places costs the memory of the limit.
+   *
+   * @defaultValue `1000`
+   */
+  readonly maxFindings?: number;
 }
 
 /** The options as the checks use them. */
@@ -35,6 +43,20 @@ export interface CheckedOptions {
   readonly customOperators: ReadonlyMap<string, CustomOperator> | undefined;
   /** Resolves a template URI, or `undefined` when the standard templates are the only ones. */
   readonly resolveTemplate: ((uri: string) => ResponseProcessing | undefined) | undefined;
+  /** The most issues to list. */
+  readonly maxFindings: number;
+}
+
+/**
+ * Checks the option `maxFindings` of a validation and returns it, or its default.
+ *
+ * @throws `DataError` when it is not a positive integer.
+ */
+export function checkMaxFindings(options: Pick<ValidateOptions, "maxFindings">): number {
+  checkOptions(options);
+  const { maxFindings = DEFAULT_MAX_FINDINGS } = options;
+  checkPositiveInteger(maxFindings, "The option maxFindings");
+  return maxFindings;
 }
 
 /**
@@ -42,11 +64,11 @@ export interface CheckedOptions {
  *
  * @param options - The options of a validation function.
  * @returns The options as the checks use them.
- * @throws `DataError` when they are not an object, or `path` is not a string, `customOperators` not a `Map` or
- * `resolveTemplate` not a function.
+ * @throws `DataError` when they are not an object, or `path` is not a string, `customOperators` not a `Map`,
+ * `resolveTemplate` not a function or `maxFindings` not a positive integer.
  */
 export function checkValidateOptions(options: ValidateOptions): CheckedOptions {
-  checkOptions(options);
+  const maxFindings = checkMaxFindings(options);
   const { path, customOperators, resolveTemplate } = options;
   if (path !== undefined) checkString(path, "The option path");
   if (customOperators !== undefined && !(customOperators instanceof Map)) {
@@ -55,5 +77,5 @@ export function checkValidateOptions(options: ValidateOptions): CheckedOptions {
     );
   }
   if (resolveTemplate !== undefined) checkFunction(resolveTemplate, "The option resolveTemplate must be a function");
-  return { path, customOperators, resolveTemplate };
+  return { path, customOperators, resolveTemplate, maxFindings };
 }

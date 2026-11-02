@@ -1,6 +1,8 @@
 import { ParseOption, XmlDocument, XmlLibError, type XsdValidator } from "libxml2-wasm";
 import { checkArray, checkRecord, checkString, describe } from "../checks.js";
 import { DataError, type Issue, ReadError, SecurityError } from "../errors.js";
+import type { ValidateOptions } from "../validate/index.js";
+import { checkMaxFindings, FindingsLimit } from "../validate/internal.js";
 import { parseXml, type XmlElement } from "../xml/index.js";
 import { checkSchemaSet, type SchemaSet, validatorFor } from "./schema-set.js";
 import { selectSchema } from "./select-schema.js";
@@ -98,13 +100,23 @@ function validateOne(schemas: SchemaSet, file: XmlFile): Issue[] {
  * that namespace (ASI 3.0.1, results, usage data, metadata, LOM, manifest, and the manifest extension, curriculum
  * standards, accessibility resource and PNP schemas). The schemas are compiled once per set, not per call.
  *
+ * libxml2 reports every violation of a document, which takes about half a millisecond each, so a document of the
+ * largest size that `parseXml` reads, invalid at every element, takes minutes; the list keeps the first `maxFindings`.
+ *
  * @param schemas - The set from {@link loadSchemaSet}.
  * @param files - The documents.
- * @returns The issues of all documents in the order of the files; none when every document is valid. A schema violation
+ * @param options - `maxFindings`, as `ValidateOptions` of `validate` has it, over all the files.
+ * @returns The issues of all documents in the order of the files, up to `maxFindings`, and the error
+ * `assesskit/validate/findings-stopped` when there were more; none when every document is valid. A schema violation
  * has the code `assesskit/node/xsd-invalid`.
  * @throws `DataError` when an argument has the wrong type or the set is closed.
  */
-export async function validateXmlFiles(schemas: SchemaSet, files: readonly XmlFile[]): Promise<readonly Issue[]> {
+export async function validateXmlFiles(
+  schemas: SchemaSet,
+  files: readonly XmlFile[],
+  options: Pick<ValidateOptions, "maxFindings"> = {},
+): Promise<readonly Issue[]> {
+  const limit = new FindingsLimit(checkMaxFindings(options));
   checkSchemaSet(schemas);
   checkArray(files, "The files must be an array");
   const issues: Issue[] = [];
@@ -116,7 +128,9 @@ export async function validateXmlFiles(schemas: SchemaSet, files: readonly XmlFi
         `The content of the file ${JSON.stringify(file.path)} must be a string or a Uint8Array, found ${describe(file.content)}.`,
       );
     }
-    issues.push(...validateOne(schemas, file));
+    for (const issue of validateOne(schemas, file)) {
+      if (limit.take()) issues.push(issue);
+    }
   }
-  return issues;
+  return [...issues, ...limit.end()];
 }

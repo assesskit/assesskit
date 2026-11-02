@@ -1,7 +1,8 @@
 import { checkArray, checkRecord } from "../checks.js";
 import type { Issue } from "../errors.js";
 import type { AssessmentResult, ItemResult, ResultVariable, SupportUse, TestResult } from "../results/index.js";
-import { Findings } from "./findings.js";
+import { Findings, FindingsLimit } from "./findings.js";
+import { checkMaxFindings, type ValidateOptions } from "./options.js";
 import { checkStandardOutcome } from "./standard-outcomes.js";
 
 const ROOT = "assessmentResult";
@@ -83,16 +84,22 @@ function checkShape(result: AssessmentResult): void {
  * them as a warning, and an outcome a positive `normal-maximum`; and a prohibited support reports no value.
  *
  * @param result - The report, as `readResults` reads it.
- * @returns The issues in document order; none when the report is valid.
- * @throws `DataError` when `result` is not an object of the model of `AssessmentResult`.
+ * @param options - `maxFindings`, as {@link ValidateOptions} has it.
+ * @returns The issues in document order, up to `maxFindings`; none when the report is valid.
+ * @throws `DataError` when `result` is not an object of the model of `AssessmentResult`, or `maxFindings` is not a
+ * positive integer.
  */
-export function validateResults(result: AssessmentResult): readonly Issue[] {
+export function validateResults(
+  result: AssessmentResult,
+  options: Pick<ValidateOptions, "maxFindings"> = {},
+): readonly Issue[] {
+  const limit = new FindingsLimit(checkMaxFindings(options));
   checkShape(result);
-  const findings = new Findings();
+  const findings = new Findings(undefined, limit);
   if (result.testResult !== undefined) checkTestResult(result.testResult, result.itemResults, findings);
   for (const item of result.itemResults) {
     checkVariables(item.variables, "itemResult", findings);
     checkSupports(item.supports, "itemResult", findings);
   }
-  return findings.issues;
+  return findings.list();
 }

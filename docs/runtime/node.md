@@ -21,15 +21,15 @@ flowchart LR
   pkg -- "writePackageFile" --> zip
 ```
 
-| Export                                    | Purpose                                                                                  |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `SCHEMA_FILES`, `SchemaFile`              | The pinned list: URL, file name and SHA-256 of every schema.                             |
-| `loadSchemaSet(directory)`                | Checks the files of `SCHEMA_FILES` in a directory and returns a `SchemaSet`.             |
-| `SchemaSet`                               | The schemas of a directory, compiled when first needed and reused; `close()` frees them. |
-| `validateXmlFiles(schemas, files)`        | Parses each document with `parseXml`, then validates it; returns `Issue`s.               |
-| `XmlFile`                                 | A document: `path` and `content` (text or bytes).                                        |
-| `readPackageFile(path, options?)`         | Reads a package from a ZIP file or an unpacked directory.                                |
-| `writePackageFile(path, manifest, files)` | Writes a package as a ZIP file.                                                          |
+| Export                                       | Purpose                                                                                                                                 |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `SCHEMA_FILES`, `SchemaFile`                 | The pinned list: URL, file name and SHA-256 of every schema.                                                                            |
+| `loadSchemaSet(directory)`                   | Checks the files of `SCHEMA_FILES` in a directory and returns a `SchemaSet`.                                                            |
+| `SchemaSet`                                  | The schemas of a directory, compiled when first needed and reused; `close()` frees them.                                                |
+| `validateXmlFiles(schemas, files, options?)` | Parses each document with `parseXml`, then validates it; returns `Issue`s, at most `maxFindings` (1,000 by default) over all the files. |
+| `XmlFile`                                    | A document: `path` and `content` (text or bytes).                                                                                       |
+| `readPackageFile(path, options?)`            | Reads a package from a ZIP file or an unpacked directory.                                                                               |
+| `writePackageFile(path, manifest, files)`    | Writes a package as a ZIP file.                                                                                                         |
 
 ## Example
 
@@ -120,6 +120,11 @@ after loading is never compiled.
 | `assesskit/node/no-schema`                                                         | The root is in a namespace with no schema in the table above.                               | `SCHEMA_FILES`                                                    |
 | `assesskit/node/xsd-invalid`                                                       | The schema rejects the document. One issue per message of libxml2.                          | The schema file that reported it                                  |
 | `assesskit/node/xml-rejected`                                                      | libxml2 cannot parse a document that the runtime parsed (for example an encoding it lacks). | The schema file                                                   |
+
+The list keeps the first `maxFindings` issues of all the files, 1,000 unless the option says otherwise, and ends with the error
+`assesskit/validate/findings-stopped` when there were more, as the lists of [validate](validate.md#issues) do. libxml2 still
+reports every violation to the runtime, at about half a millisecond each, so a document at the size limit of `parseXml` that
+breaks the schema at every element takes minutes to validate.
 
 A document goes through `parseXml` first, with the default limits, so a DOCTYPE, a document over a limit and one that is not
 well-formed never reach libxml2. libxml2 also runs with network access and external entities off. It throws `DataError` for

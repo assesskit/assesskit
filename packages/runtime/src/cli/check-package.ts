@@ -42,7 +42,7 @@ export async function packageIssues(path: string, schemas: SchemaSet): Promise<r
   }
   const issues: Issue[] = [];
   for (const file of pkg.paths.filter((each) => each.toLowerCase().endsWith(".xml"))) {
-    issues.push(...(await schemaIssues(pkg, file, schemas)));
+    for (const issue of await schemaIssues(pkg, file, schemas)) issues.push(issue);
   }
   return [...issues, ...validatePackage(pkg)];
 }

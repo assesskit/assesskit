@@ -2493,6 +2493,85 @@ describe("the entry points", () => {
     ]);
   });
 
+  describe("the option maxFindings", () => {
+    /** A body with `count` printed variables of an undeclared variable, one issue each. */
+    const undeclared = (count: number): string =>
+      `<p>${'<qti-printed-variable identifier="MISSING"/>'.repeat(count)}</p>`;
+    const stoppedCode = "assesskit/validate/findings-stopped";
+
+    it("lists at most that many issues and ends a list that stopped with an error, 1,000 by default", () => {
+      expect(codesOf(check({ body: undeclared(5) }, { maxFindings: 3 }))).toEqual([
+        ...Array(3).fill("assesskit/validate/undeclared-variable"),
+        stoppedCode,
+      ]);
+      expect(check({ body: undeclared(3) }, { maxFindings: 3 }).map(({ code }) => code)).not.toContain(stoppedCode);
+      const stopped = check({ body: undeclared(1005) });
+      expect(stopped).toHaveLength(1001);
+      expect(stopped.at(-1)).toEqual({
+        severity: "error",
+        code: stoppedCode,
+        message:
+          "The validation stopped after 1000 issues, so the content may hold more, errors among them. Raise the option maxFindings to list them.",
+      });
+    });
+
+    it("shares the limit among the documents of a package and of a test", () => {
+      const broken = (identifier: string): string =>
+        itemXml({ identifier, declarations: single("string"), body: `${textEntry("")}${undeclared(3)}` });
+      const pkg = packageOf(
+        [
+          { identifier: "q1", type: ITEM_TYPE, href: "q1.xml" },
+          { identifier: "q2", type: ITEM_TYPE, href: "q2.xml" },
+        ],
+        { "q1.xml": broken("Q1"), "q2.xml": broken("Q2") },
+      );
+      const issues = validatePackage(pkg, { maxFindings: 4 });
+      expect(issues.map(({ location }) => location?.path)).toEqual(["q1.xml", "q1.xml", "q1.xml", "q2.xml", undefined]);
+      expect(issues.at(-1)?.code).toBe(stoppedCode);
+      const test = testOf(testXml({ sections: section("S1", `${itemRef("Q1")}${itemRef("Q2")}`) }));
+      const resolvers = resolversOf({ "Q1.xml": broken("Q1"), "Q2.xml": broken("Q2") });
+      expect(codesOf(validateTest(test, "t.xml", resolvers, { maxFindings: 4 })).at(-1)).toBe(stoppedCode);
+    });
+
+    it("bounds the issues of a results report and of the namespaces of a profile", () => {
+      const twice = (identifier: string, index: number) =>
+        itemResult(identifier, index, [scoreOutcome("float"), scoreOutcome("float")]);
+      const results = validateResults(report([twice("A", 1), twice("B", 2), twice("C", 3)]), { maxFindings: 2 });
+      expect(codesOf(results)).toEqual([
+        "assesskit/validate/duplicate-identifier",
+        "assesskit/validate/duplicate-identifier",
+        stoppedCode,
+      ]);
+      const alternate =
+        '<access-for-all-pnp xmlns="http://www.imsglobal.org/xsd/qtiv3p0/imsafa3p0pnp_v1p0"><spoken/></access-for-all-pnp>';
+      const record = `<access-for-all-pnp-record><person-sourced-id source-system="s">1</person-sourced-id>${alternate}</access-for-all-pnp-record>`;
+      const records = parseXml(
+        `<access-for-all-pnp-records xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imsafa3p0pnp_v1p0">${record.repeat(3)}</access-for-all-pnp-records>`,
+      );
+      expect(codesOf(validatePnpNamespace(records, { maxFindings: 2 }))).toEqual([
+        "assesskit/validate/pnp-namespace",
+        "assesskit/validate/pnp-namespace",
+        stoppedCode,
+      ]);
+    });
+
+    it("throws a DataError for a limit that is not a positive integer, as JavaScript and JSON pass it", () => {
+      for (const options of [
+        '{"maxFindings":0}',
+        '{"maxFindings":1.5}',
+        '{"maxFindings":"3"}',
+        '{"maxFindings":null}',
+      ]) {
+        expect(() => validateAsi(document(), json(options))).toThrow(
+          "The option maxFindings must be a positive integer",
+        );
+        expect(() => validateResults(report([]), json(options))).toThrow(DataError);
+        expect(() => validatePnpNamespace(parseXml("<a/>"), json(options))).toThrow(DataError);
+      }
+      expect(() => validateResults(report([]), json("null"))).toThrow(DataError);
+    });
+  });
+
   it("name the file in the location of an issue, and the element path of the offending element", () => {
     const issues = check({ body: '<h1 role="button">a</h1>' }, { path: "items/a.xml" });
     expect(issues[0]?.location).toEqual({ path: "items/a.xml", element: "qti-assessment-item/qti-item-body/h1" });

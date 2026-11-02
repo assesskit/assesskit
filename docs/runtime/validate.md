@@ -17,15 +17,15 @@ flowchart LR
   checks["Checks<br/>rule sets, declarations, static types,<br/>structure, files, covers, scoring rubrics"] --> issues["Issue[]<br/>severity, code, message, location"]
 ```
 
-| Export                                          | Purpose                                                                                              |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `validateAsi(document, options?)`               | The issues of an item, test, section, stimulus, response processing or outcome declaration.          |
-| `validateTest(test, base, resolvers, options?)` | The issues of a test and of every section, item and stimulus it names: the static gate of an engine. |
-| `validatePackage(pkg, options?)`                | The issues of a package: its files, its resources and every document in them.                        |
-| `validateResults(result)`                       | The issues of a Results Reporting document.                                                          |
-| `validatePnp(profile)`                          | The issues of the sets of a personal needs profile.                                                  |
-| `validatePnpNamespace(root)`                    | The elements of a PNP document in a namespace other than the schema's.                               |
-| `ValidateOptions`                               | The options of the first three.                                                                      |
+| Export                                          | Purpose                                                                                               |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `validateAsi(document, options?)`               | The issues of an item, test, section, stimulus, response processing or outcome declaration.           |
+| `validateTest(test, base, resolvers, options?)` | The issues of a test and of every section, item and stimulus it names: the static gate of an engine.  |
+| `validatePackage(pkg, options?)`                | The issues of a package: its files, its resources and every document in them.                         |
+| `validateResults(result, options?)`             | The issues of a Results Reporting document.                                                           |
+| `validatePnp(profile)`                          | The issues of the sets of a personal needs profile.                                                   |
+| `validatePnpNamespace(root, options?)`          | The elements of a PNP document in a namespace other than the schema's.                                |
+| `ValidateOptions`                               | The options of the first three; `maxFindings` alone for `validateResults` and `validatePnpNamespace`. |
 
 Every function returns `readonly Issue[]` and none throws for content that is invalid; the order of the issues is the
 order in which the checks found them. A wrong argument, or a model whose shape is not the one the schema gives it, is a
@@ -81,6 +81,10 @@ the `path` of the file and the `element` path.
   resources of a package at `imsmanifest.xml`.
 - A reference that cannot be resolved, or a document that cannot be read, is one issue: the issues of a `ReadError`, or
   `assesskit/validate/unresolved-reference` for any other error of the runtime. What is left unresolved is not checked further.
+- A validation lists at most `maxFindings` issues, over all the documents it checks. When the checks find more, the list
+  ends with the error `assesskit/validate/findings-stopped`: an error because the content may hold more errors than the list
+  shows. Content that is wrong at every element of a document at the size limit of `parseXml` makes close to a million
+  issues, which would cost about 700 MB without the limit and close to a gigabyte for each such document of a package.
 
 ## Options
 
@@ -89,6 +93,7 @@ the `path` of the file and the `element` path.
 | `path`            | none    | The path of the document, named in the location of its issues. Used by `validateAsi` only.                                                                                                                                                                             |
 | `customOperators` | none    | A `Map` from the `definition` or `class` of a `qti-custom-operator` to its function. When given, an operator that no entry serves is an error; when absent, custom operators are not checked.                                                                          |
 | `resolveTemplate` | none    | Returns the response processing for a template URI other than the six standard ones, called with the `template-location` of the item, else its `template`. When absent, only the standard templates are known. `validatePackage` adds the templates the package holds. |
+| `maxFindings`     | `1000`  | The most issues to list, a positive integer. When the checks find more, the list ends with the error `assesskit/validate/findings-stopped`.                                                                                                                            |
 
 ## Rule sets of the XML binding
 

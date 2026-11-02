@@ -49,6 +49,11 @@ Points to be aware of when deploying the runtime:
   `SCHEMA_FILES`, and again when it compiles a file. `validateXmlFiles` parses every document with `parseXml` first and
   runs libxml2 with network access and external entities off. A document has no way to name another schema file than the
   pinned ones.
+- **Validation.** A validation lists at most `maxFindings` issues, 1,000 by default, over every document it checks, and ends a
+  longer list with the error `assesskit/validate/findings-stopped` instead of throwing. Content that is wrong at every
+  element of a document at the XML limits makes close to a million issues, about 700 MB, and a package of such documents,
+  small once compressed, would hold gigabytes. libxml2 still reports every violation of the schema to `validateXmlFiles`, so
+  such a document takes minutes there; validate untrusted uploads off the request path.
 - **Command line.** `assesskit validate` reads the path it is given and the schema directory, and no other file: an `xi:include`
   of a lone document is not resolved. It refuses a package that breaks a rule of **Packages** below, and an XML file above
   `maxBytes` of `parseXml` before it reads the file, with the exit code 2.

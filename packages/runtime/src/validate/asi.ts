@@ -23,7 +23,7 @@ export function validateAsi(document: AsiDocument, options: ValidateOptions = {}
   const checked = checkValidateOptions(options);
   // The checks read the model by its properties, so the shape of the whole model is checked first.
   walkDocument(document, () => undefined);
-  const reports = new Reports();
+  const reports = new Reports(checked.maxFindings);
   checkDocument(document, reports, checked);
   return reports.issues;
 }
