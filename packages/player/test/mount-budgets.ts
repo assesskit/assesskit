@@ -12,8 +12,8 @@ export const HIGHLIGHT_WORDS = 2_000;
 
 /**
  * The most that the fastest sample of a mount may take, in milliseconds, with the CPU slowed by {@link CPU_SLOWDOWN}: five
- * times the fastest sample that the CI runner took, the median of three runs (30.1, 73.1 and 48.3 ms), rounded up to one
- * significant digit, as docs/player/size.md explains.
+ * times the fastest sample that the CI runner took, rounded up to one significant digit, as docs/player/size.md explains.
+ * The samples are the medians of three runs: 30.1, 73.1 and 48.3 ms, for the three rows in order.
  */
 export const MOUNT_BUDGETS = {
   /** `mountDelivery` over a test: until the first item is on the page. */

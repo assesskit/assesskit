@@ -4,17 +4,6 @@ The working rules of this repository for people and coding agents. The gates enf
 `check:standards`, `typecheck`, `knip`, `compat`, `docs:api`); this file holds the rest. The workspace's engineering standards
 apply, and the deviations from them are recorded below.
 
-```mermaid
-flowchart LR
-  runtime["packages/runtime<br/>QTI 3.0 semantics and data"] --> player["packages/player<br/>presentation and platform"]
-  runtime --> examples["examples/<br/>run by a test"]
-  player --> examples
-  docs["docs/<br/>guides, one per module"] -.-> runtime
-  docs -.-> player
-  tools["scripts/, validation/, biome/<br/>downloads, checks, fixtures, lint rules"] -.-> runtime
-  compat["compat/<br/>browser baseline"] -.-> player
-```
-
 ## Terms
 
 Use these words with these meanings in code, comments and docs.
@@ -94,8 +83,7 @@ Biome enforces, folder by folder.
   the last green run of main. A newer push to the same ref cancels the run in progress; a cancelled run is not a failure.
 - `rules` is not a job of `ci.yml`: `rules.yml` runs it each week and on `workflow_dispatch`. A builder runs the rules of its package
   before a merge (`pnpm check:rules packages/<package>`), and the release gate needs a green `rules` run on the commit being released.
-- Development needs Node.js 22.18+ and pnpm 12. The scripts in `compat/` and `scripts/` are TypeScript that Node runs
-  directly, so their relative imports end in `.ts`. The packages run on Node.js 22 and later, and CI tests 22 and 24.
+- The scripts in `compat/` and `scripts/` are TypeScript that Node runs directly, so their relative imports end in `.ts`.
 - The Firefox of Playwright does not start on some macOS versions (it did not on macOS 27): run the browser tests in the Linux
   container of [evidence.md](docs/player/evidence.md#tests-in-a-browser) there.
 
@@ -105,17 +93,12 @@ Biome enforces, folder by folder.
   `.changeset/`; a change made before the release extends it.
 - A pull request from a `changeset-release/` branch runs `pnpm changeset version`; after it merges, the maintainer runs the
   Release workflow by hand, which builds and publishes the versions not yet on npm.
-- No workflow opens pull requests, and Dependabot version updates are off.
-- Changesets, docs and TSDoc describe current behavior only.
 
 ## Boundary between the runtime and the player
 
-[architecture.md](docs/runtime/architecture.md#boundary-with-the-player) says who owns what.
-
-- Semantics belong to the runtime: validity, visibility, the choice of a variant, processing, the rules of a session, time limits,
-  the flow of scoring and the view without answer keys. The player never evaluates an expression, decides what is visible or
-  valid, chooses a variant, or holds an answer key outside the runtime's solution view.
-- A rule that the player needs and the runtime lacks is a change in the runtime, with its test, never a workaround in the player.
+[architecture.md](docs/runtime/architecture.md#boundary-with-the-player) says who owns what. The player never evaluates an
+expression, decides what is visible or valid, chooses a variant, or holds an answer key outside the runtime's solution view. A rule
+that the player needs and the runtime lacks is a change in the runtime, with its test, never a workaround in the player.
 
 ## Dependencies
 
@@ -123,14 +106,11 @@ Biome enforces, folder by folder.
   `assesskit schemas fetch` run one implementation. Node runs that file directly and does not resolve the `.js` specifiers of
   an `internal.ts`, so it imports only `node:*` modules and types; `scripts/asi-table.ts` imports only types, through
   `asi/internal.ts`.
-- Dependencies are pinned to exact versions, development ones too, and the runtime dependencies are recorded in
+- Dependencies are pinned to exact versions, development ones too; a runtime dependency has its row in
   [SECURITY.md](SECURITY.md#runtime-dependencies).
 - The player gets `AssesskitError` and `DataError` from `@assesskit/runtime/errors` and its checks from
   `@assesskit/runtime/checks`, never from the root of the runtime, which loads every module.
-- `Date.now` appears only in `packages/player/src/client/clock.ts` and `packages/player/src/server/clock.ts`.
-- `examples/player/cat-with-measurekit` links measurekit from `../measurekit` and `examples/player/lms-integration` links interopkit
-  from `../interopkit`, until both are on npm; CI checks them out at the commits of `scripts/measurekit.lock.json` and
-  `scripts/interopkit.lock.json`, which change with the library that the example needs.
+- `scripts/measurekit.lock.json` and `scripts/interopkit.lock.json` change with the library that an example needs.
 - The JSON of the bodies of the CAT REST binding is written once, in `packages/player/src/cat-rest/binding.ts`, and the client
   and the handler both use it.
 
@@ -169,6 +149,8 @@ Biome enforces, folder by folder.
 - Validation returns `Issue`s with a stable `code` and a message and does not throw. A refusal of the engine has a `code` and a
   message too, listed in the [delivery guide](docs/runtime/delivery.md).
 - Identifier-keyed data lives in `Map`s, never in plain objects, so that an identifier such as `__proto__` stays data.
+- A reader of untrusted input bounds it before it builds anything, with a size or a token count before `JSON.parse`, and a list
+  of findings has a limit (`maxFindings`): memory follows the tokens and the findings, not the bytes.
 - An array whose length a document, a response or a request decides is never spread into the arguments of a call (`push`,
   `append`, `Math.max`): above about 100,000 values that throws a `RangeError`. `biome/no-spread-arguments.grit` holds the
   runtime and the server folders of the player to it for `push`, `unshift`, `Math.min` and `Math.max`.
@@ -187,10 +169,9 @@ Biome enforces, folder by folder.
 
 ## Browser baseline
 
-The shared and browser folders of the player and every stylesheet run in Chromium 111, Firefox 115 and Safari 16.4, and later
-versions ([baseline.md](docs/player/baseline.md)). The `browserslist` of `packages/player/package.json`, the esbuild targets and
-the `lib` of the browser tsconfig name them. Do not guard a feature that a baseline browser lacks with a support check: the code would be dead
-in some browsers and untested in the others.
+[baseline.md](docs/player/baseline.md) names the browsers, and `pnpm compat` holds the shared and browser folders of the player to
+them. Do not guard a feature that a baseline browser lacks with a support check: the code would be dead in some browsers and
+untested in the others.
 
 ## Comments and docs
 
@@ -201,8 +182,7 @@ in some browsers and untested in the others.
   fails on a result that differs. The guides of the player are imported with `?raw`, and a guide whose samples need a page runs in
   `guides.browser.test.ts`.
 - What a call throws goes into a table of errors, not into a sample.
-- The Example of `packages/runtime/README.md` is the file `packages/runtime/test/readme-example.ts`, and `readme.test.ts` fails
-  when they differ; the Quick start of `packages/player/README.md` runs in `protocol.test.ts`.
+- The Quick start of `packages/player/README.md` runs in `protocol.test.ts`.
 - One purpose for each document: `README.md` for users, `docs/<package>/` for guides, `CONTRIBUTING.md` for the process,
   `AGENTS.md` for conventions, `SECURITY.md` for deployment security, `validation/README.md` for the fixture scripts.
 
@@ -217,9 +197,8 @@ in some browsers and untested in the others.
 | `*.xsd.test.ts`            | `pnpm test:xsd`     | Tests that read the official XSDs; every writer test passes its output to `validateXmlFiles` of `node` with a `SchemaSet` that the file loads once |
 | `*.bench.ts`               | `pnpm bench`        | Benchmarks that fail above their budget in `test/budgets.ts` or `test/mount-budgets.ts` ([performance.md](docs/runtime/performance.md))            |
 
-- Completeness comes from the specifications, not from a list that the repository keeps: tests derive the elements, attributes,
-  expressions and interactions to cover from the schemas, the element table and the runtime's own descriptors, and fail when
-  something is missing ([evidence.md](docs/runtime/evidence.md#completeness)).
+- Tests derive what to cover from the schemas, the element table and the runtime's descriptors, never from a list that the
+  repository keeps ([evidence.md](docs/runtime/evidence.md#completeness)).
 - A file's `describe` blocks follow the order of the folder's source files, with a closing `properties` block; within a block,
   the comparisons with the oracle and the main behavior come first, then the options, then errors and edge cases.
 - Every public function has a test of input of other types, as JavaScript or JSON pass it: `null` options and arguments, a string
@@ -233,8 +212,6 @@ in some browsers and untested in the others.
 - A browser test that records waits with `heardFor` of `test/audio.ts` until the audio contexts have played the seconds it needs,
   never for real time: a busy host stalls the clock of a context, and the recording holds a header and no sound. The fake
   microphone presses a button first, because WebKit keeps an audio context suspended without a recent gesture.
-- The browser files of the player have size budgets in `packages/player/test/size-budgets.ts`; `size.test.ts` bundles each entry
-  point and fails when a file is above its budget after gzip ([size.md](docs/player/size.md)).
 
 ## Where things go
 
@@ -247,8 +224,6 @@ in some browsers and untested in the others.
   `lint.test.ts`, a subpath in `package.json` `exports` and in `typedoc.json` when the host imports it, a test file and a guide in `docs/`.
 - A check shared by modules: of a value of a JavaScript type in `checks.ts`; of a value that a module defines, in the `internal.ts` of
   that module.
-- A place where the specifications contradict themselves or are silent: its resolution in [spec-gaps.md](docs/runtime/spec-gaps.md), a
-  test, and a mention in the guide of the module.
+- A place where the specifications contradict themselves or are silent: as CONTRIBUTING says, and a mention in the guide of the module.
 - Something the runtime defines because QTI does not: [conventions.md](docs/runtime/conventions.md), built from QTI's own elements
   so that documents stay valid.
-- A difference from Longsight `qti3-core` that the specification settles: the list in `packages/runtime/test/differential/accepted.ts`.
