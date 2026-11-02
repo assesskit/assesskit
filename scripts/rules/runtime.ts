@@ -9,6 +9,7 @@ const INCLUDE = "packages/runtime/src/xml/include.ts";
 const ACTION = "packages/runtime/src/delivery/action-json.ts";
 const PLAN = "packages/runtime/src/delivery/plan.ts";
 const SESSION_STEP = "packages/runtime/src/delivery/step-session.ts";
+const SUPPORT_JSON = "packages/runtime/src/delivery/support-json.ts";
 const PACKAGE_TEST = "packages/runtime/test/package.test.ts";
 const XML_TEST = "packages/runtime/test/xml.test.ts";
 const NODE_TEST = "packages/runtime/test/node.test.ts";
@@ -266,6 +267,13 @@ export const RUNTIME_RULES: readonly Rule[] = [
     file: SESSION_STEP,
     find: "  if (fixed !== undefined) {",
     replace: "  if (false) {",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "The settings of a support in an action of a client hold the parameters of the support and no other property.",
+    file: SUPPORT_JSON,
+    find: "v.strictObject(magnification),",
+    replace: "v.looseObject(magnification),",
     test: DELIVERY_TEST,
   },
   {
