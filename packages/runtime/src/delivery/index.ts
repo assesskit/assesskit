@@ -22,6 +22,7 @@ export {
   type ParseCandidateActionOptions,
   parseCandidateAction,
 } from "./action-json.js";
+export { ADJUSTABLE_SETTINGS } from "./adjustable-settings.js";
 export type {
   CandidateItem,
   CandidateView,

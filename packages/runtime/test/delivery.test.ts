@@ -4,6 +4,7 @@ import { CANDIDATE_ACTION_TYPES, itemSessionFromJson, itemSessionToJson } from "
 import {
   type AccessForAllResource,
   type Action,
+  ADJUSTABLE_SETTINGS,
   ASI_NAMESPACE,
   type AssessmentItem,
   type AssessmentSection,
@@ -72,6 +73,7 @@ import {
   type StartOptions,
   type Step,
   type SupportName,
+  type SupportSetting,
   serializeState,
   sessionControl,
   single,
@@ -500,6 +502,13 @@ function pnpOf(children: string): PersonalNeedsProfile {
   const read = readPnp(`<access-for-all-pnp xmlns="${PNP_NAMESPACE}">${children}</access-for-all-pnp>`);
   return "supports" in read ? read : fail("The document is a bulk file.");
 }
+
+/** The settings of a magnification of all content by a zoom. */
+const zoomed = (zoomAmount: number): SupportSetting => ({
+  name: "magnification",
+  replaceAccessModes: [],
+  allContent: { zoomAmount },
+});
 
 /** An item that declares a template variable `T`, 7 by default, and sets `U` to `T` + 1 in template processing. */
 const templated = (): AssessmentItem =>
@@ -1284,6 +1293,75 @@ describe("applying actions", () => {
     );
   });
 
+  it("changes the settings of a support that is on, those that the candidate may change, and keeps them in the state", () => {
+    const engine = engineOf(nonlinearAb);
+    const pnp = pnpOf(
+      '<magnification><all-content zoom-amount="2"/></magnification><spoken><reading-type>computer-read-aloud</reading-type><restriction-type>skip-math-equations</restriction-type></spoken><line-reader/><activate-as-option-set><braille/></activate-as-option-set><prohibit-set><text-appearance/></prohibit-set>',
+    );
+    const { state } = begun(engine, { pnp });
+    expect(engine.view(state, 0).actions).toContain("support-settings");
+    const adjust = (settings: SupportSetting, at: number): Action => ({ type: "support-settings", settings, at });
+    const zoom = played(engine, state, adjust(zoomed(4), 1), adjust(zoomed(4), 2));
+    expect(described(zoom.events)).toEqual(["support-changed magnification settings@1"]);
+    expect(engine.view(zoom.state, 2).supports.find(({ name }) => name === "magnification")?.settings).toEqual(
+      zoomed(4),
+    );
+    expect(deserializeState(serializeState(zoom.state)).supports.get("magnification")?.settings).toEqual(zoomed(4));
+    const spoken = engine.view(state, 0).supports.find(({ name }) => name === "spoken")?.settings;
+    if (spoken?.name !== "spoken") throw new Error("The profile has a spoken support.");
+    const faster = played(engine, state, adjust({ ...spoken, speechRate: 220, typingEcho: "words" }, 1));
+    expect(faster.state.supports.get("spoken")?.settings).toMatchObject({
+      speechRate: 220,
+      typingEcho: "words",
+      restrictionTypes: ["skip-math-equations"],
+    });
+    expect(refusalOf(engine, state, adjust({ ...spoken, restrictionTypes: [] }, 1))).toEqual({
+      code: "setting-not-adjustable",
+      message: `The candidate can change ${ADJUSTABLE_SETTINGS.spoken.join(", ")} of spoken, and not restrictionTypes.`,
+    });
+    expect(refusalOf(engine, state, adjust({ ...spoken, readingType: "screen-reader" }, 1)).code).toBe(
+      "setting-not-adjustable",
+    );
+    expect(refusalOf(engine, state, adjust({ name: "line-reader", replaceAccessModes: [] }, 1)).message).toBe(
+      "The support line-reader has no settings that the candidate can change.",
+    );
+    expect(refusalOf(engine, state, adjust({ name: "braille", replaceAccessModes: [], grade: 1 }, 1)).message).toBe(
+      "The support braille is off, so the candidate cannot change its settings.",
+    );
+    expect(refusalOf(engine, state, adjust({ name: "text-appearance", replaceAccessModes: [] }, 1)).message).toBe(
+      "The support text-appearance is off, so the candidate cannot change its settings.",
+    );
+    expect(refusalOf(engine, state, adjust({ name: "captions", replaceAccessModes: [] }, 1)).message).toBe(
+      "The support captions is not offered, so the candidate cannot change its settings.",
+    );
+    const braille = played(
+      engine,
+      state,
+      { type: "support", name: "braille", active: true, at: 1 },
+      adjust({ name: "braille", replaceAccessModes: [], grade: 1, brailleType: "ueb" }, 2),
+    );
+    expect(braille.state.supports.get("braille")).toMatchObject({ active: true, settings: { grade: 1 } });
+  });
+
+  it("changes the settings of a universal support that the profile does not name, from empty ones", () => {
+    const engine = engineOf(nonlinearAb);
+    const { state } = begun(engine, { universalSupports: ["magnification"] });
+    expect(engine.view(state, 0).actions).not.toContain("support-settings");
+    const on = played(engine, state, { type: "support", name: "magnification", active: true, at: 1 });
+    expect(engine.view(on.state, 1).actions).toContain("support-settings");
+    const zoom = played(engine, on.state, { type: "support-settings", settings: zoomed(3), at: 2 });
+    expect(zoom.state.supports.get("magnification")).toEqual({
+      state: "option",
+      active: true,
+      universal: true,
+      settings: zoomed(3),
+    });
+    const wider = { name: "magnification", replaceAccessModes: ["visual"], allContent: { zoomAmount: 3 } } as const;
+    expect(refusalOf(engine, on.state, { type: "support-settings", settings: wider, at: 2 }).code).toBe(
+      "setting-not-adjustable",
+    );
+  });
+
   it("presents the variant that avoids the candidate's hazards and is in the candidate's language", () => {
     const variants = withVariants(
       ["flashing"],
@@ -1462,6 +1540,20 @@ describe("applying actions", () => {
     expect(() => engine.apply(state, json('{"type":"support","name":"spoken","active":"yes","at":1}'))).toThrow(
       'The active of support must be a boolean, found "yes".',
     );
+    expect(() => engine.apply(state, json('{"type":"support-settings","settings":null,"at":1}'))).toThrow(
+      "The settings of support-settings must be an object whose name is a predefined support, found null.",
+    );
+    expect(() => engine.apply(state, json('{"type":"support-settings","settings":{"name":"ext:x"},"at":1}'))).toThrow(
+      'The settings of support-settings must be an object whose name is a predefined support, found "ext:x".',
+    );
+    expect(() =>
+      engine.apply(
+        state,
+        json(
+          '{"type":"support-settings","settings":{"name":"spoken","replaceAccessModes":[],"restrictionTypes":[],"volume":"loud"},"at":1}',
+        ),
+      ),
+    ).toThrow(DataError);
     expect(() =>
       engine.apply(state, json('{"type":"set-responses","item":{"ref":"a","instance":1},"responses":{},"at":1}')),
     ).toThrow("The responses of set-responses must be a Map from response identifier to value, found an object.");
@@ -4609,6 +4701,11 @@ describe("candidate actions", () => {
     { type: "move", to: key("b", 3) },
     { type: "support", name: "line-reader", active: true },
     { type: "support", name: "ext:highlighter", active: false },
+    { type: "support-settings", settings: zoomed(2.5) },
+    {
+      type: "support-settings",
+      settings: { name: "spoken", replaceAccessModes: [], restrictionTypes: [], pitch: 0.75, linkIndication: "none" },
+    },
     { type: "end-part" },
     { type: "end-test" },
     { type: "suspend" },
@@ -4696,6 +4793,15 @@ describe("candidate actions", () => {
       '{"type":"support","name":"line-reader","active":"yes"}',
       'The action is invalid at active: expected true or false, found "yes".',
     );
+    refuses(
+      '{"type":"support-settings","settings":{"name":"chocolate"}}',
+      "The action is invalid at settings.name: The name of the settings must be a predefined support.",
+    );
+    refuses(
+      '{"type":"support-settings","settings":{"name":"magnification","replaceAccessModes":[],"allContent":{"zoomAmount":"big"}}}',
+      /zoom/i,
+    );
+    refuses('{"type":"support-settings","settings":"magnification"}', /settings/);
     refuses(
       '{"type":"set-responses","item":{"ref":"a","instance":1},"responses":{}}',
       "The action is invalid at responses: expected an array, found an object.",
@@ -6098,6 +6204,7 @@ describe("properties", () => {
         "resume",
         "time",
         "support",
+        "support-settings",
       ),
       choice: fc.constantFrom("A", "B", "C"),
       target: fc.nat(),
@@ -6129,12 +6236,14 @@ describe("properties", () => {
         return { type: "move", to: other };
       case "support":
         return { type: "support", name: "line-reader", active: target % 2 === 0 };
+      case "support-settings":
+        return { type: move, settings: zoomed((target % 4) + 1) };
       default:
         return { type: move };
     }
   }
 
-  const Profile = "<line-reader/><activate-as-option-set><line-reader/></activate-as-option-set>";
+  const Profile = "<line-reader/><magnification/><activate-as-option-set><line-reader/></activate-as-option-set>";
 
   /** Runs moves from a start at 0, each stamped at the time of the moves before it; returns the accepted actions. */
   function session(
@@ -6331,6 +6440,8 @@ describe("properties", () => {
         return { type, to: "next" };
       case "support":
         return { type, name: "line-reader", active: true };
+      case "support-settings":
+        return { type, settings: zoomed(3) };
       case "submit":
       case "skip":
       case "next-attempt":

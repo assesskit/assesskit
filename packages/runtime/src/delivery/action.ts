@@ -2,12 +2,13 @@ import type { CatResponse } from "../cat/index.js";
 import { isSessionEnd } from "../cat/index.js";
 import { checkArray, checkBoolean, checkChoice, checkRecord, checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
-import { isSupportName, type SupportName } from "../pnp/index.js";
+import { isSupportName, type SupportName, type SupportSetting } from "../pnp/index.js";
 import { normalizeValue, type Value } from "../values/index.js";
 import { checkInstant } from "./datestamp.js";
 import { checkItemAction, ITEM_ACTION_TYPES, type ItemAction } from "./item-action.js";
 import { checkKey, type ItemKey } from "./plan.js";
 import type { Scorer } from "./scoring.js";
+import { checkSupportSetting } from "./support-json.js";
 
 /**
  * An action of the candidate:
@@ -18,6 +19,7 @@ import type { Scorer } from "./scoring.js";
  * | `mark`                    | marks an item instance presented for review, or takes the mark away                                       |
  * | `move`                    | goes to the next item, to the previous one, or to an item of a nonlinear test part                        |
  * | `support`                 | turns on or off a support that is an option                                                               |
+ * | `support-settings`        | changes the settings of a support that is on, those of `ADJUSTABLE_SETTINGS`                              |
  * | `end-part`                | ends the test part                                                                                        |
  * | `end-test`                | ends the test                                                                                             |
  * | `suspend`                 | suspends the candidate session                                                                            |
@@ -49,6 +51,15 @@ export type CandidateAction =
       readonly name: SupportName;
       /** Whether the support is to be on. */
       readonly active: boolean;
+    }
+  | {
+      /** Changes the settings of a support that is on. */
+      readonly type: "support-settings";
+      /**
+       * The settings of the support, whole: those in force with the candidate's changes. Only the settings of
+       * `ADJUSTABLE_SETTINGS` may differ from those in force.
+       */
+      readonly settings: SupportSetting;
     }
   | {
       /** Ends the test part or the test, or suspends or resumes the candidate session. */
@@ -99,6 +110,7 @@ const SESSION_ACTION_TYPES = [
   "mark",
   "move",
   "support",
+  "support-settings",
   "end-part",
   "end-test",
   "suspend",
@@ -145,6 +157,9 @@ export function checkAction(action: unknown): asserts action is Action {
         );
       }
       checkBoolean(action.active, "The active of support");
+      break;
+    case "support-settings":
+      checkSupportSetting(action.settings, "The settings of support-settings");
       break;
     case "supply-scores":
       checkString(action.request, "The request of supply-scores");

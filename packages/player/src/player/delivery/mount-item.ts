@@ -88,7 +88,6 @@ export function mountItem(host: HTMLElement, options: ItemMountOptions): Mounted
   return {
     update,
     settled: body.settled,
-    setColorTheme: attachments.supports.setColorTheme,
     destroy: () => {
       if (state.destroyed) return;
       state.destroyed = true;

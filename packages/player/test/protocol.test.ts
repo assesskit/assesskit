@@ -252,7 +252,7 @@ describe("checkViewEnvelope: documents and refusal", () => {
       checkViewEnvelope(json(`{"seq":2,"view":{},"assets":{},"refusal":${refusal}}`));
     expect(() => check("5")).toThrow("A view envelope is invalid at refusal: expected an object, found 5.");
     expect(() => check('{"code":"nope","message":"m"}')).toThrow(
-      'A view envelope is invalid at refusal.code: expected "attempts-exhausted", "awaiting-cat", "clock-regression", "comment-not-allowed", "ended", "invalid-response", "item-closed", "linear-backward", "min-time-not-reached", "not-current", "review-not-allowed", "score-type-mismatch", "skipping-not-allowed", "solution-not-allowed", "support-not-available", "suspended", "time-over", "unknown-item", "unknown-request", "value-out-of-range" or "wrong-submission-mode", found "nope".',
+      'A view envelope is invalid at refusal.code: expected "attempts-exhausted", "awaiting-cat", "clock-regression", "comment-not-allowed", "ended", "invalid-response", "item-closed", "linear-backward", "min-time-not-reached", "not-current", "review-not-allowed", "score-type-mismatch", "setting-not-adjustable", "skipping-not-allowed", "solution-not-allowed", "support-not-available", "suspended", "time-over", "unknown-item", "unknown-request", "value-out-of-range" or "wrong-submission-mode", found "nope".',
     );
     expect(() => check('{"code":"ended","message":1}')).toThrow(
       "A view envelope is invalid at refusal.message: expected a string, found 1.",
@@ -281,6 +281,7 @@ describe("REFUSAL_CODES", () => {
       "not-current": true,
       "review-not-allowed": true,
       "score-type-mismatch": true,
+      "setting-not-adjustable": true,
       "skipping-not-allowed": true,
       "solution-not-allowed": true,
       "support-not-available": true,

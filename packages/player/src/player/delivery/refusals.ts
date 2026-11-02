@@ -20,6 +20,7 @@ export const REFUSAL_MESSAGES: Readonly<Record<RefusalCode, keyof Messages>> = {
   "not-current": "refusalNotCurrent",
   "review-not-allowed": "refusalReviewNotAllowed",
   "score-type-mismatch": "refusalScoreTypeMismatch",
+  "setting-not-adjustable": "refusalSettingNotAdjustable",
   "skipping-not-allowed": "refusalSkippingNotAllowed",
   "solution-not-allowed": "refusalSolutionNotAllowed",
   "support-not-available": "refusalSupportNotAvailable",

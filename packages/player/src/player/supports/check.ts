@@ -11,7 +11,6 @@ import {
   strictRecord,
 } from "@assesskit/runtime/checks";
 import type { SupportView } from "@assesskit/runtime/delivery";
-import { DataError } from "@assesskit/runtime/errors";
 import {
   type ColorTheme,
   isColorTheme,
@@ -150,19 +149,4 @@ export function activeSupport(supports: readonly SupportView[], name: SupportNam
 export function colorThemeOf(supports: readonly SupportView[]): ColorTheme | undefined {
   const settings = activeSupport(supports, "text-appearance")?.settings;
   return settings?.name === "text-appearance" ? settings.colorTheme : undefined;
-}
-
-/**
- * Checks a color theme, as a host passes it from JavaScript.
- *
- * @param value - The value to check.
- * @param label - Names the value in the error message, such as `The option colorTheme`.
- * @throws `DataError` when it is neither a term of `color-theme` nor an extension.
- */
-export function checkColorTheme(value: unknown, label: string): asserts value is ColorTheme {
-  if (!isColorTheme(value)) {
-    throw new DataError(
-      `${label} must be a term of color-theme or ext: and at most 256 characters, found ${describe(value)}.`,
-    );
-  }
 }

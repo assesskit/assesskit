@@ -108,12 +108,11 @@ chrome. The chrome uses the system colors and `rem` sizes, so it follows the col
 
 It returns a `Mounted`:
 
-| Member                 | Meaning                                                                                                                                                                                                                                                      |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `update(view)`         | Shows a view in place of the one before. The player follows the client by itself, so a host calls it only to feed its own view.                                                                                                                              |
-| `settled()`            | Resolves when the interactions of the item shown have handed over what the candidate gave. A host with `chrome: false` waits for it before it sends an action that submits or leaves the item.                                                               |
-| `setColorTheme(theme)` | Shows the content in a color theme, in place of the look of the profile, while `text-appearance` is on ([supports](supports.md#the-color-theme)). The list of the panel calls it; a host without chrome, or with `mountItem`, calls it from its own control. |
-| `destroy()`            | Takes the content, the timers and the listeners away. The session client stays open: it belongs to the host.                                                                                                                                                 |
+| Member         | Meaning                                                                                                                                                                                        |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `update(view)` | Shows a view in place of the one before. The player follows the client by itself, so a host calls it only to feed its own view.                                                                |
+| `settled()`    | Resolves when the interactions of the item shown have handed over what the candidate gave. A host with `chrome: false` waits for it before it sends an action that submits or leaves the item. |
+| `destroy()`    | Takes the content, the timers and the listeners away. The session client stays open: it belongs to the host.                                                                                   |
 
 ## What the player draws
 

@@ -49,6 +49,30 @@ function readSupportSetting(json: unknown, name: string): SupportSetting {
   return setting;
 }
 
+/**
+ * Checks the settings of a support, as an action carries them: an object whose `name` is a predefined support and whose
+ * parameters `writePnp` accepts for that support.
+ *
+ * @param value - The value to check.
+ * @param label - Names the value in the message, such as `The settings of support-settings`.
+ * @throws `DataError` when it is not the settings of a predefined support.
+ */
+export function checkSupportSetting(value: unknown, label: string): asserts value is SupportSetting {
+  const name = isRecord(value) ? value.name : undefined;
+  if (typeof name !== "string" || !SUPPORT_NAMES.some((known) => known === name)) {
+    throw new DataError(
+      `${label} must be an object whose name is a predefined support, found ${describe(isRecord(value) ? name : value)}.`,
+    );
+  }
+  readSupportSetting(value, name);
+}
+
+/** The schema of the settings of a support in an action: those of the support that their `name` names. */
+export const supportSettingSchema: Schema<SupportSetting> = v.pipe(
+  v.looseObject({ name: v.picklist(SUPPORT_NAMES, "The name of the settings must be a predefined support.") }),
+  transformWith((json) => readSupportSetting(json, json.name)),
+);
+
 /** The schema of a support in a view; its settings are those of its name. */
 export const supportViewSchema: Schema<SupportView> = v.pipe(
   v.strictObject({

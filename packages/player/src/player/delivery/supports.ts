@@ -1,5 +1,4 @@
-import type { CandidateView, SupportView } from "@assesskit/runtime/delivery";
-import type { ColorTheme } from "@assesskit/runtime/pnp";
+import type { CandidateView } from "@assesskit/runtime/delivery";
 import type { Messages } from "../../messages/index.js";
 import type { ContentRoot } from "../roots/index.js";
 import type { Lexicon, SpeechHook } from "../speech/index.js";
@@ -12,7 +11,6 @@ import {
   presentationOf,
   type SupportPanel,
 } from "../supports/index.js";
-import { checkColorTheme } from "../supports/internal.js";
 import type { PciHost } from "./pci.js";
 
 /** What the supports of the shell need of the player. */
@@ -33,8 +31,8 @@ export interface SupportsContext {
   readonly pci: PciHost;
   /** The voice that reads aloud. */
   readonly voice: SpeechHook;
-  /** Mounts the panel of the options in the slot, which reports the color theme the candidate chooses; without it the panel is not drawn. */
-  readonly panel?: (slot: HTMLElement, onColorTheme: (theme: ColorTheme) => void) => SupportPanel;
+  /** Mounts the panel of the options in the slot; without it the panel is not drawn. */
+  readonly panel?: (slot: HTMLElement) => SupportPanel;
 }
 
 /** The supports of the candidate, applied to the content of the views the player shows and to the player around it. */
@@ -49,12 +47,6 @@ export interface DeliverySupports {
    * @param view - The view.
    */
   update(view: CandidateView): void;
-  /**
-   * Shows the content in the color theme that the candidate chose, for as long as the supports stay mounted.
-   *
-   * @param theme - The theme.
-   */
-  setColorTheme(theme: ColorTheme): void;
   /**
    * Gives reading aloud the pronunciation lexicons of the item shown, in order of preference.
    *
@@ -89,20 +81,7 @@ export interface DeliverySupports {
 export function mountDeliverySupports(context: SupportsContext): DeliverySupports {
   const { messages, language, slot, contentHost, content, pci, voice } = context;
   const variant = mountVariantNotice(slot, { messages, language });
-  let supports: readonly SupportView[] = [];
-  let chosen: ColorTheme | undefined;
-  const applyLook = (theme: ColorTheme | undefined): void => {
-    const presentation = presentationOf(supports, theme === undefined ? {} : { colorTheme: theme });
-    chosen = theme;
-    applyPresentation(contentHost, presentation);
-    pci.setPresentation(presentation);
-  };
-  const setColorTheme = (theme: ColorTheme): void => {
-    checkColorTheme(theme, "The color theme");
-    applyLook(theme);
-    panel?.update(supports, theme);
-  };
-  const panel = context.panel?.(slot, setColorTheme);
+  const panel = context.panel?.(slot);
   const spoken = mountSpoken(slot, content, { messages, language, voice, onError: context.report });
   const cards = mountContentSupports(content, { messages });
   let look: string | undefined;
@@ -111,16 +90,16 @@ export function mountDeliverySupports(context: SupportsContext): DeliverySupport
   return {
     update: (view) => {
       const key = JSON.stringify(view.supports);
-      supports = view.supports;
       if (key !== look) {
         look = key;
-        applyLook(chosen);
+        const presentation = presentationOf(view.supports);
+        applyPresentation(contentHost, presentation);
+        pci.setPresentation(presentation);
         content.setMediaScale(mediaScaleOf(view.supports));
       }
-      panel?.update(view.supports, chosen);
+      panel?.update(view.supports);
       variant.update(view.current?.variant);
     },
-    setColorTheme,
     setLexicons: (lexicons) => spoken.setLexicons(lexicons),
     applyToContent: (view, drawn) => {
       const key = JSON.stringify(view.supports);

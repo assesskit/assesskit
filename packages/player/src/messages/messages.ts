@@ -488,6 +488,8 @@ export interface Messages {
   readonly refusalReviewNotAllowed: string;
   /** The reason for refusing a score that does not fit the question. */
   readonly refusalScoreTypeMismatch: string;
+  /** The reason for refusing a change of a setting of a support that only the profile sets. */
+  readonly refusalSettingNotAdjustable: string;
   /** The reason for refusing to skip a question. */
   readonly refusalSkippingNotAllowed: string;
   /** The reason for refusing to show a solution. */
@@ -668,6 +670,12 @@ export interface Messages {
   readonly colorThemeMedgrayDarkgray: string;
   /** The color theme of dark gray text on medium gray, of low contrast on purpose. */
   readonly colorThemeDarkgrayMedgray: string;
+  /** The label of the list of the amount of magnification of all content. */
+  readonly settingZoom: string;
+  /** The label of the list of the amount of magnification of text. */
+  readonly settingZoomText: string;
+  /** The label of the list of the amount of magnification of images and other content that is not text. */
+  readonly settingZoomNonText: string;
   /** The action that reads the content aloud. */
   readonly readAloud: string;
   /** The action that stops the reading. */

@@ -1,13 +1,13 @@
-import { checkFunction, checkProperties, checkRecord, describe } from "@assesskit/runtime/checks";
+import { checkFunction, checkNonEmptyString, checkProperties, checkRecord, describe } from "@assesskit/runtime/checks";
 import type { SupportView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import type { ColorTheme, SupportName } from "@assesskit/runtime/pnp";
+import type { SupportName, SupportSetting } from "@assesskit/runtime/pnp";
 import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";
 import { html } from "../internal.js";
-import { activeSupport, checkColorTheme, checkSupportViews, colorThemeOf } from "./check.js";
-import { type ColorThemeControl, createColorThemeControl } from "./color-theme.js";
+import { checkSupportViews } from "./check.js";
 import { supportLabel } from "./names.js";
+import { createSettingsControls, type SettingsControls } from "./settings.js";
 import { adoptSupportStyles } from "./styles.js";
 
 /** The options of {@link mountSupportPanel}. */
@@ -22,15 +22,24 @@ export interface SupportPanelOptions {
    */
   readonly onSupport: (name: SupportName, active: boolean) => void;
   /**
-   * Called when the candidate chooses a color theme. With it the panel lists the color themes while `text-appearance` is on.
+   * Called when the candidate changes a setting of a support that is on: the host sends
+   * `{ type: "support-settings", settings }`. With it the panel has a list for each setting that the candidate may change
+   * and the player follows: the color theme while `text-appearance` is on, and the amount of magnification while
+   * `magnification` is on.
    *
    * @remarks
-   * The list follows the theme that `update` gets; `mountDelivery` passes the theme to `presentationOf`, and a host with
-   * `chrome: false` calls `Mounted.setColorTheme`.
+   * The settings are whole: those of the view with the value chosen. A list follows the settings of the next input, not the
+   * request, so a refusal leaves it as it was.
    *
-   * @defaultValue None, so that the panel has no list
+   * @defaultValue None, so that the panel has no lists
    */
-  readonly onColorTheme?: (theme: ColorTheme) => void;
+  readonly onSettings?: (settings: SupportSetting) => void;
+  /**
+   * The language of the interface, a BCP 47 tag, in which the lists write numbers.
+   *
+   * @defaultValue `"en"`
+   */
+  readonly language?: string;
 }
 
 /** The panel of the supports of the candidate: the ones that can be turned on and off, and the state of the others. */
@@ -45,10 +54,9 @@ export interface SupportPanel {
    * is not listed.
    *
    * @param supports - The supports of the view.
-   * @param colorTheme - The color theme that the candidate chose; without one the list shows that of the profile.
-   * @throws `DataError` when `supports` is not a list of the runtime's `SupportView`s, or `colorTheme` is not a color theme.
+   * @throws `DataError` when `supports` is not a list of the runtime's `SupportView`s.
    */
-  update(supports: readonly SupportView[], colorTheme?: ColorTheme): void;
+  update(supports: readonly SupportView[]): void;
   /** Takes the panel away. */
   destroy(): void;
 }
@@ -67,19 +75,21 @@ function checkPanelOptions(host: unknown, options: unknown): asserts options is 
     throw new DataError(`The host must be an element in a document, found ${describe(host)}.`);
   }
   checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", ["messages", "onSupport", "onColorTheme"]);
+  checkProperties(options, "The options", ["messages", "onSupport", "onSettings", "language"]);
   checkMessages(options.messages);
   checkFunction(options.onSupport, "The option onSupport must be a function");
-  const { onColorTheme = () => undefined } = options;
-  checkFunction(onColorTheme, "The option onColorTheme must be a function");
+  const { onSettings = () => undefined, language = "en" } = options;
+  checkFunction(onSettings, "The option onSettings must be a function");
+  checkNonEmptyString(language, "The option language");
 }
 
 /**
  * Mounts the panel of the supports of the candidate.
  *
  * @remarks
- * The panel is a region with a toggle button for each support that can be turned on and off, named after the support, and
- * a line with the state of each support that cannot. It sends no action itself: `onSupport` gets the request.
+ * The panel is a region with a toggle button for each support that can be turned on and off, named after the support, a
+ * line with the state of each support that cannot, and with `onSettings` a list for each setting of a support that is on and
+ * that the candidate may change. It sends no action itself: `onSupport` and `onSettings` get the requests.
  *
  * @param host - The element that gets the panel, in a document or a shadow root.
  * @param options - See {@link SupportPanelOptions}.
@@ -89,10 +99,10 @@ function checkPanelOptions(host: unknown, options: unknown): asserts options is 
  */
 export function mountSupportPanel(host: HTMLElement, options: SupportPanelOptions): SupportPanel {
   checkPanelOptions(host, options);
-  const { messages, onSupport, onColorTheme } = options;
+  const { messages, onSupport, onSettings, language = "en" } = options;
   const release = adoptSupportStyles(host);
-  const themes: ColorThemeControl | undefined =
-    onColorTheme === undefined ? undefined : createColorThemeControl(messages, onColorTheme);
+  const settings: SettingsControls | undefined =
+    onSettings === undefined ? undefined : createSettingsControls({ messages, language }, onSettings);
   const list = html("ul");
   const region = html("section", { class: "ak-supports", "aria-label": messages.supportsLabel }, list);
   region.hidden = true;
@@ -107,20 +117,9 @@ export function mountSupportPanel(host: HTMLElement, options: SupportPanelOption
     return entry;
   };
 
-  const themeItems = (supports: readonly SupportView[], colorTheme: ColorTheme | undefined): HTMLLIElement[] => {
-    if (themes === undefined) return [];
-    if (activeSupport(supports, "text-appearance") === undefined) {
-      themes.item.remove();
-      return [];
-    }
-    themes.update(colorTheme ?? colorThemeOf(supports));
-    return [themes.item];
-  };
-
   return {
-    update(supports, colorTheme) {
+    update(supports) {
       checkSupportViews(supports, "The list of supports");
-      if (colorTheme !== undefined) checkColorTheme(colorTheme, "The color theme");
       const shown = supports.flatMap((support) => {
         const label = support.state === "prohibited" ? undefined : supportLabel(support.name, messages);
         return label === undefined ? [] : [{ support, label, option: support.state === "option" }];
@@ -143,7 +142,7 @@ export function mountSupportPanel(host: HTMLElement, options: SupportPanelOption
         }
         return entry.item;
       });
-      items.push(...themeItems(supports, colorTheme));
+      items.push(...(settings?.update(supports) ?? []));
       // Only an item that is out of place moves, so that the button that has the focus keeps it.
       for (const [index, item] of items.entries()) {
         if (list.children[index] !== item) list.insertBefore(item, list.children[index] ?? null);

@@ -14,7 +14,7 @@ import type { CandidateAction } from "./action.js";
 import { CANDIDATE_ACTION_TYPES, checkResponseMaps } from "./candidate-actions.js";
 import { entriesSchema, valuesSchema, valuesToJson } from "./entries-json.js";
 import { checkKey, type ItemKey, itemKeySchema } from "./item-key.js";
-import { supportNameSchema } from "./support-json.js";
+import { supportNameSchema, supportSettingSchema } from "./support-json.js";
 
 /** The limits of {@link parseCandidateAction}, which keep a client from sending an action that is too large to handle. */
 export interface ActionLimits {
@@ -108,6 +108,7 @@ const actionSchema: Schema<CandidateAction> = v.variant("type", [
     ),
   }),
   v.strictObject({ type: v.literal("support"), name: supportNameSchema, active: v.boolean() }),
+  v.strictObject({ type: v.literal("support-settings"), settings: supportSettingSchema }),
   v.strictObject({ type: v.picklist(["end-part", "end-test", "suspend", "resume"]) }),
 ]);
 
@@ -212,6 +213,9 @@ export function actionToJson(action: CandidateAction): unknown {
       break;
     case "support":
       json = { type: action.type, name: action.name, active: action.active };
+      break;
+    case "support-settings":
+      json = { type: action.type, settings: action.settings };
       break;
     case "end-part":
     case "end-test":

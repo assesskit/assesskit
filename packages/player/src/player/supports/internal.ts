@@ -7,5 +7,5 @@
  * @module
  */
 export { cardKindOf } from "./cards.js";
-export { checkColorTheme, checkSupportViews } from "./check.js";
+export { checkSupportViews } from "./check.js";
 export { supportLabel, TOOL_EXTENSIONS } from "./names.js";

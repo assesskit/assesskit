@@ -101,7 +101,6 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
   return {
     update,
     settled: body.settled,
-    setColorTheme: attachments.supports.setColorTheme,
     destroy: () => {
       if (state.destroyed) return;
       state.destroyed = true;

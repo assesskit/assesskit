@@ -75,7 +75,8 @@ Points to be aware of when deploying the runtime:
 - **Client actions.** `parseCandidateAction` checks the shape, the types and the size of an action from a client (see
   **Default limits**) and refuses the actions of the host (`time`, `supply-scores`, `cat-response`) and any `at`; the server
   stamps the time. The engine checks every action against the rules and answers a refusal, never a state change, and an
-  out-of-range integer response is a refusal. The engine does not decide which candidate actions a client may send: it
+  out-of-range integer response is a refusal. `support-settings` changes only the preferences of a support that is on
+  (`ADJUSTABLE_SETTINGS`), so a client cannot lift a restriction of reading aloud or turn on a support of the profile. The engine does not decide which candidate actions a client may send: it
   applies `suspend` and `resume`, which stop the clock, from whoever sends them, so a deployment that must not let candidates
   pause filters them before it applies them (the exam default of the player does).
 - **Resolvers and callbacks.** The functions a host passes in (`resolvers`, `resolveTemplate`, `customOperators`, the file

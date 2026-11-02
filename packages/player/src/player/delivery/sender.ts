@@ -1,6 +1,6 @@
 import type { CandidateAction } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import type { SupportName } from "@assesskit/runtime/pnp";
+import type { SupportName, SupportSetting } from "@assesskit/runtime/pnp";
 import type { Value } from "@assesskit/runtime/values";
 import { AccessError } from "../../errors.js";
 import type { Messages } from "../../messages/index.js";
@@ -42,6 +42,8 @@ export interface Sender {
   respond(identifier: string, value: Value | null, pciState?: string): void;
   /** Asks to turn a support on or off: the next view says whether it took effect. */
   request(name: SupportName, active: boolean): void;
+  /** Asks to change the settings of a support that is on: the next view says whether they took effect. */
+  adjust(settings: SupportSetting): void;
   /** Sends the comment of the candidate on the item presented. */
   comment(text: string): void;
 }
@@ -83,6 +85,7 @@ export function createSender(context: SenderContext): Sender {
       );
     },
     request: (name, active) => void send({ type: "support", name, active }),
+    adjust: (settings) => void send({ type: "support-settings", settings }),
     comment: (text) => {
       const item = state.view.current?.key;
       if (item !== undefined) void send({ type: "comment", item, text }, () => status.say(messages.commentSaved));

@@ -109,7 +109,8 @@ The best practices guide has `color-theme` under `text-appearance`, and the PNP 
 | `assesskit validate` | Also the schema error of a document with the element, which the validator of 1EdTech would report as well                                               |
 
 The first of a pair of colors is the text, as in `yellow-blue`. `isColorTheme(value)` tells whether a value is a theme. The player
-draws the themes and offers the choice ([supports](../player/supports.md#the-color-theme)).
+draws the themes and offers the choice, which the candidate makes with a `support-settings` action
+([supports](../player/supports.md#the-color-theme)).
 
 ## Sets
 

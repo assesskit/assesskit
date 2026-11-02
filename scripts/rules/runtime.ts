@@ -8,6 +8,7 @@ const TREE = "packages/runtime/src/xml/tree-builder.ts";
 const INCLUDE = "packages/runtime/src/xml/include.ts";
 const ACTION = "packages/runtime/src/delivery/action-json.ts";
 const PLAN = "packages/runtime/src/delivery/plan.ts";
+const SESSION_STEP = "packages/runtime/src/delivery/step-session.ts";
 const PACKAGE_TEST = "packages/runtime/test/package.test.ts";
 const XML_TEST = "packages/runtime/test/xml.test.ts";
 const NODE_TEST = "packages/runtime/test/node.test.ts";
@@ -258,6 +259,20 @@ export const RUNTIME_RULES: readonly Rule[] = [
     file: ACTION,
     find: 'if (isRecord(json) && typeof json.type === "string" && HOST_ACTION_TYPES.includes(json.type)) {',
     replace: "if (false) {",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "A candidate changes only the settings of a support that the profile leaves to the candidate.",
+    file: SESSION_STEP,
+    find: "  if (fixed !== undefined) {",
+    replace: "  if (false) {",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "A candidate changes the settings of a support that is on only.",
+    file: SESSION_STEP,
+    find: "  if (support?.active !== true) {",
+    replace: "  if (support === undefined) {",
     test: DELIVERY_TEST,
   },
   {

@@ -4,13 +4,14 @@ import { DataError } from "@assesskit/runtime/errors";
 import { describeInteractions } from "@assesskit/runtime/interactions";
 import {
   type ColorTheme,
+  type Magnification,
   PNP_COLOR_THEMES,
   readPnp,
   type SupportSetting,
   type SupportState,
 } from "@assesskit/runtime/pnp";
 import { afterEach, beforeEach, describe, expect, inject, it } from "vitest";
-import { userEvent } from "vitest/browser";
+import { commands, userEvent } from "vitest/browser";
 import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
 import {
   applyPresentation,
@@ -423,6 +424,20 @@ describe("mountSupportPanel", () => {
     expect(await axeViolations(host)).toEqual([]);
   });
 
+  /** A panel with the lists of the settings, and the settings that the candidate chose. */
+  const adjusting = (extra: Partial<Parameters<typeof mountSupportPanel>[1]> = {}) => {
+    const chosen: SupportSetting[] = [];
+    return { chosen, ...mountPanel({ onSettings: (settings) => chosen.push(settings), ...extra }) };
+  };
+  /** Returns the list of the panel with a label. */
+  const listNamed = (host: HTMLElement, label: string): HTMLSelectElement => {
+    const list = [...host.querySelectorAll("select")].find(
+      (select) => select.labels?.[0]?.firstChild?.textContent === label,
+    );
+    if (list === undefined) throw new Error(`The panel has no list ${label}.`);
+    return list;
+  };
+
   describe("the list of color themes", () => {
     const appearance = (
       fields: { readonly state?: SupportState; readonly active?: boolean; readonly colorTheme?: ColorTheme } = {},
@@ -438,13 +453,9 @@ describe("mountSupportPanel", () => {
         },
       });
     };
-    const themed = () => {
-      const chosen: ColorTheme[] = [];
-      return { chosen, ...mountPanel({ onColorTheme: (theme) => chosen.push(theme) }) };
-    };
 
     it("lists every term of the guide while the text appearance is on, under a label, the default first", () => {
-      const { host, panel } = themed();
+      const { host, panel } = adjusting();
       panel.update([appearance()]);
       const select = el(host, "select") as HTMLSelectElement;
       expect(select.labels?.[0]?.textContent).toContain("Color theme");
@@ -455,7 +466,7 @@ describe("mountSupportPanel", () => {
     });
 
     it("selects the theme of the profile, and nothing when the profile names none", () => {
-      const { host, panel } = themed();
+      const { host, panel } = adjusting();
       const select = (): HTMLSelectElement => el(host, "select") as HTMLSelectElement;
       panel.update([appearance({ colorTheme: "black-cream" })]);
       expect(select().value).toBe("black-cream");
@@ -463,44 +474,51 @@ describe("mountSupportPanel", () => {
       expect(select().selectedIndex).toBe(-1);
     });
 
-    it("selects the theme that the candidate chose in place of the one of the profile", () => {
-      const { host, panel } = themed();
-      panel.update([appearance({ colorTheme: "black-cream" })], "cyan-black");
-      expect((el(host, "select") as HTMLSelectElement).value).toBe("cyan-black");
-    });
-
-    it("says which theme the candidate chooses, and shows what the next update says, not the request", async () => {
-      const { host, panel, chosen } = themed();
+    it("reports the settings whole with the theme chosen, and shows what the next update says, not the request", async () => {
+      const { host, panel, chosen } = adjusting();
       panel.update([appearance({ colorTheme: "black-cream" })]);
       const select = el(host, "select") as HTMLSelectElement;
       await userEvent.selectOptions(select, "yellow-blue");
-      expect(chosen).toEqual(["yellow-blue"]);
-      panel.update([appearance({ colorTheme: "black-cream" })], "yellow-blue");
+      expect(chosen).toEqual([{ name: "text-appearance", replaceAccessModes: [], colorTheme: "yellow-blue" }]);
+      panel.update([appearance({ colorTheme: "black-cream" })]);
+      expect(select.value).toBe("black-cream");
+      panel.update([appearance({ colorTheme: "yellow-blue" })]);
       expect(select.value).toBe("yellow-blue");
-      await userEvent.selectOptions(select, "default");
-      expect(chosen).toEqual(["yellow-blue", "default"]);
     });
 
-    it("keeps the focus on the list when an update arrives", async () => {
-      const { host, panel } = themed();
+    it("gives a text appearance without settings the settings of an empty element, with the theme", async () => {
+      const { host, panel, chosen } = adjusting();
+      panel.update([supportView("text-appearance", { state: "option", active: true })]);
+      await userEvent.selectOptions(el(host, "select") as HTMLSelectElement, "default");
+      expect(chosen).toEqual([{ name: "text-appearance", replaceAccessModes: [], colorTheme: "default" }]);
+    });
+
+    it("keeps the focus on the list when an update arrives", () => {
+      const { host, panel } = adjusting();
       panel.update([appearance(), supportView("captions", { state: "option" })]);
       const select = el(host, "select") as HTMLSelectElement;
       select.focus();
-      panel.update([appearance(), supportView("captions", { state: "option", active: true })], "default");
+      panel.update([appearance({ colorTheme: "default" }), supportView("captions", { state: "option", active: true })]);
       expect(document.activeElement).toBe(select);
     });
 
-    it("adds a theme of a program under the name that follows ext:", () => {
-      const { host, panel } = themed();
+    it("adds a theme of a program under the name that follows ext:, and reports it when chosen again", async () => {
+      const { host, panel, chosen } = adjusting();
       panel.update([appearance({ colorTheme: "ext:school-green" })]);
       panel.update([appearance({ colorTheme: "ext:school-green" })]);
       const select = el(host, "select") as HTMLSelectElement;
       expect(select.options).toHaveLength(15);
       expect(select.selectedOptions[0]?.textContent).toBe("school-green");
+      await userEvent.selectOptions(select, "default");
+      await userEvent.selectOptions(select, "ext:school-green");
+      expect(chosen.map((settings) => (settings.name === "text-appearance" ? settings.colorTheme : ""))).toEqual([
+        "default",
+        "ext:school-green",
+      ]);
     });
 
     it("has no list while the text appearance is off, prohibited or absent, and without the option", () => {
-      const { host, panel } = themed();
+      const { host, panel } = adjusting();
       panel.update([appearance()]);
       expect(host.querySelector("select")).not.toBeNull();
       for (const supports of [
@@ -517,17 +535,117 @@ describe("mountSupportPanel", () => {
     });
 
     it("writes the names of the themes in the language of the interface", () => {
-      const { host, panel } = mountPanel({ messages: ID_MESSAGES, onColorTheme: () => undefined });
+      const { host, panel } = adjusting({ messages: ID_MESSAGES });
       panel.update([appearance()]);
       expect((el(host, "select") as HTMLSelectElement).labels?.[0]?.textContent).toContain("Tema warna");
       expect(el(host, "option").textContent).toBe("Warna bawaan");
     });
 
     it("passes axe, and gives the list the target size of the panel", async () => {
-      const { host, panel } = themed();
+      const { host, panel } = adjusting();
       panel.update([appearance({ colorTheme: "default" })]);
       expect(await axeViolations(host)).toEqual([]);
       expect(el(host, "select").getBoundingClientRect().height).toBeGreaterThanOrEqual(24);
+    });
+  });
+
+  describe("the lists of the amount of magnification", () => {
+    const magnified = (
+      settings: Omit<Magnification, "name" | "replaceAccessModes"> = {},
+      state: SupportState = "assigned",
+    ) =>
+      supportView("magnification", {
+        state,
+        active: true,
+        settings: { name: "magnification", replaceAccessModes: [], ...settings },
+      });
+
+    it("offers every amount up to 400 percent, starts at the amount of the profile, and names the list", () => {
+      const { host, panel } = adjusting();
+      panel.update([magnified({ allContent: { zoomAmount: 1.5 } })]);
+      const select = listNamed(host, "Zoom");
+      expect(select.labels?.[0]?.firstChild?.textContent).toBe("Zoom");
+      expect([...select.options].map(({ value }) => value)).toEqual([
+        "1",
+        "1.25",
+        "1.5",
+        "1.75",
+        "2",
+        "2.5",
+        "3",
+        "3.5",
+        "4",
+      ]);
+      expect([...select.options].map(({ textContent }) => textContent).at(-1)).toBe("400%");
+      expect(select.value).toBe("1.5");
+    });
+
+    it("starts at 200 percent when the profile names no amount, the zoom that the player applies then", () => {
+      const { host, panel } = adjusting();
+      panel.update([magnified()]);
+      expect(listNamed(host, "Zoom").value).toBe("2");
+      panel.update([supportView("magnification", { state: "option", active: true })]);
+      expect(listNamed(host, "Zoom").value).toBe("2");
+    });
+
+    it("reports the settings whole with the amount chosen, and adds an amount of the profile that the list lacks", async () => {
+      const { host, panel, chosen } = adjusting();
+      panel.update([magnified({ allContent: { zoomAmount: 2.2 } })]);
+      const select = listNamed(host, "Zoom");
+      expect(select.selectedOptions[0]?.textContent).toBe("220%");
+      await userEvent.selectOptions(select, "4");
+      expect(chosen).toEqual([{ name: "magnification", replaceAccessModes: [], allContent: { zoomAmount: 4 } }]);
+    });
+
+    it("has a list for each of text and non-text content when the profile magnifies them apart", async () => {
+      const { host, panel, chosen } = adjusting();
+      panel.update([magnified({ text: { zoomAmount: 3 }, nonText: {} })]);
+      expect([...host.querySelectorAll("select")].map((select) => select.labels?.[0]?.firstChild?.textContent)).toEqual(
+        ["Zoom of text", "Zoom of images"],
+      );
+      await userEvent.selectOptions(listNamed(host, "Zoom of images"), "1.25");
+      expect(chosen).toEqual([
+        { name: "magnification", replaceAccessModes: [], text: { zoomAmount: 3 }, nonText: { zoomAmount: 1.25 } },
+      ]);
+    });
+
+    it("is operated by the keyboard alone: the list takes the focus and the first digits choose an amount", async () => {
+      const { host, panel, chosen } = adjusting();
+      panel.update([magnified({ allContent: { zoomAmount: 1 } })]);
+      const select = listNamed(host, "Zoom");
+      expect(select.tabIndex).toBe(0);
+      select.focus();
+      // The arrow keys open the list in some systems, and the first characters choose an entry in all of them.
+      await userEvent.keyboard("4");
+      await waitFor(() => expect(chosen).toEqual([magnified({ allContent: { zoomAmount: 4 } }).settings]));
+    });
+
+    it("writes the amounts and the label in the language of the interface", () => {
+      const { host, panel } = adjusting({ messages: ID_MESSAGES, language: "id" });
+      panel.update([magnified()]);
+      const select = el(host, "select") as HTMLSelectElement;
+      expect(select.labels?.[0]?.firstChild?.textContent).toBe("Tingkat pembesaran");
+      expect(select.options[8]?.textContent).toBe(new Intl.NumberFormat("id", { style: "percent" }).format(4));
+    });
+
+    it("has no list while the magnification is off or prohibited", () => {
+      const { host, panel } = adjusting();
+      panel.update([
+        supportView("magnification", { state: "option" }),
+        supportView("magnification", { state: "prohibited" }),
+      ]);
+      expect(host.querySelector("select")).toBeNull();
+    });
+
+    it("passes axe, and has the name of its label for a screen reader", async () => {
+      const { host, panel } = adjusting();
+      panel.update([magnified({ text: { zoomAmount: 2 }, nonText: { zoomAmount: 2 } })]);
+      expect(await axeViolations(host)).toEqual([]);
+      await waitFor(async () => {
+        const tree = await commands.ariaSnapshot();
+        expect(tree).toMatch(/- combobox "Zoom of text"/u);
+        expect(tree).toMatch(/- combobox "Zoom of images"/u);
+      });
     });
   });
 
@@ -553,18 +671,18 @@ describe("mountSupportPanel", () => {
     expect(() => mountSupportPanel(host, { ...valid, onSupport: JSON.parse("1") })).toThrow(
       new DataError("The option onSupport must be a function, found 1."),
     );
-    expect(() => mountSupportPanel(host, { ...valid, onColorTheme: JSON.parse("1") })).toThrow(
-      new DataError("The option onColorTheme must be a function, found 1."),
+    expect(() => mountSupportPanel(host, { ...valid, onSettings: JSON.parse("1") })).toThrow(
+      new DataError("The option onSettings must be a function, found 1."),
     );
+    expect(() => mountSupportPanel(host, { ...valid, language: JSON.parse('""') })).toThrow(DataError);
     expect(() => mountSupportPanel(host, { ...valid, ...JSON.parse('{"extra": 1}') })).toThrow(
-      new DataError('The options has the properties "messages", "onSupport" and "onColorTheme", found "extra".'),
+      new DataError(
+        'The options has the properties "messages", "onSupport", "onSettings" and "language", found "extra".',
+      ),
     );
     const panel = mountSupportPanel(host, valid);
     expect(() => panel.update(JSON.parse("{}"))).toThrow(
       new DataError("The list of supports is invalid: expected an array, found an object."),
-    );
-    expect(() => panel.update([], JSON.parse('"pink"'))).toThrow(
-      new DataError('The color theme must be a term of color-theme or ext: and at most 256 characters, found "pink".'),
     );
     panel.destroy();
   });

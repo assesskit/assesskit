@@ -13,7 +13,6 @@ import {
 } from "@assesskit/runtime/checks";
 import type { CandidateView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import type { ColorTheme } from "@assesskit/runtime/pnp";
 import type { FileValue } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { SessionCallOptions, SessionClient } from "../../protocol/index.js";
@@ -246,17 +245,6 @@ export interface Mounted {
    * @returns A promise that resolves when the interactions are settled.
    */
   settled(): Promise<void>;
-  /**
-   * Shows the content in the color theme that the candidate chose, in place of the look of the profile.
-   *
-   * @remarks
-   * The theme takes effect while the support `text-appearance` is on, and lasts as long as the mount. The panel of the supports
-   * calls it for a player with chrome; a host that draws its own control calls it.
-   *
-   * @param theme - A term of `color-theme`, or a theme of a program as `ext:` and its name.
-   * @throws `DataError` when `theme` is neither.
-   */
-  setColorTheme(theme: ColorTheme): void;
   /** Takes the content, the timers and the listeners away, and empties the shadow root, so that a later mount can use the host element. */
   destroy(): void;
 }

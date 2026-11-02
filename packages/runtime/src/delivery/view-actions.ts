@@ -1,5 +1,6 @@
 import type { AssessmentItem } from "../asi/index.js";
 import type { CandidateAction } from "./action.js";
+import { adjustableSettings } from "./adjustable-settings.js";
 import { endAttemptInteractions } from "./attempt.js";
 import { CANDIDATE_ACTION_TYPES } from "./candidate-actions.js";
 import type { Course } from "./course.js";
@@ -52,8 +53,8 @@ function itemTypes(rules: ItemRules): CandidateAction["type"][] {
 /**
  * Returns the types of the actions of the candidate that the state allows, in the order of `CANDIDATE_ACTION_TYPES`: a
  * suspended session allows `resume` only, an ended one nothing; a running one allows the actions on the item presented
- * that its session allows, `mark` once an item was presented, `move`, `end-part`, `end-test`, `suspend`, and `support` when a
- * support is an option.
+ * that its session allows, `mark` once an item was presented, `move`, `end-part`, `end-test`, `suspend`, `support` when a
+ * support is an option, and `support-settings` when a support that is on has settings that the candidate may change.
  *
  * @remarks
  * The rules are those of `Engine.apply`, which refuses every type left out. While the first stage of an adaptive
@@ -66,6 +67,9 @@ export function allowedActions(state: DeliveryState, rules: ItemRules | undefine
   if (state.items.length > 0) allowed.add("mark");
   if (rules !== undefined) allowed.add("move");
   if ([...state.supports.values()].some((support) => support.state === "option")) allowed.add("support");
+  if ([...state.supports].some(([name, { active }]) => active && adjustableSettings(name) !== undefined)) {
+    allowed.add("support-settings");
+  }
   for (const type of rules === undefined ? [] : itemTypes(rules)) allowed.add(type);
   return CANDIDATE_ACTION_TYPES.filter((type) => allowed.has(type));
 }

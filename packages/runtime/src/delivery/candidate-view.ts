@@ -90,7 +90,10 @@ export interface SupportView {
   readonly state: SupportState;
   /** Whether it is on. */
   readonly active: boolean;
-  /** The settings of the profile; absent when it gives none and for a prohibited support. */
+  /**
+   * The settings of the profile, as the candidate changed them with `support-settings`; absent when there are none and for a
+   * prohibited support.
+   */
   readonly settings?: SupportSetting;
 }
 

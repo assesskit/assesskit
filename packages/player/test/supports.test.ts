@@ -305,40 +305,12 @@ describe("appearance", () => {
       ).toEqual({ attributes: { "data-ak-theme": "black-cream" }, properties: { "--ak-font-scale": "1.5" } });
     });
 
-    it("lets the choice of the candidate go before the profile, and back to the default colors", () => {
-      const supports = [themed("yellow-blue"), onSupport("high-contrast")];
-      expect(entries(presentationOf(supports, { colorTheme: "cream-black" }).attributes)).toEqual({
-        "data-ak-theme": "cream-black",
-      });
-      expect(entries(presentationOf(supports, { colorTheme: "default" }).attributes)).toEqual({});
-    });
-
     it("leaves the look alone while the text appearance is off, prohibited or absent", () => {
       const settings: SupportSetting = { name: "text-appearance", replaceAccessModes: [], colorTheme: "black-rose" };
       for (const fields of [{ state: "option" }, { state: "prohibited" }] as const) {
         const support = supportView("text-appearance", { ...fields, settings });
         expect(lookOf(support).attributes).toEqual({});
-        expect(entries(presentationOf([support], { colorTheme: "black-rose" }).attributes)).toEqual({});
       }
-      expect(entries(presentationOf([], { colorTheme: "black-rose" }).attributes)).toEqual({});
-    });
-
-    it("rejects options of other types, as JavaScript or JSON gives them", () => {
-      const supports = [themed("default")];
-      expect(() => presentationOf(supports, json({ colorTheme: "pink" }))).toThrow(
-        new DataError(
-          'The option colorTheme must be a term of color-theme or ext: and at most 256 characters, found "pink".',
-        ),
-      );
-      expect(() => presentationOf(supports, JSON.parse('{"colorTheme": null}'))).toThrow(
-        new DataError(
-          "The option colorTheme must be a term of color-theme or ext: and at most 256 characters, found null.",
-        ),
-      );
-      expect(() => presentationOf(supports, JSON.parse("null"))).toThrow(
-        new DataError("The options must be an object, found null."),
-      );
-      expect(() => presentationOf(supports, json({ extra: 1 }))).toThrow(DataError);
     });
 
     it("rejects a theme of a profile that is not one", () => {

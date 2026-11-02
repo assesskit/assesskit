@@ -1252,6 +1252,16 @@ describe("WCAG 2.2 visual criteria", () => {
     }
   });
 
+  it("magnifies the text 4 times at a width of 1280 pixels, as WCAG reflow measures 400 percent, and loses no content", async () => {
+    await resize(1280, 800);
+    const { host, find, findAll } = mount(REPRESENTATIVE, {}, { "--ak-text-zoom": "4" });
+    expect(computed(find("p"), "font-size")).toBe("64px");
+    expect(clipped(host)).toEqual([]);
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(document.documentElement.clientWidth);
+    const wide = findAll("*").filter((element) => rectOf(element).right > document.documentElement.clientWidth + 1);
+    expect(wide.map((element) => element.localName)).toEqual([]);
+  });
+
   it("reflows at 320 CSS pixels without scrolling in two directions", async () => {
     await resize(320, 568);
     const { host, findAll } = mount(REPRESENTATIVE);

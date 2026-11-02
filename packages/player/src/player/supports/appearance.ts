@@ -1,8 +1,7 @@
-import { checkProperties, checkRecord } from "@assesskit/runtime/checks";
 import type { SupportView } from "@assesskit/runtime/delivery";
 import type { ColorTheme, FontFace, GenericFontFace, SupportName, Zoom } from "@assesskit/runtime/pnp";
 import type { Presentation } from "../presentation/index.js";
-import { activeSupport, checkColorTheme, checkSupportViews, colorThemeOf } from "./check.js";
+import { activeSupport, checkSupportViews, colorThemeOf } from "./check.js";
 
 /** The font size that scales to 1: the default of `font-size` in the PNP schema, in points. */
 const BASE_FONT_SIZE = 12;
@@ -12,7 +11,7 @@ const BASE_FONT_SIZE = 12;
  *
  * @see {@link https://www.w3.org/TR/WCAG22/#resize-text | WCAG 2.2, resize text}
  */
-const DEFAULT_ZOOM = 2;
+export const DEFAULT_ZOOM = 2;
 
 /** The generic font families as CSS spells them. */
 const GENERIC_FONT_FACES: Readonly<Record<GenericFontFace, string>> = {
@@ -153,16 +152,6 @@ function applyColorTheme(theme: ColorTheme, { attributes, properties }: Writer):
   for (const [name, value] of INTERFACE_THEMES.get(theme) ?? [["data-ak-theme", theme]]) attributes.set(name, value);
 }
 
-/** The options of {@link presentationOf}. */
-export interface PresentationOptions {
-  /**
-   * The color theme that the candidate chose, which goes before the one of the profile while `text-appearance` is on.
-   *
-   * @defaultValue None, so that the profile decides
-   */
-  readonly colorTheme?: ColorTheme;
-}
-
 /**
  * Builds the look that the supports that are on ask for.
  *
@@ -172,25 +161,19 @@ export interface PresentationOptions {
  * {@link mediaScaleOf}.
  *
  * @param supports - The supports of the view; those that are off or change nothing of the look are ignored.
- * @param options - See {@link PresentationOptions}.
  * @returns The presentation.
- * @throws `DataError` when `supports` is not a list of the runtime's `SupportView`s, or an option is not valid.
+ * @throws `DataError` when `supports` is not a list of the runtime's `SupportView`s.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, display supports}
  */
-export function presentationOf(supports: readonly SupportView[], options: PresentationOptions = {}): Presentation {
+export function presentationOf(supports: readonly SupportView[]): Presentation {
   checkSupportViews(supports, "The list of supports");
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", ["colorTheme"]);
-  const { colorTheme = colorThemeOf(supports) } = options;
-  if (colorTheme !== undefined) checkColorTheme(colorTheme, "The option colorTheme");
+  const colorTheme = colorThemeOf(supports);
   const out: Writer = { attributes: new Map(), properties: new Map() };
   for (const [name, apply] of APPLIERS) {
     const support = activeSupport(supports, name);
     if (support !== undefined) apply(support, out);
   }
-  if (colorTheme !== undefined && activeSupport(supports, "text-appearance") !== undefined) {
-    applyColorTheme(colorTheme, out);
-  }
+  if (colorTheme !== undefined) applyColorTheme(colorTheme, out);
   return out;
 }
 

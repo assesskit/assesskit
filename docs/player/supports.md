@@ -1,25 +1,25 @@
 # Supports
 
 A candidate's personal needs and preferences (PNP) arrive in the runtime's view as `SupportView`s: a `name`, a `state`, whether
-the support is `active`, and the `settings` of the profile. The player applies each support that is on. It does not
+the support is `active`, and its `settings`: those of the profile, as the candidate changed them. The player applies each support that is on. It does not
 decide which candidate has which support, and it does not choose the variant: the runtime does both, and the player shows the result.
 
 ```mermaid
 flowchart LR
   view["view.supports"] --> look["presentationOf, mediaScaleOf<br/>applyPresentation"]
-  view --> panel["mountSupportPanel<br/>buttons for the options"]
+  view --> panel["mountSupportPanel<br/>buttons for the options,<br/>lists of the settings"]
   view --> content["mountContentSupports<br/>cards, tracks, alternative text"]
   view --> spoken["mountSpoken<br/>reading aloud"]
   view --> variant["mountVariantNotice"]
   view --> tools["mountTools<br/>tools of the supports"]
-  panel -- "support action" --> engine["Session client and runtime"]
+  panel -- "support and support-settings actions" --> engine["Session client and runtime"]
   engine --> view
 ```
 
 | Part                                  | What it does                                                                                               |
 | ------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `presentationOf`, `applyPresentation` | The look: themes, color themes, colors, text size and face, spacing, zoom, single column, keyword emphasis |
-| `mountSupportPanel`                   | The buttons that turn the supports that are options on and off, and the list of color themes               |
+| `mountSupportPanel`                   | The buttons that turn the supports that are options on and off, and the lists of their settings            |
 | `mountContentSupports`                | Cards of the catalog, text tracks of media and the alternative text of images                              |
 | `mountSpoken`                         | Reading aloud: the controls, the word-by-word cursor, the typing echo and the reading type                 |
 | `mountVariantNotice`                  | The variant that the runtime delivered, and its language                                                   |
@@ -27,7 +27,7 @@ flowchart LR
 | `mountTools`                          | The tools that supports put on the screen ([tools](tools.md))                                              |
 
 The parts do not navigate and do not build the chrome. The chrome mounts them, calls `update` with `view.supports` for every
-view, and sends the `support` action when a part asks for one ([in the player](#in-the-player)).
+view, and sends the `support` and `support-settings` actions when a part asks for one ([in the player](#in-the-player)).
 
 ```ts
 import { selectMessages } from "@assesskit/player";
@@ -85,6 +85,9 @@ itself. `mountItem` ([items in a page](delivery.md#items-in-a-page)) mounts the 
 - **The voice** of reading aloud is `hooks.voice`, by default the voice of the browser ([speech](speech.md)). It reads with
   the pronunciation lexicons of the item shown: the shell loads the files that `documents.lexicons` names, through the gate,
   and leaves out one that is missing or is not a PLS document ([speech](speech.md#lexicons)).
+- **Settings** that the candidate may change have a list in the panel while their support is on: the color theme and the amount
+  of magnification. A choice sends `{ type: "support-settings", settings }`, the state keeps it, and the next view applies it, so
+  it holds for later items and after a reload ([the settings](#the-settings)).
 - **The magnification** of non-text content reaches media sized in pixels at once: the shell sets the media scale of the
   content root from `mediaScaleOf` with every change of the supports, and the item is not drawn again, so what the candidate
   typed and chose stays.
@@ -99,6 +102,9 @@ is assigned with `support-not-available`, and records the supports that were on 
   `onSupport(name, !active)` when pressed. The host sends the action, and the next view says whether it took effect.
 - A prohibited support has no control and is not listed. A support that is `active` or `assigned` has no control either,
   because the runtime would refuse it; the panel lists it with its state.
+- `{ type: "support-settings", settings }` changes the settings of a support that is on, whatever its state. The runtime takes
+  the settings whole and refuses one that changes what only the profile sets with `setting-not-adjustable`
+  ([delivery](../runtime/delivery.md#suspension-supports-and-variants)).
 - The panel does not list the supports that the toolbar of the tools turns on and off (`line-reader`, `answer-masking`,
   `calculator-on-screen`, the on-screen tools but the glossary, and the custom supports `ext:highlighter` and `ext:eliminator`), so that no support has two controls.
 
@@ -128,28 +134,55 @@ a magnification.
 | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | A support that is off, or prohibited                                  | Sets nothing                                                                                                        |
 | `text-appearance` and `invert-display-polarity` both give a color     | The color of `text-appearance` wins                                                                                 |
-| A color theme with high contrast, polarity or the colors of a profile | The theme decides the colors, and the others set nothing of them                                                    |
+| A color theme with high contrast, polarity or the colors of a profile | The theme decides the colors, and the others set nothing of them, so that `default` is the default colors           |
 | A magnification without a positive `zoomAmount`                       | 200 percent, the enlargement that WCAG 1.4.4 asks the text to survive                                               |
 | `fontSize`                                                            | Points, with 12 as 1: the PNP schema gives 12 as the default size and no unit; a size of 0 or less asks for nothing |
 | `letterSpacing` and `wordSpacing`                                     | Ems: the schema gives a float and no unit                                                                           |
 | `lineHeight` and `lineSpacing`                                        | A multiple of the base height of 1.5, and ems added to it                                                           |
 | A font name                                                           | Quoted as a CSS string, with the backslash and the quote escaped and control characters turned into spaces          |
 
-## The color theme
+## The settings
 
-The best practices guide says that a candidate whose profile has the color theme must be able to change it at any time and to go
-back to the default colors, and CERT asks the same of `text-appearance` as a whole (`A-42a`). So the panel lists the themes while
-`text-appearance` is on, with or without `colorTheme` in the profile, and the content changes at once and is not drawn again.
-A program that offers the themes to everyone gives every candidate `text-appearance`.
+The profile sets the preferences of a support when the session starts, and the candidate changes them during the session, as
+CERT asks of magnification (`A-30a`, `A-30b`) and the best practices guide of the color theme. The panel has a list for each
+setting that the player follows, while its support is on. A choice reports the settings whole, those of the view with the value
+chosen; the host sends them as `support-settings`, the runtime keeps them in the state, and the next view applies them to the
+content root and the frames at once, without drawing the item again.
 
 ```mermaid
 flowchart LR
-  profile["colorTheme of the profile"] --> look["presentationOf"]
-  list["List in the panel"] --> set["setColorTheme"]
-  host["Control of a host,<br/>chrome: false or mountItem"] --> set
-  set --> look
+  profile["Settings of the profile"] --> state["State of the session"]
+  list["List in the panel"] -- "support-settings" --> state
+  host["Control of a host,<br/>chrome: false or mountItem"] -- "support-settings" --> state
+  state --> view["view.supports"]
+  view --> look["presentationOf, mediaScaleOf"]
   look --> root["Content root and PCI frames"]
 ```
+
+| Support           | List           | Values                                                                                        |
+| ----------------- | -------------- | --------------------------------------------------------------------------------------------- |
+| `text-appearance` | Color theme    | The 14 terms of `color-theme`, and a theme of a program that the profile names                |
+| `magnification`   | Zoom           | 100 to 400 percent: 100, 125, 150, 175, 200, 250, 300, 350, 400; an amount of the profile too |
+|                   | Zoom of text   | The same, in place of Zoom when the profile magnifies text apart                              |
+|                   | Zoom of images | The same, in place of Zoom when the profile magnifies non-text content apart                  |
+
+- **Each list** is a `select` with a label, so the pointer, the keyboard and a screen reader operate it as any list of the page:
+  the first characters choose an entry, and the arrow keys move in it. It keeps the focus while views arrive, and it shows what
+  the next view says, not the request, so a refusal leaves it as it was.
+- **A list without a value** selects nothing: a profile that names no color theme leaves the colors to the other supports.
+  A magnification that names no amount shows 200 percent, the zoom that the player applies then.
+- **A setting of the program**, such as the restrictions of reading aloud, has no list: the runtime refuses a change of it.
+- **A host without chrome**, or with `mountItem`, draws its own control and sends the same action through the session client.
+- **A program that offers a setting to everyone** gives every candidate the support, such as `text-appearance` or
+  `magnification`, as a universal support; the candidate turns it on and then changes its settings.
+
+### The color theme
+
+The best practices guide says that a candidate whose profile has the color theme must be able to change it at any time and to go
+back to the default colors, and CERT asks the same of `text-appearance` as a whole (`A-42a`). So the list shows while
+`text-appearance` is on, with or without `colorTheme` in the profile. A theme decides the colors: high contrast, polarity and the
+colors of `text-appearance` set none of theirs while it is in force, so that `default` is the default colors whatever the profile
+asks for. The chrome stays in the system colors, as it does for high contrast and inverted polarity.
 
 | Term                                                                                                                                                       | Look                                                          |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
@@ -160,14 +193,22 @@ flowchart LR
 | `yellow-blue`, `blue-yellow`, `black-rose`, `rose-black`, `black-cyan`, `cyan-black`, `black-cream`, `cream-black`, `medgray-darkgray`, `darkgray-medgray` | `data-ak-theme`, a palette of [player.css](styling.md#themes) |
 | `ext:` and a name                                                                                                                                          | `data-ak-theme`; the stylesheet of the host gives the palette |
 
-- **`presentationOf(supports, { colorTheme })`** takes the choice of the candidate, which goes before the theme of the profile. A
-  theme decides the colors: high contrast, polarity and the colors of `text-appearance` set none of theirs while it is in force, so
-  that `default` is the default colors whatever the profile asks for.
-- **`Mounted.setColorTheme(theme)`** applies a choice to the content root and the frames. The list calls it in a player with chrome.
-  A host with `chrome: false`, or with `mountItem`, draws its control and calls it.
-- **The choice** sends no action: it is the look of this page and not a rule of the session. It holds for later items and lasts as
-  long as the mount. What a candidate needs every time belongs in the profile.
-- **The chrome** stays in the system colors, as it does for high contrast and inverted polarity.
+### Magnification
+
+The guide asks that the candidate can change the amount of magnification at any time, at least up to 400 percent, starting at
+the `zoom-amount` of the profile. The list of the zoom sets `zoomAmount` of `allContent`, or of `text` and `nonText` when the
+profile magnifies them apart.
+
+| Type         | What grows                                                                                                          |
+| ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `allContent` | The text of the content root (`--ak-text-zoom`) and media sized in pixels (`mediaScaleOf`); also with no type named |
+| `text`       | The text of the content root, which reflows in its containers                                                       |
+| `nonText`    | Media sized in pixels; an image never grows past the width of its container                                         |
+
+The content root is the main content of the guide: the item with its interactions, the stimuli, the rubric and the feedback.
+At 400 percent in a page 1280 pixels wide, which WCAG 1.4.10 takes as 320 pixels, the text reflows with no scrolling in two
+directions and loses no content. The chrome (navigation, timers, toolbar and panel) keeps the size of the page and follows the
+zoom of the browser, as the guide lets the delivery system choose how far the interface around the content grows.
 
 ## The panel
 
@@ -176,14 +217,15 @@ support whose state is `option`, and a line of text with the state of each suppo
 "Additional testing time: on" or "Additional testing time: off". The line has no control. It adopts its stylesheet into the
 document or shadow root of `host`.
 
-| Option         | Type                                           | Meaning                                                                                        |
-| -------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `messages`     | `Messages`                                     | The text of the interface; the supports are named in its language.                             |
-| `onSupport`    | `(name: SupportName, active: boolean) => void` | Called when the candidate asks to turn a support on or off.                                    |
-| `onColorTheme` | `(theme: ColorTheme) => void`                  | Called when the candidate chooses a color theme. With it the panel has the list. Default: none |
+| Option       | Type                                           | Meaning                                                                                                       |
+| ------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `messages`   | `Messages`                                     | The text of the interface; the supports are named in its language.                                            |
+| `onSupport`  | `(name: SupportName, active: boolean) => void` | Called when the candidate asks to turn a support on or off.                                                   |
+| `onSettings` | `(settings: SupportSetting) => void`           | Called with the settings whole when the candidate changes one. With it the panel has the lists. Default: none |
+| `language`   | `string`                                       | The language of the interface, in which the lists write numbers. Default: `"en"`                              |
 
-`update(supports, colorTheme)` shows the buttons and the lines for the supports of the view, in their order, and keeps the focus on the
-control that has it. The list of color themes selects `colorTheme`, then the theme of the profile, and nothing when neither names one. A prohibited support is not shown. A custom support is named by the local name of its element. `destroy()` takes the panel away.
+`update(supports)` shows the buttons and the lines for the supports of the view, in their order, then the lists of the settings,
+and keeps the focus on the control that has it. A prohibited support is not shown. A custom support is named by the local name of its element. `destroy()` takes the panel away.
 
 ## Cards
 
@@ -198,19 +240,19 @@ cards of the supports that are on, with `ContentRoot.card`; the card is chosen b
 `update(supports)` replaces what an earlier call applied. Call it after `show` of the root settles, and again when the
 supports change. `destroy()` gives the content back as the root drew it.
 
-| Support                                                               | The card shows                                                                                         |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `glossary-on-screen`                                                  | in a popup, on request                                                                                 |
-| `keyword-translation`                                                 | in a popup, on request, in the language of the support                                                 |
-| `linguistic-guidance`, `additional-directions`, `keyboard-directions` | in a popup, on request                                                                                 |
+| Support                                                               | The card shows                                                                                         |     |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | --- |
+| `glossary-on-screen`                                                  | in a popup, on request                                                                                 |     |
+| `keyword-translation`                                                 | in a popup, on request, in the language of the support                                                 |     |
+| `linguistic-guidance`, `additional-directions`, `keyboard-directions` | in a popup, on request                                                                                 |     |
 | A custom support (`ext:`)                                             | in a popup, on request                                                                                 |     |
-| `high-contrast`                                                       | in place of the content                                                                                |
-| `simplified-graphics`, `simplified-language-portions`                 | in place of the content                                                                                |
-| `sign-language`                                                       | beside the content, the entry of the language of the support                                           |
-| `audio-description`, `transcript`                                     | beside the content                                                                                     |
-| `long-description`                                                    | beside the content; visually hidden unless `hideVisually` is `false`                                   |
-| `braille`                                                             | beside the content; the text is visually hidden unless the delivery is `embossed`, the files are links |
-| `tactile`                                                             | beside the content; its files are links                                                                |
+| `high-contrast`                                                       | in place of the content                                                                                |     |
+| `simplified-graphics`, `simplified-language-portions`                 | in place of the content                                                                                |     |
+| `sign-language`                                                       | beside the content, the entry of the language of the support                                           |     |
+| `audio-description`, `transcript`                                     | beside the content                                                                                     |     |
+| `long-description`                                                    | beside the content; visually hidden unless `hideVisually` is `false`                                   |     |
+| `braille`                                                             | beside the content; the text is visually hidden unless the delivery is `embossed`, the files are links |     |
+| `tactile`                                                             | beside the content; its files are links                                                                |     |
 | `spoken`                                                              | not shown: a card for the voice of a host                                                              |     |
 
 The language of a card is that of `keyword-translation` or `sign-language` for their own cards, else that of the
@@ -316,14 +358,15 @@ hover and on focus, and Escape has the Close button as its pointer equivalent.
 
 A support that is wrong for the candidate is not an error of the player: the runtime refuses the action and the status region says why. What a host can meet:
 
-| Error                                                  | When                                                                                                                                                                                                                    | What to do                                                                                            |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `DataError`                                            | The host of a part is not an element in the document, or the root of the content root is not a shadow root                                                                                                              | Mount the part after the host is in the page, and pass the content root that `createContentRoot` made |
-| `DataError`                                            | The list of supports is not an array of `SupportView`: a support of the wrong type, with an unknown property, with a name that is not a support, or with settings that are not those of its support or are out of range | Pass `view.supports` as the runtime gave it                                                           |
-| `DataError`                                            | An option, such as `onSupport`, `messages` or `hooks`, is of the wrong type                                                                                                                                             | Fix the option; the message names it                                                                  |
-| A refusal `support-not-available` in the status region | The panel asked for a support that is prohibited, on from the start or assigned                                                                                                                                         | The runtime decides; the panel has no button for these, so a host's own button should not offer them  |
-| A support with no visible effect                       | It is `prohibited`, or the content has nothing for it: a card the catalog lacks, a track the media lacks                                                                                                                | Nothing: see [the cards](#cards) for what an absent card leaves                                       |
-| No voice for reading aloud                             | The browser has none for the language, or `hooks.voice` fails                                                                                                                                                           | The error goes to `hooks.onError` ([speech](speech.md#errors))                                        |
+| Error                                                   | When                                                                                                                                                                                                                    | What to do                                                                                            |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `DataError`                                             | The host of a part is not an element in the document, or the root of the content root is not a shadow root                                                                                                              | Mount the part after the host is in the page, and pass the content root that `createContentRoot` made |
+| `DataError`                                             | The list of supports is not an array of `SupportView`: a support of the wrong type, with an unknown property, with a name that is not a support, or with settings that are not those of its support or are out of range | Pass `view.supports` as the runtime gave it                                                           |
+| `DataError`                                             | An option, such as `onSupport`, `messages` or `hooks`, is of the wrong type                                                                                                                                             | Fix the option; the message names it                                                                  |
+| A refusal `support-not-available` in the status region  | The panel asked for a support that is prohibited, on from the start or assigned, or for the settings of one that is off                                                                                                 | The runtime decides; the panel has no button for these, so a host's own button should not offer them  |
+| A refusal `setting-not-adjustable` in the status region | A host's control changed a setting that only the profile sets                                                                                                                                                           | Change only the settings of `ADJUSTABLE_SETTINGS`                                                     |
+| A support with no visible effect                        | It is `prohibited`, or the content has nothing for it: a card the catalog lacks, a track the media lacks                                                                                                                | Nothing: see [the cards](#cards) for what an absent card leaves                                       |
+| No voice for reading aloud                              | The browser has none for the language, or `hooks.voice` fails                                                                                                                                                           | The error goes to `hooks.onError` ([speech](speech.md#errors))                                        |
 
 ## Not included
 
@@ -350,7 +393,7 @@ A support that is wrong for the candidate is not an error of the player: the run
 
 `pnpm test:browser` mounts every part in Chromium, Firefox and WebKit, runs axe at WCAG 2.2 A and AA on each of them
 (popups open, in the themes), presses real keys and pointer buttons, and drives them with the runtime's engine: a click on the
-panel sends the `support` action, and the next view applies the support. The popup tests cover the three conditions of
+panel sends the `support` action, a list sends `support-settings`, and the next view applies them. The popup tests cover the three conditions of
 1.4.13. A running frame of a portable custom interaction takes a new look (`pci` in `pci.browser.test.ts`).
 
 ## Files
@@ -362,7 +405,6 @@ Each file of `src/player/supports/`, `src/player/presentation/` holds one concep
 | `supports/appearance.ts`       | The look and the media scale of the supports                                  |
 | `supports/cards.ts`            | Showing the cards of the supports                                             |
 | `supports/check.ts`            | The check of the supports of a view                                           |
-| `supports/color-theme.ts`      | The list of color themes                                                      |
 | `supports/content.ts`          | `mountContentSupports`                                                        |
 | `supports/index.ts`            | The public API                                                                |
 | `supports/internal.ts`         | Helpers that other folders and tests share, which the package does not export |
@@ -370,6 +412,7 @@ Each file of `src/player/supports/`, `src/player/presentation/` holds one concep
 | `supports/names.ts`            | The name of a support                                                         |
 | `supports/panel.ts`            | `mountSupportPanel`                                                           |
 | `supports/popup.ts`            | The popup of a card                                                           |
+| `supports/settings.ts`         | The lists of the settings that the candidate changes                          |
 | `supports/spoken.ts`           | `mountSpoken`                                                                 |
 | `supports/styles.ts`           | The stylesheet of the parts in the chrome                                     |
 | `supports/variant.ts`          | `mountVariantNotice`                                                          |

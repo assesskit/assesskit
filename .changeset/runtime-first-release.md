@@ -46,3 +46,8 @@ ignores those of the sections and items in it.
 
 `readPnp` reads the color theme of the best practices guide into `TextAppearance.colorTheme`, with the terms of `PNP_COLOR_THEMES`
 and `isColorTheme`. The PNP schema has no such element, so `writePnp` leaves it out and `validatePnp` warns.
+
+The action `support-settings` changes the settings of a support that is on, whatever its state: the preferences that CERT asks
+the candidate to change during the session (`ADJUSTABLE_SETTINGS`: braille, magnification, reading aloud, text appearance). The
+action carries the settings whole, the state keeps them, and the engine refuses one that changes a setting of the program with
+`setting-not-adjustable`. The view lists the action while such a support is on.

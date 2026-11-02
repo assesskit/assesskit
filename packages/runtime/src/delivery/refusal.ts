@@ -17,6 +17,7 @@ export type RefusalCode =
   | "not-current"
   | "review-not-allowed"
   | "score-type-mismatch"
+  | "setting-not-adjustable"
   | "skipping-not-allowed"
   | "solution-not-allowed"
   | "support-not-available"

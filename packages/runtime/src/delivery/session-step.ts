@@ -8,7 +8,7 @@ import { enter } from "./step-entry.js";
 import { catResponse, reconcile, supply } from "./step-host.js";
 import { act, move } from "./step-moves.js";
 import { isReview, reviewEnded } from "./step-review.js";
-import { mark, resume, suspend, toggle } from "./step-session.js";
+import { adjust, mark, resume, suspend, toggle } from "./step-session.js";
 import { advance, expireUntil } from "./step-time.js";
 import { arrive, end, navigate } from "./step-walk.js";
 
@@ -101,6 +101,8 @@ export class SessionStep {
         return move(step, action.to, at);
       case "support":
         return toggle(step, action.name, action.active, at);
+      case "support-settings":
+        return adjust(step, action.settings, at);
       case "end-part":
         return end(step, PART_END, at);
       case "end-test":
@@ -116,7 +118,8 @@ export class SessionStep {
 
   /**
    * Applies an action of the candidate while no item is presented, because the first stage of an adaptive section is
-   * awaited: time passes without effect, a support can be turned on or off, the session can be suspended and resumed,
+   * awaited: time passes without effect, a support can be turned on or off and its settings changed, the session can be
+   * suspended and resumed,
    * and the part or the test can be ended. Anything else waits for the CAT engine.
    */
   private idle(action: Action): Refusal | undefined {
@@ -129,6 +132,8 @@ export class SessionStep {
         return mark(step, action.item, action.marked);
       case "support":
         return toggle(step, action.name, action.active, at);
+      case "support-settings":
+        return adjust(step, action.settings, at);
       case "suspend":
         return suspend(step, at);
       case "resume":

@@ -18,6 +18,7 @@ export const CANDIDATE_ACTION_TYPES = [
   "mark",
   "move",
   "support",
+  "support-settings",
   "end-part",
   "end-test",
   "suspend",

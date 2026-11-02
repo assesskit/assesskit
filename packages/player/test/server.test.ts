@@ -713,6 +713,7 @@ describe("the client-action policy", () => {
       mark: true,
       move: true,
       support: true,
+      "support-settings": true,
       "end-part": true,
       "end-test": true,
       suspend: true,

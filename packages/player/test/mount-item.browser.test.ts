@@ -236,7 +236,7 @@ describe("mountItem", () => {
     expect(s.ui.querySelector(".ak-supports")).toBeNull();
   });
 
-  it("takes the color theme of the profile, and the choice that the host makes for the candidate", async () => {
+  it("takes the color theme of the profile, and the one that the host sends for the candidate", async () => {
     const s = await embed("l1", {
       profile: `<access-for-all-pnp xmlns="${PNP_NAMESPACE}">
         <text-appearance><color-theme>black-rose</color-theme></text-appearance>
@@ -246,8 +246,11 @@ describe("mountItem", () => {
     await shown(s);
     const contentHost = s.ui.querySelector(".ak-content-host") as HTMLElement;
     await waitFor(() => expect(contentHost.getAttribute("data-ak-theme")).toBe("black-rose"));
-    s.mounted.setColorTheme("default");
-    expect(contentHost.hasAttribute("data-ak-theme")).toBe(false);
+    await s.client.dispatch({
+      type: "support-settings",
+      settings: { name: "text-appearance", replaceAccessModes: [], colorTheme: "default" },
+    });
+    await waitFor(() => expect(contentHost.hasAttribute("data-ak-theme")).toBe(false));
   });
 
   it("keeps the content and the answers when a view arrives that answers an earlier request", async () => {

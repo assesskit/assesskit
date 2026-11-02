@@ -1304,28 +1304,27 @@ describe("the supports in the player", () => {
       expect(themeList(s.ui).value).toBe("cream-black");
     });
 
-    it("sends no action, because the choice is the presentation of this page", async () => {
+    it("sends the choice as the settings of the text appearance, which the state keeps", async () => {
       const { sent, wrap } = recording();
       const s = await shell({ profile: Themed, wrap });
       await shown(s);
       await userEvent.selectOptions(themeList(s.ui), "rose-black");
       await waitFor(() => expect(contentHostOf(s.ui).getAttribute("data-ak-theme")).toBe("rose-black"));
-      expect(sent).toEqual([]);
+      const settings = { name: "text-appearance", replaceAccessModes: [], colorTheme: "rose-black" } as const;
+      expect(sent).toEqual([{ type: "support-settings", settings }]);
+      expect(s.client.view.supports.find(({ name }) => name === "text-appearance")?.settings).toEqual(settings);
     });
 
-    it("gives a host without chrome the same change, through the mount", async () => {
+    it("gives a host without chrome the same change, through the session", async () => {
       const s = await shell({ profile: Themed, chrome: false });
       await shown(s);
       const host = contentHostOf(s.ui);
       expect(s.ui.querySelector("select")).toBeNull();
-      s.mounted.setColorTheme("blue-yellow");
-      expect(host.getAttribute("data-ak-theme")).toBe("blue-yellow");
-      expect(() => s.mounted.setColorTheme(JSON.parse('"pink"'))).toThrow(
-        new DataError(
-          'The color theme must be a term of color-theme or ext: and at most 256 characters, found "pink".',
-        ),
-      );
-      expect(host.getAttribute("data-ak-theme")).toBe("blue-yellow");
+      await s.client.dispatch({
+        type: "support-settings",
+        settings: { name: "text-appearance", replaceAccessModes: [], colorTheme: "blue-yellow" },
+      });
+      await waitFor(() => expect(host.getAttribute("data-ak-theme")).toBe("blue-yellow"));
     });
 
     it("changes the look inside the frame of a portable custom interaction", async () => {
@@ -1342,6 +1341,66 @@ describe("the supports in the player", () => {
       await waitFor(async () => expect(await look()).toBe("black-cream"), { timeout: 15_000 });
       await userEvent.selectOptions(themeList(s.ui), "default");
       await waitFor(async () => expect(await look()).toBeUndefined(), { timeout: 15_000 });
+    });
+  });
+
+  describe("the amount of magnification", () => {
+    const Magnified = `<access-for-all-pnp xmlns="${PNP_NAMESPACE}">
+      <magnification><all-content zoom-amount="1.5"/></magnification>
+    </access-for-all-pnp>`;
+    const zoomList = (ui: ShadowRoot): HTMLSelectElement => {
+      const list = [...ui.querySelectorAll<HTMLSelectElement>(".ak-supports select")].find(
+        (select) => select.labels?.[0]?.firstChild?.textContent === "Zoom",
+      );
+      if (list === undefined) throw new Error("The panel has no list of the zoom.");
+      return list;
+    };
+    /** The zoom of text that the content root has, which the view of the session decides. */
+    const zoomOf = (ui: ShadowRoot): string => contentHostOf(ui).style.getPropertyValue("--ak-text-zoom");
+    const textSize = (ui: ShadowRoot): number =>
+      Number.parseFloat(getComputedStyle(contentOf(ui).querySelector("p") as HTMLElement).fontSize);
+
+    it("starts at the zoom of the profile and lets the candidate change it up to 400 percent, without drawing the item again", async () => {
+      const { sent, wrap } = recording();
+      const s = await shell({ profile: Magnified, wrap });
+      await shown(s);
+      await waitFor(() => expect(zoomList(s.ui).value).toBe("1.5"));
+      const base = textSize(s.ui) / 1.5;
+      const paragraph = contentOf(s.ui).querySelector("p");
+      await userEvent.selectOptions(zoomList(s.ui), "4");
+      await waitFor(() => expect(textSize(s.ui)).toBeCloseTo(4 * base, 1));
+      expect(contentOf(s.ui).querySelector("p")).toBe(paragraph);
+      expect(sent).toEqual([
+        {
+          type: "support-settings",
+          settings: { name: "magnification", replaceAccessModes: [], allContent: { zoomAmount: 4 } },
+        },
+      ]);
+      expect(zoomList(s.ui).value).toBe("4");
+    });
+
+    it("keeps the amount on the next item, because the state holds it", async () => {
+      const s = await shell({ profile: Magnified });
+      await shown(s);
+      await userEvent.selectOptions(zoomList(s.ui), "3");
+      await waitFor(() => expect(zoomOf(s.ui)).toBe("3"));
+      const size = textSize(s.ui);
+      await s.client.dispatch({ type: "move", to: "next" });
+      await waitFor(() => expect(s.client.view.current?.key.ref).not.toBe("q1"));
+      expect(zoomList(s.ui).value).toBe("3");
+      expect(textSize(s.ui)).toBe(size);
+    });
+
+    it("has no horizontal scroll at 400 percent in a page 1280 pixels wide, as WCAG reflow asks, and passes axe", async () => {
+      const s = await shell({ profile: Magnified });
+      await shown(s);
+      s.page.style.inlineSize = "1280px";
+      await userEvent.selectOptions(zoomList(s.ui), "4");
+      await waitFor(() => expect(zoomOf(s.ui)).toBe("4"));
+      const content = contentHostOf(s.ui);
+      expect(content.scrollWidth).toBeLessThanOrEqual(content.clientWidth);
+      expect(s.page.scrollWidth).toBeLessThanOrEqual(s.page.clientWidth);
+      expect(await axeViolations(s.page)).toEqual([]);
     });
   });
 

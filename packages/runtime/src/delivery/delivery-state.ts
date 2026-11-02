@@ -82,8 +82,8 @@ export interface SessionSupport {
   /** Whether the support is on. */
   readonly active: boolean;
   /**
-   * The settings that the profile gives the support; absent for a universal support that the profile does not name, and
-   * for a custom support.
+   * The settings that the profile gives the support, as the candidate changed them with `support-settings`; absent for a
+   * universal support that neither the profile nor the candidate set, and for a custom support.
    *
    * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
    */
