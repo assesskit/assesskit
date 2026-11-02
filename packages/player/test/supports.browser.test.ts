@@ -512,6 +512,7 @@ describe("mountSupportPanel", () => {
       expect(select.options).toHaveLength(15);
       expect(select.selectedOptions[0]?.textContent).toBe("school-green");
       await userEvent.selectOptions(select, "default");
+      panel.update([appearance({ colorTheme: "default" })]);
       await userEvent.selectOptions(select, "ext:school-green");
       expect(chosen.map((settings) => (settings.name === "text-appearance" ? settings.colorTheme : ""))).toEqual([
         "default",

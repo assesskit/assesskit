@@ -8,6 +8,7 @@ import type {
   ColorTheme,
   LinkIndication,
   Magnification,
+  PnpExtensionTerm,
   Spoken,
   SupportName,
   SupportSetting,
@@ -78,9 +79,13 @@ function percent(language: string): (value: number) => string {
   return (value) => format.format(value);
 }
 
+/** Returns a term of a program, `ext:` and a name, which the color themes and the kinds of braille allow. */
+const extensionTerm = (value: string): PnpExtensionTerm | undefined =>
+  value.startsWith(EXTENSION_PREFIX) ? `${EXTENSION_PREFIX}${value.slice(EXTENSION_PREFIX.length)}` : undefined;
+
 /**
  * Returns the list of a setting whose values are terms, each named by a message; a term of the profile that the list lacks,
- * such as one of a program, is offered too.
+ * such as one of a program, is offered too, and `extension` reads it back when the candidate chooses it again later.
  */
 function termField<TTerm extends string>(
   key: string,
@@ -89,6 +94,7 @@ function termField<TTerm extends string>(
   named: readonly (readonly [TTerm, keyof Messages])[],
   current: TTerm | undefined,
   set: (term: TTerm) => SupportSetting,
+  extension: (value: string) => TTerm | undefined = () => undefined,
 ): Field {
   return {
     key,
@@ -97,7 +103,7 @@ function termField<TTerm extends string>(
     value: current,
     text: termText,
     choose: (value) => {
-      const term = value === current ? current : named.find(([known]) => known === value)?.[0];
+      const term = named.find(([known]) => known === value)?.[0] ?? extension(value);
       return term === undefined ? undefined : set(term);
     },
   };
@@ -151,10 +157,15 @@ const THEMES: readonly (readonly [ColorTheme, keyof Messages])[] = [
 function textAppearanceFields(settings: TextAppearance, context: FieldContext): Field[] {
   const { messages } = context;
   return [
-    termField("color-theme", messages.colorTheme, context, THEMES, settings.colorTheme, (colorTheme) => ({
-      ...settings,
-      colorTheme,
-    })),
+    termField(
+      "color-theme",
+      messages.colorTheme,
+      context,
+      THEMES,
+      settings.colorTheme,
+      (colorTheme) => ({ ...settings, colorTheme }),
+      extensionTerm,
+    ),
   ];
 }
 
@@ -291,11 +302,17 @@ function brailleFields(settings: Braille, context: FieldContext): Field[] {
       BRAILLE_TYPES,
       settings.brailleType,
       (brailleType) => ({ ...settings, brailleType }),
+      extensionTerm,
     ),
-    termField("math-type", messages.settingBrailleMath, context, MATH_TYPES, settings.mathType, (mathType) => ({
-      ...settings,
-      mathType,
-    })),
+    termField(
+      "math-type",
+      messages.settingBrailleMath,
+      context,
+      MATH_TYPES,
+      settings.mathType,
+      (mathType) => ({ ...settings, mathType }),
+      extensionTerm,
+    ),
   ];
 }
 
