@@ -12,6 +12,7 @@ import {
   single,
   startItemSession,
   type Value,
+  validateAsi,
 } from "@assesskit/runtime";
 import {
   createItemSession,
@@ -21,9 +22,10 @@ import {
   type QtiItemSession,
   startQtiTest,
   submitQtiTestAnswer,
+  validateAssessmentItem,
 } from "@longsightgroup/qti3-core";
-import { expect, type TestContext, test } from "vitest";
-import { BENCH_OPTIONS, expectAgainst, LONGSIGHT_BUDGETS, type LongsightBudget } from "./budgets.js";
+import { expect, test } from "vitest";
+import { compareRow, LONGSIGHT_BUDGETS } from "./budgets.js";
 import { EXAMPLES } from "./corpus-items.js";
 import { corpusCases } from "./differential/cases.js";
 import { CHOICE_ITEM } from "./differential/items.js";
@@ -107,52 +109,6 @@ function subjects(): Subject[] {
 
 const EXAMPLE_SUBJECTS = subjects();
 
-/** One row of the comparison: what each implementation does in a run, and the hooks that prepare a run outside the time. */
-interface Row {
-  readonly name: string;
-  readonly budget: LongsightBudget;
-  readonly runtime: () => void;
-  readonly longsight: () => void;
-  readonly prepareRuntime?: () => void;
-  readonly prepareLongsight?: () => void;
-}
-
-/**
- * The rounds in which a row takes turns between the two implementations. Each round gives each side a fifth of the window
- * of {@link BENCH_OPTIONS}, so that a stretch of a busy host, which lasts a second or more on a shared runner, falls on
- * both sides and not on whichever ran then: the fastest sample of each side comes from the quietest of its rounds, and
- * the ratio of the two holds on a shared host as the budgets assume.
- */
-const ROUNDS = 5;
-
-/** The statistics of the fastest sample over several rounds, and the median of the medians. */
-function overRounds(rounds: readonly { readonly min: number; readonly p50: number }[]): {
-  readonly latency: { readonly min: number; readonly p50: number };
-} {
-  const medians = rounds.map(({ p50 }) => p50).sort((a, b) => a - b);
-  return {
-    latency: { min: Math.min(...rounds.map(({ min }) => min)), p50: medians[Math.floor(medians.length / 2)] ?? 0 },
-  };
-}
-
-/** Times both implementations on a row, in turns, and holds the runtime to its budgets. */
-async function compareRow(context: Pick<TestContext, "annotate" | "bench">, row: Row): Promise<void> {
-  const { annotate, bench } = context;
-  const subject = bench(`${row.name}: runtime`, { beforeEach: row.prepareRuntime }, row.runtime);
-  const reference = bench(`${row.name}: Longsight`, { beforeEach: row.prepareLongsight }, row.longsight);
-  const { time, iterations } = BENCH_OPTIONS;
-  const round = { ...BENCH_OPTIONS, time: time / ROUNDS, iterations: Math.ceil(iterations / ROUNDS) };
-  const runtimeRounds = [];
-  const referenceRounds = [];
-  for (let place = 0; place < ROUNDS; place++) {
-    // The warm-up is once, in the first round: the later rounds find both sides warm.
-    const options = { ...round, warmup: place === 0 };
-    runtimeRounds.push((await subject.run(options)).latency);
-    referenceRounds.push((await reference.run(options)).latency);
-  }
-  await expectAgainst(annotate, row.name, overRounds(runtimeRounds), overRounds(referenceRounds), row.budget);
-}
-
 test("has examples that both implementations read and score", () => {
   expect(EXAMPLE_SUBJECTS.length).toBeGreaterThan(200);
 });
@@ -166,8 +122,24 @@ test("parses the example items as fast as Longsight", async ({ annotate, bench }
       runtime: () => {
         for (const { xml } of EXAMPLE_SUBJECTS) readAsi(xml);
       },
-      longsight: () => {
+      reference: () => {
         for (const { xml } of EXAMPLE_SUBJECTS) parseQtiXml(xml);
+      },
+    },
+  );
+});
+
+test("validates the example items within its budget against Longsight", async ({ annotate, bench }) => {
+  await compareRow(
+    { annotate, bench },
+    {
+      name: "validate an item",
+      budget: LONGSIGHT_BUDGETS.validate,
+      runtime: () => {
+        for (const { item } of EXAMPLE_SUBJECTS) validateAsi({ kind: "item", item });
+      },
+      reference: () => {
+        for (const { document } of EXAMPLE_SUBJECTS) validateAssessmentItem(document);
       },
     },
   );
@@ -189,7 +161,7 @@ test("starts an item session, with template processing, as fast as Longsight", a
       name: "start an item session",
       budget: LONGSIGHT_BUDGETS.start,
       runtime: start(EXAMPLE_SUBJECTS, 1),
-      longsight: open(EXAMPLE_SUBJECTS, 1),
+      reference: open(EXAMPLE_SUBJECTS, 1),
     },
   );
   await compareRow(
@@ -198,7 +170,7 @@ test("starts an item session, with template processing, as fast as Longsight", a
       name: "start an item session that has template processing",
       budget: LONGSIGHT_BUDGETS.startTemplated,
       runtime: start(templated, TEMPLATED_REPEATS),
-      longsight: open(templated, TEMPLATED_REPEATS),
+      reference: open(templated, TEMPLATED_REPEATS),
     },
   );
 });
@@ -217,7 +189,7 @@ test("enters responses and processes them on submit as fast as Longsight", async
           if (session !== undefined) submitted(item, values, session);
         });
       },
-      longsight: () => {
+      reference: () => {
         EXAMPLE_SUBJECTS.forEach(({ responses }, index) => {
           const session = oracle[index];
           if (session === undefined) return;
@@ -228,7 +200,7 @@ test("enters responses and processes them on submit as fast as Longsight", async
       prepareRuntime: () => {
         sessions = EXAMPLE_SUBJECTS.flatMap(({ item, seed }) => presented(item, seed) ?? []);
       },
-      prepareLongsight: () => {
+      prepareReference: () => {
         oracle = EXAMPLE_SUBJECTS.map(({ document, seed }) =>
           createItemSession(document, undefined, { randomSeed: seed }),
         );
@@ -251,7 +223,7 @@ test("takes an item from its document to its score as fast as Longsight", async 
           if (session !== undefined) submitted(read.item, subject.values, session);
         }
       },
-      longsight: () => {
+      reference: () => {
         for (const { xml, responses, seed } of EXAMPLE_SUBJECTS) {
           const { document } = parseQtiXml(xml);
           if (document === undefined) continue;
@@ -271,17 +243,57 @@ const ANSWERED_BEFORE = 50;
 /** The submissions in a sample of that row: one takes about 20 microseconds, and a sample of milliseconds is long enough to time. */
 const SUBMITS_PER_SAMPLE = 100;
 
-test("processes the outcomes of a test on a submission as fast as Longsight", async ({ annotate, bench }) => {
+/**
+ * The test of {@link TEST_SECTIONS} sections of {@link TEST_ITEMS_PER_SECTION} choice items with the sum of the scores as
+ * its outcome, as the engine of the runtime delivers it and as Longsight executes it, with the identifiers of its items.
+ */
+function choiceTest() {
   const itemRefs = Array.from({ length: TEST_SECTIONS }, (_, place) =>
     Array.from({ length: TEST_ITEMS_PER_SECTION }, (_, item) => `s${place}i${item}`),
   );
-  const sections = itemRefs.map((list, place) => section(`sec${place}`, refs(...list)));
+  const content =
+    outcome("TOTAL", "float") +
+    part("P", itemRefs.map((list, place) => section(`sec${place}`, refs(...list))).join("")) +
+    processing(setOutcome("TOTAL", SUM_SCORES));
   // The engine is the build, which `createEngine` of this import is: the helpers of the fixtures import the sources.
-  const engine = engineOf(
-    outcome("TOTAL", "float") + part("P", sections.join("")) + processing(setOutcome("TOTAL", SUM_SCORES)),
-    { create: createEngine },
+  const engine = engineOf(content, { create: createEngine });
+  const parsed = parseQtiTest(
+    `<qti-assessment-test xmlns="${ASI_NAMESPACE}" identifier="T" title="T">${content}</qti-assessment-test>`,
   );
-  const names = itemRefs.flat();
+  if (!parsed.ok) fail("Longsight does not accept the test.");
+  return { engine, test: parsed.value, names: itemRefs.flat() };
+}
+
+/** The starts in a sample of that row: one takes microseconds, and a sample of milliseconds is long enough to time. */
+const STARTS_PER_SAMPLE = 100;
+
+test("starts a session of a test within its budget against Longsight", async ({ annotate, bench }) => {
+  const { engine, test } = choiceTest();
+  const started = engine.start({ seed: 1, at: 0 });
+  expect(started.ok && started.state.plan.parts[0]?.children).toHaveLength(TEST_SECTIONS);
+  expect(startQtiTest(test).ok).toBe(true);
+  // The engine starts the session of the first item as it starts the test; Longsight starts an item session apart.
+  const item = parseQtiXml(CHOICE_ITEM).document ?? fail("Longsight does not accept the item.");
+  await compareRow(
+    { annotate, bench },
+    {
+      name: "start a test",
+      budget: LONGSIGHT_BUDGETS.testStart,
+      runtime: () => {
+        for (let start = 0; start < STARTS_PER_SAMPLE; start++) engine.start({ seed: 1, at: 0 });
+      },
+      reference: () => {
+        for (let start = 0; start < STARTS_PER_SAMPLE; start++) {
+          startQtiTest(test);
+          createItemSession(item, undefined, { randomSeed: 1 });
+        }
+      },
+    },
+  );
+});
+
+test("processes the outcomes of a test on a submission as fast as Longsight", async ({ annotate, bench }) => {
+  const { engine, test, names } = choiceTest();
   const answer = (index: number, at: number) => [pick(names[index] ?? fail("No such item."), "B", at)];
   // The session halfway through: the first items answered rightly, and the draft of the next one entered.
   let state = begun(engine).state;
@@ -302,10 +314,6 @@ test("processes the outcomes of a test on a submission as fast as Longsight", as
   if (!submitted.ok) fail(`The submission was refused: ${submitted.refusal.code}.`);
   expect(submitted.state.outcomes.get("TOTAL")).toEqual(single("float", ANSWERED_BEFORE + 1));
 
-  const xml = `<qti-assessment-test xmlns="${ASI_NAMESPACE}" identifier="T" title="T">${outcome("TOTAL", "float")}${part("P", sections.join(""))}${processing(setOutcome("TOTAL", SUM_SCORES))}</qti-assessment-test>`;
-  const parsed = parseQtiTest(xml);
-  if (!parsed.ok) fail("Longsight does not accept the test.");
-  const test = parsed.value;
   let oracle = startQtiTest(test);
   if (!oracle.ok) fail("Longsight does not start the test.");
   for (let index = 0; index < ANSWERED_BEFORE; index++) {
@@ -338,12 +346,12 @@ test("processes the outcomes of a test on a submission as fast as Longsight", as
       runtime: () => {
         for (let submit = 0; submit < SUBMITS_PER_SAMPLE; submit++) engine.apply(drafted, submission);
       },
-      longsight: () => {
+      reference: () => {
         for (const session of sessions) {
           submitQtiTestAnswer(test, before, { itemRef: ref, score: Number(session.score().outcomes.SCORE) });
         }
       },
-      prepareLongsight: prepare,
+      prepareReference: prepare,
     },
   );
 });

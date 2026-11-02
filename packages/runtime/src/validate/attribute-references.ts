@@ -1,4 +1,4 @@
-import type { AttributeType, ElementVisit } from "../asi/index.js";
+import type { AttributeDef, AttributeType, ElementVisit } from "../asi/index.js";
 import type { Findings } from "./findings.js";
 import { elementPath } from "./model-access.js";
 import type { StaticType } from "./static-type.js";
@@ -12,6 +12,27 @@ type ReferenceType = Extract<AttributeType, { kind: "reference" }>;
 function referenceTypeOf(type: AttributeType): ReferenceType | undefined {
   if (type.kind === "reference") return type;
   return type.kind === "list" && type.item.kind === "reference" ? type.item : undefined;
+}
+
+/** An attribute of a type that holds a number or the identifier of a variable, alone or in a list. */
+interface ReferenceAttribute {
+  readonly definition: AttributeDef;
+  readonly type: ReferenceType;
+}
+
+/** The attributes of each list of a type that may name a variable, made once for the list, which the type keeps. */
+const REFERENCES = new WeakMap<readonly AttributeDef[], readonly ReferenceAttribute[]>();
+
+/** Returns the attributes of a list that may name a variable, in the order of the list. */
+function referencesOf(attributes: readonly AttributeDef[]): readonly ReferenceAttribute[] {
+  const known = REFERENCES.get(attributes);
+  if (known !== undefined) return known;
+  const found = attributes.flatMap((definition): ReferenceAttribute[] => {
+    const type = referenceTypeOf(definition.type);
+    return type === undefined ? [] : [{ definition, type }];
+  });
+  REFERENCES.set(attributes, found);
+  return found;
 }
 
 /** Finds the variable an attribute names: `identifier` is the text of the attribute, `templateProcessing` where it is. */
@@ -45,10 +66,10 @@ export class AttributeReferences {
    * @param visit - The element that the walk of the document reached.
    */
   visit(visit: ElementVisit): void {
+    const references = referencesOf(visit.attributes);
+    if (references.length === 0) return;
     const templateProcessing = this.within(visit, "qti-template-processing");
-    for (const definition of visit.attributes) {
-      const type = referenceTypeOf(definition.type);
-      if (type === undefined) continue;
+    for (const { definition, type } of references) {
       for (const identifier of this.identifiersOf(visit.model[definition.property])) {
         const found = this.lookup(identifier, templateProcessing);
         const here = elementPath(visit);

@@ -3875,6 +3875,19 @@ describe("planning a test", () => {
     }
   });
 
+  it("plans a test that draws nothing once for every session of its engine, and one that draws for each session", () => {
+    const planOf = (engine: Engine, seed: number) => {
+      const step = engine.start({ seed, at: 0 });
+      return step.ok ? step.state.plan : fail("The start was refused.");
+    };
+    const fixed = engineOf(part("P", section("S", `<qti-ordering shuffle="false"/>${refs("a", "b", "c")}`)));
+    expect(planOf(fixed, 1)).toBe(planOf(fixed, 2));
+    expect(outlineOf(planOf(fixed, 3))).toBe("P{S[a b c]}");
+    const drawn = engineOf(part("P", section("S", `<qti-ordering shuffle="true"/>${refs("a", "b", "c")}`)));
+    expect(planOf(drawn, 1)).not.toBe(planOf(drawn, 1));
+    expect(planOf(drawn, 1)).toEqual(planOf(drawn, 1));
+  });
+
   it("shuffles by Fisher–Yates from the last index, with floor(uniform × n) as the draw", () => {
     // [x, y, z]: i = 2 draws floor(0.5 × 3) = 1 and swaps the places 2 and 1, giving [x, z, y];
     // i = 1 draws floor(0.5 × 2) = 1 and swaps the place 1 with itself.

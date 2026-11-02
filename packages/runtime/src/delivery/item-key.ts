@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { parseWith, positiveIntegerSchema, type Schema } from "../checks.js";
+import { isRecord, parseWith, positiveIntegerSchema, type Schema } from "../checks.js";
 
 /**
  * One occurrence of an item reference in a session: the identifier of the item reference and the instance, counted from
@@ -26,6 +26,11 @@ export const itemKeySchema: Schema<ItemKey> = v.object({ ref: v.string(), instan
  * @throws `DataError` when it is not an object with a string `ref` and a positive integer `instance`.
  */
 export function checkKey(key: unknown): asserts key is ItemKey {
+  // Every action and every call on an item session checks its key, so a key that the schema accepts returns at once; the
+  // schema reads the others, for the message of the first issue.
+  const { ref, instance } = isRecord(key) ? key : {};
+  if (typeof ref === "string" && typeof instance === "number" && Number.isSafeInteger(instance) && instance >= 1)
+    return;
   parseWith(itemKeySchema, key, "The item instance");
 }
 

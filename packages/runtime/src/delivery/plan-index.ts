@@ -60,8 +60,11 @@ export function planIndex(plan: TestPlan): PlanIndex {
   const placements: Placement[] = [];
   for (const part of plan.parts) place(part.children, part.identifier, [], placements);
   const byRef = new Map<string, Placement[]>();
-  for (const placement of placements)
-    byRef.set(placement.key.ref, [...(byRef.get(placement.key.ref) ?? []), placement]);
+  for (const placement of placements) {
+    const instances = byRef.get(placement.key.ref);
+    if (instances === undefined) byRef.set(placement.key.ref, [placement]);
+    else instances.push(placement);
+  }
   const index: PlanIndex = {
     placements,
     placement: (key) => byRef.get(key.ref)?.find((placement) => sameKey(placement.key, key)),

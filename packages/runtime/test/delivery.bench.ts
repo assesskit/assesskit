@@ -12,7 +12,7 @@ import {
   serializeState,
   single,
 } from "../src/index.js";
-import { BENCH_OPTIONS, BUDGETS, expectAgainst, expectWithin, RESCORING_BUDGET } from "./budgets.js";
+import { BENCH_OPTIONS, BUDGETS, compareRow, expectWithin, RESCORING_BUDGET } from "./budgets.js";
 import {
   act,
   begun,
@@ -201,13 +201,13 @@ test("reads the inputs of a report of 200 items and runs the outcome processing 
   };
   expect(rescore()).toEqual(ended.outcomes);
 
-  const subject = await bench("rescoring", rescore).run(BENCH_OPTIONS);
-  const reference = await bench("engine step", () => engine.apply(drafted, submission)).run(BENCH_OPTIONS);
-  await expectAgainst(
-    annotate,
-    "rescoring against the outcome step of the engine",
-    subject,
-    reference,
-    RESCORING_BUDGET,
+  await compareRow(
+    { annotate, bench },
+    {
+      name: "rescoring against the outcome step of the engine",
+      budget: RESCORING_BUDGET,
+      runtime: rescore,
+      reference: () => engine.apply(drafted, submission),
+    },
   );
 });

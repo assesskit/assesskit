@@ -125,17 +125,25 @@ function buildFrames(nodes: readonly (PlannedPart | PlannedChild)[], parent: Fra
     const frame: Frame = { node, parent, index, children, start: build.next, last: build.next };
     build.next += 1;
     const identifier = identifierOf(node);
-    build.named.set(identifier, [...(build.named.get(identifier) ?? []), frame]);
+    const named = build.named.get(identifier);
+    if (named === undefined) build.named.set(identifier, [frame]);
+    else named.push(frame);
     if (node.kind !== "item") for (const child of buildFrames(node.children, frame, build)) children.push(child);
     frame.last = build.next - 1;
     return frame;
   });
 }
 
+/** The frames of each plan, made once: a plan does not change, and every step of a session walks the same one. */
+const FRAMES = new WeakMap<TestPlan, Frames>();
+
 function indexPlan(plan: TestPlan): Frames {
+  const known = FRAMES.get(plan);
+  if (known !== undefined) return known;
   const build: Build = { next: 0, named: new Map() };
-  const roots = buildFrames(plan.parts, undefined, build);
-  return { roots, named: build.named };
+  const frames = { roots: buildFrames(plan.parts, undefined, build), named: build.named };
+  FRAMES.set(plan, frames);
+  return frames;
 }
 
 /** Returns the frames from the root down to a frame. */

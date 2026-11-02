@@ -1,13 +1,16 @@
 import { ASI_NAMESPACE, readAsi } from "@assesskit/runtime/asi";
+import ampUpStyles from "qti3-item-player/dist/qti3Player.css?raw";
+import ampUpPlayer from "qti3-item-player/dist/qti3Player.umd.min.js?raw";
 import { afterEach, describe, expect, inject, it } from "vitest";
 import { commands } from "vitest/browser";
+import vue from "vue/dist/vue.min.js?raw";
 import { createLocalSession, type LocalStore } from "../src/client/index.js";
 import { EN_MESSAGES } from "../src/index.js";
 import { mountDelivery, mountItem, mountTools } from "../src/player/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
 import { examDefinition, fakeClock } from "./exam-fixture.js";
 import { NO_RECORDING } from "./files-fixture.js";
-import { CPU_SLOWDOWN, HIGHLIGHT_WORDS, LESSON_ITEMS, MOUNT_BUDGETS, SAMPLES } from "./mount-budgets.js";
+import { AMP_UP_RATIO, CPU_SLOWDOWN, HIGHLIGHT_WORDS, LESSON_ITEMS, MOUNT_BUDGETS, SAMPLES } from "./mount-budgets.js";
 import { supportView } from "./supports-fixture.js";
 
 const player = new CSSStyleSheet();
@@ -137,6 +140,119 @@ async function timeLesson(): Promise<number> {
   return took;
 }
 
+/** Resolves at the first task in which the condition holds, so that a time is not rounded up to the next frame. */
+function untilTask(condition: () => boolean): Promise<void> {
+  const channel = new MessageChannel();
+  return new Promise<void>((resolve) => {
+    channel.port1.onmessage = () => (condition() ? resolve() : channel.port2.postMessage(null));
+    channel.port2.postMessage(null);
+  }).finally(() => channel.port1.close());
+}
+
+/** Times the items of a lesson page from their documents onto the page: read, sessions started, mounted and drawn. */
+async function timeLessonFromDocuments(): Promise<number> {
+  const page = newHost();
+  const began = performance.now();
+  const mounted = await Promise.all(
+    Array.from({ length: LESSON_ITEMS }, async (_, index) => {
+      const parsed = readAsi(lessonItem(`l${index}`));
+      if (parsed.kind !== "item") throw new Error("The fixture is not an item.");
+      const client = await createLocalSession({
+        definition: { kind: "item", item: parsed.item, base: `items/l${index}.xml` },
+        store: memoryStore(),
+        session: `documents-${index}`,
+        seed: 1,
+        assets: (path) => `${inject("fixtures").asset}/${path}`,
+        clock,
+      });
+      const host = document.createElement("div");
+      page.append(host);
+      const mount = mountItem(host, {
+        client,
+        files,
+        staticUrl: `${inject("fixtures").asset}/static/`,
+        stylesheet: player,
+        fetch: fetcher,
+        hooks: { onError: ignore },
+      });
+      return { host, client, mount };
+    }),
+  );
+  await untilTask(() => mounted.every(({ host }) => drawn(host)));
+  const took = performance.now() - began;
+  for (const { mount, client } of mounted) {
+    mount.destroy();
+    client.close();
+  }
+  return took;
+}
+
+/** The calls of the Amp-up player (`qti3-item-player`) that the comparison makes. */
+interface AmpUpPlayer {
+  loadItemFromXml(xml: string, configuration: object): void;
+}
+
+/** The parts of Vue 2 that mount the Amp-up player. */
+interface Vue2 {
+  new (options: {
+    render: (create: (component: unknown, data: unknown) => unknown) => unknown;
+  }): {
+    $mount(element: Element): unknown;
+    $destroy(): void;
+  };
+}
+
+/** Loads Vue 2, the Amp-up player and its stylesheet into the page once, as a page of the Amp-up player loads them. */
+function ampUp(): { readonly vue: Vue2; readonly component: unknown } {
+  if (Reflect.get(window, "qti3Player") === undefined) {
+    for (const source of [vue, ampUpPlayer]) {
+      const script = document.createElement("script");
+      script.textContent = source;
+      document.head.append(script);
+    }
+    const style = document.createElement("style");
+    style.textContent = ampUpStyles;
+    document.head.append(style);
+    // The player logs each step of a load to the console.
+    console.log = ignore;
+  }
+  const vueConstructor: Vue2 = Reflect.get(window, "Vue");
+  const library = Reflect.get(window, "qti3Player");
+  return { vue: vueConstructor, component: Reflect.get(library, "default") ?? library };
+}
+
+/** Times the items of the lesson page from their documents onto the page in the Amp-up player, a player for each. */
+async function timeAmpUpLesson(): Promise<number> {
+  const { vue: Vue, component } = ampUp();
+  const page = newHost();
+  const began = performance.now();
+  const players = Array.from({ length: LESSON_ITEMS }, (_, index) => {
+    const host = document.createElement("div");
+    const element = document.createElement("div");
+    host.append(element);
+    page.append(host);
+    let ready: AmpUpPlayer | undefined;
+    const instance = new Vue({
+      render: (create) =>
+        create(component, {
+          on: {
+            notifyQti3PlayerReady: (loaded: AmpUpPlayer) => {
+              ready = loaded;
+            },
+          },
+        }),
+    });
+    instance.$mount(element);
+    if (ready === undefined) throw new Error("The Amp-up player did not mount.");
+    ready.loadItemFromXml(lessonItem(`l${index}`), {});
+    return { host, instance };
+  });
+  await untilTask(() => players.every(({ host }) => (host.textContent ?? "").includes("Beta")));
+  const took = performance.now() - began;
+  for (const { instance } of players) instance.$destroy();
+  return took;
+}
+
 /** Times turning on the highlighter over a passage of {@link HIGHLIGHT_WORDS} words, until its words are found, measured and drawn. */
 function timeHighlighter(): Promise<number> {
   const stage = document.createElement("div");
@@ -187,6 +303,24 @@ describe(`the mount time with the CPU slowed ${CPU_SLOWDOWN} times`, () => {
     const took = await fastest(timeLesson);
     await annotate(`lesson page: fastest ${took.toFixed(2)} ms, budget ${MOUNT_BUDGETS.lesson} ms`);
     expect(took, "the fastest sample of the lesson page, in milliseconds").toBeLessThan(MOUNT_BUDGETS.lesson);
+  });
+
+  it("brings the items of a lesson page from their documents onto the page within its ratio to the Amp-up player", async ({
+    annotate,
+  }) => {
+    await commands.throttleCpu(CPU_SLOWDOWN);
+    // In turns, so that a busy stretch of the host falls on both.
+    const ours: number[] = [];
+    const reference: number[] = [];
+    for (let sample = 0; sample < SAMPLES; sample += 1) {
+      ours.push(await timeLessonFromDocuments());
+      reference.push(await timeAmpUpLesson());
+    }
+    const ratio = Math.min(...ours) / Math.min(...reference);
+    await annotate(
+      `lesson page from documents: fastest ${Math.min(...ours).toFixed(2)} ms, Amp-up ${Math.min(...reference).toFixed(2)} ms; ratio ${ratio.toFixed(2)}, budget ${AMP_UP_RATIO}`,
+    );
+    expect(ratio, "the fastest sample as a multiple of the Amp-up player's").toBeLessThan(AMP_UP_RATIO);
   });
 
   it("turns the highlighter on over a passage of 2,000 words within its budget", async ({ annotate }) => {

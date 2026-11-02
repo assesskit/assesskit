@@ -1,53 +1,78 @@
 # Performance
 
-The runtime is timed against Longsight `qti3-core` on the work both do, and against budgets on the work only it does. The
-target is parity with Longsight: a ratio of 1 on every row. A budget fails the `bench` job of CI when the runtime slows down.
-The ratio budgets of the table sit above parity for the reasons under it.
+The runtime is timed against Longsight `qti3-core` and libxml2 on the work each does with it, and against budgets on the
+work only it does; the player is timed against the Amp-up player in [size](../player/size.md#mount-time). The target is
+parity: a ratio of 1 on every row. A budget fails the `bench` job of CI when the runtime slows down. The ratio budgets sit
+above parity by the headroom of a shared host, and above the measured ratio where the runtime does work that the reference
+does not, which the list under the table names.
 
-## Against Longsight
+## Against the references
 
-Time of the runtime divided by time of Longsight, on the same items and responses. Below the line at 1 the runtime is faster.
+Time of the runtime divided by time of the reference, on the same input. Below the line at 1 the runtime is faster.
 
 ```mermaid
 xychart-beta
-  title "Runtime time ÷ Longsight time (lower is faster)"
-  x-axis ["parse", "start", "start + template", "submit", "item end to end", "submit in a test"]
-  y-axis "ratio" 0 --> 2
-  bar [0.85, 1.14, 1.21, 1.13, 0.97, 1.61]
-  line [1, 1, 1, 1, 1, 1]
+  title "Runtime time ÷ reference time (lower is faster)"
+  x-axis ["parse", "validate", "start", "start + template", "submit", "item end to end", "package", "start a test", "submit in a test", "XML (libxml2)"]
+  y-axis "ratio" 0 --> 3
+  bar [0.68, 2.73, 1.07, 1.09, 1.02, 0.82, 0.53, 0.50, 1.62, 1.57]
+  line [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ```
 
-| Row              | The runtime                                                                                          | Longsight                                                                  | Runtime  | Longsight | Ratio | Budget (time, ratio) |
-| ---------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------- | --------- | ----- | -------------------- |
-| parse            | `readAsi` on the 223 example items that both read                                                    | `parseQtiXml` on the same items                                            | 13.86 ms | 16.44 ms  | 0.85  | 500 ms, 1.5          |
-| start            | `startItemSession` and `presentItem` for each: variables, template processing, first attempt         | `createItemSession` for each                                               | 0.345 ms | 0.303 ms  | 1.14  | 7 ms, 2              |
-| start + template | the same for the 8 items with template processing, 20 times each                                     | the same                                                                   | 1.766 ms | 1.452 ms  | 1.21  | 40 ms, 2             |
-| submit           | `set-responses` and `submit` of the correct responses in presented sessions                          | `respond` for each response, then `score`                                  | 0.559 ms | 0.493 ms  | 1.13  | 20 ms, 2             |
-| item end to end  | `readAsi`, start, present, set the responses and submit                                              | `parseQtiXml`, `createItemSession`, `respond`, `score`                     | 16.91 ms | 17.49 ms  | 0.97  | 400 ms, 1.5          |
-| submit in a test | `apply` of `submit` for the 51st of 100 items, 100 times: response processing, the sum of the scores | `score` of the item, then `submitQtiTestAnswer` with the 50 earlier scores | 1.02 ms  | 0.633 ms  | 1.61  | 20 ms, 3             |
+| Row              | The runtime                                                                                          | The reference                                                                         | Runtime  | Reference | Ratio | Budget (time, ratio) |
+| ---------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | -------- | --------- | ----- | -------------------- |
+| parse            | `readAsi` on the 215 example items that both read                                                    | Longsight: `parseQtiXml` on the same items                                            | 13.63 ms | 20.05 ms  | 0.68  | 500 ms, 1.5          |
+| validate         | `validateAsi` of each                                                                                | Longsight: `validateAssessmentItem` of each                                           | 5.06 ms  | 1.85 ms   | 2.73  | 80 ms, 4.5           |
+| start            | `startItemSession` and `presentItem` for each: variables, template processing, first attempt         | Longsight: `createItemSession` for each                                               | 0.374 ms | 0.351 ms  | 1.07  | 7 ms, 2              |
+| start + template | the same for the 8 items with template processing, 20 times each                                     | Longsight: the same                                                                   | 1.833 ms | 1.685 ms  | 1.09  | 40 ms, 2             |
+| submit           | `set-responses` and `submit` of the correct responses in presented sessions                          | Longsight: `respond` for each response, then `score`                                  | 0.615 ms | 0.605 ms  | 1.02  | 20 ms, 2             |
+| item end to end  | `readAsi`, start, present, set the responses and submit                                              | Longsight: `parseQtiXml`, `createItemSession`, `respond`, `score`                     | 16.18 ms | 19.84 ms  | 0.82  | 400 ms, 1.5          |
+| package          | `readPackage` of 200 generated items, then each item through `packageResolvers`                      | Longsight: `parseQtiPackage`, with the inflation of fflate that the runtime uses      | 75.2 ms  | 141.4 ms  | 0.53  | 2,000 ms, 1          |
+| start a test     | `start` of a test of 10 sections of 10 choice items, 100 times                                       | Longsight: `startQtiTest` and `createItemSession` of its first item, 100 times        | 0.206 ms | 0.412 ms  | 0.50  | 4 ms, 1              |
+| submit in a test | `apply` of `submit` for the 51st of 100 items, 100 times: response processing, the sum of the scores | Longsight: `score` of the item, then `submitQtiTestAnswer` with the 50 earlier scores | 1.10 ms  | 0.680 ms  | 1.62  | 20 ms, 3             |
+| XML (libxml2)    | `parseXml` of the bytes of the 325 XML files of the examples that both read                          | libxml2-wasm: `XmlDocument.fromBuffer` with the options of `validateXmlFiles`         | 14.94 ms | 9.53 ms   | 1.57  | 300 ms, 2.5          |
 
-The inputs are the 1EdTech examples that both implementations read and score (`pnpm corpus`), with the correct responses
-the oracle reports, and a test of 10 sections of 10 choice items with the sum of the scores as its outcome. A sample is the
-whole row: every item of it, once; the row of a test submits 100 times, so that a sample lasts milliseconds. Both sides run warm, after a warm-up, on a runtime built as it ships; each side prepares its
-sessions outside the time. The two sides take turns in five rounds of a fifth of the window each, so that a stretch of a busy
-host falls on both and not on whichever ran then; the fastest sample of each side is the fastest of its rounds. The ratio
-compares those fastest samples, and a gate compares the runtime with both its time and its ratio. `pnpm bench` runs the rows.
+The times are those of a laptop with an Apple M5 and Node.js 26.8, where both sides of a row run in one process. The inputs
+are the 1EdTech examples that both implementations read and score (`pnpm corpus`), with the correct responses the oracle
+reports, a test of 10 sections of 10 choice items with the sum of the scores as its outcome, and a package of generated items.
+A sample is the whole row: every item of it, once; the rows of a test start or submit 100 times, so that a sample lasts
+milliseconds. Both sides run warm, after a warm-up, on a runtime built as it ships; each side prepares its sessions outside
+the time. The two sides take turns in five rounds of a fifth of the window each, so that a stretch of a busy host falls on
+both and not on whichever ran then; the fastest sample of each side is the fastest of its rounds. The ratio compares those
+fastest samples, and a gate compares the runtime with both its time and its ratio. `pnpm bench` runs the rows.
 
 A ratio budget is the measured ratio with headroom for the noise of a shared host, so that a slowdown of the runtime by half
-again fails the gate. The rows of parsing, of a submission and of a test also allow for work that the runtime does and
-Longsight does not, which the list below names; the rows of the start have no such work to name. What each side does besides
-the work in the table:
+again fails the gate. What each side does besides the work in the table, where the runtime is above parity or its budget
+allows for more:
 
-- **Reading (parse, item end to end; budget 1.5).** The runtime reads every attribute value against the type of the ASI schema, refuses a DOCTYPE and enforces limits
-  on size, depth and nodes. Longsight collects diagnostics and validates in a separate call that the row does not make.
-- **Submitting a response (submit; budget 2).** The runtime checks each response against its declaration and the rules of its interaction.
-  Longsight stores a copy of the value it is given.
+- **Reading (parse, item end to end; budget 1.5).** The runtime reads every attribute value against the type of the ASI
+  schema, refuses a DOCTYPE and enforces limits on size, depth and nodes. Longsight collects diagnostics and validates in a
+  separate call that the row does not make.
+- **Validating (validate; budget 4.5).** The runtime walks every element against the element table of the schema and runs
+  the rule sets of BIND section 5, the static types of response and template processing, the formats of identifiers and ids,
+  the references of attributes and content, unreachable content and scoring rubrics. Longsight checks the declarations, the
+  interactions and the references of processing on the model that its parser made. The walk alone is about a sixth of the
+  runtime's time; the rest is the checks.
+- **Submitting a response (submit; budget 2).** The runtime checks each response against its declaration and the rules of
+  its interaction. Longsight stores a copy of the value it is given.
+- **Reading a package (package).** Longsight parses every item as it reads the package; the runtime reads the manifest and
+  parses an item at its first use, so the row asks for every item.
+- **Starting a test (start a test).** A test whose sections neither select nor shuffle has one plan for every session, which
+  the engine makes at the first start and shares, with the indexes of the plan that the steps make. The engine starts the
+  session of the first item with the test, and the row has Longsight start that item too.
 - **A test (submit in a test; budget 3).** Longsight takes the score of an item as a number and adds the 50 scores that it
   holds. The runtime evaluates the outcome processing of the test over the 100 instances of the plan, those not yet presented
-  included (`qti-test-variables` reads the variables of each), which is about half of the step: 4.9 of the 10 µs of one `apply`.
-  The rest of the step scores the item, settles the time limits and the scoring requests and returns the state, and takes 5.1 µs,
-  less than all of Longsight's 6.4 µs. The row compares one `apply` with the score of an item and `submitQtiTestAnswer`,
-  which is the smallest operation of each that submits an item of a test.
+  included (`qti-test-variables` reads the variables of each), which is about half of the step. The rest of the step scores
+  the item, settles the time limits and the scoring requests and returns the state, in less time than all of Longsight's
+  step. The row compares one `apply` with the score of an item and `submitQtiTestAnswer`, which is the smallest operation of
+  each that submits an item of a test.
+- **Parsing XML (XML; budget 2.5).** libxml2 is C compiled to WebAssembly and builds its tree in its own memory. The runtime
+  reads with saxes, a parser in JavaScript, which takes about half of the time of `parseXml` on these documents, and builds a
+  tree of JavaScript objects whose names, namespaces and limits it checks as it goes; the readers of the runtime take that tree.
+
+The rows of validation, of a package, of the start of a test and of XML have no sample of the CI runner yet: their times are
+five times the sample of the laptop times 3, what the runner takes against the laptop on the other rows, rounded up to one
+significant digit, until a run of CI gives their sample.
 
 ## Budgets
 
@@ -86,10 +111,10 @@ Which budgets hold on a machine other than the runner:
 | A time                        | One sample against a fixed number of milliseconds          | On a machine up to five times slower than the runner; on a slower one only the ratios apply |
 
 Vitest counts the export getters that a benchmark reads, which makes the benchmarks of the engine two to three times slower,
-so the project turns the counting off (`suppressExportGetterWarnings`). The benchmarks of the delivery and of packages import
-the sources, which run through Vite; the one against Longsight times the build by name, the engine of the test row included,
-which `pnpm bench` makes first, because Vite's rewrite of the imports makes the sources about 1.7 times slower than the code
-that ships.
+so the project turns the counting off (`suppressExportGetterWarnings`). The benchmarks against budgets import the sources,
+which run through Vite; the rows against Longsight and libxml2 time the build by name, the engine of the test rows
+included, which `pnpm bench` makes first, because Vite's rewrite of the imports makes the sources about 1.7 times slower than
+the code that ships, and the references load natively from `node_modules`.
 
 ## Outcome processing
 
@@ -121,31 +146,31 @@ xychart-beta
   title "Subpaths after gzip, in kilobytes"
   x-axis ["errors", "checks", "content", "pci", "cat", "xml", "values", "interactions", "metadata", "usage", "results", "pnp", "processing", "asi", "package", "validate", "delivery", "root"]
   y-axis "kB" 0 --> 170
-  bar [0.2, 4.0, 8.1, 8.7, 9.3, 16.6, 18.4, 17.2, 18.5, 18.9, 21.8, 21.8, 26.6, 39.0, 50.9, 72.5, 117.3, 166.1]
+  bar [0.2, 4.0, 8.1, 8.7, 9.3, 16.9, 18.4, 17.2, 18.8, 19.2, 22.0, 22.1, 26.6, 39.3, 51.2, 72.9, 117.5, 166.7]
 ```
 
 | Subpath        | Bytes     | Gzip    | Budget  | Holds besides its own code, `errors`, `checks` and valibot                                                                                                               |
 | -------------- | --------- | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `.`            | 661,469   | 166,094 | 208,000 | Every module but `node` and `cli`; fflate, saxes, xmlchars                                                                                                               |
-| `asi`          | 234,276   | 39,026  | 49,000  | `values`, `xml`; saxes, xmlchars                                                                                                                                         |
+| `.`            | 663,272   | 166,690 | 208,000 | Every module but `node` and `cli`; fflate, saxes, xmlchars                                                                                                               |
+| `asi`          | 235,113   | 39,319  | 49,000  | `values`, `xml`; saxes, xmlchars                                                                                                                                         |
 | `cat`          | 28,642    | 9,252   | 12,000  | `metadata`, `results`, `values`                                                                                                                                          |
 | `checks`       | 13,522    | 4,006   | 5,500   | Nothing                                                                                                                                                                  |
 | `content`      | 22,938    | 8,143   | 10,500  | `asi`, `values`                                                                                                                                                          |
-| `delivery`     | 501,195   | 117,274 | 140,500 | `asi`, `cat`, `content`, `interactions`, `package`, `pnp`, `processing`, `random`, `validate`, `values`, `xml`; xmlchars                                                 |
+| `delivery`     | 502,161   | 117,546 | 140,500 | `asi`, `cat`, `content`, `interactions`, `package`, `pnp`, `processing`, `random`, `validate`, `values`, `xml`; xmlchars                                                 |
 | `errors`       | 477       | 225     | 500     | Nothing                                                                                                                                                                  |
 | `interactions` | 54,608    | 17,198  | 21,500  | `asi`, `random`, `values`                                                                                                                                                |
 | `pci`          | 26,986    | 8,726   | 11,000  | `values`                                                                                                                                                                 |
-| `pnp`          | 73,287    | 21,807  | 27,500  | `xml`; saxes, xmlchars                                                                                                                                                   |
-| `results`      | 71,794    | 21,751  | 27,500  | `values`, `xml`; saxes, xmlchars                                                                                                                                         |
-| `usage`        | 62,128    | 18,928  | 24,000  | `values`, `xml`; saxes, xmlchars                                                                                                                                         |
-| `validate`     | 354,154   | 72,520  | 91,000  | `asi`, `interactions`, `metadata`, `package`, `pci`, `pnp`, `processing`, `results`, `values`, `xml`; saxes, xmlchars                                                    |
-| `metadata`     | 61,848    | 18,504  | 23,500  | `asi`, `xml`; saxes, xmlchars                                                                                                                                            |
-| `package`      | 264,532   | 50,873  | 64,000  | `asi`, `metadata`, `values`, `xml`; fflate, saxes, xmlchars                                                                                                              |
+| `pnp`          | 74,124    | 22,090  | 27,500  | `xml`; saxes, xmlchars                                                                                                                                                   |
+| `results`      | 72,631    | 22,028  | 27,500  | `values`, `xml`; saxes, xmlchars                                                                                                                                         |
+| `usage`        | 62,966    | 19,218  | 24,000  | `values`, `xml`; saxes, xmlchars                                                                                                                                         |
+| `validate`     | 355,427   | 72,906  | 91,000  | `asi`, `interactions`, `metadata`, `package`, `pci`, `pnp`, `processing`, `results`, `values`, `xml`; saxes, xmlchars                                                    |
+| `metadata`     | 62,685    | 18,789  | 23,500  | `asi`, `xml`; saxes, xmlchars                                                                                                                                            |
+| `package`      | 265,369   | 51,160  | 64,000  | `asi`, `metadata`, `values`, `xml`; fflate, saxes, xmlchars                                                                                                              |
 | `processing`   | 87,333    | 26,601  | 33,500  | `asi`, `random`, `values`                                                                                                                                                |
 | `values`       | 57,813    | 18,412  | 23,500  | Nothing                                                                                                                                                                  |
-| `xml`          | 55,470    | 16,596  | 21,000  | saxes, xmlchars                                                                                                                                                          |
-| `node`         | 1,614,696 | 500,445 | 626,000 | `asi`, `metadata`, `package`, `validate`, `values`, `xml`; fflate, libxml2-wasm, saxes, xmlchars                                                                         |
-| `cli`          | 1,771,947 | 545,666 | 682,500 | `asi`, `interactions`, `metadata`, `node`, `package`, `pci`, `pnp`, `processing`, `results`, `usage`, `validate`, `values`, `xml`; fflate, libxml2-wasm, saxes, xmlchars |
+| `xml`          | 56,307    | 16,871  | 21,000  | saxes, xmlchars                                                                                                                                                          |
+| `node`         | 1,615,533 | 500,784 | 626,000 | `asi`, `metadata`, `package`, `validate`, `values`, `xml`; fflate, libxml2-wasm, saxes, xmlchars                                                                         |
+| `cli`          | 1,773,220 | 546,104 | 682,500 | `asi`, `interactions`, `metadata`, `node`, `package`, `pci`, `pnp`, `processing`, `results`, `usage`, `validate`, `values`, `xml`; fflate, libxml2-wasm, saxes, xmlchars |
 
 `errors` holds nothing else, and `checks` holds only `errors` and valibot. A module that reads XML holds the parser (`xml`,
 saxes and xmlchars). A module that walks the model of a document (`asi`, `package`, `validate`, `delivery`) holds the element

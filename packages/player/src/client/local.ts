@@ -234,12 +234,24 @@ interface Applied {
   readonly view: CandidateView;
 }
 
+/** The engine of the runtime once it has loaded, so that the sessions of a page load it once. */
+let engineModule: Promise<typeof import("@assesskit/runtime/delivery")> | undefined;
+
+/** Loads the engine once; a load that fails is tried again by the next session. */
+function loadEngine(): Promise<typeof import("@assesskit/runtime/delivery")> {
+  engineModule ??= import("@assesskit/runtime/delivery").catch((error: unknown) => {
+    engineModule = undefined;
+    throw error;
+  });
+  return engineModule;
+}
+
 /**
  * Creates the session client of practice: the engine runs on the device, with the same client interface as exam mode, and
  * `host` offers the host side of the session.
  *
  * @remarks
- * It loads the runtime's engine with `import()`, so an exam's bundle holds no engine. The answer keys are on the device, which practice accepts, and its results are never official.
+ * It loads the runtime's engine with `import()` at its first call on a page, so an exam's bundle holds no engine. The answer keys are on the device, which practice accepts, and its results are never official.
  *
  * It stamps each action with the clock and saves the state after each step that is accepted, before it applies the step:
  * an action whose save fails is rejected and changes nothing. It fires a `time` action at each maximum time with
@@ -266,7 +278,7 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
   const onError = options.onError ?? ((error: unknown) => reportError(error));
   const now = (): number => readClock(clock);
 
-  const delivery = await import("@assesskit/runtime/delivery");
+  const delivery = await loadEngine();
   const engine = delivery.createEngine(definition, options.engine);
   const structure =
     definition.kind === "test"

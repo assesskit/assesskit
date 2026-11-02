@@ -1376,6 +1376,33 @@ describe("properties", () => {
     return { ...rest, attributes: node.attributes.filter(({ namespace }) => namespace !== XMLNS_NAMESPACE), children };
   }
 
+  it("places each element at the line and column that a count of the characters before its start tag gives", () => {
+    /** The line and column of an offset, one UTF-16 unit at a time: `\r\n`, `\r` and `\n` end a line, a low surrogate has no column. */
+    const reference = (text: string, offset: number): [number, number] => {
+      let [line, column] = [1, 1];
+      for (let index = text.startsWith("﻿") ? 1 : 0; index < offset; index++) {
+        const unit = text[index];
+        if (unit === "\n" || (unit === "\r" && text[index + 1] !== "\n")) [line, column] = [line + 1, 1];
+        else if (unit !== "\r" && !/[\uDC00-\uDFFF]/.test(unit ?? "")) column++;
+      }
+      return [line, column];
+    };
+    const piece = fc.oneof(
+      fc.constantFrom("\n", "\r", "\r\n", "x", "é", "\u{1F600}", " "),
+      fc.constantFrom("<e/>", '<e\r\n a="1"/>', "<e>\r</e>"),
+    );
+    fc.assert(
+      fc.property(fc.boolean(), fc.array(piece, { maxLength: 30 }), (marked, pieces) => {
+        const text = `${marked ? "﻿" : ""}<r>${pieces.join("")}</r>`;
+        const root = parseXml(text);
+        const starts = [...text.matchAll(/<[re]/g)].map(({ index }) => reference(text, index));
+        const elements = [root, ...root.children.filter((child): child is XmlElement => child.kind === "element")];
+        expect(elements.map(({ line, column }) => [line, column])).toEqual(starts);
+      }),
+      { numRuns: 300 },
+    );
+  });
+
   it("parseXml reads back what serializeXml writes, with its namespaces", () => {
     fc.assert(
       fc.property(tree, (root) => {

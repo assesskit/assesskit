@@ -23,3 +23,10 @@ export const MOUNT_BUDGETS = {
   /** `update` of the tools that turns the highlighter on over {@link HIGHLIGHT_WORDS} words: the words found, measured and drawn. */
   highlighter: 300,
 } as const;
+
+/**
+ * The most that the fastest sample of the lesson page from its documents may take, as a multiple of the fastest sample of
+ * the same page in the Amp-up player (`qti3-item-player`), with the CPU slowed by {@link CPU_SLOWDOWN}: the ratio measured
+ * with the headroom of the ratios against Longsight (docs/player/size.md).
+ */
+export const AMP_UP_RATIO = 2.5;

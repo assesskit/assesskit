@@ -10,7 +10,7 @@ import {
   writePnp,
 } from "../pnp/index.js";
 import { givenContext } from "../processing/internal.js";
-import { createRandom } from "../random.js";
+import { createRandom, type Random } from "../random.js";
 import type { AssessmentResult, ResultContext } from "../results/index.js";
 import { encodeBase64, type Value } from "../values/index.js";
 import { type Action, checkAction } from "./action.js";
@@ -27,7 +27,7 @@ import {
   type Step,
 } from "./delivery-state.js";
 import { type PendingWork, pendingWork } from "./pending-work.js";
-import { planTest } from "./plan.js";
+import { drawsNothing, planTest, type TestPlan } from "./plan.js";
 import { assembleResults } from "./results-assembly.js";
 import { type ScorerView, scorerViewOf } from "./scorer-view.js";
 import { SessionStep } from "./session-step.js";
@@ -278,6 +278,21 @@ function checkEngineState(course: Course, state: DeliveryState): void {
   }
 }
 
+/**
+ * The plan of each course whose test takes no draw to plan, made at its first start: every session of such a test has an
+ * equal plan, and one plan lets the indexes that the steps make of a plan serve every session.
+ */
+const FIXED_PLANS = new WeakMap<Course, TestPlan>();
+
+/** Returns the plan of a new session of a course. */
+function planOf(course: Course, random: Random): TestPlan {
+  const known = FIXED_PLANS.get(course);
+  if (known !== undefined) return known;
+  const plan = planTest(course.structure, { random, limits: course.limits });
+  if (drawsNothing(course.structure)) FIXED_PLANS.set(course, plan);
+  return plan;
+}
+
 function start(course: Course, options: StartOptions): Step {
   checkOptions(options);
   const {
@@ -298,8 +313,8 @@ function start(course: Course, options: StartOptions): Step {
   }
   checkContextValues(course, context);
   const random = createRandom(seed);
-  const { structure, limits } = course;
-  const plan = planTest(structure, { random, limits });
+  const { structure } = course;
+  const plan = planOf(course, random);
   const state: DeliveryState = {
     version: STATE_VERSION,
     ...(course.contentVersion === undefined ? {} : { contentVersion: course.contentVersion }),

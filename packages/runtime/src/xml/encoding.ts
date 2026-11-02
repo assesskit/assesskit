@@ -57,12 +57,22 @@ const ISO_8859_1_LABELS: ReadonlySet<string> = new Set([
 /** The bytes that `String.fromCharCode` takes at once, so that a long document does not overflow the call stack. */
 const LATIN1_CHUNK_BYTES = 8192;
 
-/** Returns the bytes as a string, one character per byte: ISO-8859-1, and enough to read an ASCII declaration. */
+/** Returns the bytes as a string, one character per byte: ISO-8859-1. */
 function latin1(bytes: Uint8Array): string {
   let text = "";
   for (let start = 0; start < bytes.length; start += LATIN1_CHUNK_BYTES) {
     text += String.fromCharCode(...bytes.subarray(start, start + LATIN1_CHUNK_BYTES));
   }
+  return text;
+}
+
+/**
+ * Returns the first bytes as one character per byte, as {@link latin1} does, to read an ASCII declaration from. Every
+ * document reads its head, and a loop takes a fifth of the time of a spread of 256 bytes into arguments.
+ */
+function head(bytes: Uint8Array): string {
+  let text = "";
+  for (const byte of bytes.subarray(0, DECLARATION_LENGTH)) text += String.fromCharCode(byte);
   return text;
 }
 
@@ -104,7 +114,7 @@ function decodeMarked(bytes: Uint8Array, mark: ByteOrderMark, path: string | und
 export function decodeXml(bytes: Uint8Array, path: string | undefined): string {
   const mark = BYTE_ORDER_MARKS.find(({ bytes: prefix }) => prefix.every((byte, index) => bytes[index] === byte));
   if (mark !== undefined) return decodeMarked(bytes, mark, path);
-  const label = declaredLabel(latin1(bytes.subarray(0, DECLARATION_LENGTH))) ?? "utf-8";
+  const label = declaredLabel(head(bytes)) ?? "utf-8";
   if (ISO_8859_1_LABELS.has(label.toLowerCase())) return latin1(bytes);
   const encoding = encodingOf(label);
   if (encoding === undefined || encoding.startsWith("utf-16")) {

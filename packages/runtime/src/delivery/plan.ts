@@ -227,6 +227,18 @@ export function planTest(structure: TestStructure, options: PlanOptions): TestPl
 }
 
 /**
+ * Whether planning a structure takes no draw: no section has a selection or shuffles its children, so that every seed gives
+ * an equal plan and leaves the generator as it was.
+ */
+export function drawsNothing(structure: TestStructure): boolean {
+  const fixed = (section: SectionNode): boolean =>
+    section.model.selection === undefined &&
+    section.model.ordering?.shuffle !== true &&
+    section.children.every((child) => child.kind !== "section" || fixed(child));
+  return structure.test.parts.every((part) => part.sections.every(fixed));
+}
+
+/**
  * Returns the item instances of a plan in presentation order, or those of one test part.
  *
  * @remarks

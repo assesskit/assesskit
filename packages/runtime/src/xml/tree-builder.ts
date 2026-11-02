@@ -5,14 +5,23 @@ import type { XmlLimits } from "./limits.js";
 import { documentName, readError } from "./read-error.js";
 import { XMLNS_NAMESPACE, type XmlAttribute, type XmlElement, type XmlNode } from "./tree.js";
 
-/** An element that is still open: its tag, the children so far and the text not yet made a node. */
+/** An element that is still open: its tag and position, the children so far and the text not yet made a node. */
 interface Frame {
-  readonly head: Omit<XmlElement, "children">;
+  readonly tag: SaxesTagNS;
+  readonly attributes: readonly XmlAttribute[];
+  readonly line: number;
+  readonly column: number;
   readonly children: XmlNode[];
   text: string;
 }
 
-function toAttribute({ uri: namespace, local: name, prefix, value }: SaxesTagNS["attributes"][string]): XmlAttribute {
+type SaxesAttribute = SaxesTagNS["attributes"][string];
+
+/** Whether the prefix and the local part of a name are names without a colon. */
+const isQualified = ({ prefix, local }: SaxesTagNS | SaxesAttribute): boolean =>
+  NC_NAME_RE.test(local) && (prefix === "" || NC_NAME_RE.test(prefix));
+
+function toAttribute({ uri: namespace, local: name, prefix, value }: SaxesAttribute): XmlAttribute {
   return prefix === "" ? { namespace, name, value } : { namespace, name, prefix, value };
 }
 
@@ -78,33 +87,27 @@ export class TreeBuilder {
 
   /**
    * Checks that the prefix and the local part of each name of the tag are names without a colon, which the parser does
-   * not: it takes `p:1` for a qualified name, and a tree with it cannot be written.
+   * not: it takes `p:1` for a qualified name, and a tree with it cannot be written. Then checks that no namespace
+   * declaration has white space at its start or end: the parser strips it from the namespace of the elements and keeps it
+   * in the declaration, so that the two would differ.
    */
-  private checkNames(
-    tag: SaxesTagNS,
-    attributes: readonly SaxesTagNS["attributes"][string][],
-    line: number,
-    column: number,
-  ): void {
-    const unqualified = [tag, ...attributes].find(
-      ({ prefix, local }) => !NC_NAME_RE.test(local) || (prefix !== "" && !NC_NAME_RE.test(prefix)),
-    );
-    if (unqualified === undefined) return;
-    const written = unqualified.prefix === "" ? unqualified.local : `${unqualified.prefix}:${unqualified.local}`;
-    const message = `${this.name} has the name ${JSON.stringify(written)}, which is not a qualified name: the parts around its colon must be names without a colon.`;
-    throw readError("assesskit/xml/not-well-formed", message, { path: this.path, line, column });
-  }
-
-  /**
-   * Checks that no namespace declaration has white space at its start or end. The parser strips it from the namespace of
-   * the elements and keeps it in the declaration, so that the two would differ.
-   */
-  private checkNamespaces(attributes: readonly SaxesTagNS["attributes"][string][], line: number, column: number): void {
-    const padded = attributes.find(({ uri, value }) => uri === XMLNS_NAMESPACE && value !== value.trim());
-    if (padded === undefined) return;
-    const declaration = padded.prefix === "" ? padded.local : `${padded.prefix}:${padded.local}`;
-    const message = `${this.name} declares the namespace ${JSON.stringify(padded.value)} in ${declaration}, which has white space at its start or end; a namespace name is a URI reference and has none.`;
-    throw readError("assesskit/xml/namespace", message, { path: this.path, line, column });
+  private checkTag(tag: SaxesTagNS, attributes: readonly SaxesAttribute[], line: number, column: number): void {
+    let unqualified: SaxesTagNS | SaxesAttribute | undefined = isQualified(tag) ? undefined : tag;
+    for (let index = 0; unqualified === undefined && index < attributes.length; index++) {
+      const attribute = attributes[index];
+      if (attribute !== undefined && !isQualified(attribute)) unqualified = attribute;
+    }
+    if (unqualified !== undefined) {
+      const written = unqualified.prefix === "" ? unqualified.local : `${unqualified.prefix}:${unqualified.local}`;
+      const message = `${this.name} has the name ${JSON.stringify(written)}, which is not a qualified name: the parts around its colon must be names without a colon.`;
+      throw readError("assesskit/xml/not-well-formed", message, { path: this.path, line, column });
+    }
+    for (const { uri, value, prefix, local } of attributes) {
+      if (uri !== XMLNS_NAMESPACE || value === value.trim()) continue;
+      const declaration = prefix === "" ? local : `${prefix}:${local}`;
+      const message = `${this.name} declares the namespace ${JSON.stringify(value)} in ${declaration}, which has white space at its start or end; a namespace name is a URI reference and has none.`;
+      throw readError("assesskit/xml/namespace", message, { path: this.path, line, column });
+    }
   }
 
   /**
@@ -123,19 +126,9 @@ export class TreeBuilder {
     if (attributes.length > this.limits.maxAttributes) {
       throw this.exceeded("maxAttributes", "has an element with more attributes than");
     }
-    this.checkNames(tag, attributes, line, column);
-    this.checkNamespaces(attributes, line, column);
+    this.checkTag(tag, attributes, line, column);
     this.count();
-    const head: Frame["head"] = {
-      kind: "element",
-      namespace: tag.uri,
-      name: tag.local,
-      ...(tag.prefix === "" ? {} : { prefix: tag.prefix }),
-      attributes: attributes.map(toAttribute),
-      line,
-      column,
-    };
-    this.frames.push({ head, children: [], text: "" });
+    this.frames.push({ tag, attributes: attributes.map(toAttribute), line, column, children: [], text: "" });
   }
 
   /**
@@ -169,7 +162,20 @@ export class TreeBuilder {
     this.flush();
     const frame = this.frames.pop();
     if (frame === undefined) return;
-    const element: XmlElement = { ...frame.head, children: frame.children };
+    const { tag, attributes, line, column, children } = frame;
+    const element: XmlElement =
+      tag.prefix === ""
+        ? { kind: "element", namespace: tag.uri, name: tag.local, attributes, line, column, children }
+        : {
+            kind: "element",
+            namespace: tag.uri,
+            name: tag.local,
+            prefix: tag.prefix,
+            attributes,
+            line,
+            column,
+            children,
+          };
     const parent = this.frames.at(-1);
     if (parent === undefined) this.result = element;
     else parent.children.push(element);

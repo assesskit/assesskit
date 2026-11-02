@@ -12,7 +12,7 @@ xychart-beta
   title "Entry points after gzip, in kilobytes"
   x-axis ["root", "messages/id", "protocol", "client", "player", "mountItem", "scoring", "cat", "cat-rest", "server", "engine (on demand)"]
   y-axis "kB" 0 --> 140
-  bar [9.1, 6.1, 7.1, 21.7, 125.9, 86.1, 10.2, 19.4, 14.3, 49.4, 117.3]
+  bar [9.1, 6.1, 7.1, 21.8, 126.2, 86.1, 10.2, 19.7, 14.3, 49.8, 117.5]
 ```
 
 | File                            | Bytes   | Gzip    | Budget  | What it holds                                                                                                                                                                                                     |
@@ -20,14 +20,14 @@ xychart-beta
 | `@assesskit/player`             | 25,963  | 9,066   | 10,000  | The errors, the checks of the player and the interface messages in English                                                                                                                                        |
 | `@assesskit/player/messages/id` | 16,977  | 6,147   | 8,000   | The interface messages in Indonesian, which a host that shows Indonesian loads beside the player, and nothing else                                                                                                |
 | `@assesskit/player/protocol`    | 22,149  | 7,083   | 7,500   | The envelopes and their schemas, and the check of a scoring rubric (`asi`, `values`); valibot is 10.5 kB of it                                                                                                    |
-| `@assesskit/player/client`      | 67,553  | 21,734  | 25,000  | The remote and the local session, and the decoders of a view and of an action (`delivery`, `interactions`, `package`, `pnp`, `values`, `xml`), without the engine                                                 |
-| `@assesskit/player/player`      | 395,823 | 125,889 | 134,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions (`asi`, `content`, `interactions`, `package`, `pci`, `pnp`, `values`, `xml`, saxes) |
+| `@assesskit/player/client`      | 67,723  | 21,794  | 25,000  | The remote and the local session, and the decoders of a view and of an action (`delivery`, `interactions`, `package`, `pnp`, `values`, `xml`), without the engine                                                 |
+| `@assesskit/player/player`      | 396,660 | 126,170 | 134,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions (`asi`, `content`, `interactions`, `package`, `pci`, `pnp`, `values`, `xml`, saxes) |
 | `mountItem`                     | 269,704 | 86,134  | 101,000 | The content, the interactions, the supports, speech and the host of portable custom interactions; no chrome, no tools and no XML parser                                                                           |
 | `@assesskit/player/scoring`     | 33,485  | 10,226  | 13,000  | The actions that score and supply scores, with the protocol (`asi`, `processing`, `values`)                                                                                                                       |
-| `@assesskit/player/cat`         | 64,248  | 19,435  | 24,500  | The deployment of adaptive sections, which reads their files (`cat`, `delivery`, `metadata`, `package`, `values`, `xml`, saxes)                                                                                   |
+| `@assesskit/player/cat`         | 65,085  | 19,712  | 24,500  | The deployment of adaptive sections, which reads their files (`cat`, `delivery`, `metadata`, `package`, `values`, `xml`, saxes)                                                                                   |
 | `@assesskit/player/cat-rest`    | 45,868  | 14,330  | 18,000  | The client and the handler of the REST binding of a CAT engine (`cat`, `metadata`, `results`, `values`)                                                                                                           |
-| `@assesskit/player/server`      | 157,854 | 49,410  | 62,000  | The session host, the asset gate and the stores, with the protocol, jose and the readers and JSON of the runtime; not the engine, which the host passes in                                                        |
-| `@assesskit/runtime/delivery`   | 501,195 | 117,274 | 140,500 | The engine, which `createLocalSession` loads with `import()` for practice on a device                                                                                                                             |
+| `@assesskit/player/server`      | 158,794 | 49,750  | 62,000  | The session host, the asset gate and the stores, with the protocol, jose and the readers and JSON of the runtime; not the engine, which the host passes in                                                        |
+| `@assesskit/runtime/delivery`   | 502,161 | 117,546 | 140,500 | The engine, which `createLocalSession` loads with `import()` for practice on a device                                                                                                                             |
 | `pci-frame/bridge.js`           | 9,915   | 3,685   | 5,000   | The script of the frame of a portable custom interaction                                                                                                                                                          |
 | `pci-frame/require.js`          | 17,781  | 6,852   | 9,000   | RequireJS, which the frame loads                                                                                                                                                                                  |
 | `recorder-worklet.js`           | 322     | 250     | 500     | The script of the audio worklet of a WAV recording                                                                                                                                                                |
@@ -111,6 +111,24 @@ runner took, because the gate runs there. The runner takes 4 to 6 times as long 
 times as long as another on the same code (`mountDelivery` 23.9, 30.1 and 33.2 ms), so a budget of five times the sample of a
 laptop fails on the runner with no change in the code. A mount must become several times slower on the runner before it fails
 its budget; the sizes above guard the load.
+
+### Against the Amp-up player
+
+The lesson page also comes from the documents of its ten items, in the player and in the Amp-up player (`qti3-item-player`,
+Vue 2), the player that holds the certifications of 1EdTech for QTI 3 delivery, with the CPU slowed 4 times. The player
+reads each item, starts a local session and mounts it with `mountItem`; the Amp-up player mounts a player for each item and
+loads its document with `loadItemFromXml`. Both are timed until the text of every item is in the page, checked at each task
+rather than at each frame, in turns over 5 samples; the gate compares the fastest of each.
+
+| Row                                             | The player | Amp-up  | Ratio | Budget (ratio) |
+| ----------------------------------------------- | ---------- | ------- | ----- | -------------- |
+| A lesson page of ten items from their documents | 26.1 ms    | 16.0 ms | 1.63  | 2.5            |
+
+The times are those of the laptop. The player draws each item in shadow roots of its own, with the stylesheet of a content
+root, a status region and the controls of the supports, where the Amp-up player draws plain elements; with the sessions made,
+the player takes 21 ms for the same page (the lesson row above), so the drawing is most of its time, and the runtime's reading,
+gate and start of the ten items the rest. A local session loads the engine with `import()` once for a page, not once for each
+session. The budget is the measured ratio with the headroom of the [rows against Longsight](../runtime/performance.md#against-the-references).
 
 The times do not include loading and parsing the bundle, which `size.test.ts` bounds by bytes: with the CPU slowed 4 times
 the bundle of `mountDelivery` loaded, parsed and evaluated in 47 ms, and that of `mountItem` in 46 ms.

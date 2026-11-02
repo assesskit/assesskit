@@ -27,15 +27,37 @@ const REFERENCE_TARGETS: ReadonlyMap<string, { readonly target: string }> = new 
   ["variable-identifier-ref", { target: "qti-response-declaration" }],
 ]);
 
-/** The text or texts that an attribute of a model holds and the format its type gives them. */
-function textsOf(definition: AttributeDef, value: unknown): { format?: StringFormat; texts: readonly string[] } {
-  const { type } = definition;
-  if (type.kind === "string")
-    return typeof value === "string" ? { format: type.format, texts: [value] } : { texts: [] };
-  if (type.kind === "list" && type.item.kind === "string" && Array.isArray(value)) {
-    return { format: type.item.format, texts: value.filter((member: unknown) => typeof member === "string") };
-  }
-  return { texts: [] };
+/** The formats of text that the checks read. */
+type CheckedFormat = Extract<StringFormat, "identifier" | "id" | "idref">;
+
+/** An attribute of a type whose text, or each of whose texts, has a format that the checks read. */
+interface FormattedAttribute {
+  readonly definition: AttributeDef;
+  readonly format: CheckedFormat;
+  /** Whether the attribute holds a list of texts rather than one. */
+  readonly list: boolean;
+}
+
+const isChecked = (format: StringFormat | undefined): format is CheckedFormat =>
+  format === "identifier" || format === "id" || format === "idref";
+
+/** The attributes of each list of a type that the checks read, made once for the list, which the type keeps. */
+const FORMATTED = new WeakMap<readonly AttributeDef[], readonly FormattedAttribute[]>();
+
+/** Returns the attributes of a list whose text has a format that the checks read, in the order of the list. */
+function formattedOf(attributes: readonly AttributeDef[]): readonly FormattedAttribute[] {
+  const known = FORMATTED.get(attributes);
+  if (known !== undefined) return known;
+  const found = attributes.flatMap((definition): FormattedAttribute[] => {
+    const { type } = definition;
+    if (type.kind === "string" && isChecked(type.format)) return [{ definition, format: type.format, list: false }];
+    if (type.kind === "list" && type.item.kind === "string" && isChecked(type.item.format)) {
+      return [{ definition, format: type.item.format, list: true }];
+    }
+    return [];
+  });
+  FORMATTED.set(attributes, found);
+  return found;
 }
 
 /** A reference to an `id` that is checked once the whole document is walked. */
@@ -70,14 +92,20 @@ export class FormatChecks {
    * @param visit - The element that the walk of the document reached.
    */
   visit(visit: ElementVisit): void {
-    for (const definition of visit.attributes) {
-      const { format, texts } = textsOf(definition, visit.model[definition.property]);
-      for (const text of texts) {
-        if (format === "identifier") this.identifier(visit, definition, text);
-        else if (format === "id") this.id(visit, definition, text);
-        else if (format === "idref") this.references.push({ attribute: definition.name, value: text, element: visit });
+    for (const { definition, format, list } of formattedOf(visit.attributes)) {
+      const value = visit.model[definition.property];
+      if (!list) {
+        if (typeof value === "string") this.check(visit, definition, format, value);
+      } else if (Array.isArray(value)) {
+        for (const text of value) if (typeof text === "string") this.check(visit, definition, format, text);
       }
     }
+  }
+
+  private check(visit: ElementVisit, definition: AttributeDef, format: CheckedFormat, text: string): void {
+    if (format === "identifier") this.identifier(visit, definition, text);
+    else if (format === "id") this.id(visit, definition, text);
+    else this.references.push({ attribute: definition.name, value: text, element: visit });
   }
 
   /** Resolves the references to an `id`, after every element has been visited. */
