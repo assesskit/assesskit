@@ -2,7 +2,6 @@ import type { AssessmentItem, BodyNode, TestFeedback } from "../asi/index.js";
 import { describe } from "../checks.js";
 import { resolveContent, testRubricBlocks, visibleTestFeedback } from "../content/index.js";
 import { DataError } from "../errors.js";
-import { resolveReference } from "../package/index.js";
 import type { CandidateView, SupportView, TimerView } from "./candidate-view.js";
 import { partOfSection } from "./cat-session.js";
 import type { Course } from "./course.js";
@@ -13,7 +12,7 @@ import { partModel, submissionModeOf } from "./modes.js";
 import { type Placement, planIndex, type SectionInstance } from "./plan-index.js";
 import { SessionStep } from "./session-step.js";
 import { allowedActions, type ItemRules, reviewActions } from "./view-actions.js";
-import { candidateItem } from "./view-item.js";
+import { candidateItem, packagePath } from "./view-item.js";
 import { navigationOf, reviewNavigationOf } from "./view-navigation.js";
 
 /** What resolution reads of an item for the content of a test: it declares no template variables. */
@@ -148,9 +147,7 @@ export function candidateView(course: Course, original: DeliveryState, now: numb
     test: {
       identifier: test.identifier,
       title: test.title,
-      stylesheets: [
-        ...new Set(test.stylesheets.map(({ href }) => resolveReference(structure.test.base, href) ?? href)),
-      ],
+      stylesheets: [...new Set(test.stylesheets.map(({ href }) => packagePath(structure.test.base, href)))],
     },
     supports: supportViews(state),
   };

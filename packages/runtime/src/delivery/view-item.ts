@@ -12,7 +12,7 @@ import { itemFeedback, itemResponses, presentedInteractions } from "./item-displ
 import { arrangeChoices, catalogsIn, portableInteractionsIn } from "./view-body.js";
 
 /** Returns the package path of a reference as the document at `base` writes it; a reference outside the package stays as written. */
-const packagePath = (base: string, href: string): string => resolveReference(base, href) ?? href;
+export const packagePath = (base: string, href: string): string => resolveReference(base, href) ?? href;
 
 /** Returns the identifiers of the response variables that the interactions bind, with those that keep a raw text. */
 function responseIdentifiers(interactions: readonly InteractionDescriptor[]): ReadonlySet<string> {
