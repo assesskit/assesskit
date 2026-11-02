@@ -1,16 +1,6 @@
 # Architecture
 
-The runtime is one package with a subpath per module. These principles hold for every module; Biome enforces the ones marked
-lint, and the rest are checked in review.
-
-| Principle              | Rule                                                                                                                                                                                                                                                     |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pure core              | Every module except `node` and `cli` uses ECMAScript 2023 and no platform API: no `node:*`, `fetch`, timers, `window`, `document` or `process` (lint). It runs in any JavaScript runtime.                                                                |
-| Deterministic          | Randomness comes from a `Random` the caller passes, time from an argument the caller passes. `Math.random`, `Date.now()`, `new Date()` and `performance.now()` fail lint.                                                                                |
-| No backtracking regexp | `new RegExp` and `RegExp(` fail lint everywhere in `src/`. Patterns that authors write run on the runtime's linear-time automaton, never on a backtracking engine.                                                                                       |
-| No code execution      | No `eval` (lint) and no code loading. Extension points are functions the caller registers.                                                                                                                                                               |
-| Untrusted input        | Every input is untrusted: documents, packages, actions, and what resolvers return. Entry points validate deeply, and the JSON they read is read with valibot schemas; inner functions validate shallowly, so a call does not cost the size of the model. |
-| Cited rules            | Every semantic rule cites the specification section that defines it, and what the specifications declare has a test that derives it from them ([evidence](evidence.md#completeness)).                                                                    |
+The runtime is one package with a subpath per module.
 
 ## Layers
 
@@ -62,6 +52,19 @@ A module imports only from lower layers, and imports never form cycles (lint). E
 | 7     | `delivery/`                            | `values/`, `asi/`, `results/`, `pnp/`, `processing/`, `interactions/`, `pci/`, `content/`, `cat/`, `package/`, `validate/` |
 | 8     | `node/`                                | `xml/`, `package/`, `validate/`, `node:*`                                                                                  |
 | 9     | `cli/`                                 | `xml/`, `asi/`, `results/`, `usage/`, `pnp/`, `package/`, `validate/`, `node/`, `node:*`                                   |
+
+## Principles
+
+These principles hold for every module; Biome enforces the ones marked lint, and the rest are checked in review.
+
+| Principle              | Rule                                                                                                                                                                                                                                                     |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pure core              | Every module except `node` and `cli` uses ECMAScript 2023 and no platform API: no `node:*`, `fetch`, timers, `window`, `document` or `process` (lint). It runs in any JavaScript runtime.                                                                |
+| Deterministic          | Randomness comes from a `Random` the caller passes, time from an argument the caller passes. `Math.random`, `Date.now()`, `new Date()` and `performance.now()` fail lint.                                                                                |
+| No backtracking regexp | `new RegExp` and `RegExp(` fail lint everywhere in `src/`. Patterns that authors write run on the runtime's linear-time automaton, never on a backtracking engine.                                                                                       |
+| No code execution      | No `eval` (lint) and no code loading. Extension points are functions the caller registers.                                                                                                                                                               |
+| Untrusted input        | Every input is untrusted: documents, packages, actions, and what resolvers return. Entry points validate deeply, and the JSON they read is read with valibot schemas; inner functions validate shallowly, so a call does not cost the size of the model. |
+| Cited rules            | Every semantic rule cites the specification section that defines it, and what the specifications declare has a test that derives it from them ([evidence](evidence.md#completeness)).                                                                    |
 
 ## Subpaths
 
@@ -123,11 +126,14 @@ session replays to the same state and events from its seed and its actions.
 - Processing interprets the model. Outcome processing runs after each submission in individual mode, so a step costs the rules
   of the test times the item instances they read ([Performance](performance.md#outcome-processing)). What a session reads of
   an item that does not change, such as its interactions or its declared values, is read once and kept for the item.
+- A test whose sections neither select nor shuffle has one plan, which its first session makes and every later one shares
+  with the indexes of the plan.
 - A `SchemaSet` is compiled once and reused for every document.
 - Entry points validate deeply and inner functions shallowly, so that a call does not cost the size of the model.
+- A subpath holds only the modules it uses, which a test holds for each ([Performance](performance.md#entry-points)).
 
 No compiled or indexed form of the model exists, because the budgets hold. [Performance](performance.md) lists the
-budgets and the runtime's times against Longsight `qti3-core`.
+budgets and the runtime's times against Longsight `qti3-core` and libxml2.
 
 ## Security
 

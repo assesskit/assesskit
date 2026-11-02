@@ -4,7 +4,7 @@
 of the [protocol](protocol.md#the-session-client), so the player never knows the mode. The browser code holds no answer
 key in an exam: it imports only `viewFromJson` and `actionToJson` from the runtime's `delivery`, and a test bundles the player and
 the remote session and fails if any file of the engine has code in the output. Only `createLocalSession` loads the engine,
-with `import()`.
+with `import()` at its first call on a page.
 
 | Client                | Mode     | Where the engine runs | Keys on the device | Host side of the session |
 | --------------------- | -------- | --------------------- | ------------------ | ------------------------ |

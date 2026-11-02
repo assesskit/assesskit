@@ -63,7 +63,7 @@ Biome enforces, folder by folder.
 | `pnpm test:coverage:browser`     | The browser tests in Chromium with the floors of the folders that draw a page and of the client                                                                                                                                                                      |
 | `pnpm test:corpus`               | The tests that read the corpus; needs `pnpm corpus`                                                                                                                                                                                                                  |
 | `pnpm test:xsd`                  | The tests that read the official XSDs; needs `pnpm schemas` and `pnpm corpus`                                                                                                                                                                                        |
-| `pnpm bench`                     | The benchmarks of the runtime, and the mount time of the player in Chromium with the CPU slowed 4 times, against budgets                                                                                                                                             |
+| `pnpm bench`                     | The benchmarks of the runtime and the mount time of the player in Chromium with the CPU slowed 4 times, against budgets and against Longsight, libxml2 and the Amp-up player                                                                                         |
 | `pnpm build`                     | `tsc -b` after deleting `dist/`, so that no stale output ships                                                                                                                                                                                                       |
 | `pnpm check:packages`            | publint and Are the Types Wrong on the packed packages                                                                                                                                                                                                               |
 | `pnpm check:release`             | Fails when a package that a changeset releases is private or lacks `publishConfig.access`                                                                                                                                                                            |
@@ -205,6 +205,8 @@ untested in the others.
 - Every public function has a test of input of other types, as JavaScript or JSON pass it: `null` options and arguments, a string
   for a number, an object for an array. Such input comes from `JSON.parse`, not from a cast.
 - Properties that hold for any input are tested with fast-check, and its generators are in `test/arbitraries/`, a file for each module.
+- A benchmark against a reference runs the two sides in turns on the same input, doing the same work to the same point, and
+  gates the ratio; in the runtime it is `compareRow` of `test/budgets.ts`, which also gates the time.
 - Fuzz tests of readers use `FUZZ` of `test/fuzz.ts`: a fixed seed and a bounded number of runs, so that CI runs the inputs a laptop
   does. A reader of documents is tested with `fuzzReader`, which mutates valid documents (`mutations` of `test/arbitraries/xml.ts`)
   and accepts a result, a `ReadError` or a `SecurityError`, nothing else.

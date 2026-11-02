@@ -49,41 +49,26 @@ exports `parseLexicon`.
 ## Languages
 
 English is in the root, in `player` and in `mountItem`: every catalog is checked against it, and a language without a catalog
-gets it. The Indonesian catalog is the module `@assesskit/player/messages/id`, which a host passes to the player ([messages](messages.md)).
-`size.test.ts` fails when the root, the protocol, the client, the player or the first load of an item holds it. A host that shows
-English loads nothing more; a host that shows Indonesian loads 6.1 kB more after gzip, beside the player, and each language
-after it is a module of the same kind. The catalog took 4.6 kB out of the root, 6.5 kB out of `player` and 6.6 kB out of
-`mountItem`, and their budgets fell by as much, rounded up to the next 500 bytes, so that the room for growth stays what it was.
+gets it. The Indonesian catalog is the module `@assesskit/player/messages/id`, which a host passes to the player
+([messages](messages.md)). `size.test.ts` fails when the root, the protocol, the client, the player or the first load of an
+item holds it. A host that shows English loads nothing more; a host that shows Indonesian loads 6.1 kB more after gzip,
+beside the player, and each language after it is a module of the same kind.
 
 ## What is in the player
 
+Bytes of the minified `@assesskit/player/player`, before gzip:
+
 | Part                                             | Bytes   | Why                                                                                                     |
 | ------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------- |
-| The elements of the player                       | 254,075 | The folders of `player/`, of which `elements` is 74 kB, `tools` 45 kB and `supports` 23 kB              |
-| `values` of the runtime                          | 40,761  | The values of responses, and the automaton and the Unicode tables for the patterns of text entry        |
-| The messages                                     | 16,642  | The English catalog, which `selectMessages` completes a language from; Indonesian is a module of 16,951 |
-| `saxes`, and `xml` and `xmlchars` of the runtime | 40,317  | The reader of a pronunciation lexicon in `speech/`                                                      |
-| valibot                                          | 11,350  | The schemas of the JSON that crosses the wire                                                           |
+| The elements of the player                       | 254,344 | The folders of `player/`, of which `elements` is 78 kB, `tools` 45 kB and `supports` 24 kB              |
+| `values` of the runtime                          | 40,752  | The values of responses, and the automaton and the Unicode tables for the patterns of text entry        |
+| The messages                                     | 16,642  | The English catalog, which `selectMessages` completes a language from; Indonesian is a module of 16,977 |
+| `saxes`, and `xml` and `xmlchars` of the runtime | 41,406  | The reader of a pronunciation lexicon in `speech/`                                                      |
+| valibot                                          | 11,379  | The schemas of the JSON that crosses the wire                                                           |
 
-## What the controls of the conformance gaps cost
-
-The controls that close the gaps of [conformance](../runtime/conformance.md) stay in their entry points: the largest, the
-scientific calculator, adds 2.7 kB after gzip with its messages, 2 percent of the budget of the player, and it comes with the
-tools that draw its button. The lists of the panel are chrome, so `mountItem` grows by their messages and by what the content
-root shares, such as the choice of braille files. The sizes were measured when both catalogs were in the entry points: a message
-now costs those entries about half as much, and the module of Indonesian the rest. Bytes after gzip:
-
-| Addition                                                                               | `player` | `mountItem` | Root | Engine |
-| -------------------------------------------------------------------------------------- | -------- | ----------- | ---- | ------ |
-| `support-settings`, the lists of the zoom and of the color theme (A-30a, A-30b)        | +611     | +45         | +119 | +587   |
-| The scientific calculator (A-12)                                                       | +2,687   | +723        | +512 | 0      |
-| The breaks of a profile in the session host (A-11)                                     | 0        | 0           | 0    | 0      |
-| The lists of reading aloud (A-40d, A-40e)                                              | +710     | +386        | +367 | 0      |
-| The lists of braille and the choice of braille files (A-10b)                           | +868     | +678        | +281 | 0      |
-| The stylesheets of the test (T-3)                                                      | +57      | +39         | 0    | 0      |
-| The list of the size of text, which the guide asks the candidate to change at any time | +152     | +37         | +26  | 0      |
-
-The root holds the English catalog and is at 9,077 of its 10,000 bytes.
+The controls that close the gaps of [conformance](../runtime/conformance.md) are in the entry points that draw them. The
+largest, the scientific calculator, is 9.9 kB of the tools; the lists of the panel of the supports are chrome, so `mountItem`
+holds only their messages and what the content root shares with them, such as the choice of braille files.
 
 ## Running it
 
