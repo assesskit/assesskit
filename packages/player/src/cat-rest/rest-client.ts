@@ -5,6 +5,7 @@ import { encodeBase64 } from "@assesskit/runtime/values";
 import * as v from "valibot";
 import { httpsUrlSchema } from "../checks.js";
 import { ServiceError } from "../errors.js";
+import { hasMoreTokensThan } from "./json-tokens.js";
 
 /** A request of the REST client: the part of `RequestInit` that it uses. */
 export interface CatFetchRequest {
@@ -87,6 +88,8 @@ export interface RestClientOptions {
   readonly fetch: CatFetch;
   /** The milliseconds after which a request, the token request included, is aborted. */
   readonly timeoutMs: number;
+  /** The most tokens of the JSON of an answer, the answer of the token endpoint included, counted before it is parsed. */
+  readonly maxTokens: number;
 }
 
 /**
@@ -113,8 +116,18 @@ function formEncode(value: string): string {
   return new URLSearchParams({ v: value }).toString().slice("v=".length);
 }
 
-/** Parses the JSON body of an answer, or throws the `ServiceError` that names who sent it. */
-function parseBody(text: string, what: string, status: number): unknown {
+/**
+ * Parses the JSON body of an answer, or throws the `ServiceError` that names who sent it. The tokens are counted first,
+ * since the memory of a parse follows them; the error of an answer above the limit does not hold its body.
+ */
+function parseBody(text: string, what: string, status: number, maxTokens: number): unknown {
+  if (hasMoreTokensThan(text, maxTokens)) {
+    throw new ServiceError(
+      `${what} answered with more than ${maxTokens} tokens of JSON, the limit of maxTokens.`,
+      status,
+      "",
+    );
+  }
   try {
     return JSON.parse(text);
   } catch {
@@ -147,10 +160,10 @@ function refuseRedirect(response: CatFetchResponse, what: string): void {
  * service's `401`, not from `expires_in`; the new token is asked for with the credentials of the call that met the `401`,
  * so that the current secret of the host is used. A failure of the token request is a `TokenEndpointError`.
  *
- * @param options - The `fetch` function and the timeout.
+ * @param options - The `fetch` function, the timeout and the limit on the tokens of an answer.
  * @returns The client.
  */
-export function createRestClient({ fetch, timeoutMs }: RestClientOptions): RestClient {
+export function createRestClient({ fetch, timeoutMs, maxTokens }: RestClientOptions): RestClient {
   const tokens = new Map<string, Promise<string>>();
 
   const requestToken = async ({ tokenUrl, clientId, clientSecret, scope }: OAuthClientCredentials): Promise<string> => {
@@ -172,7 +185,7 @@ export function createRestClient({ fetch, timeoutMs }: RestClientOptions): RestC
     const text = await response.text();
     if (!response.ok)
       throw new ServiceError(`${what} answered with the status ${response.status}.`, response.status, text);
-    const grant = parseBody(text, what, response.status);
+    const grant = parseBody(text, what, response.status, maxTokens);
     checkRecord(grant, `${what} must answer with an object`);
     if (typeof grant.access_token !== "string" || grant.access_token === "") {
       throw new ServiceError(`${what} gave no access_token.`, response.status, text);
@@ -250,7 +263,7 @@ export function createRestClient({ fetch, timeoutMs }: RestClientOptions): RestC
           response.status,
           answer,
         );
-      return answer === "" ? undefined : parseBody(answer, what, response.status);
+      return answer === "" ? undefined : parseBody(answer, what, response.status, maxTokens);
     },
   };
 }

@@ -22,7 +22,7 @@ LTI and Caliper are in [interopkit](https://github.com/interopkit/interopkit) as
 `forward.log` and `createToolScoreIntake` with `ToolScoreStore` (`server`), and `sessionScore` (`scoring`). The mapping of
 delivery events to Caliper events, the outbox and the jobs that publish a grade are in the example
 `examples/player/lms-integration`. `forward` takes only `log`, `HostApplyOptions.scoredBy` is a non-empty string, and `LtiLogin`
-takes a `signal`. The CAT client refuses a redirect (`redirect: "manual"`) with a `ServiceError`.
+takes a `signal`. The CAT client refuses a redirect (`redirect: "manual"`) with a `ServiceError`, and an answer with more JSON tokens than `maxTokens`.
 
 After the end of a test that the engine lets the candidate review, the navigation map lists the items presented and reviews the
 one chosen.

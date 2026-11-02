@@ -22,6 +22,7 @@ import {
   writeSubmitResultsAnswer,
 } from "./binding.js";
 import { readJsonBody } from "./body.js";
+import { DEFAULT_MAX_TOKENS } from "./json-tokens.js";
 import { type CatOperation, matchRoute, type PathIdentifiers } from "./route.js";
 import {
   AUTHORIZATION_FAILURE,
@@ -85,9 +86,6 @@ const DEFAULT_ROOT = "/ims/cat/v1p0";
 
 /** The default size limit of a request body, in bytes: that of an XML file in the runtime, 32 MiB. */
 const DEFAULT_MAX_BODY_BYTES = 33_554_432;
-
-/** The default limit on the tokens of the JSON of a request body. */
-const DEFAULT_MAX_TOKENS = 1_000_000;
 
 const rootSchema = v.pipe(
   v.string(),

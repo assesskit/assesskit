@@ -1,3 +1,9 @@
+/**
+ * The default limit on the tokens of a text of JSON that the binding reads, a body of a request or an answer of an engine: a
+ * million tokens parse into tens of megabytes.
+ */
+export const DEFAULT_MAX_TOKENS = 1_000_000;
+
 /** The code units that the count of tokens tells apart (RFC 8259, section 2). */
 const QUOTE = 0x22;
 const BACKSLASH = 0x5c;

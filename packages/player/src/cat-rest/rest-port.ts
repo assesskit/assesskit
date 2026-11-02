@@ -6,6 +6,7 @@ import {
   functionSchema,
   guardSchema,
   parseWith,
+  positiveIntegerSchema,
   positiveSchema,
   type Schema,
 } from "@assesskit/runtime/checks";
@@ -21,6 +22,7 @@ import {
   writeResultsBody,
   writeSectionBody,
 } from "./binding.js";
+import { DEFAULT_MAX_TOKENS } from "./json-tokens.js";
 import { type CatFetch, createRestClient, type OAuthClientCredentials, oauthCredentialsSchema } from "./rest-client.js";
 
 /** An engine that the port reaches: where it is, how to authorize at it, and what it may be told about the candidate. */
@@ -69,6 +71,14 @@ export interface RestCatPortOptions {
    * @defaultValue `10000`
    */
   readonly timeoutMs?: number;
+  /**
+   * The most tokens of the JSON of an answer of an engine or of its token endpoint, counted before it is parsed: a
+   * structural character, a string, a number or a literal each count one. An answer with more is a `ServiceError`. The
+   * memory of a parse follows its tokens, not its bytes: 32 MiB of empty objects parse into more than a gigabyte.
+   *
+   * @defaultValue `1000000`
+   */
+  readonly maxTokens?: number;
 }
 
 /** The milliseconds after which a request to the engine is aborted, unless the host says otherwise. */
@@ -89,6 +99,7 @@ const optionsSchema = v.strictObject({
   fetch: functionSchema<CatFetch>(),
   engines: enginesSchema,
   timeoutMs: v.optional(positiveSchema, DEFAULT_TIMEOUT_MS),
+  maxTokens: v.optional(positiveIntegerSchema, DEFAULT_MAX_TOKENS),
 });
 
 /**
@@ -136,24 +147,25 @@ function checkedMap(engines: ReadonlyMap<string, CatEngine>): ReadonlyMap<string
  *   request and repeats it once. A `403` is a failure and is not repeated. It reads no clock. A failed token request is a
  *   `ServiceError` that `createCatRestHandler` answers as a fault, whatever its status.
  * - **Requests.** Redirects are errors, and every request, the token request included, is aborted after `timeoutMs`. A
- *   network error or a timeout rejects with the error of `fetch`.
+ *   network error or a timeout rejects with the error of `fetch`. An answer is read whole, and its JSON has at most
+ *   `maxTokens` tokens.
  * - **Personal data.** Create Session sends the personal needs and preferences only to an engine with `sharePnp`.
  * - **Binding.** The bodies are those of the binding's OpenAPI file, and the port sends no other shape. The `qtiMetadata`
  *   of the binding is one QTI metadata record, which `qtiMetadataRecord` of the section data carries; the metadata file of
  *   the section data has no field in the binding, so Create Section does not send it. The assessment result drops what the
  *   binding has no field for.
  *
- * @param options - The `fetch` function, the engines and the timeout.
+ * @param options - The `fetch` function, the engines, the timeout and the limit on the tokens of an answer.
  * @returns The engine, as the runtime's `CatPort`.
  * @throws `DataError` when an option has the wrong type, an engine is malformed or an endpoint is not an `https` URL.
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding}
  */
 export function createRestCatPort(options: RestCatPortOptions): CatPort {
-  const { fetch, engines, timeoutMs } = parseWith(optionsSchema, options, "The options object");
+  const { fetch, engines, timeoutMs, maxTokens } = parseWith(optionsSchema, options, "The options object");
 
   const known = typeof engines === "function" ? undefined : checkedMap(engines);
   const resolve = typeof engines === "function" ? engines : undefined;
-  const client = createRestClient({ fetch, timeoutMs });
+  const client = createRestClient({ fetch, timeoutMs, maxTokens });
 
   /** Finds the engine that a reference stands for; a reference that the host did not configure is refused. */
   const engineOf = async (prefix: unknown): Promise<CatEngine> => {

@@ -458,6 +458,41 @@ describe("createRestCatPort", () => {
     );
   });
 
+  it("refuses an answer with more tokens of JSON than maxTokens before it parses it, and keeps no body in the error", async () => {
+    const pool = (count: number) => ({
+      section: { sectionConfiguration: "e30=" },
+      items: { itemIdentifiers: Array(count).fill("i") },
+    });
+    // The answer is 18 tokens of braces, brackets, colons, a comma, keys and the configuration, and each identifier adds its
+    // string and a comma, but for the first.
+    const tokensOf = (count: number) => 17 + 2 * count;
+    const service = fakeService((call) => ({ status: 200, body: pool(call.url.endsWith("big") ? 101 : 100) }));
+    const port = createRestCatPort({
+      fetch: service.fetch,
+      engines: new Map([[PREFIX, { endpoint: PREFIX, credentials: CREDENTIALS }]]),
+      maxTokens: tokensOf(100),
+    });
+    expect((await port.getSection(PREFIX, "fits")).items.itemIdentifiers).toHaveLength(100);
+    const error = await port.getSection(PREFIX, "big").catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ServiceError);
+    expect(error).toMatchObject({
+      status: 200,
+      body: "",
+      message: `The CAT engine at ${PREFIX}/sections/big answered with more than ${tokensOf(100)} tokens of JSON, the limit of maxTokens.`,
+    });
+    const tight = createRestCatPort({
+      fetch: service.fetch,
+      engines: new Map([[PREFIX, { endpoint: PREFIX, credentials: CREDENTIALS }]]),
+      maxTokens: 10,
+    });
+    await expect(tight.endSection(PREFIX, "sec1")).rejects.toThrow(
+      `The token endpoint ${TOKEN_URL} answered with more than 10 tokens of JSON, the limit of maxTokens.`,
+    );
+    expect(() => createRestCatPort({ fetch: service.fetch, engines: new Map(), maxTokens: 1.5 })).toThrow(
+      new DataError("The options object is invalid at maxTokens: expected a safe integer, found 1.5."),
+    );
+  });
+
   it("fails with a ServiceError for a 401 after the new token, for a body that is not JSON and for a bad token answer", async () => {
     const denied = onePort({
       fetch: fakeService(() => ({ status: 401, body: {} })).fetch,

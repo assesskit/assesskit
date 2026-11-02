@@ -126,6 +126,13 @@ export const CAT_REST_RULES: readonly Rule[] = [
     test: TEST,
   },
   {
+    rule: "An answer of an engine or of its token endpoint whose JSON has more tokens than maxTokens is refused before it is parsed.",
+    file: CLIENT,
+    find: "if (hasMoreTokensThan(text, maxTokens)) {",
+    replace: "if (false) {",
+    test: TEST,
+  },
+  {
     rule: "Engines with their own credentials never share a token.",
     file: CLIENT,
     find: "JSON.stringify([credentials.tokenUrl, credentials.clientId, credentials.scope]);",

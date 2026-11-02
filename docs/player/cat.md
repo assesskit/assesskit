@@ -175,11 +175,12 @@ flowchart LR
   token --> call["HTTPS request with the bearer token"]
 ```
 
-| Option      | Default  | Meaning                                                                                                                                                              |
-| ----------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fetch`     | required | `fetch`, or a replacement.                                                                                                                                           |
-| `engines`   | required | A `Map` from reference to engine, or a function from a reference to its engine, or to `undefined` for a reference that the host did not configure (it may be async). |
-| `timeoutMs` | `10000`  | The milliseconds after which a request, the token request included, is aborted.                                                                                      |
+| Option      | Default   | Meaning                                                                                                                                                              |
+| ----------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fetch`     | required  | `fetch`, or a replacement.                                                                                                                                           |
+| `engines`   | required  | A `Map` from reference to engine, or a function from a reference to its engine, or to `undefined` for a reference that the host did not configure (it may be async). |
+| `timeoutMs` | `10000`   | The milliseconds after which a request, the token request included, is aborted.                                                                                      |
+| `maxTokens` | `1000000` | The most tokens of the JSON of an answer, the token endpoint's included, counted before the parse: an answer with more is a `ServiceError`.                          |
 
 | Field of an engine | Default  | Meaning                                                                                                             |
 | ------------------ | -------- | ------------------------------------------------------------------------------------------------------------------- |

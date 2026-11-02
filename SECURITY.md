@@ -168,6 +168,9 @@ it is built to send them only to the engines that the host configured.
   reference: the port sends the client secret and the candidate's data wherever the function points.
 - The endpoint and the token URL must be `https`. Redirects are errors, so a redirect cannot carry the token to another
   address or from HTTPS to HTTP. Every request is aborted after `timeoutMs`.
+- An answer has at most `maxTokens` tokens of JSON (a million by default), counted before the parse, whose memory follows the
+  tokens: 32 MiB of empty objects took 850 MiB without the count. The answer is read whole, so its bytes are the engine's to
+  keep within reason, and the host's `fetch` can cap them.
 - The personal needs and preferences of a candidate go only to an engine with `sharePnp: true`.
 - The client secret goes only to the token URL of its engine, as HTTP Basic credentials. A token is kept for each token URL,
   client and scope, so engines never share one.
