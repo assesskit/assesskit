@@ -49,8 +49,8 @@ export interface Body {
   /** Sends an action that submits or leaves the item once its interactions have settled, so that a pending drawing is in what goes. */
   sendSettled(action: CandidateAction): Promise<void>;
   /**
-   * Shows the body of a view when it differs from what is shown: a new item, or the same one with another status or
-   * answers to review.
+   * Shows the body of a view when it differs from what is shown: a new item instance, or the same one with another status
+   * or answers to review.
    *
    * @param view - The view.
    * @returns Whether the content was drawn again, or `undefined` when the player was destroyed while it was drawn.
@@ -176,7 +176,10 @@ export function createBody(context: BodyContext): Body {
     sendSettled,
     showBody: async (view) => {
       const { current } = view;
+      // The item instance counts: two instances of one item, which a selection with replacement makes, have the same
+      // content, and each has responses and a state of its own.
       const body = signature([
+        itemId(current?.key),
         rootContentOf(view, client.documents),
         current?.status,
         current?.status === "interacting" ? null : current?.responses,

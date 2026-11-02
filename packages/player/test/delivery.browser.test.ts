@@ -1071,6 +1071,27 @@ describe("the interactions in the player", () => {
     expect(choices(s.ui).map((input) => input.checked)).toEqual([false, false]);
   });
 
+  it("draws again the item of the next instance of one item, which has the same content and answers of its own", async () => {
+    const files = examFiles();
+    // A selection with replacement makes two instances of q2, whose content is the same.
+    const twice = String(files["tests/exam.xml"]).replace(
+      /<qti-assessment-item-ref identifier="q1"[\s\S]*<qti-assessment-item-ref identifier="q3"[^>]*\/>/u,
+      '<qti-selection select="2" with-replacement="true"/><qti-assessment-item-ref identifier="q2" href="../items/q2/item.xml"/>',
+    );
+    const s = await shell({ practice: true, files: { ...files, "tests/exam.xml": twice } });
+    await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    expect(s.client.view.current?.key).toEqual({ ref: "q2", instance: 1 });
+    choices(s.ui)[1]?.click();
+    await waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."));
+    await s.client.dispatch({ type: "move", to: { ref: "q2", instance: 2 } });
+    await waitFor(() => expect(choices(s.ui).map((input) => input.checked)).toEqual([false, false]));
+    choices(s.ui)[0]?.click();
+    await waitFor(() => expect(s.client.view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "A")));
+    await s.client.dispatch({ type: "move", to: { ref: "q2", instance: 1 } });
+    await waitFor(() => expect(choices(s.ui).map((input) => input.checked)).toEqual([false, true]));
+    expect(s.client.view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "B"));
+  });
+
   it("sends the held response before the submit, so that the engine submits what the candidate chose", async () => {
     const control = '<qti-item-session-control allow-review="true" show-solution="true"/>';
     const s = await shell({ files: examFiles({ control }) });

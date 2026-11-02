@@ -274,7 +274,8 @@ says why, in the language of the interface, in a polite live region with `role="
 
 The content of a view goes to a content root ([content](content.md)): the rubric, the stimuli, the item and the test
 feedback, with the documents they come from so that relative references resolve (`ViewEnvelope.documents`). The player draws it
-again only when it differs from what is shown: a new item, another state of the item, or answers to review. A new view that
+again only when it differs from what is shown: a new item instance, even of the item shown, as a selection with replacement
+makes, another state of the item, or answers to review. A new view that
 only carries the answers the candidate just gave leaves the interactions as they are, so the caret and the focus stay.
 Modal feedback opens in a dialog once for each attempt.
 
