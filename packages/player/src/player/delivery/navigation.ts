@@ -1,6 +1,6 @@
 import type { CandidateView, ItemKey, NavigationEntry } from "@assesskit/runtime/delivery";
 import type { Messages } from "../../messages/index.js";
-import { html } from "../internal.js";
+import { appendAll, html } from "../internal.js";
 
 /** The message that names each status of an item session. */
 const STATUS_MESSAGES = {
@@ -70,8 +70,11 @@ export function renderNavigation(
 ): HTMLElement | undefined {
   const items = view.navigation.filter((entry) => entry.kind === "item");
   if (items.length < 2) return undefined;
-  const entries = view.navigation.map((entry) =>
-    entry.kind === "section" ? sectionEntry(entry) : itemEntry(entry, messages, move),
+  const list = html("ol", {});
+  // The test decides how many entries there are, so they are appended in steps rather than spread into a call.
+  appendAll(
+    list,
+    view.navigation.map((entry) => (entry.kind === "section" ? sectionEntry(entry) : itemEntry(entry, messages, move))),
   );
-  return html("nav", { class: "ak-nav", "aria-label": messages.navigationLabel }, html("ol", {}, ...entries));
+  return html("nav", { class: "ak-nav", "aria-label": messages.navigationLabel }, list);
 }

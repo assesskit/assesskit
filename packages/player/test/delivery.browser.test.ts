@@ -215,6 +215,23 @@ describe("mountDelivery", () => {
     expect(s.ui.querySelector("nav [aria-current]")?.textContent).toContain("Item q2");
   });
 
+  it("lists more items in the map than a call of the engine takes as arguments", async () => {
+    const s = await shell();
+    await shown(s);
+    const [first] = s.client.view.navigation.filter((entry) => entry.kind === "item");
+    if (first?.kind !== "item") throw new Error("The fixture lists items.");
+    const count = 200_000;
+    const navigation = Array.from({ length: count }, (_, index) => ({
+      ...first,
+      key: { ref: first.key.ref, instance: index + 1 },
+      current: index === 0,
+    }));
+    // The map is built and not laid out: WebKit lays out a grid of this many rows in minutes, and the test is of the build.
+    s.page.style.display = "none";
+    s.mounted.update({ ...s.client.view, navigation });
+    expect(s.ui.querySelectorAll("nav li")).toHaveLength(count);
+  });
+
   describe("Mark for review", () => {
     const mark = (ui: ShadowRoot): HTMLButtonElement => buttonNamed(ui, "Mark for review");
     const mapOf = (ui: ShadowRoot): string[] =>
