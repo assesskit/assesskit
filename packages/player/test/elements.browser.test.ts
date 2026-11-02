@@ -720,10 +720,10 @@ describe("extended text", () => {
   it("counts the characters typed or left of the expected length, as code points", async () => {
     const up = mountScene(declare("single", "string"), Body('class="qti-counter-up" expected-length="20"'));
     await userEvent.fill(up.find("textarea"), "a\u{1F600}b");
-    expect(up.find(".ak-counter").textContent).toBe("3 / 20 characters");
+    expect(up.find(".ak-counter").textContent).toBe("Characters: 3 / 20");
     const down = mountScene(declare("single", "string"), Body('class="qti-counter-down" expected-length="20"'));
     await userEvent.fill(down.find("textarea"), "abcde");
-    expect(down.find(".ak-counter").textContent).toBe("15 characters left");
+    expect(down.find(".ak-counter").textContent).toBe("Characters left: 15");
     const none = mountScene(declare("single", "string"), Body('expected-length="20"'));
     expect(none.root.querySelector(".ak-counter")).toBeNull();
   });
@@ -734,25 +734,32 @@ describe("extended text", () => {
     for (const attributes of ['data-ak-count="words"', 'data-ak-count="words" format="preformatted"']) {
       const scene = mountScene(declare("single", "string"), Body(attributes));
       await userEvent.fill(scene.find("textarea"), typed);
-      expect(scene.find(".ak-counter").textContent).toBe(`${wordsIn(typed)} words`);
+      expect(scene.find(".ak-counter").textContent).toBe(`Words: ${wordsIn(typed)}`);
     }
     const editor = mountScene(declare("single", "string"), Body('data-ak-count="words" format="xhtml"'));
     editor.find("[role=textbox]").innerHTML =
       "<p>one  two</p><p>three</p>four<br>five<ul><li>six</li><li>seven</li></ul>";
     editor.find("[role=textbox]").dispatchEvent(new InputEvent("input", { bubbles: true }));
-    expect(editor.find(".ak-counter").textContent).toBe(`${wordsIn("one two three four five six seven")} words`);
+    expect(editor.find(".ak-counter").textContent).toBe(`Words: ${wordsIn("one two three four five six seven")}`);
     // The words need neither a counter class nor an expected length, and an expected length stays in characters.
     const sized = mountScene(
       declare("single", "string"),
       Body('data-ak-count="words" class="qti-counter-up" expected-length="20"'),
     );
     await userEvent.fill(sized.find("textarea"), "two words");
-    expect(sized.find(".ak-counter").textContent).toBe("2 words");
+    expect(sized.find(".ak-counter").textContent).toBe("Words: 2");
     const indonesian = mountScene(declare("single", "string"), Body('data-ak-count="words"'), {
       options: { messages: ID_MESSAGES },
     });
     await userEvent.fill(indonesian.find("textarea"), "dua kata");
-    expect(indonesian.find(".ak-counter").textContent).toBe("2 kata");
+    expect(indonesian.find(".ak-counter").textContent).toBe("Kata: 2");
+    // The message is a label before the number, so that one word and one character need no singular.
+    const one = mountScene(declare("single", "string"), Body('data-ak-count="words"'));
+    await userEvent.fill(one.find("textarea"), "one");
+    expect(one.find(".ak-counter").textContent).toBe("Words: 1");
+    const left = mountScene(declare("single", "string"), Body('class="qti-counter-down" expected-length="4"'));
+    await userEvent.fill(left.find("textarea"), "abc");
+    expect(left.find(".ak-counter").textContent).toBe("Characters left: 1");
     const characters = mountScene(declare("single", "string"), Body('data-ak-count="characters"'));
     expect(characters.root.querySelector(".ak-counter")).toBeNull();
   });
@@ -826,7 +833,7 @@ describe("extended text", () => {
     expect(scene.responses.at(-1)?.value).toEqual(
       single("string", "<p>Hello <strong>bold</strong> &amp; &lt;more&gt;</p>"),
     );
-    expect(scene.find(".ak-counter").textContent).toBe("19 / 30 characters");
+    expect(scene.find(".ak-counter").textContent).toBe("Characters: 19 / 30");
     expect(await axeViolations(scene.host)).toEqual([]);
   });
 

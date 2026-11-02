@@ -282,11 +282,11 @@ export interface Messages {
   readonly hintInteger: string;
   /** The name of a field where the candidate types an answer. */
   readonly answerLabel: string;
-  /** The unit after the number of characters typed, next to the expected number. */
+  /** The label before the number of characters typed, next to the expected number. */
   readonly counterCharacters: string;
-  /** The words after the number of characters that remain of the expected number. */
+  /** The label before the number of characters that remain of the expected number. */
   readonly counterLeft: string;
-  /** The word after the number of words typed, which `data-ak-count="words"` shows. */
+  /** The label before the number of words typed, which `data-ak-count="words"` shows. */
   readonly counterWords: string;
   /** The name of the group of buttons that format the text of an answer. */
   readonly editorToolbar: string;

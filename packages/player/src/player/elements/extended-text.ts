@@ -153,15 +153,15 @@ export class ExtendedTextInteractionElement extends TextElement {
   #count({ counter, characters, words }: Entry, messages: Messages): void {
     if (counter === undefined) return;
     if (this.getAttribute("data-ak-count") === "words") {
-      counter.textContent = `${words()} ${messages.counterWords}`;
+      counter.textContent = `${messages.counterWords} ${words()}`;
       return;
     }
     const expected = this.#node?.expectedLength;
     if (!expected) return;
     const typed = characters();
     counter.textContent = this.classList.contains("qti-counter-up")
-      ? `${typed} / ${expected} ${messages.counterCharacters}`
-      : `${expected - typed} ${messages.counterLeft}`;
+      ? `${messages.counterCharacters} ${typed} / ${expected}`
+      : `${messages.counterLeft} ${expected - typed}`;
   }
 
   protected override fields(): readonly TextField[] {

@@ -195,7 +195,7 @@ that has only `p`, `br`, `strong`, `em`, `u`, `ul`, `ol`, `li`, `sub` and `sup`,
 replaced by its text and a `script` or `style` is dropped, so that pasted markup carries nothing else; a paste is plain text.
 `qti-counter-up` and `qti-counter-down` with `expected-length` show the characters typed, or left, counted as code points;
 in XHTML only the text counts. `expected-length` is a hint and never a limit. `data-ak-count="words"` on an extended text shows
-the words typed instead, as `3 words` (the message `counterWords`), with no counter class and no expected length: a word is a
+the words typed instead, as `Words: 3` (the message `counterWords`), with no counter class and no expected length: a word is a
 run of characters that are not white space, and a line or block of an XHTML answer ends a word. `expected-length` stays in
 characters, as QTI defines it, and a text in a script with no space between words, such as Chinese or Japanese, uses the
 character counter.

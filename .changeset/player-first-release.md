@@ -51,4 +51,4 @@ choices, in the toolbar. With the option `marking`, `mountDelivery` offers Mark 
 a marked item. The guide of the server has the recipe of a review step with a cap on changes, as a wrapper of the `Engine`.
 The frame of a portable custom interaction takes a relative URL from `assets`, resolved against the base URL of the page, and
 refuses at mount a module of the package on an origin that the frame loads no scripts from, the origin of `staticUrl` and
-`origins`.
+`origins`. The counters of an extended text are labels before the number (`Words: 1`), so that no noun has to agree with it.
