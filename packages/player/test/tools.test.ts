@@ -231,6 +231,13 @@ describe("calculator-engine: the scientific calculator", () => {
     expect(reads("2*3+")).toBe("6");
   });
 
+  it("runs the operations that bind as tightly when a pressed operation is replaced by one that binds less", () => {
+    expect(reads("2*3", "power", "+4=")).toBe("10");
+    expect(reads("2-3*-1=")).toBe("-2");
+    expect(reads("1/0", "power", "+")).toBe("error");
+    expect(reads("2+3*", "power", "2=")).toBe("11");
+  });
+
   it("groups with parentheses, and closes those left open at equals", () => {
     expect(reads("2*", "open", "3+4", "close", "=")).toBe("14");
     expect(reads("2*", "open", "3+4=")).toBe("14");

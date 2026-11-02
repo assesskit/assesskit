@@ -351,7 +351,9 @@ function reduce(
 function pressOperator(state: CalculatorState, operator: Operator): CalculatorState {
   const last = state.pending.at(-1);
   if (state.phase === "operator" && last?.kind === "operation") {
-    return { ...state, pending: [...state.pending.slice(0, -1), { ...last, operator }] };
+    // The operation replaces the one pressed before it on the same left operand, so the operations that wait before it
+    // run as they would have had it been pressed first: 2 × 3 ^ + is 6 +.
+    return pressOperator({ ...state, pending: state.pending.slice(0, -1), value: last.left, phase: "value" }, operator);
   }
   const precedence = state.ordered ? PRECEDENCE[operator] : 1;
   const { pending, value } = reduce(state, state.value, precedence, state.ordered && FROM_RIGHT.has(operator));
