@@ -557,8 +557,8 @@ describe("mountSupportPanel", () => {
       ]);
       await userEvent.selectOptions(size, "24");
       expect(chosen).toEqual([{ name: "text-appearance", replaceAccessModes: [], fontSize: 24 }]);
-      size.focus();
-      await userEvent.keyboard("3");
+      await userEvent.type(size, "3");
+      expect(document.activeElement).toBe(size);
       await waitFor(() => expect(chosen.at(-1)).toMatchObject({ fontSize: 32 }));
     });
 
@@ -642,9 +642,10 @@ describe("mountSupportPanel", () => {
       panel.update([magnified({ allContent: { zoomAmount: 1 } })]);
       const select = listNamed(host, "Zoom");
       expect(select.tabIndex).toBe(0);
-      select.focus();
-      // The arrow keys open the list in some systems, and the first characters choose an entry in all of them.
-      await userEvent.keyboard("4");
+      // The arrow keys open the list in some systems, and the first characters choose an entry in all of them. The list
+      // takes the focus and the key in one command of the browser, with no turn of the page between them.
+      await userEvent.type(select, "4");
+      expect(document.activeElement).toBe(select);
       await waitFor(() => expect(chosen).toEqual([magnified({ allContent: { zoomAmount: 4 } }).settings]));
     });
 
@@ -750,8 +751,9 @@ describe("mountSupportPanel", () => {
     it("is operated by the keyboard alone: the first characters choose an entry", async () => {
       const { host, panel, chosen } = adjusting();
       panel.update([spoken()]);
-      listNamed(host, "How links are read").focus();
-      await userEvent.keyboard("W");
+      const list = listNamed(host, "How links are read");
+      await userEvent.type(list, "W");
+      expect(document.activeElement).toBe(list);
       await waitFor(() => expect(chosen).toEqual([{ ...spoken().settings, linkIndication: "sound-effect" }]));
     });
 
@@ -812,8 +814,9 @@ describe("mountSupportPanel", () => {
     it("is operated by the keyboard alone, and has no list while braille is off", async () => {
       const { host, panel, chosen } = adjusting();
       panel.update([braille()]);
-      listNamed(host, "Braille delivery").focus();
-      await userEvent.keyboard("E");
+      const list = listNamed(host, "Braille delivery");
+      await userEvent.type(list, "E");
+      expect(document.activeElement).toBe(list);
       await waitFor(() => expect(chosen.at(-1)).toMatchObject({ deliveryMode: "embossed" }));
       panel.update([supportView("braille", { state: "option" })]);
       expect(host.querySelector("select")).toBeNull();
