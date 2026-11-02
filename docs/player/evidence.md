@@ -133,9 +133,12 @@ docker run --rm --ipc=host --volume "$PWD":/src:ro --volume "$PWD/../measurekit"
   mkdir /work && tar -C /src --exclude=node_modules --exclude=.git --exclude=dist --exclude=.cache -cf - . | tar -C /work -xf - &&
   cd /work && npm install --global pnpm@12.8.1 && pnpm install --frozen-lockfile --ignore-scripts &&
   apt-get update && apt-get install -y pulseaudio && sh scripts/linux-audio.sh &&
-  pnpm schemas && pnpm exec playwright install chromium firefox webkit &&
+  pnpm exec playwright install chromium firefox webkit &&
   pnpm schemas && pnpm corpus && REQUIRE_AUDIO=1 pnpm test:browser && pnpm test:corpus'
 ```
+
+`pnpm schemas` can time out against purl.imsglobal.org from inside a container. It resumes from the files that it holds, so a
+second run finishes; a host that has both caches can instead mount its `.cache` read-only and copy it to `/work/.cache`.
 
 ## Tests of the shell, the clients and the gate
 

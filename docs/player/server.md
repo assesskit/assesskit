@@ -178,6 +178,11 @@ never started twice or bound to another principal.
 
 ### Handling a request
 
+The host parses the body of the request before it calls `handle`, so the size of the body is the host's to limit: refuse a
+body above a limit of its own before `JSON.parse`, because the memory of a parse follows the tokens and `limits` counts only
+what the parse has built. 32 MiB of empty objects take more than a gigabyte. An action within the default limits fits in about
+24 MiB, and 8 MiB is plenty for an exam, whose largest action is the state of a portable custom interaction.
+
 1. The caller is checked against the record. A repeated `seq` returns the stored envelope with fresh tokens and changes
    nothing; a stale one is a `DataError`.
 2. The action is read with the runtime's `parseCandidateAction` and its size limits. The actions of the host are refused there.

@@ -131,6 +131,8 @@ In an exam the engine, the seeds and the answer keys stay on the server ([server
 browser code imports only the wire functions of the runtime's `delivery`, and a test fails if the bundle of the player and the remote
 session holds any file of the engine. Practice runs the engine on the device, so its keys are visible there.
 
+- The host parses the body of a request, so it limits the size of the body before `JSON.parse`
+  ([server.md](docs/player/server.md#handling-a-request)): `limits` of `parseCandidateAction` counts what the parse has built.
 - The host's authentication gives `{ session, principal }` to every call. Envelopes carry no session identifier, and a
   request for a session that is not bound to the principal, or that does not exist, is the same `AccessError`: map it to 403
   and tell nothing else. `start` never rebinds a session.
