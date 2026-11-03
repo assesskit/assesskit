@@ -173,6 +173,12 @@ sizes and ratios to a filter of the caller. The [security checks](#security-chec
 inflated, so the reader owns the directory. The inflater is the library's, fed in steps of 8 KiB, so that the reader counts the
 output as it comes.
 
+`@zip.js/zip.js` 2.24.0, which interopkit's `course-launch` reads cmi5 packages with, recovers a count that wrapped past
+65,535, but its reader is asynchronous: the entries and the bytes of each come through promises. `readPackage` is synchronous
+(`package.ts`), and so are the resolvers that `packageResolvers` builds over `file(path)` (`Resolvers`), which the engine calls
+inside `start` and `apply`: the engine is a synchronous reducer, and an asynchronous reader would make every step of it
+asynchronous. The reader stays, with the inflater of `fflate`.
+
 ### Security checks
 
 | Threat                                | Control                                                                                                                                                                  | Error                                       |

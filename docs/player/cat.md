@@ -63,6 +63,22 @@ flowchart TD
   i -->|"plugs in through ports"| p["the player: LtiLogin, forward.log,<br/>sessionScore, createToolScoreIntake"]
 ```
 
+## Why the token request is written here
+
+The token request is the client credentials grant with HTTP Basic (RFC 6749 sections 2.3.1 and 4.4): one `POST`, and a check
+that the answer holds a bearer `access_token`. interopkit's OAuth clients make it with `oauth4webapi` 3.8.8, and here that
+library would cost more than the request it replaces:
+
+| Measure                                                               | Written here                                       | With `oauth4webapi` 3.8.8                                                                                                        |
+| --------------------------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `@assesskit/player/cat-rest` after gzip ([size](size.md))             | 14,475 bytes                                       | 18,804 bytes, above its budget of 18,000                                                                                         |
+| What the host's `fetch` returns                                       | `ok`, `status`, `text()`, and `type` if it has one | `headers` too: the library reads `content-type` before it parses an OAuth error (section 5.2), and `WWW-Authenticate` of a `401` |
+| The timeout, no redirect, the tokens of JSON counted before the parse | In the request                                     | In a wrapper around the library's `fetch`, as long as the request                                                                |
+
+The port asks the host's `fetch` for the least, so a replacement that returns a status and a body, as in the sample below,
+works; the library would need the headers of every answer, or headers that the client makes up. What else it checks, the binding
+does not use: the client reads no clock and leaves `expires_in` aside, and any status but 2xx is a failure with its status and body.
+
 ## With the runtime's engine
 
 The delivery engine of the runtime makes the session requests. A deployment creates the sections once, and the delivery engine
