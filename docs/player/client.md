@@ -1,16 +1,17 @@
 # Client
 
-`@assesskit/player/client` has the two session clients that the player mounts against. Both implement `SessionClient`
-of the [protocol](protocol.md#the-session-client), so the player never knows the mode. The browser code holds no answer
-key in an exam: the remote session imports `viewFromJson`, `actionToJson` and `parseCandidateAction` from
-`@assesskit/runtime/delivery/wire`, which reaches no file of the engine, and a test bundles the player and the remote session
-and fails if any file of the engine has code in the first load. Only `createLocalSession` loads the engine, with `import()`
-at its first call on a page ([size](size.md#the-first-load-of-a-client)).
+The player mounts against one of two session clients, each a subpath of its own: the remote session of an exam in
+`@assesskit/player/client`, and the local session of practice in `@assesskit/player/client/local`. Both implement
+`SessionClient` of the [protocol](protocol.md#the-session-client), so the player never knows the mode, and a page imports
+only the client it runs. The browser code holds no answer key in an exam: the remote session imports `viewFromJson`,
+`actionToJson` and `parseCandidateAction` from `@assesskit/runtime/delivery/wire`, which reaches no file of the engine, and a
+test bundles the player and the remote session and fails if any file of the engine has code in the first load. Only
+`createLocalSession` loads the engine, with `import()` at its first call on a page ([size](size.md#the-first-load-of-a-client)).
 
-| Client                | Mode     | Where the engine runs | Keys on the device | Host side of the session |
-| --------------------- | -------- | --------------------- | ------------------ | ------------------------ |
-| `createRemoteSession` | exam     | the server            | no                 | the session host         |
-| `createLocalSession`  | practice | the device            | yes, by design     | `host`                   |
+| Client                | Subpath                          | Mode     | Where the engine runs | Keys on the device | Host side of the session |
+| --------------------- | -------------------------------- | -------- | --------------------- | ------------------ | ------------------------ |
+| `createRemoteSession` | `@assesskit/player/client`       | exam     | the server            | no                 | the session host         |
+| `createLocalSession`  | `@assesskit/player/client/local` | practice | the device            | yes, by design     | `host`                   |
 
 ```mermaid
 sequenceDiagram
@@ -90,7 +91,7 @@ client.close();
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
-import { createLocalSession } from "@assesskit/player/client";
+import { createLocalSession } from "@assesskit/player/client/local";
 
 const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
     identifier="q1" title="Question" adaptive="false" time-dependent="false">
@@ -213,7 +214,7 @@ sequenceDiagram
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
 import { single } from "@assesskit/runtime/values";
-import { createLocalSession } from "@assesskit/player/client";
+import { createLocalSession } from "@assesskit/player/client/local";
 
 const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
     identifier="essay" title="Essay" adaptive="false" time-dependent="false">

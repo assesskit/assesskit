@@ -114,6 +114,9 @@ that the player needs and the runtime lacks is a change in the runtime, with its
   forms of views and actions from `@assesskit/runtime/delivery/wire` and only types from `@assesskit/runtime/delivery`, whose
   index reaches the engine: esbuild splits code by file, so a page that imports the index and also loads the engine with
   `import()` loads the whole engine first.
+- The remote session is `@assesskit/player/client` and the local session `@assesskit/player/client/local`: a part that a page
+  uses alone is a subpath of its own, so that an exam page and a practice page each import only what they run, in every
+  bundler.
 - `scripts/measurekit.lock.json` and `scripts/interopkit.lock.json` change with the library that an example needs.
 - The JSON of the bodies of the CAT REST binding is written once, in `packages/player/src/cat-rest/binding.ts`, and the client
   and the handler both use it.

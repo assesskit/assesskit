@@ -72,7 +72,7 @@ describe("the exam bundle", () => {
     expect(inputs.some((path) => path.endsWith("client/remote.ts"))).toBe(true);
     expect(inputs.some((path) => path.endsWith("player/delivery/mount.ts"))).toBe(true);
     expect(inputs.some((path) => path.endsWith("delivery/view-json.ts"))).toBe(true);
-    expect(inputs.some((path) => path.endsWith("client/local.ts"))).toBe(false);
+    expect(inputs.some((path) => path.includes("/client/local/"))).toBe(false);
     expect(engineFilesIn(inputs)).toEqual([]);
   });
 
@@ -98,7 +98,7 @@ describe("the exam bundle", () => {
 
   it("holds the engine in what a page that makes a local session loads on demand, which is how the check sees it", async () => {
     const { inputs, onDemand } = await bundle(`
-      import { createLocalSession } from "./client/index.ts";
+      import { createLocalSession } from "./client/local/index.ts";
       export { createLocalSession };
     `);
     expect(engineFilesIn(onDemand)).toContain("delivery/engine.ts");
@@ -106,7 +106,7 @@ describe("the exam bundle", () => {
   });
 
   it("holds none of the engine in the first load of a page with both sessions, and reads views with the wire module", async () => {
-    const inputs = await bundled('export * from "./client/index.ts";');
+    const inputs = await bundled('export * from "./client/index.ts"; export * from "./client/local/index.ts";');
     expect(inputs).toContain(resolve(RUNTIME, "delivery/view-json.ts"));
     expect(inputs).toContain(resolve(RUNTIME, "delivery/action-json.ts"));
     expect(engineFilesIn(inputs)).toEqual([]);
@@ -161,7 +161,7 @@ describe("the item bundle", () => {
 
 describe("the practice bundle", () => {
   const practice = bundled(`
-    import { createLocalSession } from "./client/index.ts";
+    import { createLocalSession } from "./client/local/index.ts";
     import { toSubmission, toSupplyScores } from "./scoring/index.ts";
     import { deployCatSections } from "./cat/index.ts";
     export { createLocalSession, toSubmission, toSupplyScores, deployCatSections };

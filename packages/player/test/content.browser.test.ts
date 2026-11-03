@@ -6,7 +6,7 @@ import { single } from "@assesskit/runtime/values";
 import { parseXml, type XmlElement } from "@assesskit/runtime/xml";
 import { afterEach, describe, expect, inject, it } from "vitest";
 import { userEvent } from "vitest/browser";
-import { createLocalSession } from "../src/client/index.js";
+import { createLocalSession } from "../src/client/local/index.js";
 import { EN_MESSAGES } from "../src/index.js";
 import { enableSorting } from "../src/player/content/internal.js";
 import {

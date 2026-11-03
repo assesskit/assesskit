@@ -8,6 +8,7 @@
       "entry": [
         "src/index.ts",
         "src/*/index.ts",
+        "src/client/local/index.ts",
         "src/player/pci/frame/bridge.ts",
         "src/player/recording/worklet/recorder-worklet.ts"
       ],

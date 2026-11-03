@@ -36,7 +36,7 @@ The sample mounts the player on a preview of one item, which the device runs:
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
-import { createLocalSession } from "@assesskit/player/client";
+import { createLocalSession } from "@assesskit/player/client/local";
 import { mountDelivery } from "@assesskit/player/player";
 import css from "@assesskit/player/player.css?inline"; // any bundler that imports a file as text
 
@@ -194,7 +194,7 @@ The host waits for `settled()` before it sends an action that submits or leaves 
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
-import { createLocalSession } from "@assesskit/player/client";
+import { createLocalSession } from "@assesskit/player/client/local";
 import { mountItem } from "@assesskit/player/player";
 import css from "@assesskit/player/player.css?inline"; // any bundler that imports a file as text
 

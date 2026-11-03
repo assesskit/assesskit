@@ -18,6 +18,7 @@ async function modules(): Promise<Record<string, object>> {
   return {
     "@assesskit/player": await import("../src/index.js"),
     "@assesskit/player/client": await import("../src/client/index.js"),
+    "@assesskit/player/client/local": await import("../src/client/local/index.js"),
     "@assesskit/player/player": await import("../src/player/index.js"),
     "@assesskit/player/player.css?inline": { default: PLAYER_CSS },
     "@assesskit/runtime/asi": await import("@assesskit/runtime/asi"),

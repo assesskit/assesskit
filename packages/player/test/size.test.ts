@@ -67,20 +67,32 @@ describe("every entry point alone", () => {
 });
 
 describe("the size of what a page loads", () => {
-  it("keeps the engine of the runtime out of the first load of a client, which loads it on demand", async () => {
+  it("keeps the engine out of the client of an exam page, which loads nothing on demand", async () => {
     const { inputs, onDemand } = await entry("@assesskit/player/client");
+    expect(inputs.some(isProcessing)).toBe(false);
+    expect(onDemand).toEqual([]);
+  });
+
+  it("keeps the engine out of the first load of the local session, which loads it on demand", async () => {
+    const { inputs, onDemand } = await entry("@assesskit/player/client/local");
     expect(inputs.some(isProcessing)).toBe(false);
     expect(onDemand.some(isProcessing)).toBe(true);
   });
 
-  it("keeps the engine out of an exam page, which imports only the remote session from the client", async () => {
-    const { inputs, gzip } = await bundle('export { createRemoteSession } from "./client/index.ts";', { minify: true });
+  it("keeps the engine out of the first load of a page with both sessions", async () => {
+    const { inputs } = await bundle('export * from "./client/index.ts"; export * from "./client/local/index.ts";', {
+      minify: true,
+    });
     expect(inputs.some(isProcessing)).toBe(false);
-    expect(gzip, "The gzipped bytes of the first load of createRemoteSession").toBeLessThan(SIZE_BUDGETS.remote);
   });
 
-  it("holds no server library and no XML parser in the root, the protocol and the client", async () => {
-    for (const name of ["@assesskit/player", "@assesskit/player/protocol", "@assesskit/player/client"]) {
+  it("holds no server library and no XML parser in the root, the protocol and the clients", async () => {
+    for (const name of [
+      "@assesskit/player",
+      "@assesskit/player/protocol",
+      "@assesskit/player/client",
+      "@assesskit/player/client/local",
+    ]) {
       const { modules } = await entry(name);
       expect(
         modules.filter((module) => ["jose", "uuid", "saxes"].includes(module)),

@@ -36,7 +36,7 @@ import {
   type SessionClient,
   type ViewDocuments,
   viewDocuments,
-} from "../protocol/index.js";
+} from "../../protocol/index.js";
 import {
   type CatAnswerer,
   type CatLoopFailure,
@@ -48,9 +48,8 @@ import {
   MAX_TIMER_DELAY_MS,
   readClock,
   stepAfterIdle,
-} from "../protocol/internal.js";
-import { BROWSER_CLOCK } from "./clock.js";
-import { notifyListeners } from "./notify.js";
+} from "../../protocol/internal.js";
+import { BROWSER_CLOCK, notifyListeners } from "../internal.js";
 
 /** What a {@link LocalStore} saves for a step: the state, and the events of the step. */
 export interface LocalSave {
@@ -252,9 +251,9 @@ function loadEngine(): Promise<typeof import("@assesskit/runtime/delivery")> {
  *
  * @remarks
  * It loads the runtime's engine with `import()` at its first call on a page, so the first load of a page holds none of the
- * engine, whatever else of the client it imports: the remote session reads views and writes actions with
- * `@assesskit/runtime/delivery/wire`, which reaches no file of the engine (docs/player/size.md gives the sizes in four
- * bundlers). The answer keys are on the device, which practice accepts, and its results are never official.
+ * engine. It is the subpath `@assesskit/player/client/local`, apart from the remote session of `@assesskit/player/client`,
+ * so that a page imports only the session it runs (docs/player/size.md gives the sizes in four bundlers). The answer keys
+ * are on the device, which practice accepts, and its results are never official.
  *
  * It stamps each action with the clock and saves the state after each step that is accepted, before it applies the step:
  * an action whose save fails is rejected and changes nothing. It fires a `time` action at each maximum time with

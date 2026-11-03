@@ -5,6 +5,7 @@
     "src/messages/id/index.ts",
     "src/player/index.ts",
     "src/client/index.ts",
+    "src/client/local/index.ts",
     "src/protocol/index.ts",
     "src/scoring/index.ts",
     "src/cat/index.ts",

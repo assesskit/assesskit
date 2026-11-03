@@ -1,7 +1,7 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers, OAuth parameters and JSON fields are those of their specifications.
 
 import { type DeployedCatSection, deployCatSections } from "@assesskit/player/cat";
-import { createLocalSession } from "@assesskit/player/client";
+import { createLocalSession } from "@assesskit/player/client/local";
 import { type CatPort, isSessionEnd, type SectionData } from "@assesskit/runtime/cat";
 import {
   createEngine,

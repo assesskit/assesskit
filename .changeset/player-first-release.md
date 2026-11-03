@@ -79,3 +79,7 @@ breaks to the proctor.
 
 `mountDelivery` and `mountItem` adopt the stylesheets of the test before those of the item, in the content root and in the frames
 of portable custom interactions, and the gate signs the folder that holds them.
+
+The remote session of an exam page is `@assesskit/player/client`, and the local session of practice is
+`@assesskit/player/client/local`, so that a page imports only the session it runs: the client of an exam page holds no engine
+in any bundler, and the local session loads the engine with `import()` at its first call.

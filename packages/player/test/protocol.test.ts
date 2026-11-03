@@ -20,7 +20,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import protocolGuide from "../../../docs/player/protocol.md?raw";
 import readme from "../README.md?raw";
-import { createLocalSession } from "../src/client/index.js";
+import { createLocalSession } from "../src/client/local/index.js";
 import { ServiceError } from "../src/index.js";
 import {
   checkActionEnvelope,

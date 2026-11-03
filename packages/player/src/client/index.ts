@@ -1,20 +1,12 @@
 /**
- * The session clients that the player mounts against: the remote session of exam mode, which talks to a session host
- * with autosave, and the local session of practice, which runs the runtime's engine on the device.
+ * The session client of exam mode: the remote session, which talks to a session host with autosave. The local session of
+ * practice, which runs the runtime's engine on the device, is `@assesskit/player/client/local`.
  *
  * @module @assesskit/player/client
  */
 
 export type { Clock } from "../protocol/index.js";
 export { BROWSER_CLOCK } from "./clock.js";
-export {
-  createLocalSession,
-  type LocalHostSession,
-  type LocalSave,
-  type LocalSession,
-  type LocalSessionOptions,
-  type LocalStore,
-} from "./local.js";
 export {
   AUTOSAVE_MS,
   createRemoteSession,

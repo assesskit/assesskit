@@ -227,7 +227,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/player/client": {
-    gzip: 45_000,
+    gzip: 25_000,
     holds: [
       "player/errors",
       "player/protocol",
@@ -235,14 +235,16 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
       "runtime/delivery",
       "runtime/errors",
       "runtime/interactions",
-      "runtime/package",
       "runtime/pnp",
-      "runtime/random",
       "runtime/values",
       "runtime/xml",
       "valibot",
       "xmlchars",
     ],
+  },
+  "@assesskit/player/client/local": {
+    gzip: 11_000,
+    holds: ["player/errors", "player/protocol", "runtime/checks", "runtime/errors", "runtime/package", "valibot"],
   },
   "@assesskit/player/protocol": {
     gzip: 7_500,
@@ -321,14 +323,12 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
 
 /**
  * The most that a file may take after gzip, in bytes, for the files that a browser loads besides the entry points: the first
- * loads of `mountItem` and of `createRemoteSession`, and the static files that `pnpm build` writes. Each is 1.25 times the size measured, rounded up to
+ * load of `mountItem`, and the static files that `pnpm build` writes. Each is 1.25 times the size measured, rounded up to
  * the next 500 bytes; docs/player/size.md lists the sizes. A budget changes only with the reason in the commit that changes it.
  */
 export const SIZE_BUDGETS = {
   /** `mountItem` of `@assesskit/player/player`, with the code that it shares with `mountDelivery` and none of the chrome. */
   item: 101_000,
-  /** `createRemoteSession` of `@assesskit/player/client` alone, the client of an exam page. */
-  remote: 41_000,
   /** The script of the frame of a portable custom interaction. */
   bridge: 5_000,
   /** RequireJS, which the frame loads. */

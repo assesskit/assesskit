@@ -204,7 +204,7 @@ const delivery = {
     `export { createEngine } from ${DELIVERY};`,
     `export const a = import(${DELIVERY});`,
   ]),
-  local: source(`${SRC}/client/local.ts`, [
+  local: source(`${SRC}/client/local/session.ts`, [
     `import { type CandidateView } from ${DELIVERY};`,
     `import { createEngine } from ${DELIVERY};`,
     `export const a = import(${DELIVERY});`,
@@ -248,7 +248,7 @@ const spread = {
 const SPREAD = "A spread into the arguments of a call throws a RangeError";
 const IMPORTS = "Browser code imports from @assesskit/runtime/delivery only";
 const REEXPORTS = "Browser code re-exports from @assesskit/runtime/delivery only";
-const LOADS = "Only client/local.ts loads @assesskit/runtime/delivery";
+const LOADS = "Only client/local/session.ts loads @assesskit/runtime/delivery";
 
 beforeAll(() => {
   project = mkdtempSync(join(tmpdir(), "player-lint-"));
@@ -397,7 +397,7 @@ describe("browser-delivery-imports.grit", () => {
     expect(messagesFor(delivery.denied, REEXPORTS)).toHaveLength(2);
   });
 
-  it("lets only client/local.ts load @assesskit/runtime/delivery with import()", () => {
+  it("lets only client/local/session.ts load @assesskit/runtime/delivery with import()", () => {
     expect(messagesFor(delivery.denied, LOADS)).toHaveLength(1);
     expect(messagesFor(delivery.local, LOADS)).toEqual([]);
     expect(messagesFor(delivery.local, IMPORTS)).toHaveLength(1);

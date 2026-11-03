@@ -36,6 +36,10 @@
       "types": "./dist/client/index.d.ts",
       "default": "./dist/client/index.js"
     },
+    "./client/local": {
+      "types": "./dist/client/local/index.d.ts",
+      "default": "./dist/client/local/index.js"
+    },
     "./protocol": {
       "types": "./dist/protocol/index.d.ts",
       "default": "./dist/protocol/index.js"

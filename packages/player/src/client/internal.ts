@@ -1,5 +1,5 @@
 /**
- * Helpers of the clients that the tests of the package use.
+ * Helpers that the two clients share and the tests of the package use.
  *
  * @remarks
  * The package does not export them.
@@ -7,3 +7,5 @@
  * @module
  */
 export { assetResolver, UNSIGNED_URL } from "./assets.js";
+export { BROWSER_CLOCK } from "./clock.js";
+export { notifyListeners } from "./notify.js";

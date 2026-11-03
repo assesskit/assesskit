@@ -8,7 +8,8 @@ import {
 import { DataError, SecurityError } from "@assesskit/runtime/errors";
 import { single } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
-import { AUTOSAVE_MS, createLocalSession, createRemoteSession, FLUSH_BEFORE_DEADLINE_MS } from "../src/client/index.js";
+import { AUTOSAVE_MS, createRemoteSession, FLUSH_BEFORE_DEADLINE_MS } from "../src/client/index.js";
+import { createLocalSession } from "../src/client/local/index.js";
 import { ServiceError } from "../src/index.js";
 import type { ActionEnvelope, SessionCallOptions, ViewRequest } from "../src/protocol/index.js";
 import { examDefinition, examFiles, examHost, packageOf } from "./exam-fixture.js";

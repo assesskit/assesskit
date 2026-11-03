@@ -2,7 +2,7 @@ import { type ItemSessionControl, readAsi } from "@assesskit/runtime/asi";
 import type { DeliveryEvent } from "@assesskit/runtime/delivery";
 import { expect } from "vitest";
 import { userEvent } from "vitest/browser";
-import { createLocalSession } from "../src/client/index.js";
+import { createLocalSession } from "../src/client/local/index.js";
 import { mountDelivery } from "../src/player/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
 import { fakeClock } from "./exam-fixture.js";

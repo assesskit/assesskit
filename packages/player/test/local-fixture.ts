@@ -1,6 +1,6 @@
 import type { CandidateAction, CandidateView, DeliveryEvent } from "@assesskit/runtime/delivery";
 import { single } from "@assesskit/runtime/values";
-import type { createLocalSession, LocalStore } from "../src/client/index.js";
+import type { createLocalSession, LocalStore } from "../src/client/local/index.js";
 import type { SessionCallOptions } from "../src/protocol/index.js";
 import { examDefinition, fakeClock } from "./exam-fixture.js";
 

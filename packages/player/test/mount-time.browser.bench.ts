@@ -4,7 +4,7 @@ import ampUpPlayer from "qti3-item-player/dist/qti3Player.umd.min.js?raw";
 import { afterEach, describe, expect, inject, it } from "vitest";
 import { commands } from "vitest/browser";
 import vue from "vue/dist/vue.min.js?raw";
-import { createLocalSession, type LocalStore } from "../src/client/index.js";
+import { createLocalSession, type LocalStore } from "../src/client/local/index.js";
 import { EN_MESSAGES } from "../src/index.js";
 import { mountDelivery, mountItem, mountTools } from "../src/player/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";

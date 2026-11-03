@@ -3,8 +3,9 @@ import { DataError } from "@assesskit/runtime/errors";
 import { single } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BROWSER_CLOCK, createLocalSession, type LocalStore } from "../src/client/index.js";
+import { BROWSER_CLOCK } from "../src/client/index.js";
 import { assetResolver, UNSIGNED_URL } from "../src/client/internal.js";
+import { createLocalSession, type LocalStore } from "../src/client/local/index.js";
 import { ServiceError } from "../src/index.js";
 import { isOfficialResult } from "../src/protocol/index.js";
 import {
