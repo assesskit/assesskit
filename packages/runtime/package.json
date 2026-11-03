@@ -54,6 +54,10 @@
       "types": "./dist/delivery/index.d.ts",
       "default": "./dist/delivery/index.js"
     },
+    "./delivery/wire": {
+      "types": "./dist/delivery/wire.d.ts",
+      "default": "./dist/delivery/wire.js"
+    },
     "./errors": {
       "types": "./dist/errors.d.ts",
       "default": "./dist/errors.js"

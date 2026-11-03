@@ -7,7 +7,7 @@ import { COMMANDS } from "./packages/player/test/fixtures/commands.js";
 const RUNTIME_SOURCES = [
   { find: /^@assesskit\/runtime$/, replacement: resolve(import.meta.dirname, "packages/runtime/src/index.ts") },
   {
-    find: /^@assesskit\/runtime\/(errors|checks)$/,
+    find: /^@assesskit\/runtime\/(errors|checks|delivery\/wire)$/,
     replacement: resolve(import.meta.dirname, "packages/runtime/src/$1.ts"),
   },
   {

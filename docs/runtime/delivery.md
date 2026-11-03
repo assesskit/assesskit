@@ -494,9 +494,9 @@ the view:
 
 The server keeps the state between requests with `serializeState`, fires `{ type: "time", at }` at the `deadlines` of the
 state, and supplies the other actions of the host, `supply-scores` and `cat-response`. A client holds only views, which
-`viewFromJson` reads, and sends actions, which `actionToJson` writes; neither imports engine code, so a bundle of them holds
-no answer key. The seed of a session stays on the server too: selection and shuffles are reproducible from it
-([SECURITY](https://github.com/assesskit/assesskit/blob/main/SECURITY.md)).
+`viewFromJson` reads, and sends actions, which `actionToJson` writes; it imports them from `@assesskit/runtime/delivery/wire`,
+which reaches no file of the engine, so its bundle holds no answer key. The seed of a session stays on the server too:
+selection and shuffles are reproducible from it ([SECURITY](https://github.com/assesskit/assesskit/blob/main/SECURITY.md)).
 
 **Device mode.** The engine and `engine.view` run in the client, with actions passed to `apply` directly and nothing
 converted. The client holds the items with their correct responses, processing and the seed, so the mode is for practice,
@@ -632,7 +632,11 @@ from `ordered`, and the NULL of one type from that of another.
 | `maxSettingListLength` | `256`     | The entries of one list in the settings of a `support-settings` action, nested lists included.             |
 
 Host actions (`time`, `supply-scores`, `cat-response`) never come from a client, and the time of an action is the server's
-`stamp`. `viewFromJson` and `actionToJson` import no engine code, so a browser bundle of them holds none of the answer keys.
+`stamp`. The four functions, `DEFAULT_ACTION_LIMITS` and the types of a view and an action are also the subpath
+`@assesskit/runtime/delivery/wire`, which reaches no file of the engine. A client in a browser imports them from there: a
+bundler that splits code by file, such as esbuild, puts in the first load every file that the page reaches through an import
+and that any of its chunks uses, and `@assesskit/runtime/delivery` reaches the engine, which a practice session on the same
+page loads with `import()` ([size](../player/size.md#the-first-load-of-a-client)).
 [Modes](#modes) says how a server and a device use these forms.
 
 ## Pending work

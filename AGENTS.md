@@ -110,7 +110,10 @@ that the player needs and the runtime lacks is a change in the runtime, with its
 - Dependencies are pinned to exact versions, development ones too; a runtime dependency has its row in
   [SECURITY.md](SECURITY.md#runtime-dependencies).
 - The player gets `AssesskitError` and `DataError` from `@assesskit/runtime/errors` and its checks from
-  `@assesskit/runtime/checks`, never from the root of the runtime, which loads every module.
+  `@assesskit/runtime/checks`, never from the root of the runtime, which loads every module. Its browser folders take the wire
+  forms of views and actions from `@assesskit/runtime/delivery/wire` and only types from `@assesskit/runtime/delivery`, whose
+  index reaches the engine: esbuild splits code by file, so a page that imports the index and also loads the engine with
+  `import()` loads the whole engine first.
 - `scripts/measurekit.lock.json` and `scripts/interopkit.lock.json` change with the library that an example needs.
 - The JSON of the bodies of the CAT REST binding is written once, in `packages/player/src/cat-rest/binding.ts`, and the client
   and the handler both use it.

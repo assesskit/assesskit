@@ -182,18 +182,20 @@ const allowedCalls = source(`${SRC}/player/allowed.ts`, [
 ]);
 
 const DELIVERY = '"@assesskit/runtime/delivery"';
+const WIRE = '"@assesskit/runtime/delivery/wire"';
 const delivery = {
   allowed: source(`${SRC}/player/allowed-delivery.ts`, [
-    `import { actionToJson, viewFromJson } from ${DELIVERY};`,
-    `import { parseCandidateAction, type CandidateView, viewFromJson as read } from ${DELIVERY};`,
+    `import { actionToJson, viewFromJson } from ${WIRE};`,
+    `import { parseCandidateAction, type CandidateView, viewFromJson as read } from ${WIRE};`,
     `import type { CandidateAction, createEngine } from ${DELIVERY};`,
-    `import {\n  actionToJson as write,\n  type CandidateView as View,\n} from ${DELIVERY};`,
+    `import {\n  type CandidateAction as Action,\n  type CandidateView as View,\n} from ${DELIVERY};`,
     `export type { CandidateView as Shown } from ${DELIVERY};`,
+    `export { viewFromJson as readView } from ${WIRE};`,
     'import { container } from "@assesskit/runtime/values";',
   ]),
   denied: source(`${SRC}/client/denied-delivery.ts`, [
     `import { createEngine } from ${DELIVERY};`,
-    `import { viewFromJson, stamp } from ${DELIVERY};`,
+    `import { viewFromJson, type CandidateView } from ${DELIVERY};`,
     `import {\n  actionToJson,\n  createEngine as engine,\n} from ${DELIVERY};`,
     `import * as delivery from ${DELIVERY};`,
     `import delivery2 from ${DELIVERY};`,
@@ -203,7 +205,7 @@ const delivery = {
     `export const a = import(${DELIVERY});`,
   ]),
   local: source(`${SRC}/client/local.ts`, [
-    `import { viewFromJson } from ${DELIVERY};`,
+    `import { type CandidateView } from ${DELIVERY};`,
     `import { createEngine } from ${DELIVERY};`,
     `export const a = import(${DELIVERY});`,
   ]),
@@ -386,7 +388,7 @@ describe("GritQL rules", () => {
 });
 
 describe("browser-delivery-imports.grit", () => {
-  it("lets browser folders import viewFromJson, actionToJson, parseCandidateAction and types from @assesskit/runtime/delivery", () => {
+  it("lets browser folders import types from @assesskit/runtime/delivery, and anything from @assesskit/runtime/delivery/wire", () => {
     expect(messagesFor(delivery.allowed, "Browser code")).toEqual([]);
   });
 

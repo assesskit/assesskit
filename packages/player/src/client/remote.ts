@@ -6,7 +6,7 @@ import {
   type CandidateView,
   parseCandidateAction,
   viewFromJson,
-} from "@assesskit/runtime/delivery";
+} from "@assesskit/runtime/delivery/wire";
 import { DataError, SecurityError } from "@assesskit/runtime/errors";
 import type { Value } from "@assesskit/runtime/values";
 import * as v from "valibot";

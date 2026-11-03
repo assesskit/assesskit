@@ -28,7 +28,7 @@ flowchart LR
   host --> practice --> protocol
   protocol --> base
   host --> runtime
-  client -.->|"viewFromJson, actionToJson"| runtime
+  client -.->|"delivery/wire: viewFromJson, actionToJson"| runtime
 ```
 
 ## Quick start

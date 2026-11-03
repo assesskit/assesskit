@@ -2,9 +2,10 @@
 
 `@assesskit/player/client` has the two session clients that the player mounts against. Both implement `SessionClient`
 of the [protocol](protocol.md#the-session-client), so the player never knows the mode. The browser code holds no answer
-key in an exam: it imports only `viewFromJson` and `actionToJson` from the runtime's `delivery`, and a test bundles the player and
-the remote session and fails if any file of the engine has code in the output. Only `createLocalSession` loads the engine,
-with `import()` at its first call on a page.
+key in an exam: the remote session imports `viewFromJson`, `actionToJson` and `parseCandidateAction` from
+`@assesskit/runtime/delivery/wire`, which reaches no file of the engine, and a test bundles the player and the remote session
+and fails if any file of the engine has code in the first load. Only `createLocalSession` loads the engine, with `import()`
+at its first call on a page ([size](size.md#the-first-load-of-a-client)).
 
 | Client                | Mode     | Where the engine runs | Keys on the device | Host side of the session |
 | --------------------- | -------- | --------------------- | ------------------ | ------------------------ |

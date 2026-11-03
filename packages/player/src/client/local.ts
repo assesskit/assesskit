@@ -251,7 +251,10 @@ function loadEngine(): Promise<typeof import("@assesskit/runtime/delivery")> {
  * `host` offers the host side of the session.
  *
  * @remarks
- * It loads the runtime's engine with `import()` at its first call on a page, so an exam's bundle holds no engine. The answer keys are on the device, which practice accepts, and its results are never official.
+ * It loads the runtime's engine with `import()` at its first call on a page, so the first load of a page holds none of the
+ * engine, whatever else of the client it imports: the remote session reads views and writes actions with
+ * `@assesskit/runtime/delivery/wire`, which reaches no file of the engine (docs/player/size.md gives the sizes in four
+ * bundlers). The answer keys are on the device, which practice accepts, and its results are never official.
  *
  * It stamps each action with the clock and saves the state after each step that is accepted, before it applies the step:
  * an action whose save fails is rejected and changes nothing. It fires a `time` action at each maximum time with

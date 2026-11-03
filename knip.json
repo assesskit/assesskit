@@ -2,7 +2,7 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     "packages/runtime": {
-      "entry": ["src/index.ts", "src/checks.ts", "src/*/index.ts", "src/cli/bin.ts"]
+      "entry": ["src/index.ts", "src/checks.ts", "src/*/index.ts", "src/delivery/wire.ts", "src/cli/bin.ts"]
     },
     "packages/player": {
       "entry": [

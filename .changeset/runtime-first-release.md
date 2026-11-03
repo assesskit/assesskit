@@ -58,3 +58,7 @@ action carries the settings whole, the state keeps them, and the engine refuses 
 falling back to the language and the default where no entry fits.
 
 The view carries the stylesheets of the test as package paths (`TestView.stylesheets`), in every status of the session.
+
+`viewToJson`, `viewFromJson`, `actionToJson`, `parseCandidateAction` and `DEFAULT_ACTION_LIMITS`, the wire forms of a candidate
+view and action, are also `@assesskit/runtime/delivery/wire`, which reaches no file of the engine: a client in a browser
+imports them from there, so that a bundler that splits code by file keeps the engine out of its first load.

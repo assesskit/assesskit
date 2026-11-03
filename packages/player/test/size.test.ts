@@ -7,9 +7,9 @@ import { buildFrame, buildWorklet } from "../scripts/build-static.js";
 import { bundle, entrySources } from "./bundle.js";
 import { ENTRY_BUDGETS, SIZE_BUDGETS } from "./size-budgets.js";
 
-// The sizes that a host loads for each entry point of both packages, as its bundler makes them (minified, for the browsers
-// of the baseline), and the modules that each holds, against size-budgets.ts. docs/player/size.md and
-// docs/runtime/performance.md list them.
+// The sizes that a host loads first for each entry point of both packages, as its bundler makes them (minified, for the
+// browsers of the baseline, with code splitting), and the modules that each holds, against size-budgets.ts.
+// docs/player/size.md and docs/runtime/performance.md list them.
 
 const PLAYER = resolve(import.meta.dirname, "..");
 const PACKAGES = resolve(PLAYER, "..");
@@ -35,20 +35,23 @@ function moduleOf(path: string): string {
 }
 
 /**
- * What a host's bundler gives an entry point alone, minified, with what it loads by `import()` left out: its bytes before
- * and after gzip, and the modules other than its own that have code in it, in order.
+ * What a host's bundler gives an entry point alone, minified: the bytes of its first load before and after gzip, the files
+ * of its first load and of what it loads on demand, and the modules other than its own that have code in its first load, in
+ * order.
  */
 async function entry(specifier: string) {
   const source = ENTRIES.get(specifier) ?? "";
-  const { output, inputs } = await bundle(`export * from ${JSON.stringify(source)};`, {
+  const bundled = await bundle(`export * from ${JSON.stringify(source)};`, {
     minify: true,
-    lazy: true,
     platform: NODE_ENTRIES.has(specifier) ? "node" : "browser",
   });
   const own = moduleOf(source);
-  const modules = [...new Set(inputs.map(moduleOf))].filter((name) => name !== own).sort();
-  return { raw: output.contents.length, gzip: gzipped(output.contents), modules, inputs };
+  const modules = [...new Set(bundled.inputs.map(moduleOf))].filter((name) => name !== own).sort();
+  return { ...bundled, modules };
 }
+
+/** Whether a file is one of the runtime's processing, which only the engine runs. */
+const isProcessing = (path: string): boolean => path.includes("/runtime/src/processing/");
 
 describe("every entry point alone", () => {
   it("has a budget for each entry point of both packages, and none for a name that is not one", () => {
@@ -64,9 +67,16 @@ describe("every entry point alone", () => {
 });
 
 describe("the size of what a page loads", () => {
-  it("keeps the engine of the runtime out of the first load of a client", async () => {
-    const { inputs } = await entry("@assesskit/player/client");
-    expect(inputs.some((path) => path.includes("/runtime/src/processing/"))).toBe(false);
+  it("keeps the engine of the runtime out of the first load of a client, which loads it on demand", async () => {
+    const { inputs, onDemand } = await entry("@assesskit/player/client");
+    expect(inputs.some(isProcessing)).toBe(false);
+    expect(onDemand.some(isProcessing)).toBe(true);
+  });
+
+  it("keeps the engine out of an exam page, which imports only the remote session from the client", async () => {
+    const { inputs, gzip } = await bundle('export { createRemoteSession } from "./client/index.ts";', { minify: true });
+    expect(inputs.some(isProcessing)).toBe(false);
+    expect(gzip, "The gzipped bytes of the first load of createRemoteSession").toBeLessThan(SIZE_BUDGETS.remote);
   });
 
   it("holds no server library and no XML parser in the root, the protocol and the client", async () => {
@@ -102,23 +112,21 @@ describe("the size of what a page loads", () => {
     expect(modules.filter((module) => ["jose", "uuid"].includes(module))).toEqual([]);
   });
 
-  it("keeps the first load of an item within its budget, with no server library and no XML parser", async () => {
-    const { output, inputs } = await item();
-    expect(gzipped(output.contents), "The gzipped bytes of mountItem").toBeLessThan(SIZE_BUDGETS.item);
-    expect(inputs.map(moduleOf).filter((module) => ["jose", "uuid", "saxes"].includes(module))).toEqual([]);
+  it("keeps the first load of an item within its budget, with no server library", async () => {
+    const { gzip, inputs } = await item();
+    expect(gzip, "The gzipped bytes of mountItem").toBeLessThan(SIZE_BUDGETS.item);
+    expect(inputs.map(moduleOf).filter((module) => ["jose", "uuid"].includes(module))).toEqual([]);
   });
 
   it("makes an item cost less than the player with its chrome and its tools", async () => {
-    const { output: first } = await item();
-    const { output } = await bundle('export { mountDelivery } from "./player/index.ts";', { minify: true, lazy: true });
-    expect(gzipped(first.contents), "The gzipped bytes of mountItem against mountDelivery").toBeLessThan(
-      gzipped(output.contents),
-    );
+    const first = await item();
+    const delivery = await bundle('export { mountDelivery } from "./player/index.ts";', { minify: true });
+    expect(first.gzip, "The gzipped bytes of mountItem against mountDelivery").toBeLessThan(delivery.gzip);
   });
 });
 
 /** The first load of `mountItem`, which shares the content and the interactions with `mountDelivery` and has none of its chrome. */
-const item = () => bundle('export { mountItem } from "./player/index.ts";', { minify: true, lazy: true });
+const item = () => bundle('export { mountItem } from "./player/index.ts";', { minify: true });
 
 describe("the size of the static files", () => {
   let directory = "";

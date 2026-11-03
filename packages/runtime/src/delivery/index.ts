@@ -15,13 +15,6 @@
  * @module @assesskit/runtime/delivery
  */
 export type { Action, CandidateAction, HostAction } from "./action.js";
-export {
-  type ActionLimits,
-  actionToJson,
-  DEFAULT_ACTION_LIMITS,
-  type ParseCandidateActionOptions,
-  parseCandidateAction,
-} from "./action-json.js";
 export { ADJUSTABLE_SETTINGS } from "./adjustable-settings.js";
 export type {
   CandidateItem,
@@ -116,4 +109,12 @@ export {
   type TestStructure,
 } from "./structure.js";
 export { additionalTestingTime, type EffectiveTimeLimits, timeLimits } from "./time-limits.js";
-export { viewFromJson, viewToJson } from "./view-json.js";
+export {
+  type ActionLimits,
+  actionToJson,
+  DEFAULT_ACTION_LIMITS,
+  type ParseCandidateActionOptions,
+  parseCandidateAction,
+  viewFromJson,
+  viewToJson,
+} from "./wire.js";

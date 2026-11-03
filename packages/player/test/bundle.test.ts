@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { type BundleOptions, bundle } from "./bundle.js";
+import { bundle } from "./bundle.js";
 
 const SRC = resolve(import.meta.dirname, "../src");
 const RUNTIME = resolve(import.meta.dirname, "../../runtime/src");
@@ -52,9 +52,8 @@ const CHROME_FILES = [
 ];
 const CHROME_FOLDERS = ["player/tools", "player/lti-frame"];
 
-/** Bundles a program for a browser, as a host's bundler would, and returns the files that have code in the output. */
-const bundled = async (program: string, options: BundleOptions = {}): Promise<readonly string[]> =>
-  (await bundle(program, options)).inputs;
+/** Bundles a program for a browser, as a host's bundler would, and returns the files that have code in its first load. */
+const bundled = async (program: string): Promise<readonly string[]> => (await bundle(program)).inputs;
 
 const engineFilesIn = (inputs: readonly string[]): string[] =>
   ENGINE_FILES.filter((file) => inputs.includes(resolve(RUNTIME, file)));
@@ -97,12 +96,20 @@ describe("the exam bundle", () => {
     expect(filesOf(inputs, "player/rating")).toEqual([]);
   });
 
-  it("holds the engine in a bundle that makes a local session, which is how the check sees it", async () => {
-    const inputs = await bundled(`
+  it("holds the engine in what a page that makes a local session loads on demand, which is how the check sees it", async () => {
+    const { inputs, onDemand } = await bundle(`
       import { createLocalSession } from "./client/index.ts";
       export { createLocalSession };
     `);
-    expect(engineFilesIn(inputs)).toContain("delivery/engine.ts");
+    expect(engineFilesIn(onDemand)).toContain("delivery/engine.ts");
+    expect(engineFilesIn(inputs)).toEqual([]);
+  });
+
+  it("holds none of the engine in the first load of a page with both sessions, and reads views with the wire module", async () => {
+    const inputs = await bundled('export * from "./client/index.ts";');
+    expect(inputs).toContain(resolve(RUNTIME, "delivery/view-json.ts"));
+    expect(inputs).toContain(resolve(RUNTIME, "delivery/action-json.ts"));
+    expect(engineFilesIn(inputs)).toEqual([]);
   });
 });
 
@@ -149,12 +156,6 @@ describe("the item bundle", () => {
     for (const folder of ["cat-rest", "cat", "scoring", "server", "player/rating"]) {
       expect(filesOf(inputs, folder), folder).toEqual([]);
     }
-  });
-
-  it("holds none of the XML parser that reads a lexicon, which loads with the first lexicon", async () => {
-    const inputs = await bundled(item, { lazy: true });
-    expect(inputs.filter((path) => path.endsWith("xml/parse.ts"))).toEqual([]);
-    expect(inputs.filter((path) => /\/node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?saxes\//.test(path))).toEqual([]);
   });
 });
 

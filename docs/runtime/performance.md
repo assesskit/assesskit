@@ -138,8 +138,9 @@ state, and the outcome processing is the same work over the same plan.
 
 ## Entry points
 
-What a host's bundler adds for each subpath of the runtime imported alone: esbuild, minified, for the browsers of the
-[player's baseline](../player/baseline.md) (Node.js 22 for `node` and `cli`), with what the subpath loads by `import()` left out.
+What a host's bundler adds for each subpath of the runtime imported alone: esbuild with code splitting, minified, for the
+browsers of the [player's baseline](../player/baseline.md) (Node.js 22 for `node` and `cli`). No subpath of the runtime loads
+anything with `import()`, so each is one chunk.
 `size.test.ts` of the player bundles every subpath that the `exports` of the manifest name, and fails when one is above its
 budget after gzip or holds a module that its row below does not name, so that an import which pulls one module into another
 shows in the change that makes it. The player's entry points are in [size](../player/size.md).
@@ -147,37 +148,42 @@ shows in the change that makes it. The player's entry points are in [size](../pl
 ```mermaid
 xychart-beta
   title "Subpaths after gzip, in kilobytes"
-  x-axis ["errors", "checks", "content", "pci", "cat", "xml", "values", "interactions", "metadata", "usage", "results", "pnp", "processing", "asi", "package", "validate", "delivery", "root"]
+  x-axis ["errors", "checks", "content", "pci", "cat", "xml", "values", "interactions", "delivery/wire", "metadata", "usage", "results", "pnp", "processing", "asi", "package", "validate", "delivery", "root"]
   y-axis "kB" 0 --> 170
-  bar [0.2, 4.0, 8.1, 8.7, 9.3, 16.9, 18.4, 17.2, 18.8, 19.2, 22.0, 22.1, 26.6, 39.3, 51.2, 72.9, 117.5, 166.7]
+  bar [0.2, 4.0, 8.2, 8.7, 9.3, 16.9, 18.4, 17.2, 17.8, 18.8, 19.2, 22.0, 22.1, 26.6, 39.3, 51.2, 72.9, 118.0, 167.5]
 ```
 
-| Subpath        | Bytes     | Gzip    | Budget  | Holds besides its own code, `errors`, `checks` and valibot                                                                                                               |
-| -------------- | --------- | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `.`            | 663,272   | 166,690 | 208,000 | Every module but `node` and `cli`; fflate, saxes, xmlchars                                                                                                               |
-| `asi`          | 235,113   | 39,319  | 49,000  | `values`, `xml`; saxes, xmlchars                                                                                                                                         |
-| `cat`          | 28,642    | 9,252   | 12,000  | `metadata`, `results`, `values`                                                                                                                                          |
-| `checks`       | 13,522    | 4,006   | 5,500   | Nothing                                                                                                                                                                  |
-| `content`      | 22,938    | 8,143   | 10,500  | `asi`, `values`                                                                                                                                                          |
-| `delivery`     | 502,161   | 117,546 | 140,500 | `asi`, `cat`, `content`, `interactions`, `package`, `pnp`, `processing`, `random`, `validate`, `values`, `xml`; xmlchars                                                 |
-| `errors`       | 477       | 225     | 500     | Nothing                                                                                                                                                                  |
-| `interactions` | 54,608    | 17,198  | 21,500  | `asi`, `random`, `values`                                                                                                                                                |
-| `pci`          | 26,986    | 8,726   | 11,000  | `values`                                                                                                                                                                 |
-| `pnp`          | 74,124    | 22,090  | 27,500  | `xml`; saxes, xmlchars                                                                                                                                                   |
-| `results`      | 72,631    | 22,028  | 27,500  | `values`, `xml`; saxes, xmlchars                                                                                                                                         |
-| `usage`        | 62,966    | 19,218  | 24,000  | `values`, `xml`; saxes, xmlchars                                                                                                                                         |
-| `validate`     | 355,427   | 72,906  | 91,000  | `asi`, `interactions`, `metadata`, `package`, `pci`, `pnp`, `processing`, `results`, `values`, `xml`; saxes, xmlchars                                                    |
-| `metadata`     | 62,685    | 18,789  | 23,500  | `asi`, `xml`; saxes, xmlchars                                                                                                                                            |
-| `package`      | 265,369   | 51,160  | 64,000  | `asi`, `metadata`, `values`, `xml`; fflate, saxes, xmlchars                                                                                                              |
-| `processing`   | 87,333    | 26,601  | 33,500  | `asi`, `random`, `values`                                                                                                                                                |
-| `values`       | 57,813    | 18,412  | 23,500  | Nothing                                                                                                                                                                  |
-| `xml`          | 56,307    | 16,871  | 21,000  | saxes, xmlchars                                                                                                                                                          |
-| `node`         | 1,615,533 | 500,784 | 626,000 | `asi`, `metadata`, `package`, `validate`, `values`, `xml`; fflate, libxml2-wasm, saxes, xmlchars                                                                         |
-| `cli`          | 1,773,220 | 546,104 | 682,500 | `asi`, `interactions`, `metadata`, `node`, `package`, `pci`, `pnp`, `processing`, `results`, `usage`, `validate`, `values`, `xml`; fflate, libxml2-wasm, saxes, xmlchars |
+| Subpath         | Bytes     | Gzip    | Budget  | Holds besides its own code, `errors`, `checks` and valibot                                                                                                               |
+| --------------- | --------- | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `.`             | 664,638   | 167,471 | 208,000 | Every module but `node` and `cli`; fflate, saxes, xmlchars                                                                                                               |
+| `asi`           | 235,113   | 39,319  | 49,000  | `values`, `xml`; saxes, xmlchars                                                                                                                                         |
+| `cat`           | 28,642    | 9,252   | 12,000  | `metadata`, `results`, `values`                                                                                                                                          |
+| `checks`        | 13,522    | 4,006   | 5,500   | Nothing                                                                                                                                                                  |
+| `content`       | 23,276    | 8,241   | 10,500  | `asi`, `values`                                                                                                                                                          |
+| `delivery`      | 503,363   | 117,997 | 140,500 | `asi`, `cat`, `content`, `interactions`, `package`, `pnp`, `processing`, `random`, `validate`, `values`, `xml`; xmlchars                                                 |
+| `delivery/wire` | 57,252    | 17,791  | 22,500  | `interactions`, `pnp`, `values`, `xml`; xmlchars                                                                                                                         |
+| `errors`        | 477       | 225     | 500     | Nothing                                                                                                                                                                  |
+| `interactions`  | 54,608    | 17,198  | 21,500  | `asi`, `random`, `values`                                                                                                                                                |
+| `pci`           | 26,986    | 8,726   | 11,000  | `values`                                                                                                                                                                 |
+| `pnp`           | 74,124    | 22,090  | 27,500  | `xml`; saxes, xmlchars                                                                                                                                                   |
+| `results`       | 72,631    | 22,028  | 27,500  | `values`, `xml`; saxes, xmlchars                                                                                                                                         |
+| `usage`         | 62,966    | 19,218  | 24,000  | `values`, `xml`; saxes, xmlchars                                                                                                                                         |
+| `validate`      | 355,320   | 72,905  | 91,000  | `asi`, `interactions`, `metadata`, `package`, `pci`, `pnp`, `processing`, `results`, `values`, `xml`; saxes, xmlchars                                                    |
+| `metadata`      | 62,685    | 18,789  | 23,500  | `asi`, `xml`; saxes, xmlchars                                                                                                                                            |
+| `package`       | 265,369   | 51,160  | 64,000  | `asi`, `metadata`, `values`, `xml`; fflate, saxes, xmlchars                                                                                                              |
+| `processing`    | 87,333    | 26,601  | 33,500  | `asi`, `random`, `values`                                                                                                                                                |
+| `values`        | 57,813    | 18,412  | 23,500  | Nothing                                                                                                                                                                  |
+| `xml`           | 56,307    | 16,871  | 21,000  | saxes, xmlchars                                                                                                                                                          |
+| `node`          | 1,615,533 | 500,784 | 626,000 | `asi`, `metadata`, `package`, `validate`, `values`, `xml`; fflate, libxml2-wasm, saxes, xmlchars                                                                         |
+| `cli`           | 1,773,113 | 546,076 | 682,500 | `asi`, `interactions`, `metadata`, `node`, `package`, `pci`, `pnp`, `processing`, `results`, `usage`, `validate`, `values`, `xml`; fflate, libxml2-wasm, saxes, xmlchars |
 
 `errors` holds nothing else, and `checks` holds only `errors` and valibot. A module that reads XML holds the parser (`xml`,
 saxes and xmlchars). A module that walks the model of a document (`asi`, `package`, `validate`, `delivery`) holds the element
 table of `asi`, which is most of its 234 kB; `content`, `interactions` and `processing` hold a few hundred bytes of `asi`, its
-guards and constants. The engine of `delivery` holds the static gate of the content (`validate`) and processing, and builds
+guards and constants. `delivery/wire` is the wire forms of `delivery` alone (`viewToJson`, `viewFromJson`, `actionToJson`,
+`parseCandidateAction`), which `delivery` re-exports: no file of the engine is reachable from it, so a client that imports it
+and also loads the engine with `import()` keeps the engine out of its first load
+([size](../player/size.md#the-first-load-of-a-client)). The engine of `delivery` holds the static gate of the content
+(`validate`) and processing, and builds
 the test of an item delivered alone and the item of a link to a tool as models, so that it holds no XML parser. libxml2-wasm
 holds libxml2 compiled to WebAssembly, 963 kB of `node` and `cli`.
