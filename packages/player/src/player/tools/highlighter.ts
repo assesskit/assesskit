@@ -1,4 +1,4 @@
-import { html, uniqueId } from "../internal.js";
+import { html, replaceAll, uniqueId } from "../internal.js";
 import type { OpenTool, ToolContext } from "./context.js";
 import { createPanel } from "./panel.js";
 import { type Box, joinLines, linesOf, measure, type Word, wordAt, wordsOf } from "./word-layout.js";
@@ -139,14 +139,14 @@ export function openHighlighter(context: ToolContext, close: () => void): OpenTo
       anchor !== undefined && spot !== undefined && anchor.part === spot.part
         ? joinLines(parts[spot.part]?.boxes ?? [], Math.min(anchor.word, spot.word), Math.max(anchor.word, spot.word))
         : [];
-    bands.replaceChildren(
+    replaceAll(bands, [
       ...parts.flatMap((part) =>
         runsOf(marked(part)).flatMap(([first, last]) =>
           joinLines(part.boxes, first, last).map((box) => band(box, "ak-mark")),
         ),
       ),
       ...pending.map((box) => band(box, "ak-mark ak-mark-pending")),
-    );
+    ]);
     const box = spot === undefined ? undefined : parts[spot.part]?.boxes[spot.word]?.[0];
     caret.hidden = box === undefined;
     if (box !== undefined) {
@@ -174,8 +174,9 @@ export function openHighlighter(context: ToolContext, close: () => void): OpenTo
 
   const renderList = (): void => {
     const runs = parts.flatMap((part) => runsOf(marked(part)).map(([first, last]) => ({ part, first, last })));
-    list.replaceChildren(
-      ...runs.map(({ part, first, last }) => {
+    replaceAll(
+      list,
+      runs.map(({ part, first, last }) => {
         const text = textOf(part, first, last);
         const remove = html(
           "button",

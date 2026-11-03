@@ -322,10 +322,11 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
     clearTimeout(timer);
     const times = engine.deadlines(state).flatMap((each) => (each.kind === "max-time" ? [each.at] : []));
     if (closed || times.length === 0) return;
-    const delay = Math.max(0, Math.min(...times) - now());
+    const nearest = times.reduce((least, each) => Math.min(least, each));
+    const delay = Math.max(0, nearest - now());
     timer = setTimeout(
       () => {
-        if (Math.min(...times) > now()) arm();
+        if (nearest > now()) arm();
         else
           void run({ type: "time" }, undefined)
             .then(settleTimer)

@@ -76,10 +76,10 @@ export function pronounce(
   lexicons: readonly Lexicon[],
 ): readonly (string | Pronounced)[] {
   const applicable = lexicons.filter((lexicon) => primaryLanguage(lexicon.language) === primaryLanguage(language));
-  const longest = Math.max(
-    0,
-    ...applicable.flatMap(({ entries }) => [...entries.keys()].map((words) => words.split(" ").length)),
-  );
+  let longest = 0;
+  for (const { entries } of applicable) {
+    for (const words of entries.keys()) longest = Math.max(longest, words.split(" ").length);
+  }
   if (longest === 0) return [text];
   const tokens = [...text.matchAll(/\S+/gu)].map((match) => ({
     start: match.index,

@@ -3,7 +3,7 @@ import { checkResponse, type InteractionDescriptor } from "@assesskit/runtime/in
 import { type FileValue, single } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { clockText, html, uniqueId } from "../internal.js";
+import { clockText, html, replaceAll, uniqueId } from "../internal.js";
 import { chooseRecording, type Recording, type RecordingMethod, startRecording } from "../recording/index.js";
 import { createInteraction, InteractionElement } from "./element.js";
 import { violationText } from "./hints.js";
@@ -538,8 +538,9 @@ export class UploadInteractionElement extends InteractionElement {
     if (!same || this.#stale) {
       this.#shown = visible;
       this.#stale = false;
-      this.#stored.replaceChildren(
-        ...(visible === undefined || services === undefined ? [] : this.#storedParts(visible, services, messages)),
+      replaceAll(
+        this.#stored,
+        visible === undefined || services === undefined ? [] : this.#storedParts(visible, services, messages),
       );
     }
     for (const button of this.#stored.querySelectorAll("button")) button.disabled = this.disabled;

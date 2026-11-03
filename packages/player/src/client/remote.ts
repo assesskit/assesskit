@@ -168,7 +168,7 @@ export function createRemoteSession(
       timer.remaining !== undefined && timer.remaining > 0 && !timer.late ? [timer.remaining] : [],
     );
     if (closed || remaining.length === 0) return;
-    const nearest = Math.min(...remaining);
+    const nearest = remaining.reduce((least, each) => Math.min(least, each));
     if (nearest > MAX_TIMER_DELAY_MS) return;
     flushTimer = setTimeout(() => report(flush()), Math.max(0, nearest - FLUSH_BEFORE_DEADLINE_MS));
     syncTimer = setTimeout(() => report(sync()), nearest);

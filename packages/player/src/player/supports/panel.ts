@@ -143,7 +143,7 @@ export function mountSupportPanel(host: HTMLElement, options: SupportPanelOption
         }
         return entry.item;
       });
-      items.push(...(settings?.update(supports) ?? []));
+      for (const item of settings?.update(supports) ?? []) items.push(item);
       // Only an item that is out of place moves, so that the button that has the focus keeps it.
       for (const [index, item] of items.entries()) {
         if (list.children[index] !== item) list.insertBefore(item, list.children[index] ?? null);

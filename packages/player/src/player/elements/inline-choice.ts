@@ -2,7 +2,7 @@ import type { InlineChoiceInteraction } from "@assesskit/runtime/asi";
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html, uniqueId } from "../internal.js";
+import { html, replaceAll, uniqueId } from "../internal.js";
 import { createInteraction, InteractionElement } from "./element.js";
 import { Notes } from "./notes.js";
 import { nameOf } from "./parts.js";
@@ -59,10 +59,10 @@ export class InlineChoiceInteractionElement extends InteractionElement {
   protected override configure(_descriptor: InteractionDescriptor, messages: Messages): void {
     const prompt = this.#prompt ?? messages.inlineChoicePrompt;
     if (!this.#menu.hasAttribute("aria-labelledby")) this.#menu.setAttribute("aria-label", prompt);
-    this.#menu.replaceChildren(
+    replaceAll(this.#menu, [
       html("option", { value: "" }, prompt),
       ...this.#choices.map(({ identifier, text }) => html("option", { value: identifier }, text)),
-    );
+    ]);
   }
 
   protected override sync(): void {

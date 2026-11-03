@@ -3,7 +3,7 @@ import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import { single } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html } from "../internal.js";
+import { appendAll, html } from "../internal.js";
 import {
   CAPTION_KINDS,
   DESCRIPTION_KINDS,
@@ -88,7 +88,7 @@ export class MediaInteractionElement extends InteractionElement {
     this.notes = new Notes();
     this.setAttribute("role", "group");
     nameByPrompt(this, prompt);
-    this.append(...(prompt === undefined ? [] : [prompt.element]), ...rendered, this.notes.element);
+    appendAll(this, [...(prompt === undefined ? [] : [prompt.element]), ...rendered, this.notes.element]);
   }
 
   protected override configure(_descriptor: InteractionDescriptor, messages: Messages): void {

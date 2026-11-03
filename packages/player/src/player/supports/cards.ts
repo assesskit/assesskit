@@ -1,7 +1,7 @@
 import type { SupportView } from "@assesskit/runtime/delivery";
 import type { SupportName } from "@assesskit/runtime/pnp";
 import type { Messages } from "../../messages/index.js";
-import { html, uniqueId } from "../internal.js";
+import { html, replaceAll, uniqueId } from "../internal.js";
 import { followPlayback, recordingOf } from "../media/index.js";
 import { supportLabel } from "./names.js";
 import { attachPopup } from "./popup.js";
@@ -192,7 +192,7 @@ function showInstead(context: CardContext): () => void {
   }
   const saved = [...target.childNodes];
   target.replaceChildren(content);
-  return () => target.replaceChildren(...saved);
+  return () => replaceAll(target, saved);
 }
 
 /** Shows a button that opens the card in a popup, which meets WCAG 1.4.13. Returns the function that takes it away. */

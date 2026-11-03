@@ -1,6 +1,6 @@
 import type { CandidateView } from "@assesskit/runtime/delivery";
 import type { Messages } from "../../messages/index.js";
-import { html } from "../internal.js";
+import { html, replaceAll } from "../internal.js";
 
 /**
  * Shows what the view tells the candidate besides the item: that the test is suspended or ended, that an item is awaited, and
@@ -17,7 +17,10 @@ export function renderNotices(region: HTMLElement, view: CandidateView, messages
     ...(view.status === "in-progress" && view.current === undefined ? [messages.awaitingItem] : []),
     ...(view.current?.timeDependent === true ? [messages.timeDependentNotice] : []),
   ];
-  region.replaceChildren(...texts.map((text) => html("p", { class: "ak-notice", role: "note" }, text)));
+  replaceAll(
+    region,
+    texts.map((text) => html("p", { class: "ak-notice", role: "note" }, text)),
+  );
 }
 
 /**

@@ -1,5 +1,5 @@
 import type { Messages } from "../../messages/index.js";
-import { html } from "../internal.js";
+import { html, replaceAll } from "../internal.js";
 import type { PlannedAction } from "./actions.js";
 
 /**
@@ -35,5 +35,8 @@ export function renderActionRow(
         }),
     ),
   );
-  region.replaceChildren(...groups.filter((group) => group.childElementCount > 0));
+  replaceAll(
+    region,
+    groups.filter((group) => group.childElementCount > 0),
+  );
 }

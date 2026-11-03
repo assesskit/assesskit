@@ -1,6 +1,6 @@
 import type { TimerView } from "@assesskit/runtime/delivery";
 import type { Messages } from "../../messages/index.js";
-import { clockText, html } from "../internal.js";
+import { clockText, html, replaceAll } from "../internal.js";
 import type { Announcer } from "./announcer.js";
 import { spokenText } from "./duration.js";
 
@@ -141,7 +141,10 @@ export function createTimerBar(messages: Messages, language: string, announcer: 
     update: (timers, age) => {
       const built = timers.map(rowOf);
       rows = built.map(({ row }) => row);
-      list.replaceChildren(...built.flatMap(({ entries }) => entries));
+      replaceAll(
+        list,
+        built.flatMap(({ entries }) => entries),
+      );
       const known = new Set(rows.map(({ key }) => key));
       for (const key of [...warned]) if (!known.has(key.slice(0, key.lastIndexOf(" ")))) warned.delete(key);
       element.hidden = rows.length === 0;

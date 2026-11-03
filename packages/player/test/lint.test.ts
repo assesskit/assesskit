@@ -212,6 +212,38 @@ const delivery = {
     `export const a = import(${DELIVERY});`,
   ]),
 };
+const spreadCalls = [
+  "target.push(...values);",
+  "target.unshift(...values);",
+  "parent.append(...nodes);",
+  "parent.prepend(...nodes);",
+  "parent.replaceChildren(first, ...nodes);",
+  "export const least = Math.min(...values);",
+  "export const most = Math.max(0, ...values);",
+];
+const spreadHeader = [
+  "declare const target: number[];",
+  "declare const values: number[];",
+  "declare const parent: Element;",
+  "declare const nodes: Node[];",
+  "declare const first: Node;",
+  "declare const second: Node;",
+];
+const spread = {
+  flagged: [`${SRC}/player`, `${SRC}/client`, `${SRC}/server`, "packages/runtime/src/delivery"].map((folder) =>
+    source(`${folder}/spread.ts`, [...spreadHeader, ...spreadCalls]),
+  ),
+  literals: source(`${SRC}/player/spread-literals.ts`, [
+    ...spreadHeader,
+    "parent.append(...[first], second);",
+    "parent.replaceChildren(...(nodes.length === 0 ? [] : [first]), ...[]);",
+    "target.push(...[1, 2]);",
+    "export const copy = [...values];",
+    "export const node = { ...values };",
+  ]),
+  dom: source(`${SRC}/player/dom.ts`, [...spreadHeader, "parent.append(...nodes.slice(0, 10_000));"]),
+};
+const SPREAD = "A spread into the arguments of a call throws a RangeError";
 const IMPORTS = "Browser code imports from @assesskit/runtime/delivery only";
 const REEXPORTS = "Browser code re-exports from @assesskit/runtime/delivery only";
 const LOADS = "Only client/local.ts loads @assesskit/runtime/delivery";
@@ -372,5 +404,21 @@ describe("browser-delivery-imports.grit", () => {
   it("does not apply to the server folders", () => {
     expect(messagesFor(delivery.server, "Browser code")).toEqual([]);
     expect(messagesFor(delivery.server, "Only client")).toEqual([]);
+  });
+});
+
+describe("no-spread-arguments.grit", () => {
+  it("refuses a spread into push, unshift, append, prepend, replaceChildren, Math.min and Math.max in every folder of src", () => {
+    for (const path of spread.flagged) {
+      expect(messagesFor(path, SPREAD), path).toHaveLength(spreadCalls.length);
+    }
+  });
+
+  it("lets a call spread an array literal, or a choice between array literals, whose length the code sets", () => {
+    expect(messagesFor(spread.literals, SPREAD)).toEqual([]);
+  });
+
+  it("lets player/dom.ts append in steps, as appendAll does", () => {
+    expect(messagesFor(spread.dom, SPREAD)).toEqual([]);
   });
 });

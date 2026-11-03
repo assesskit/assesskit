@@ -101,12 +101,7 @@
           }
         }
       },
-      "plugins": [
-        "./biome/no-math-random.grit",
-        "./biome/no-clock.grit",
-        "./biome/no-regexp-constructor.grit",
-        "./biome/no-spread-arguments.grit"
-      ]
+      "plugins": ["./biome/no-math-random.grit", "./biome/no-clock.grit", "./biome/no-regexp-constructor.grit"]
     },
     {
       "includes": ["packages/runtime/src/**", "!packages/runtime/src/node/**", "!packages/runtime/src/cli/**"],
@@ -845,11 +840,7 @@
       "plugins": ["./biome/no-math-random.grit"]
     },
     {
-      "includes": [
-        "packages/player/src/server/**",
-        "packages/player/src/cat-rest/**",
-        "packages/player/src/scoring/**"
-      ],
+      "includes": ["packages/*/src/**", "!packages/player/src/player/dom.ts"],
       "plugins": ["./biome/no-spread-arguments.grit"]
     },
     {

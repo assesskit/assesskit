@@ -2,6 +2,7 @@ import type { ChoiceInteraction } from "@assesskit/runtime/asi";
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
+import { appendAll } from "../internal.js";
 import { createInteraction } from "./element.js";
 import { Notes } from "./notes.js";
 import { applyOrientation, renderPrompt } from "./parts.js";
@@ -40,11 +41,11 @@ export class ChoiceInteractionElement extends SelectionElement {
     this.custom = { min: node.dataMinSelectionsMessage, max: node.dataMaxSelectionsMessage };
     applyOrientation(this, node.orientation);
     this.notes = new Notes();
-    this.append(
+    appendAll(this, [
       ...(this.prompt === undefined ? [] : [this.prompt.element]),
       ...this.choices.map(({ element }) => element),
       this.notes.element,
-    );
+    ]);
     this.listen();
   }
 

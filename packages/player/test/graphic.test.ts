@@ -208,6 +208,16 @@ describe("drawing operations", () => {
     expect(cellsOf(fillRuns(pixels, [2, 1])).sort()).toEqual(["2,0", "2,1", "2,2", "2,3"]);
   });
 
+  it("fills a region with more stretches beside one run than a call takes as arguments", () => {
+    // An open middle row between rows whose cells alternate open and closed: 150,001 stretches above it and as many below.
+    const width = 300_001;
+    const data = new Uint8ClampedArray(width * 3 * 4).fill(255);
+    for (const y of [0, 2]) {
+      for (let x = 1; x < width; x += 2) data.fill(0, (y * width + x) * 4, (y * width + x) * 4 + 3);
+    }
+    expect(fillRuns({ width, height: 3, data }, [0, 1])).toHaveLength(1 + 2 * 150_001);
+  });
+
   it("fills nothing for a start outside the picture", () => {
     const pixels = grid(["..", ".."]);
     expect(fillRuns(pixels, [-1, 0])).toEqual([]);

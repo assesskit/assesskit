@@ -27,7 +27,7 @@ function textLines(stage: HTMLElement, layer: HTMLElement): readonly Line[] {
   });
   for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
     range.selectNodeContents(node);
-    rects.push(...[...range.getClientRects()].filter(({ width, height }) => width > 0 && height > 0));
+    for (const rect of range.getClientRects()) if (rect.width > 0 && rect.height > 0) rects.push(rect);
   }
   const lines: { top: number; bottom: number }[] = [];
   for (const rect of rects.sort((a, b) => a.top - b.top)) {

@@ -193,6 +193,17 @@ describe("hottext", () => {
     expect(scene.responses.at(-1)?.value).toEqual(single("identifier", "B"));
   });
 
+  it("draws a passage of more nodes than a call takes as arguments", () => {
+    const count = 150_000;
+    const passage = `${"<p>a</p>".repeat(count)}<p><qti-hottext identifier="A">dog</qti-hottext></p>`;
+    const scene = mountScene(
+      declare("single", "identifier"),
+      `<qti-hottext-interaction response-identifier="R">${passage}</qti-hottext-interaction>`,
+    );
+    expect(scene.findAll("qti-hottext-interaction > p")).toHaveLength(count + 1);
+    expect(scene.findAll<HTMLInputElement>("qti-hottext > input")).toHaveLength(1);
+  });
+
   it("shows the value of the host", () => {
     const scene = mountScene(declare("multiple", "identifier"), Body('max-choices="2"'));
     scene.setValue("R", container("multiple", "identifier", ["C"]));

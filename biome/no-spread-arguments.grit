@@ -1,10 +1,18 @@
 or {
   `$target.push($...)`,
   `$target.unshift($...)`,
+  `$target.append($...)`,
+  `$target.prepend($...)`,
+  `$target.replaceChildren($...)`,
   `Math.min($...)`,
   `Math.max($...)`
 } as $call where {
   $call <: JsCallExpression(arguments=JsCallArguments(args=$args)),
-  $args <: some JsSpread(),
-  register_diagnostic(span=$call, message="A spread into the arguments of a call throws a RangeError above about 100,000 values, which a document, a response or a request can hold: loop over the values instead.", severity="error")
+  $args <: some JsSpread(argument=$spread) where {
+    $spread <: not or {
+      JsArrayExpression(),
+      JsParenthesizedExpression(expression=JsConditionalExpression(consequent=JsArrayExpression(), alternate=JsArrayExpression()))
+    }
+  },
+  register_diagnostic(span=$call, message="A spread into the arguments of a call throws a RangeError above about 100,000 values, which a document, a response or a request can hold: loop over the values instead, or append nodes with appendAll of player/dom.ts.", severity="error")
 }

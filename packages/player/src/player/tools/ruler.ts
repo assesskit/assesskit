@@ -1,4 +1,4 @@
-import { svg } from "../internal.js";
+import { appendAll, svg } from "../internal.js";
 import type { OpenTool, ToolContext } from "./context.js";
 import type { RuleSpec } from "./model.js";
 import { formatNumber } from "./numbers.js";
@@ -50,7 +50,7 @@ export function openRuler(
       .filter((tick) => tick.major === major)
       .map((tick) => `M${PADDING + tick.at * pxPerMm} 0v${major ? MAJOR_TICK : MINOR_TICK}`)
       .join("");
-  graphic.append(
+  appendAll(graphic, [
     svg("rect", {
       class: "ak-surface",
       x: "1",
@@ -70,7 +70,7 @@ export function openRuler(
         ),
       ),
     svg("text", { class: "ak-scale-text", x: String(width / 2), y: String(HEIGHT - UNIT_BASELINE) }, unitSymbol(unit)),
-  );
+  ]);
   return openPlacedTool(
     context,
     {

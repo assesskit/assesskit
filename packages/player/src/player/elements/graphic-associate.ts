@@ -3,7 +3,7 @@ import { checkResponse, type InteractionDescriptor, type ResponseViolation } fro
 import type { Pair } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html, svg, uniqueId } from "../internal.js";
+import { html, replaceAll, svg, uniqueId } from "../internal.js";
 import { createInteraction, InteractionElement } from "./element.js";
 import { boxOf, createArea } from "./graphic/areas.js";
 import { centerOf } from "./graphic/geometry.js";
@@ -195,8 +195,9 @@ export class GraphicAssociateInteractionElement extends InteractionElement {
         return box === undefined ? [] : [[identifier, centerOf(box)] as const];
       }),
     );
-    this.#links.replaceChildren(
-      ...pairs.flatMap(([first, second]) => {
+    replaceAll(
+      this.#links,
+      pairs.flatMap(([first, second]) => {
         const [from, to] = [centers.get(first), centers.get(second)];
         if (from === undefined || to === undefined) return [];
         const line = {
@@ -217,8 +218,9 @@ export class GraphicAssociateInteractionElement extends InteractionElement {
       this.#hotspots.map(({ identifier, label }, index) => [identifier, label ?? choiceName("", index, messages)]),
     );
     const nameOf = (identifier: string): string => names.get(identifier) ?? identifier;
-    this.#list.replaceChildren(
-      ...pairs.map(([first, second], index) => {
+    replaceAll(
+      this.#list,
+      pairs.map(([first, second], index) => {
         const text = `${nameOf(first)}${JOIN}${nameOf(second)}`;
         const remove = html("button", {
           type: "button",

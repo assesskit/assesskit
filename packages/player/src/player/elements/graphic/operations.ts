@@ -88,16 +88,16 @@ function similarTo(pixels: Pixels, [startX, startY]: Point): (x: number, y: numb
   };
 }
 
-/** Returns the points to continue from on a row next to a run: one for each stretch of the row that `open` finds open. */
-function seedsOnRow(open: (x: number, y: number) => boolean, row: number, x0: number, x1: number): Point[] {
-  const seeds: Point[] = [];
+/**
+ * Adds the points to continue from on a row next to a run to `seeds`: one for each stretch of the row that `open` finds open.
+ */
+function addSeeds(seeds: Point[], open: (x: number, y: number) => boolean, row: number, x0: number, x1: number): void {
   let inside = false;
   for (let column = x0; column <= x1; column += 1) {
     const here = open(column, row);
     if (here && !inside) seeds.push([column, row]);
     inside = here;
   }
-  return seeds;
 }
 
 /**
@@ -125,7 +125,8 @@ export function fillRuns(pixels: Pixels, start: Point): Run[] {
     while (x1 < width - 1 && open(x1 + 1, y)) x1 += 1;
     filled.fill(1, y * width + x0, y * width + x1 + 1);
     runs.push({ x0, x1, y });
-    seeds.push(...seedsOnRow(open, y - 1, x0, x1), ...seedsOnRow(open, y + 1, x0, x1));
+    addSeeds(seeds, open, y - 1, x0, x1);
+    addSeeds(seeds, open, y + 1, x0, x1);
   }
   return runs;
 }

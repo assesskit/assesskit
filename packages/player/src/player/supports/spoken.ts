@@ -211,15 +211,14 @@ export function mountSpoken(host: HTMLElement, root: ContentRoot, options: Spoke
   };
 
   const build = (wordByWord: boolean): void => {
-    const words = wordByWord
-      ? [
-          button(messages.readAloudPreviousWord, () => readWord(-1)),
-          button(messages.readAloudNextWord, () => readWord(1)),
-        ]
-      : [];
     group.replaceChildren(
       button(messages.readAloud, wordByWord ? () => readWord(0) : readAll),
-      ...words,
+      ...(wordByWord
+        ? [
+            button(messages.readAloudPreviousWord, () => readWord(-1)),
+            button(messages.readAloudNextWord, () => readWord(1)),
+          ]
+        : []),
       button(messages.readAloudStop, () => voice.stop()),
       status,
     );

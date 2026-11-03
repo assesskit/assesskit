@@ -1,4 +1,4 @@
-import { svg } from "../internal.js";
+import { appendAll, svg } from "../internal.js";
 import type { OpenTool, ToolContext } from "./context.js";
 import type { ProtractorSpec } from "./model.js";
 import { formatNumber } from "./numbers.js";
@@ -71,7 +71,7 @@ export function openProtractor(
     );
   };
   const graphic = svg("svg", { width: String(width), height: String(height) });
-  graphic.append(
+  appendAll(graphic, [
     svg("path", {
       class: "ak-surface",
       d: `M${cx - radius} ${cy}A${radius} ${radius} 0 0 1 ${cx + radius} ${cy}v${BASE}h${-2 * radius}Z`,
@@ -93,7 +93,7 @@ export function openProtractor(
         label(tick.at, INNER_LABEL, PROTRACTOR_EXTENT - tick.at),
       ]),
     svg("text", { class: "ak-scale-text", x: String(cx), y: String(cy - 2 * CENTER_MARK) }, unitSymbol(unit)),
-  );
+  ]);
   return openPlacedTool(
     context,
     {

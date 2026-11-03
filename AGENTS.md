@@ -153,9 +153,10 @@ that the player needs and the runtime lacks is a change in the runtime, with its
 - A reader of untrusted input bounds it before it builds anything, with a size or a token count before `JSON.parse`, and a list
   of findings has a limit (`maxFindings`): memory follows the tokens and the findings, not the bytes.
 - An array whose length a document, a response or a request decides is never spread into the arguments of a call (`push`,
-  `append`, `Math.max`): above about 100,000 values that throws a `RangeError`. `biome/no-spread-arguments.grit` holds the
-  runtime and the server folders of the player to it for `push`, `unshift`, `Math.min` and `Math.max`; in the browser folders
-  such nodes go into an element with `appendAll` of `player/dom.ts`.
+  `append`, `Math.max`): above about 100,000 values that throws a `RangeError`. `biome/no-spread-arguments.grit` holds every
+  folder of `packages/*/src` to it for `push`, `unshift`, `append`, `prepend`, `replaceChildren`, `Math.min` and `Math.max`,
+  and lets a call spread an array literal or a choice between two, whose length the code sets. Nodes go into an element with
+  `appendAll` or `replaceAll` of `player/dom.ts`, which append in steps and are the one place the rule leaves out.
 - Every semantic rule names its specification with `@see` in the TSDoc of the code that applies it, and not in an issue.
 
 ## The state format

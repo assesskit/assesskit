@@ -2,6 +2,7 @@ import { descendantNodes, type HotText, type HotTextInteraction } from "@assessk
 import { AssesskitError } from "@assesskit/runtime/errors";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
+import { appendAll } from "../internal.js";
 import { createInteraction } from "./element.js";
 import { Notes } from "./notes.js";
 import { elementsNamed, renderPrompt } from "./parts.js";
@@ -45,7 +46,7 @@ export class HotTextInteractionElement extends SelectionElement {
     });
     this.custom = { min: node.dataMinSelectionsMessage, max: node.dataMaxSelectionsMessage };
     this.notes = new Notes();
-    this.append(...(this.prompt === undefined ? [] : [this.prompt.element]), ...passage, this.notes.element);
+    appendAll(this, [...(this.prompt === undefined ? [] : [this.prompt.element]), ...passage, this.notes.element]);
     this.listen();
   }
 }

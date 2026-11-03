@@ -3,7 +3,7 @@ import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Pair } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html, uniqueId } from "../internal.js";
+import { html, replaceAll, uniqueId } from "../internal.js";
 import { type BoardLayout, DirectedPairElement, limitsOf, tokensOf } from "./board-element.js";
 import { createInteraction } from "./element.js";
 import { Notes } from "./notes.js";
@@ -99,10 +99,16 @@ export class MatchInteractionElement extends DirectedPairElement {
     pool.classList.add("ak-choices");
     pool.setAttribute("role", "group");
     pool.setAttribute("aria-label", messages.boardChoices);
-    pool.replaceChildren(...(first?.choices ?? []).map(({ element }) => element));
+    replaceAll(
+      pool,
+      (first?.choices ?? []).map(({ element }) => element),
+    );
     const targets = second?.element ?? html("div");
     targets.classList.add("ak-targets");
-    targets.replaceChildren(...slots.map(({ element }) => element));
+    replaceAll(
+      targets,
+      slots.map(({ element }) => element),
+    );
     this.arrange(this.#prompt, pool, targets);
     return {
       sources: (first?.choices ?? []).map(({ id }) => ({ id, limit: limitOf(id) })),

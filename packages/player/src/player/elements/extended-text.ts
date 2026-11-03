@@ -2,7 +2,7 @@ import type { ExtendedTextInteraction } from "@assesskit/runtime/asi";
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html } from "../internal.js";
+import { html, replaceAll } from "../internal.js";
 import { EditorField } from "./editor.js";
 import { createInteraction } from "./element.js";
 import { Notes } from "./notes.js";
@@ -126,8 +126,9 @@ export class ExtendedTextInteractionElement extends TextElement {
       const label = many ? `${messages.answerLabel} ${index + 1}` : messages.answerLabel;
       this.#entries.push(this.#entry(node, messages, label));
     }
-    this.#fields.replaceChildren(
-      ...this.#entries.map(({ element, counter }) => html("div", {}, element, ...(counter ? [counter] : []))),
+    replaceAll(
+      this.#fields,
+      this.#entries.map(({ element, counter }) => html("div", {}, element, ...(counter ? [counter] : []))),
     );
     const [first] = this.#entries;
     if (!many && first !== undefined && this.#prompt !== undefined) {

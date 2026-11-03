@@ -1,7 +1,7 @@
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Pair, Value } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
-import { html } from "../internal.js";
+import { html, replaceAll } from "../internal.js";
 import { type Assignment, Board, type BoardPlace, type BoardSource } from "./board/model.js";
 import { type BoardSlot, type BoardToken, BoardView } from "./board/view.js";
 import { InteractionElement, sameValue } from "./element.js";
@@ -91,11 +91,11 @@ export abstract class BoardElement extends InteractionElement {
   protected arrange(prompt: RenderedPrompt | undefined, ...parts: readonly Node[]): void {
     nameByPrompt(this, prompt);
     this.setAttribute("role", "group");
-    this.replaceChildren(
+    replaceAll(this, [
       ...(prompt === undefined ? [] : [prompt.element]),
       ...parts,
       ...(this.notes === undefined ? [] : [this.notes.element]),
-    );
+    ]);
   }
 
   protected override configure(descriptor: InteractionDescriptor, messages: Messages): void {

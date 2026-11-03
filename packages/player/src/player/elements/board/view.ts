@@ -1,5 +1,5 @@
 import type { Messages } from "../../../messages/index.js";
-import { html } from "../../internal.js";
+import { appendAll, html } from "../../internal.js";
 import type { Notes } from "../notes.js";
 import { DRAG_THRESHOLD } from "../pointer.js";
 import type { Board } from "./model.js";
@@ -129,7 +129,7 @@ export class BoardView {
       for (const old of slot.element.querySelectorAll(".ak-chip, .ak-drop")) old.remove();
       const chips = board.occupants(slot.id).map((source) => this.#chip(source, slot));
       const drop = board.isFull(slot.id) ? [] : [this.#drop(slot, messages)];
-      slot.element.append(...chips, ...drop);
+      appendAll(slot.element, [...chips, ...drop]);
     }
   }
 

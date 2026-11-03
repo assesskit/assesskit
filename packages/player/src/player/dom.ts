@@ -60,6 +60,17 @@ export function appendAll(parent: ParentNode, children: readonly Node[]): void {
   }
 }
 
+/**
+ * Replaces the children of a parent with nodes, appended in steps as {@link appendAll} does.
+ *
+ * @param parent - The parent.
+ * @param children - The nodes, in order; a node that is a child of the parent already moves to its place.
+ */
+export function replaceAll(parent: ParentNode, children: readonly Node[]): void {
+  parent.replaceChildren();
+  appendAll(parent, children);
+}
+
 let lastId = 0;
 
 /**

@@ -2,6 +2,7 @@ import type { Catalog, ModelNode } from "@assesskit/runtime/asi";
 import { selectCard } from "@assesskit/runtime/content";
 import type { Braille, SupportName } from "@assesskit/runtime/pnp";
 import type { BodyRenderer } from "../content/index.js";
+import { appendAll } from "../internal.js";
 
 /**
  * Renders the card of a catalog for a support, as the candidate asks for it.
@@ -41,6 +42,6 @@ export function renderCard(
     type: "mimeType" in file ? file.mimeType : "",
     children: [],
   }));
-  fragment.append(...renderer.nodes(files));
+  appendAll(fragment, renderer.nodes(files));
   return fragment;
 }

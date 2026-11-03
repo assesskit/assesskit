@@ -4,7 +4,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES } from "../src/index.js";
 import { ID_MESSAGES } from "../src/messages/id/index.js";
-import { type Lexicon, parseLexicon } from "../src/player/speech/index.js";
+import { type Lexicon, type Pronunciation, parseLexicon } from "../src/player/speech/index.js";
 import {
   applyDataSsml,
   checkSpeechRequest,
@@ -228,6 +228,15 @@ describe("pronounce", () => {
     expect(pronounce("curé", "en", lexicons)).toEqual(["curé"]);
     expect(pronounce("vitae", "en", lexicons)).toEqual(["vitae"]);
     expect(pronounce("Lima", "en", lexicons)[0]).toMatchObject({ text: "Lima" });
+  });
+
+  it("reads a lexicon of more entries than a call takes as arguments", () => {
+    const many = new Map<string, Pronunciation>(
+      Array.from({ length: 200_000 }, (_, index) => [`word${index}`, { kind: "alias", alias: "x" }]),
+    );
+    many.set("New York", { kind: "alias", alias: "nyu york" });
+    const lexicon: Lexicon = { language: "en-US", entries: many };
+    expect(pronounce("in New York", "en", [lexicon])[1]).toMatchObject({ text: "New York" });
   });
 
   it("matches a phrase of tokens, whatever the white space between them was (PLS 1.0 Appendix C)", () => {
