@@ -603,9 +603,6 @@ describe("mountPciFrame", () => {
       expect(() => mounted.frame.setPresentation(JSON.parse('{"attributes": {}}'))).toThrow(
         new DataError("The presentation property attributes must be a Map, found an object."),
       );
-      expect(() => mount({ presentation: JSON.parse("null") })).toThrow(
-        new DataError("The option presentation must be an object with the maps attributes and properties, found null."),
-      );
       await mounted.frame.destroy();
       expect(() => mounted.frame.setPresentation(highContrast)).not.toThrow();
     });

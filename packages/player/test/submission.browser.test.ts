@@ -515,7 +515,7 @@ describe("mountSubmission", () => {
       [{ ...base, itemPath: "x" }, 'The option itemPath must be a function, found "x".'],
       [{ ...base, mathjax: 5 }, "The option mathjax must be a string, found 5."],
       [{ ...base, origins: "x" }, /^The option origins must be an array/],
-      [{ ...base, interactions: {} }, /^The option interactions must be a Map/],
+      [{ ...base, interactions: new Map() }, /^The options has the properties .*, found "interactions"\.$/],
     ];
     for (const [options, message] of cases) {
       const host = document.createElement("div");

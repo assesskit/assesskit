@@ -73,6 +73,7 @@ const mounted = mountItem(host, {
   staticUrl: "https://assets.example/static/",
   stylesheet: new CSSStyleSheet(),
   fetch: async () => ({ ok: true, status: 200, text: async () => resolution }),
+  hooks: { record: false },
 });
 
 const content = host.shadowRoot.querySelector(".ak-content-host").shadowRoot;
