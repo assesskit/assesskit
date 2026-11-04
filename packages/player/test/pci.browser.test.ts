@@ -11,7 +11,7 @@ import {
   type PciEvent,
   type PciFiles,
   type PciFrameOptions,
-  presentationOf,
+  resolvePresentation,
 } from "../src/player/index.js";
 import type { FrameTheme } from "./fixtures/commands.js";
 import {
@@ -540,7 +540,7 @@ describe("mountPciFrame", () => {
   });
 
   describe("the presentation", () => {
-    const highContrast = presentationOf([onSupport("high-contrast")]);
+    const highContrast = resolvePresentation([onSupport("high-contrast")]);
 
     /** The attributes of the player's look that the frame has. */
     const look = ({ attributes }: FrameTheme) =>
@@ -559,7 +559,9 @@ describe("mountPciFrame", () => {
     it("changes the look of a running interaction when a setting changes", async () => {
       const mounted = mount({ presentation: highContrast });
       await ready(mounted);
-      mounted.frame.setPresentation(presentationOf([onSupport("invert-display-polarity"), onSupport("magnification")]));
+      mounted.frame.setPresentation(
+        resolvePresentation([onSupport("invert-display-polarity"), onSupport("magnification")]),
+      );
       await waitFor(async () =>
         expect((await commands.frameTheme(TITLE)).attributes).toEqual({
           lang: "en",
@@ -572,7 +574,7 @@ describe("mountPciFrame", () => {
       expect(theme.properties).toEqual({ "--ak-fg": "#f2f2f2", "--ak-bg": "#121212" });
       expect(theme.color).toBe("rgb(242, 242, 242)");
       expect(theme.fontSize).toBe("32px");
-      mounted.frame.setPresentation(presentationOf([]));
+      mounted.frame.setPresentation(resolvePresentation([]));
       await waitFor(async () => expect(look(await commands.frameTheme(TITLE))).toEqual({}));
       // The defaults of the stylesheet are back.
       expect((await commands.frameTheme(TITLE)).properties).toEqual({
@@ -591,7 +593,7 @@ describe("mountPciFrame", () => {
     it("does not change the interaction, which is told nothing of the look", async () => {
       const mounted = mount({ presentation: highContrast });
       await ready(mounted);
-      mounted.frame.setPresentation(presentationOf([]));
+      mounted.frame.setPresentation(resolvePresentation([]));
       await waitFor(async () => expect(look(await commands.frameTheme(TITLE))).toEqual({}));
       expect(mounted.events.map(({ type }) => type)).toEqual(["ready"]);
     });

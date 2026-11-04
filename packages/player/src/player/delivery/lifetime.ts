@@ -1,4 +1,4 @@
-import type { SessionCallOptions } from "../../protocol/index.js";
+import type { CallOptions } from "../../protocol/index.js";
 import type { ItemSettings } from "./settings.js";
 import type { MountState } from "./state.js";
 
@@ -15,7 +15,7 @@ export function bindToLifetime<T extends ItemSettings>(settings: T, state: Mount
   const { fetch, files, report } = settings;
   const { reserve, fill } = files;
   const { signal } = state.stop;
-  const within = (options: SessionCallOptions | undefined): SessionCallOptions => ({
+  const within = (options: CallOptions | undefined): CallOptions => ({
     signal: options?.signal ?? signal,
   });
   return {

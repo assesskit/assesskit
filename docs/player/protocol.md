@@ -22,21 +22,21 @@ The runtime writes and reads the JSON inside an envelope: `writeCandidateAction`
 and `readView` for views. The checks of this module look at the envelope only. The one form that the player defines is the
 submission, because the server writes it and the browser shows it.
 
-| Export                                             | Purpose                                                                                                |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `Caller`, `checkCaller`                            | The identity that authentication gives to a request.                                                   |
-| `ActionEnvelope`, `checkActionEnvelope`            | What a client sends: a sequence number and one action.                                                 |
-| `ViewEnvelope`, `checkViewEnvelope`                | What a host answers: the view, the asset prefixes and, when they apply, the documents and the refusal. |
-| `REFUSAL_CODES`, `checkRefusal`                    | The refusal codes of the engine, and a check of a refusal that arrived as JSON.                        |
-| `ViewDocuments`, `DocumentSource`, `viewDocuments` | Where the content of a view comes from, so that references in it resolve.                              |
-| `LtiFrame`, `checkLtiFrame`, `checkAllowList`      | What the player needs to show a tool, and the checks of it.                                            |
-| `LTI_TOOL_FRAME`, `LTI_STORAGE_FRAME`              | The names of the two frames of an LTI item.                                                            |
-| `SessionClient`, `DispatchResult`                  | The one interface the player mounts against.                                                           |
-| `HostSession`, `HostStep`, `HostApplyOptions`      | The host side of a session, which a session host and a local session both offer.                       |
-| `SessionCallOptions`                               | The options of a call that waits on a store or a service: a signal.                                    |
-| `Clock`                                            | The source of the time that a client, a session host and a test pass in.                               |
-| `OfficialResult`, `isOfficialResult`               | A results report that the session host marked official.                                                |
-| `Submission` and its parts, `checkSubmission`      | What a rater needs to rate an externally scored outcome.                                               |
+| Export                                                    | Purpose                                                                                                |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `Caller`, `checkCaller`                                   | The identity that authentication gives to a request.                                                   |
+| `ActionEnvelope`, `checkActionEnvelope`                   | What a client sends: a sequence number and one action.                                                 |
+| `ViewEnvelope`, `checkViewEnvelope`                       | What a host answers: the view, the asset prefixes and, when they apply, the documents and the refusal. |
+| `REFUSAL_CODES`, `checkRefusal`                           | The refusal codes of the engine, and a check of a refusal that arrived as JSON.                        |
+| `ViewDocuments`, `DocumentSource`, `resolveViewDocuments` | Where the content of a view comes from, so that references in it resolve.                              |
+| `LtiFrame`, `checkLtiFrame`, `checkAllowList`             | What the player needs to show a tool, and the checks of it.                                            |
+| `LTI_TOOL_FRAME`, `LTI_STORAGE_FRAME`                     | The names of the two frames of an LTI item.                                                            |
+| `SessionClient`, `DispatchResult`                         | The one interface the player mounts against.                                                           |
+| `HostSession`, `HostStep`, `HostApplyOptions`             | The host side of a session, which a session host and a local session both offer.                       |
+| `CallOptions`                                             | The options of a call that waits on a store or a service: a signal.                                    |
+| `Clock`                                                   | The source of the time that a client, a session host and a test pass in.                               |
+| `OfficialResult`, `isOfficialResult`                      | A results report that the session host marked official.                                                |
+| `Submission` and its parts, `checkSubmission`             | What a rater needs to rate an externally scored outcome.                                               |
 
 ```ts
 import { checkActionEnvelope, checkCaller, isOfficialResult } from "@assesskit/player/protocol";
@@ -93,7 +93,7 @@ host does, with `documents`.
 | `stimuli`  | The paths of the documents of its stimuli, in the order of the view.                                                                                           |
 | `lexicons` | The paths of the pronunciation lexicons (PLS) that the item depends on, which reading aloud uses ([speech](speech.md#lexicons)).                               |
 
-A path is a path in the package. Without `documents`, every reference resolves against the root. `viewDocuments(view, source)`
+A path is a path in the package. Without `documents`, every reference resolves against the root. `resolveViewDocuments(view, source)`
 builds them from the `DocumentSource` that a host or a local session has of its test.
 
 ## The frame of an LTI item
@@ -141,7 +141,7 @@ flowchart LR
   HS{{"HostSession<br/>apply · pending · scorerView · results"}}
   SH -. implements .-> HS
   LS -. implements .-> HS
-  SC["Host's scoring code, written once<br/>scorerView → toSubmission → scorer → toSupplyScores → apply"] --> HS
+  SC["Host's scoring code, written once<br/>scorerView → buildSubmission → scorer → buildSupplyScores → apply"] --> HS
   T1["server: rater endpoint"] -->|calls| SC
   T2["device: host.subscribeSteps"] -->|calls| SC
 ```
@@ -153,13 +153,13 @@ flowchart LR
 | `scorerView(request, options?)` | Returns what a scorer needs to rate a request, the correct responses included.                                                                                                                           |
 | `results(options?)`             | Returns the results report of the session; it is provisional while scoring requests are pending.                                                                                                         |
 
-| Type                 | Property     | Meaning                                                                                                                                                |
-| -------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `HostStep`           | `events`     | The events of the step, in order; empty when the action was refused or changed nothing.                                                                |
-| `HostStep`           | `refusal`    | Why the engine refused the action, as a value. Default: none, the action was applied.                                                                  |
-| `HostStep`           | `catFailure` | The `request` and `message` of a CAT request that the option `cat` failed to answer after the step; the step stands. Default: none.                    |
-| `SessionCallOptions` | `signal`     | An `AbortSignal` that stops the call before it applies anything. Work already saved stays saved. Default: none.                                        |
-| `HostApplyOptions`   | `scoredBy`   | Who supplies a score, such as the rater or the scoring service: a non-empty string that a session host passes to its log with the step. Default: none. |
+| Type               | Property     | Meaning                                                                                                                                                |
+| ------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `HostStep`         | `events`     | The events of the step, in order; empty when the action was refused or changed nothing.                                                                |
+| `HostStep`         | `refusal`    | Why the engine refused the action, as a value. Default: none, the action was applied.                                                                  |
+| `HostStep`         | `catFailure` | The `request` and `message` of a CAT request that the option `cat` failed to answer after the step; the step stands. Default: none.                    |
+| `CallOptions`      | `signal`     | An `AbortSignal` that stops the call before it applies anything. Work already saved stays saved. Default: none.                                        |
+| `HostApplyOptions` | `scoredBy`   | Who supplies a score, such as the rater or the scoring service: a non-empty string that a session host passes to its log with the step. Default: none. |
 
 A `time` action that finds nothing to do is accepted with no events; it is refused only as `ended` or `suspended`. A second
 `supply-scores` for one request replaces the first and reports `scores-replaced`. `supply-scores` and `cat-response` are accepted
@@ -171,7 +171,7 @@ after the test ended while their request exists.
 | Refusal                 | Returned as `HostStep.refusal`; nothing is saved or forwarded                                              | Returned as `HostStep.refusal`; nothing is saved and no step listener runs, while the view listeners run as for any answer |
 | `scoredBy`              | Passed to the log with the step of a `supply-scores` action                                                | Ignored: a local session forwards nothing                                                                                  |
 | `pending`, `scorerView` | Load the session, then ask the engine                                                                      | Queued behind earlier calls, so they see the state those calls left                                                        |
-| `results`               | Branded as official                                                                                        | Never official: `isOfficialResult` is `false`, so `sessionScore` refuses it                                                |
+| `results`               | Branded as official                                                                                        | Never official: `isOfficialResult` is `false`, so `buildSessionScore` refuses it                                           |
 | After `close()`         | A session host has no `close`                                                                              | `apply` and `subscribeSteps` throw `DataError`; the reads still work                                                       |
 | Step feed               | `forward.log(step)` for every step with events, in every process, the start included                       | `subscribeSteps(listener)` for the steps with events that are saved after the call                                         |
 | Scorer view             | Holds the correct responses: call it only from a rater's endpoint, never from a candidate's                | Holds the correct responses by design, because the device holds them already                                               |
@@ -191,10 +191,10 @@ A signal reaches every call that waits on a store or a service.
 
 Where a host wires each concern:
 
-| Concern | Server                                                                                                      | Device                                                                                     |
-| ------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Scoring | The rater endpoint: `session(id)`, `pending`, `scorerView`, `toSubmission`, then `apply(..., { scoredBy })` | `host.subscribeSteps` on `scoring-requested`, plus one check of `pending()` after creation |
-| Time    | The scheduler's job: `session(id).apply({ type: "time" })`                                                  | Automatic: the local session fires `time` at each maximum time                             |
+| Concern | Server                                                                                                         | Device                                                                                     |
+| ------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Scoring | The rater endpoint: `session(id)`, `pending`, `scorerView`, `buildSubmission`, then `apply(..., { scoredBy })` | `host.subscribeSteps` on `scoring-requested`, plus one check of `pending()` after creation |
+| Time    | The scheduler's job: `session(id).apply({ type: "time" })`                                                     | Automatic: the local session fires `time` at each maximum time                             |
 
 ## Official results
 
@@ -205,7 +205,7 @@ module (lint). A service that reports a score takes only an `OfficialResult` and
 
 ## Submission
 
-A `Submission` is what a rater or a scorer service needs to rate one externally scored outcome. `toSubmission` of
+A `Submission` is what a rater or a scorer service needs to rate one externally scored outcome. `buildSubmission` of
 [scoring](scoring.md) writes it from the runtime's scorer view, and `mountSubmission` of `@assesskit/player/player` shows it. It
 holds the correct responses of the items, so it goes only to raters. Its `scoringRubric`, when the outcome has one, is the
 runtime's `ScoringRubric`, which `mountRatingForm` ([rating](rating.md)) turns into a form.

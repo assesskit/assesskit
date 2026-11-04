@@ -115,7 +115,7 @@ export interface PciFrameOptions {
    */
   readonly state?: string | null;
   /**
-   * The look that the candidate's supports ask for, from `presentationOf`; `setPresentation` changes it later.
+   * The look that the candidate's supports ask for, from `resolvePresentation`; `setPresentation` changes it later.
    *
    * @defaultValue None
    */

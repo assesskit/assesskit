@@ -28,14 +28,14 @@ import { DataError } from "@assesskit/runtime/errors";
 import { resolveReference } from "@assesskit/runtime/package";
 import * as v from "valibot";
 import {
+  type CallOptions,
   type Clock,
   type DocumentSource,
   type HostSession,
   type HostStep,
-  type SessionCallOptions,
+  resolveViewDocuments,
   type SessionClient,
   type ViewDocuments,
-  viewDocuments,
 } from "../../protocol/index.js";
 import {
   type CatAnswerer,
@@ -65,10 +65,10 @@ export interface LocalStore {
    * Returns the saved state of a session.
    *
    * @param session - The identifier of the session.
-   * @param options - See {@link SessionCallOptions}. A store may ignore them.
+   * @param options - See {@link CallOptions}. A store may ignore them.
    * @returns The state, or `undefined` when there is none.
    */
-  load(session: string, options?: SessionCallOptions): Promise<string | undefined>;
+  load(session: string, options?: CallOptions): Promise<string | undefined>;
   /**
    * Saves the state of a session in place of the one before, with the events of the step that made it, in one write. It
    * rejects only when the state was not saved, so that the session applies a step only when this resolved, and then no
@@ -76,9 +76,9 @@ export interface LocalStore {
    *
    * @param session - The identifier of the session.
    * @param record - The state as `serializeState` writes it, and the events of the step.
-   * @param options - See {@link SessionCallOptions}. A store may ignore them.
+   * @param options - See {@link CallOptions}. A store may ignore them.
    */
-  save(session: string, record: LocalSave, options?: SessionCallOptions): Promise<void>;
+  save(session: string, record: LocalSave, options?: CallOptions): Promise<void>;
 }
 
 /**
@@ -87,7 +87,7 @@ export interface LocalStore {
  * @remarks The `signal` stops the creation before its load and its first save. It does not reach later calls: each of them
  * takes its own.
  */
-export interface LocalSessionOptions extends SessionCallOptions {
+export interface LocalSessionOptions extends CallOptions {
   /** What to deliver: a test, or an item alone for a preview. */
   readonly definition: DeliveryDefinition;
   /**
@@ -147,7 +147,7 @@ export interface LocalSessionOptions extends SessionCallOptions {
    *
    * @defaultValue none, so that every gap counts
    */
-  readonly maxIdle?: number;
+  readonly maxIdleMs?: number;
   /**
    * The port of the CAT engines of the adaptive sections. Each call then answers the CAT requests that wait, one at a time,
    * saving each answer before the next request.
@@ -169,7 +169,7 @@ const optionsSchema = v.strictObject({
   lexicons: v.optional(functionSchema<(item: string) => readonly string[]>()),
   clock: v.optional(clockSchema),
   onError: v.optional(functionSchema<(error: unknown) => void>()),
-  maxIdle: v.optional(v.unknown()),
+  maxIdleMs: v.optional(v.unknown()),
   signal: v.optional(v.unknown()),
   cat: v.optional(methodsSchema<CatSessionPort>("createSession", "submitResults", "endSession")),
 });
@@ -273,9 +273,9 @@ function loadEngine(): Promise<typeof import("@assesskit/runtime/delivery")> {
  */
 export async function createLocalSession(options: LocalSessionOptions): Promise<LocalSession> {
   parseWith(optionsSchema, options, "The options object");
-  const { signal: creating, cat, maxIdle } = options;
+  const { signal: creating, cat, maxIdleMs } = options;
   checkOptional(creating, (value) => checkAbortSignal(value, "The option signal"));
-  checkOptional(maxIdle, (value) => checkPositiveInteger(value, "The option maxIdle"));
+  checkOptional(maxIdleMs, (value) => checkPositiveInteger(value, "The option maxIdleMs"));
   const { definition, store, session, seed, assets, lexicons = () => [], clock = BROWSER_CLOCK } = options;
   const onError = options.onError ?? ((error: unknown) => reportError(error));
   const now = (): number => readClock(clock);
@@ -315,7 +315,7 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
   const look = (): void => {
     const at = now();
     const view = engine.view(state, at);
-    latest = { view, documents: viewDocuments(view, source), receivedAt: at };
+    latest = { view, documents: resolveViewDocuments(view, source), receivedAt: at };
   };
   look();
 
@@ -351,11 +351,11 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
   /**
    * Applies one action after the ones before it. An accepted step is saved before it takes effect, so that a store that
    * rejects leaves the state, the view and the timer as they were; then the view listeners and the step listeners run. A
-   * `time` action that `maxIdle` drops changes nothing and arms no timer.
+   * `time` action that `maxIdleMs` drops changes nothing and arms no timer.
    */
   const run = (action: CandidateAction | HostAction, signal: AbortSignal | undefined): Promise<Applied> =>
     enqueue(async (): Promise<Applied> => {
-      const taken = stepAfterIdle({ engine, stamp: delivery.stamp }, { state, action, now: now(), maxIdle });
+      const taken = stepAfterIdle({ engine, stamp: delivery.stamp }, { state, action, now: now(), maxIdleMs });
       if (taken === undefined) return { step: { ok: true, state, events: [] }, view: latest.view };
       const { step } = taken;
       if (step.ok) {
@@ -373,10 +373,7 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
   const readState = <T>(from: (state: DeliveryState) => T, signal: AbortSignal | undefined): Promise<T> =>
     enqueue(() => from(state), signal);
 
-  const read = async <T>(
-    from: (state: DeliveryState) => T,
-    callOptions: SessionCallOptions | undefined,
-  ): Promise<T> => {
+  const read = async <T>(from: (state: DeliveryState) => T, callOptions: CallOptions | undefined): Promise<T> => {
     checkCallOptions(callOptions);
     return readState(from, callOptions?.signal);
   };

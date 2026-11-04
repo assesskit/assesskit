@@ -296,7 +296,7 @@ function offsetOf(transform: string | null): number {
 
 /** The check of the speech request, which runs in the page: SSML, data-ssml, a lexicon, suppression and a range. */
 const SPEECH_REQUEST = `(async () => {
-  const { buildSpeechRequest, parseLexicon } = await import("/dist/player/index.js");
+  const { buildSpeechRequest, readLexicon } = await import("/dist/player/index.js");
   const host = document.createElement("div");
   const root = host.attachShadow({ mode: "open" });
   root.innerHTML = "<p>Read <span data-ssml='{\\"sub\\":{\\"alias\\":\\"World Wide Web\\"}}'>WWW</span> and " +
@@ -306,7 +306,7 @@ const SPEECH_REQUEST = `(async () => {
   sub.textContent = "Freud";
   root.firstElementChild.append(" ", sub);
   document.body.append(host);
-  const lexicon = parseLexicon("<lexicon xmlns='http://www.w3.org/2005/01/pronunciation-lexicon' version='1.0' alphabet='ipa' xml:lang='en'>" +
+  const lexicon = readLexicon("<lexicon xmlns='http://www.w3.org/2005/01/pronunciation-lexicon' version='1.0' alphabet='ipa' xml:lang='en'>" +
     "<lexeme><grapheme>W3C</grapheme><alias>World Wide Web Consortium</alias></lexeme></lexicon>");
   const range = document.createRange();
   range.selectNodeContents(root);
@@ -321,7 +321,7 @@ const SPEECH_REQUEST = `(async () => {
 
 /** The check of the supports, which runs in the page: the look, a card in place of the content, a popup, and the panel. */
 const SUPPORTS = `(async () => {
-  const { createContentRoot, mountContentSupports, mountSupportPanel, presentationOf, applyPresentation } = await import("/dist/player/index.js");
+  const { createContentRoot, mountContentSupports, mountSupportPanel, resolvePresentation, applyPresentation } = await import("/dist/player/index.js");
   const { EN_MESSAGES } = await import("/dist/index.js");
   const player = new CSSStyleSheet();
   player.replaceSync(await (await fetch("/player.css")).text());
@@ -348,7 +348,7 @@ const SUPPORTS = `(async () => {
     { name: "high-contrast", state: "option", active: true },
   ];
   mountContentSupports(root, { messages: EN_MESSAGES }).update(supports);
-  applyPresentation(host, presentationOf(supports));
+  applyPresentation(host, resolvePresentation(supports));
   const shadow = root.root;
   const paragraph = shadow.querySelector("p");
   shadow.querySelector(".ak-card-trigger").click();

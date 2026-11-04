@@ -75,7 +75,7 @@ flowchart LR
   subgraph player["@assesskit/player"]
     login["LtiLogin<br/>player/lti-frame"]
     log["forward.log, a StepSink<br/>server"]
-    score["sessionScore<br/>scoring"]
+    score["buildSessionScore<br/>scoring"]
     intake["createToolScoreIntake, ToolScoreStore<br/>server"]
   end
   host["The host or an adapter"]
@@ -91,7 +91,7 @@ flowchart LR
 | ----------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------- |
 | `LtiLogin`, `LtiFrame`                    | The player asks the host to start a tool        | `player/lti-frame`, `protocol/lti-frame` ([delivery](delivery.md#lti-items)) |
 | `forward.log`, `StepSink`                 | The session host gives each step to the host    | `server` ([server](server.md#forwarding-the-steps))                          |
-| `sessionScore`                            | The host reads the score of a session           | `scoring` ([scoring](scoring.md#the-score-of-a-session))                     |
+| `buildSessionScore`                       | The host reads the score of a session           | `scoring` ([scoring](scoring.md#the-score-of-a-session))                     |
 | `createToolScoreIntake`, `ToolScoreStore` | The score of a tool comes in as `supply-scores` | `server` ([server](server.md#the-scores-of-tool-items))                      |
 
 [LTI items](lti-items.md) shows the three steps that wire them.

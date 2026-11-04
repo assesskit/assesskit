@@ -1,6 +1,6 @@
 import type { CandidateItem, ItemKey } from "@assesskit/runtime/delivery";
 import type { Messages } from "../../messages/index.js";
-import type { LtiFrame, SessionCallOptions } from "../../protocol/index.js";
+import type { CallOptions, LtiFrame } from "../../protocol/index.js";
 import { html } from "../internal.js";
 import { LTI_SLOT, type LtiFrameHandle, mountLtiFrame } from "./frame.js";
 
@@ -8,7 +8,7 @@ import { LTI_SLOT, type LtiFrameHandle, mountLtiFrame } from "./frame.js";
  * The hook of the host that starts the login of the tool of an item: its route answers with the frame of the item. The
  * `signal` aborts when the candidate leaves the item or the player is destroyed, and the player drops a late answer.
  */
-export type LtiLogin = (item: ItemKey, options?: SessionCallOptions) => Promise<LtiFrame>;
+export type LtiLogin = (item: ItemKey, options?: CallOptions) => Promise<LtiFrame>;
 
 /** What the slot of the LTI frame needs from the player. */
 interface LtiSlotOptions {

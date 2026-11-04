@@ -25,7 +25,7 @@ import {
   mountSpoken,
   mountSupportPanel,
   mountVariantNotice,
-  presentationOf,
+  resolvePresentation,
   type SpeechHook,
   type SpeechRequest,
 } from "../src/player/index.js";
@@ -178,11 +178,14 @@ describe("applyPresentation", () => {
     const content = mount("<p>Text</p>");
     const colors = (): string[] => [computed(content.find("p"), "color"), computed(content.host, "background-color")];
     expect(colors()).toEqual(["rgb(26, 26, 26)", "rgb(255, 255, 255)"]);
-    applyPresentation(content.host, presentationOf([onSupport("high-contrast")]));
+    applyPresentation(content.host, resolvePresentation([onSupport("high-contrast")]));
     expect(colors()).toEqual(["rgb(0, 0, 0)", "rgb(255, 255, 255)"]);
-    applyPresentation(content.host, presentationOf([onSupport("high-contrast"), onSupport("invert-display-polarity")]));
+    applyPresentation(
+      content.host,
+      resolvePresentation([onSupport("high-contrast"), onSupport("invert-display-polarity")]),
+    );
     expect(colors()).toEqual(["rgb(255, 255, 255)", "rgb(0, 0, 0)"]);
-    applyPresentation(content.host, presentationOf([]));
+    applyPresentation(content.host, resolvePresentation([]));
     expect(colors()).toEqual(["rgb(26, 26, 26)", "rgb(255, 255, 255)"]);
     expect(content.host.hasAttribute("data-ak-contrast")).toBe(false);
   });
@@ -199,7 +202,7 @@ describe("applyPresentation", () => {
       letterSpacing: 0.1,
       wordSpacing: 0.2,
     });
-    applyPresentation(content.host, presentationOf([onSupport("text-appearance", appearance)]));
+    applyPresentation(content.host, resolvePresentation([onSupport("text-appearance", appearance)]));
     const paragraph = content.find("p");
     expect(computed(paragraph, "color")).toBe("rgb(18, 52, 86)");
     expect(computed(content.host, "background-color")).toBe("rgb(255, 251, 230)");
@@ -212,24 +215,27 @@ describe("applyPresentation", () => {
 
   it("enlarges the text by the zoom of the magnification, and takes it off", () => {
     const content = mount("<p>Text</p>");
-    applyPresentation(content.host, presentationOf([onSupport("magnification")]));
+    applyPresentation(content.host, resolvePresentation([onSupport("magnification")]));
     expect(computed(content.find("p"), "font-size")).toBe("32px");
-    applyPresentation(content.host, presentationOf([]));
+    applyPresentation(content.host, resolvePresentation([]));
     expect(computed(content.find("p"), "font-size")).toBe("16px");
   });
 
   it("sets the single column and the keyword emphasis as the stylesheet reads them", () => {
     const content = mount('<p class="qti-keyword-emphasis">Key</p>');
     const before = computed(content.find("p"), "font-weight");
-    applyPresentation(content.host, presentationOf([onSupport("layout-single-column"), onSupport("keyword-emphasis")]));
+    applyPresentation(
+      content.host,
+      resolvePresentation([onSupport("layout-single-column"), onSupport("keyword-emphasis")]),
+    );
     expect(content.host.hasAttribute("data-ak-single-column")).toBe(true);
     expect(computed(content.find("p"), "font-weight")).not.toBe(before);
   });
 
   it("leaves the attributes and properties it did not set, and takes off only its own", () => {
     const content = mount("<p>Text</p>", { "data-other": "kept" }, { "--other": "kept" });
-    applyPresentation(content.host, presentationOf([onSupport("high-contrast"), onSupport("magnification")]));
-    applyPresentation(content.host, presentationOf([]));
+    applyPresentation(content.host, resolvePresentation([onSupport("high-contrast"), onSupport("magnification")]));
+    applyPresentation(content.host, resolvePresentation([]));
     expect(content.host.getAttribute("data-other")).toBe("kept");
     expect(content.host.style.getPropertyValue("--other")).toBe("kept");
     expect(content.host.hasAttribute("data-ak-contrast")).toBe(false);
@@ -237,7 +243,7 @@ describe("applyPresentation", () => {
   });
 
   it("rejects a target that is not an element and a presentation that is not one", () => {
-    expect(() => applyPresentation(JSON.parse("null"), presentationOf([]))).toThrow(
+    expect(() => applyPresentation(JSON.parse("null"), resolvePresentation([]))).toThrow(
       new DataError("The target must be an element, found null."),
     );
     expect(() => applyPresentation(document.createElement("div"), JSON.parse("{}"))).toThrow(
@@ -1127,7 +1133,7 @@ describe("mountContentSupports", () => {
         [onSupport("invert-display-polarity")],
         [onSupport("high-contrast"), onSupport("invert-display-polarity")],
       ]) {
-        applyPresentation(host, presentationOf(themed));
+        applyPresentation(host, resolvePresentation(themed));
         expect(await axeViolations(host)).toEqual([]);
       }
     });
@@ -1848,7 +1854,7 @@ describe("the supports with the runtime's engine", () => {
       const current = view.current;
       if (current === undefined) throw new Error("The item is presented.");
       await root.show({ body: { nodes: current.body, base: "item.xml" }, catalogs: current.catalogs });
-      applyPresentation(host, presentationOf(view.supports));
+      applyPresentation(host, resolvePresentation(view.supports));
       panel.update(view.supports);
       contentSupports.update(view.supports);
     };

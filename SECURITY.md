@@ -150,7 +150,7 @@ session holds any file of the engine. Practice runs the engine on the device, so
 - A client may not send `suspend` or `resume` in an exam, because the runtime counts suspended time nowhere. Breaks are the proctor's,
   except for a candidate whose profile has breaks (`environment` with `breaks`), who may pause as CERT asks; a program that wants
   every break through the proctor sets `profileBreaks: false`. The profile comes from the host, never from the client.
-  Keep the proctor's and the scheduler's endpoints away from candidates. `maxIdle` counts a long gap as a suspension, so
+  Keep the proctor's and the scheduler's endpoints away from candidates. `maxIdleMs` counts a long gap as a suspension, so
   `createSessionHost` refuses it unless `clientActions` has `suspend`; an exam never sets it.
 - The stores must make `create` and `save` atomic across processes, so that a version conflict is a conflict and a session is
   started once.
@@ -218,7 +218,7 @@ parameters of the items and the settings of the test there too.
 
 ## The player: external scoring
 
-A `Submission` of `toSubmission` carries what a rater needs to score a response, which includes the correct responses of the
+A `Submission` of `buildSubmission` carries what a rater needs to score a response, which includes the correct responses of the
 items, the rubric for the scorer and the scoring rubric of the outcome ([scoring.md](docs/player/scoring.md)).
 
 - Give a submission only to authorized raters, through an endpoint that checks the rater: never in a candidate's view, in the
@@ -232,8 +232,8 @@ items, the rubric for the scorer and the scoring rubric of the outcome ([scoring
 - `Submission.scoringRubric` goes only to authorized raters, with the rest of the submission: the candidate's view and
   envelopes hold none of its text. `mountRatingForm` sets the texts of the rubric as text, never as markup. The ratings that
   a rater's page sends back are untrusted input: the server computes the score again with `rubricScore` of the runtime
-  from the rubric of its own state, and passes it to `toSupplyScores`.
-- `toSupplyScores` checks a score against the declaration, but the host decides who may score. The engine
+  from the rubric of its own state, and passes it to `buildSupplyScores`.
+- `buildSupplyScores` checks a score against the declaration, but the host decides who may score. The engine
   trusts a score it is given, so authenticate the rater and log who supplied it.
 
 ## The player: content
@@ -287,7 +287,7 @@ another party, and its frame has `allow-same-origin`, so that the tool keeps its
 - The hook takes a `signal` that aborts when the candidate leaves the item, and the player drops an answer that comes late.
 - The ports `forward.log` and `createToolScoreIntake` receive data that the host's adapter already checked. The intake supplies
   only a `final` score, keeps the latest by `timestampMs`, and trusts the adapter to bind a score to the session and the item of
-  its launch. `sessionScore` reads a report only if the session host branded it as official.
+  its launch. `buildSessionScore` reads a report only if the session host branded it as official.
 - The hints, the line item identifiers and the tokens of a library are the library's: see its security notes.
 
 ## Default limits

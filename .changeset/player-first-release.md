@@ -12,14 +12,14 @@ client secret. The session host and a practice session offer the host side of a 
 `session(id)` and `host`: the host supplies external scores and reads pending work, scorer views and results, and a practice
 session reports the events of each step to a listener. Session calls take an `AbortSignal`. With the option `cat`, a session host and a local session answer their own CAT
 requests. `mountItem` shows the content and the interactions of one item alone, for a page with many items, with one status
-region and a focus that moves only into a dialog of modal feedback. A practice session and a session host take `maxIdle`,
+region and a focus that moves only into a dialog of modal feedback. A practice session and a session host take `maxIdleMs`,
 which counts a gap above it as suspended, and the host refuses it unless candidates may suspend. The player runs in
 Chromium 111, Firefox 115 and Safari 16.4, and later versions, and is tested with axe-core
 at WCAG 2.2 levels A and AA. It is not certified by 1EdTech.
 
 LTI and Caliper are in [interopkit](https://github.com/interopkit/interopkit) as `@interopkit/tool-integration` and
 `@interopkit/learning-analytics`. The player keeps four ports: `LtiLogin` and the frame of an LTI item (`player`),
-`forward.log` and `createToolScoreIntake` with `ToolScoreStore` (`server`), and `sessionScore` (`scoring`). The mapping of
+`forward.log` and `createToolScoreIntake` with `ToolScoreStore` (`server`), and `buildSessionScore` (`scoring`). The mapping of
 delivery events to Caliper events, the outbox and the jobs that publish a grade are in the example
 `examples/player/lms-integration`. `forward` takes only `log`, `HostApplyOptions.scoredBy` is a non-empty string, and `LtiLogin`
 takes a `signal`. The CAT client refuses a redirect (`redirect: "manual"`) with a `ServiceError`, and an answer with more JSON tokens than `maxTokens`.
@@ -39,7 +39,7 @@ that stops the recording leaves the answer in the results while the bytes arrive
 `data-ak-record-limit` and `data-ak-record-once` of `qti-upload-interaction` start a recording by itself after a countdown, limit it to
 at most `MAX_RECORDING_SECONDS`, and allow one recording only.
 
-`LocalStore.save` takes `{ state, events }`: the state and the events of the step that made it, in one write. `toSupplyScores` reads only the `id`,
+`LocalStore.save` takes `{ state, events }`: the state and the events of the step that made it, in one write. `buildSupplyScores` reads only the `id`,
 `outcome` and `declaration` of its request, so that a rater's page passes the fields of a `Submission`. The option `cat` of a session host and of a local session is a
 `CatSessionPort`. `data-ak-count="words"` on an extended text shows the words typed, with the message `counterWords`; the text areas and the editor ask the browser for no
 spell check, correction, capital letters or completion, and the support `spell-checker-on-screen` turns the spell check on.

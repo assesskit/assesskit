@@ -385,7 +385,7 @@ call after each step:
 | `outcomes` | The outcomes of the item after the attempt, by identifier, as JSON-safe wire values; an outcome named `__proto__` stays data                             | With `eventOutcomes` only |
 
 The time of one attempt is the `duration` of its event minus that of the previous event of the same item; the first attempt's is
-the value itself. Time that the session is suspended never runs, so a pause, or a gap that `maxIdle` counts as one, is left out.
+the value itself. Time that the session is suspended never runs, so a pause, or a gap that `maxIdleMs` counts as one, is left out.
 `attempt` and `duration` hold no score. `outcomes` does, so the events go to the host's log ([server](../player/server.md#forwarding-the-steps))
 and never to a candidate, whose view has no events.
 
@@ -1512,7 +1512,7 @@ also a record of what the candidate saw, so a host that edits content while exam
 
 ### Sessions across days
 
-A learner who closes the page and comes back three days later has not worked in between. With `maxIdle` on a practice session
+A learner who closes the page and comes back three days later has not worked in between. With `maxIdleMs` on a practice session
 or a session host, the first action after a gap above it suspends the session at its latest step and resumes it now, so that `duration`
 and every running maximum time leave the gap out, exactly as an explicit `suspend` and `resume` would. The `duration` of a
 `response-processed` event is then the time on task. [A learner who is away](../player/client.md#a-learner-who-is-away) has the

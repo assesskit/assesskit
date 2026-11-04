@@ -45,7 +45,7 @@ loads the content and the interactions that every mount shares. `bundle.test.ts`
 that imports only `mountItem`, and `size.test.ts` fails when it is not smaller than a bundle of `mountDelivery`. Both hold the
 reader of a pronunciation lexicon with its XML parser (`saxes` and the runtime's `xml`, 41 kB before gzip): reading aloud is
 part of every mount, and the modules of the runtime that the content uses reach the parser too, so each bundler below puts it
-in the first load of `mountItem`. The `player` entry point holds it as well, because it exports `parseLexicon`.
+in the first load of `mountItem`. The `player` entry point holds it as well, because it exports `readLexicon`.
 
 ## The first load of a client
 

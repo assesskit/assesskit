@@ -17,7 +17,7 @@ export interface IdleInput<TAction extends CandidateAction | HostAction = Candid
   /** The time of the host's clock, in epoch milliseconds. */
   readonly now: number;
   /** The longest gap between steps that counts as time on task, in milliseconds, or `undefined` for none. */
-  readonly maxIdle: number | undefined;
+  readonly maxIdleMs: number | undefined;
 }
 
 /** The step that {@link stepAfterIdle} took, with the time its action was stamped with. */
@@ -29,7 +29,7 @@ export interface IdleStep {
 }
 
 /**
- * Applies an action to a session, counting a gap above `maxIdle` as suspended: the session suspends at the latest step,
+ * Applies an action to a session, counting a gap above `maxIdleMs` as suspended: the session suspends at the latest step,
  * resumes at `now`, and then the action runs, as one step.
  *
  * @remarks
@@ -49,10 +49,10 @@ export function stepAfterIdle(runtime: IdleRuntime, input: IdleInput<CandidateAc
 export function stepAfterIdle(runtime: IdleRuntime, input: IdleInput): IdleStep | undefined;
 export function stepAfterIdle(runtime: IdleRuntime, input: IdleInput): IdleStep | undefined {
   const { engine, stamp } = runtime;
-  const { state, action, now, maxIdle } = input;
+  const { state, action, now, maxIdleMs } = input;
   const stamped = stamp(state, action, now);
   const { at } = stamped;
-  if (maxIdle === undefined || state.status !== "in-progress" || now - state.at <= maxIdle) {
+  if (maxIdleMs === undefined || state.status !== "in-progress" || now - state.at <= maxIdleMs) {
     return { step: engine.apply(state, stamped), at };
   }
   if (action.type === "time") return undefined;

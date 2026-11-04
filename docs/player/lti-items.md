@@ -13,7 +13,7 @@ flowchart LR
     subgraph player["@assesskit/player"]
       frame["player: the frames of the tool<br/>LtiLogin"]
       srv["server: the session host<br/>forward.log, createToolScoreIntake"]
-      scoring["scoring: sessionScore"]
+      scoring["scoring: buildSessionScore"]
     end
   end
   host["Your host, or the example<br/>examples/player/lms-integration"]
@@ -35,7 +35,7 @@ flowchart LR
 | `LtiLogin`, `LtiFrame`                    | The player asks the host to start the tool of an item | `hooks.ltiLogin` of `mountDelivery` ([delivery](delivery.md#lti-items))    |
 | `createToolScoreIntake`, `ToolScoreStore` | The score of the tool comes in as `supply-scores`     | `@assesskit/player/server` ([server](server.md#the-scores-of-tool-items))  |
 | `forward.log`, `StepSink`                 | The session host gives each saved step to the host    | `@assesskit/player/server` ([server](server.md#forwarding-the-steps))      |
-| `sessionScore`                            | The host reads the score of a session as plain data   | `@assesskit/player/scoring` ([scoring](scoring.md#the-score-of-a-session)) |
+| `buildSessionScore`                       | The host reads the score of a session as plain data   | `@assesskit/player/scoring` ([scoring](scoring.md#the-score-of-a-session)) |
 
 ## The wiring
 
@@ -61,14 +61,14 @@ sequenceDiagram
   S->>H: forward.log(step)
   H->>J: append to the outbox
   J->>S: results(), pending()
-  J->>K: sessionScore, then the grade of the session
+  J->>K: buildSessionScore, then the grade of the session
 ```
 
 | Step | The host does                                                                                                                                                                                                                                                                                                                                                                                       |
 | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1    | Answers `ltiLogin`: it reads the `LtiLink` of the item, takes the launch URL with `resolveLaunchUrl` of the runtime, describes the launch as a message in which the session is the context and the item instance is the resource link, and has its LTI library build the `LtiFrame`; the library calls the host's `check` first, which binds the message to the candidate with `SessionHost.check`. |
 | 2    | Takes the score of the tool: the gradebook behind the grade services checks that the line item is a link of the tool and that the session is the user's, and gives each score to `intake.onScore` as a `ToolScore`; the host's log calls `intake.settle`, so that a score that came early is supplied when the item's session is over.                                                              |
-| 3    | Publishes the outcome: the log only appends each step to an outbox, and a job outside any step reads `results()` and `pending()`, calls `sessionScore`, and sends the grade and the analytics events with its libraries.                                                                                                                                                                            |
+| 3    | Publishes the outcome: the log only appends each step to an outbox, and a job outside any step reads `results()` and `pending()`, calls `buildSessionScore`, and sends the grade and the analytics events with its libraries.                                                                                                                                                                       |
 
 The log never touches the network, so an outage of the platform never delays a candidate and never reads as a CAT failure.
 Each grade of a line item needs a later time than the one before, even after a timeout whose outcome is not known; the example

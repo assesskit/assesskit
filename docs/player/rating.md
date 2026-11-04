@@ -11,7 +11,7 @@ flowchart LR
   form -->|"the rater chooses a level<br/>for each criterion"| ratings["ratings: { criterion, score }[]"]
   ratings --> score["rubricScore:<br/>the score, or null while a criterion is unrated"]
   ratings --> host["The host: onChange, then submit"]
-  score --> supply["toSupplyScores → the engine"]
+  score --> supply["buildSupplyScores → the engine"]
 ```
 
 The form is the player's part of rating, and the workflow is the host's: assignment, double rating, adjudication and queues

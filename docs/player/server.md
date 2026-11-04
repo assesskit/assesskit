@@ -121,7 +121,7 @@ records.get("s1").version; // => 1
 | `packages`      | `(session, options?) => Promise<QtiPackage>` | The package that a session delivers; the gate takes the same function. It may ignore the options.                                                                              |
 | `clientActions` | `CandidateActionType[]`                      | The types of action a client may send. Default: every type but `suspend` and `resume` (`EXAM_CLIENT_ACTIONS`).                                                                 |
 | `profileBreaks` | `boolean`                                    | Whether a candidate whose profile has breaks may send `suspend` and `resume` beside `clientActions` ([the policy](#client-action-policy)). Default: `true`.                    |
-| `maxIdle`       | `number`                                     | The longest gap between steps, in milliseconds, that counts as time on task, as on `createLocalSession`. Needs `suspend` in `clientActions`; never for an exam. Default: none. |
+| `maxIdleMs`     | `number`                                     | The longest gap between steps, in milliseconds, that counts as time on task, as on `createLocalSession`. Needs `suspend` in `clientActions`; never for an exam. Default: none. |
 | `limits`        | `Partial<ActionLimits>`                      | The limits on the size of an action, as the runtime's `readCandidateAction` takes them; give the remote client the same ones. Default: the runtime's.                          |
 | `forward`       | `ForwardOptions`                             | Where the events of each step go: the host's `log`. Default: nowhere.                                                                                                          |
 | `cat`           | `CatSessionPort`                             | The port of the CAT engines: the host then answers its own CAT requests ([CAT](cat.md#the-option-cat)). Default: none.                                                         |
@@ -153,8 +153,8 @@ sequenceDiagram
   S-->>R: the scoring requests
   R->>S: scorerView(request)
   S-->>R: correct responses and rubric
-  R->>C: toSubmission(view), then the score
-  C-->>R: toSupplyScores(request, score, scorer)
+  R->>C: buildSubmission(view), then the score
+  C-->>R: buildSupplyScores(request, score, scorer)
   R->>S: apply(action, { scoredBy })
   S-->>R: HostStep { events, refusal? }
 ```
@@ -164,11 +164,11 @@ sequenceDiagram
 | `apply(action, options?)`       | Applies `time`, `supply-scores` or `cat-response`. A refusal of the engine, such as `unknown-request`, is `HostStep.refusal` and changes nothing. A `time` that finds nothing to apply is accepted with no events; it is saved, and the log is not called. The step of a `supply-scores` action reaches the log with `supplied`: the value, the scorer and, when the host gave `options.scoredBy`, who scored: a non-empty string, such as the rater or the scoring service that the host's authentication of the rater endpoint names. If the log throws, the step stays saved and the call rejects, so a retried `supply-scores` reports `scores-replaced` and reaches the log a second time. |
 | `pending(options?)`             | What the engine waits on the host for.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `scorerView(request, options?)` | What a rater needs, correct responses included. Call it only from a rater's endpoint.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `results(options?)`             | The results report, marked official: the one object that `sessionScore` accepts. A copy of it is not official.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `results(options?)`             | The results report, marked official: the one object that `buildSessionScore` accepts. A copy of it is not official.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 The step feed of a session host is `forward.log`, which every process calls after the save of each step with events; a
 local session has `subscribeSteps` instead ([protocol](protocol.md#the-host-session)). The host reads the score of a session
-with `results()` and `pending()` and gives them to `sessionScore` ([scoring](scoring.md#the-score-of-a-session)).
+with `results()` and `pending()` and gives them to `buildSessionScore` ([scoring](scoring.md#the-score-of-a-session)).
 
 ### Caller binding
 
@@ -249,13 +249,13 @@ action and its view shows a time-out as applied, so a late job delays only a pro
 finds nothing to apply is accepted with no events: it is saved, and the log is not called. The player offers no proctor time extension and no read of the status, the item or the time left of a session: see
 [Not included](supported.md#not-included).
 
-With `maxIdle` the host closes a gap above it as [a local session does](client.md#a-learner-who-is-away): the first request of the
+With `maxIdleMs` the host closes a gap above it as [a local session does](client.md#a-learner-who-is-away): the first request of the
 candidate or action of the host after it applies `suspend` at the latest step, `resume` now and the action, saves the three as one
 step with one version, and gives the log the events of all three in order. The `time` of the job that finds such a gap is dropped:
 nothing is saved and no deadline is scheduled again, so an abandoned session stops costing anything, and the next action
-schedules the deadlines that the gap moved. A host that wants old sessions closed sweeps them itself. `maxIdle` suspends on the
+schedules the deadlines that the gap moved. A host that wants old sessions closed sweeps them itself. `maxIdleMs` suspends on the
 candidate's behalf, which the policy of an exam does not allow, so `createSessionHost` throws `DataError` when `clientActions`
-has no `suspend`; an exam leaves `maxIdle` out.
+has no `suspend`; an exam leaves `maxIdleMs` out.
 
 ## Stores
 
@@ -296,7 +296,7 @@ ignore it. `FileStore` and the gate take none, and neither does the `log`: forwa
 `forward.log` receives each saved step that has events, as a `StepEvents`: the session, the step, the events as the runtime gave
 them, and `supplied` on every step of a `supply-scores` action. It is the one place where the host sees what happened, so a host
 composes its event sink and its score sink in it. Both are jobs of the host: the log only appends to an outbox, and a job outside
-any step reads `results()` and `pending()` from `session(id)`, calls `sessionScore`, and publishes. [LTI items](lti-items.md)
+any step reads `results()` and `pending()` from `session(id)`, calls `buildSessionScore`, and publishes. [LTI items](lti-items.md)
 shows the wiring.
 
 The events carry no score unless the host builds its engine with `eventOutcomes`: `response-processed` then holds the outcomes
@@ -325,7 +325,7 @@ A `log` bounds its own time and calls only `session(id)`: `handle`, `view` and `
 | `ToolScoreIntake.settle`            | `pending` or `apply` rejects, as `log` when it runs inside `log`; the score stays kept                                                                                                      | As `log`, or the timeout of the job that runs it                                       | Safe: it supplies only the requests that are open, so a repeat makes no step                                                 |
 | The option `scoredBy` of the intake | Rejects after `keep` and before any `apply`: the score stays kept, and a retry supplies it                                                                                                  | The `signal` of `onScore` reaches it. `settle` has none, so it bounds itself           | Before each supply; pure                                                                                                     |
 | `ToolScoreStore`                    | Rejects the caller; `keep` stores nothing when it rejects                                                                                                                                   | The `signal` reaches it; it bounds itself                                              | `keep` is atomic across processes, and keeps a score unless a later one is kept                                              |
-| `sessionScore`                      | Throws `DataError` on a report that gives no score, in the host's job and never in a step                                                                                                   | No I/O                                                                                 | Same input, same result                                                                                                      |
+| `buildSessionScore`                 | Throws `DataError` on a report that gives no score, in the host's job and never in a step                                                                                                   | No I/O                                                                                 | Same input, same result                                                                                                      |
 
 ## The scores of tool items
 
@@ -395,7 +395,7 @@ Create the intake with `host: { session: (id) => host.session(id) }`, then the h
 `forward: { log: (step) => intake.settle(step) }`.
 
 A host that logs in other ways calls `settle` after its own log, or from a job. The intake does not publish the results: that is
-the job of the host, which calls `sessionScore` when the session is over, and again when a person or a tool supplies the rest.
+the job of the host, which calls `buildSessionScore` when the session is over, and again when a person or a tool supplies the rest.
 
 ## A review step with a cap on changes
 
@@ -568,7 +568,7 @@ The host throws the runtime's `DataError` for a request it refuses and the playe
 | `SecurityError`                                   | The action is above a limit of `limits`                                                                                                | Do not send it again; raise the limit only for a reason                                                                                                                                                                                                                               |
 | `DataError`                                       | A call of `session(id)`, for the proctor, the scorer or a score, names a session that does not exist                                   | Check the identifier                                                                                                                                                                                                                                                                  |
 | `DataError`                                       | `The session cannot start: …`, the engine refused the start                                                                            | Read the refusal in the message; check the definition and the profile                                                                                                                                                                                                                 |
-| `DataError`                                       | The option `maxIdle` without `suspend` in `clientActions`, or another option of the wrong type                                         | Fix the options; the message says which                                                                                                                                                                                                                                               |
+| `DataError`                                       | The option `maxIdleMs` without `suspend` in `clientActions`, or another option of the wrong type                                       | Fix the options; the message says which                                                                                                                                                                                                                                               |
 | `DataError`                                       | The session refused the score of a tool                                                                                                | Read the refusal in the message; the request may be answered already                                                                                                                                                                                                                  |
 | `ServiceError` 409                                | Another request saved the session first, four times in a row                                                                           | Send the request again; one session with many writers needs a store with less contention                                                                                                                                                                                              |
 | The error of a store, the scheduler or `packages` | The service rejected                                                                                                                   | A request that failed before its save changed nothing: send it again. A `log` that fails after the save leaves the step saved and reaches the caller, and a repeat of the request forwards nothing, so keep the `log` to an append to an outbox ([forwarding](#forwarding-the-steps)) |
@@ -576,11 +576,11 @@ The host throws the runtime's `DataError` for a request it refuses and the playe
 
 ## Not included
 
-| Not included                                       | Why                                                                                                                                               |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Authentication and routes                          | The host authenticates and passes `caller`; the host owns the URLs, the statuses and the transport                                                |
-| A database, a queue or a file system               | `SessionStore`, `Scheduler`, `FileStore` and `ToolScoreStore` are the ports; the host chooses PostgreSQL, S3 or others behind them                |
-| A scoring service                                  | The host supplies scores through `supply-scores`, or through the intake of the tool scores                                                        |
-| Who may proctor, and the proctor's page            | The host calls `proctor` for the people it trusts; the player has no proctor interface                                                            |
-| LTI, Caliper and the other protocols of a platform | [interopkit](https://github.com/interopkit/interopkit) implements them; the host has the ports `forward.log` and `sessionScore` to plug them into |
-| Logging and metrics                                | The player never logs; the host wraps the stores and the log                                                                                      |
+| Not included                                       | Why                                                                                                                                                    |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Authentication and routes                          | The host authenticates and passes `caller`; the host owns the URLs, the statuses and the transport                                                     |
+| A database, a queue or a file system               | `SessionStore`, `Scheduler`, `FileStore` and `ToolScoreStore` are the ports; the host chooses PostgreSQL, S3 or others behind them                     |
+| A scoring service                                  | The host supplies scores through `supply-scores`, or through the intake of the tool scores                                                             |
+| Who may proctor, and the proctor's page            | The host calls `proctor` for the people it trusts; the player has no proctor interface                                                                 |
+| LTI, Caliper and the other protocols of a platform | [interopkit](https://github.com/interopkit/interopkit) implements them; the host has the ports `forward.log` and `buildSessionScore` to plug them into |
+| Logging and metrics                                | The player never logs; the host wraps the stores and the log                                                                                           |

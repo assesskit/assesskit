@@ -33,7 +33,7 @@ export interface SpeechRequest {
   readonly volume?: number;
 }
 
-/** The voice of the player: the host's text-to-speech, or the one the browser has ({@link webSpeech}). */
+/** The voice of the player: the host's text-to-speech, or the one the browser has ({@link createWebSpeech}). */
 export interface SpeechHook {
   /**
    * Voices a request.

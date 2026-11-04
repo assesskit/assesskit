@@ -15,7 +15,7 @@ import type { CandidateView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { FileValue } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
-import type { SessionCallOptions, SessionClient } from "../../protocol/index.js";
+import type { CallOptions, SessionClient } from "../../protocol/index.js";
 import { MAX_TIMER_DELAY_MS } from "../../protocol/internal.js";
 import { readOrigins } from "../content/internal.js";
 import type { CustomInteractionHook } from "../elements/index.js";
@@ -36,7 +36,7 @@ export interface MountFiles {
    * @param options - Its `signal` aborts when the mount is destroyed; a host that can, stops the upload.
    * @returns The file value.
    */
-  upload(bytes: Blob, mimeType: string, fileName?: string, options?: SessionCallOptions): Promise<FileValue>;
+  upload(bytes: Blob, mimeType: string, fileName?: string, options?: CallOptions): Promise<FileValue>;
   /**
    * Reads the bytes of a stored file, for a portable custom interaction.
    *
@@ -44,7 +44,7 @@ export interface MountFiles {
    * @param options - Its `signal` aborts when the mount is destroyed; a host that can, stops the read.
    * @returns The bytes.
    */
-  read(file: FileValue, options?: SessionCallOptions): Promise<Uint8Array>;
+  read(file: FileValue, options?: CallOptions): Promise<Uint8Array>;
   /**
    * Returns the URL that plays a stored file back, such as a recording in review: a URL of the gate with a short-lived token.
    *
@@ -62,7 +62,7 @@ export interface MountFiles {
    * @returns The file value that the response holds until the bytes are stored with `fill`. It exists before its bytes do,
    * so a host that scores holds the request until `fill` ends or times out.
    */
-  reserve?(mimeType: string, fileName?: string, options?: SessionCallOptions): Promise<FileValue>;
+  reserve?(mimeType: string, fileName?: string, options?: CallOptions): Promise<FileValue>;
   /**
    * Stores the bytes of a reserved file, retrying as the host sees fit. The end of the mount does not abort it, because a
    * recording that a time limit, a proctor or a destroy stops still has to arrive; the host's own timeout ends a store that
@@ -72,7 +72,7 @@ export interface MountFiles {
    * @param bytes - The bytes.
    * @param options - Its `signal` is the caller's alone.
    */
-  fill?(file: FileValue, bytes: Blob, options?: SessionCallOptions): Promise<void>;
+  fill?(file: FileValue, bytes: Blob, options?: CallOptions): Promise<void>;
 }
 
 /** What the player needs of its page, whatever it shows. */
@@ -147,7 +147,7 @@ export interface MountOptions {
     /**
      * The voice that reads aloud for the candidates whose supports ask for it.
      *
-     * @defaultValue The voice of the browser, `webSpeech()`.
+     * @defaultValue The voice of the browser, `createWebSpeech()`.
      */
     readonly voice?: SpeechHook;
     /**

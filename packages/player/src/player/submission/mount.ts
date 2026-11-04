@@ -69,7 +69,7 @@ function contentIn(
  * only on a page that authorized raters reach.
  *
  * @param host - An element in the page that has no shadow root, or one that an earlier mount of the player left empty.
- * @param submission - What `toSubmission` returned, as JSON parsed it.
+ * @param submission - What `buildSubmission` returned, as JSON parsed it.
  * @param options - See {@link SubmissionOptions}.
  * @returns The handle that shows another submission and takes the display down.
  * @throws `DataError` when `host` is not an element that can have a shadow root and has none, or has one that an earlier mount of the player left empty, an option is not of its

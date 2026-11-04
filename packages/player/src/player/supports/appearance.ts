@@ -172,14 +172,14 @@ function applyColorTheme(theme: ColorTheme, { attributes, properties }: Writer):
  * @remarks
  * The look has the theme of high contrast and of inverted polarity, the color theme, the colors, size, face and spacing of text
  * appearance, the zoom of text, the single column and keyword emphasis. The zoom of non-text content is
- * {@link mediaScaleOf}.
+ * {@link mediaScale}.
  *
  * @param supports - The supports of the view; those that are off or change nothing of the look are ignored.
  * @returns The presentation.
  * @throws `DataError` when `supports` is not a list of the runtime's `SupportView`s.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, display supports}
  */
-export function presentationOf(supports: readonly SupportView[]): Presentation {
+export function resolvePresentation(supports: readonly SupportView[]): Presentation {
   checkSupportViews(supports, "The list of supports");
   const colorTheme = colorThemeOf(supports);
   const out: Writer = { attributes: new Map(), properties: new Map() };
@@ -200,7 +200,7 @@ export function presentationOf(supports: readonly SupportView[]): Presentation {
  * @throws `DataError` when `supports` is not a list of the runtime's `SupportView`s.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, magnification}
  */
-export function mediaScaleOf(supports: readonly SupportView[]): number {
+export function mediaScale(supports: readonly SupportView[]): number {
   checkSupportViews(supports, "The list of supports");
   const magnification = activeSupport(supports, "magnification");
   return magnification === undefined ? 1 : zoomsOf(magnification).nonText;

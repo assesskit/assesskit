@@ -4,6 +4,6 @@
  *
  * @module @assesskit/player/scoring
  */
-export { type ScoringProgress, type SessionScore, sessionScore } from "./session-score.js";
-export { toSubmission } from "./submission.js";
-export { type ScoreInput, type SupplyScores, toSupplyScores } from "./supply-scores.js";
+export { buildSessionScore, type ScoringProgress, type SessionScore } from "./session-score.js";
+export { buildSubmission } from "./submission.js";
+export { buildSupplyScores, type ScoreInput, type SupplyScores } from "./supply-scores.js";

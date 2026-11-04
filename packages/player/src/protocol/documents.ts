@@ -66,7 +66,7 @@ export interface DocumentSource {
  * @param source - Where the documents of the test are; `undefined` for a package that has no test for the view.
  * @returns The paths of the documents of the view.
  */
-export function viewDocuments(view: CandidateView, source: DocumentSource | undefined): ViewDocuments {
+export function resolveViewDocuments(view: CandidateView, source: DocumentSource | undefined): ViewDocuments {
   const { current } = view;
   const test = source?.test ?? "";
   if (source === undefined || current === undefined || current.variant !== undefined)

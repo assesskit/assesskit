@@ -178,7 +178,7 @@ The tests of `server/` run in Node with no network. The log of a session host is
 runs against a host and a store that fail on demand, one failure at a time, which is how the failure table of
 [server](server.md#forwarding-the-steps) is tested: a retry at an equal time, a `settle` that repeats after it succeeded, a
 store, a `scoredBy` and a host that reject, a signal that aborts, and a log that rejects on the step of a `cat-response`. The
-oracles are the contracts of those ports and the specification of the score service for the order of timestamps. `sessionScore`
+oracles are the contracts of those ports and the specification of the score service for the order of timestamps. `buildSessionScore`
 is tested in `scoring.test.ts` against reports built from the runtime's result model.
 
 ## Tests of scoring
@@ -186,11 +186,11 @@ is tested in `scoring.test.ts` against reports built from the runtime's result m
 The tests of `scoring/` run in Node against the runtime's engine, and those of the display run in the browsers. Their oracles are not
 the code under test.
 
-| Oracle                                                                         | Used for                                                                                                                                                  |
-| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The runtime's engine: `scorerView`, `pending`, `apply` and `results`           | The scorer view that `toSubmission` reads, and what the engine does with the action of `toSupplyScores`: the events, the pending requests and the results |
-| The runtime's codec, `writeWireValue` and `readWireValue`, and BPIG Appendix C | The form of the values of a submission, which a property test decodes again from JSON text                                                                |
-| INFO section 4.5.10 and the runtime's scoring requests                         | Which outcomes are scored externally, by whom, and when a request is accepted: after the test ended, and again to replace the score                       |
+| Oracle                                                                         | Used for                                                                                                                                                        |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The runtime's engine: `scorerView`, `pending`, `apply` and `results`           | The scorer view that `buildSubmission` reads, and what the engine does with the action of `buildSupplyScores`: the events, the pending requests and the results |
+| The runtime's codec, `writeWireValue` and `readWireValue`, and BPIG Appendix C | The form of the values of a submission, which a property test decodes again from JSON text                                                                      |
+| INFO section 4.5.10 and the runtime's scoring requests                         | Which outcomes are scored externally, by whom, and when a request is accepted: after the test ended, and again to replace the score                             |
 
 `scoring.test.ts` plays tests and items through the engine: the request of an item outcome and of a test outcome with covers,
 an item that was not presented, correct responses and template values, a score supplied before, and `unknown-request` for a
@@ -220,5 +220,5 @@ for a rubric of each kind ([rating](rating.md)).
 
 Options and ratings of another type, as JSON passes them, are refused with a `DataError`, and a host that is refused is left
 without a shadow root. `bundle.test.ts` shows that a bundle of `mountDelivery` and `createRemoteSession` holds no file of the
-form, and that a bundle of `mountRatingForm` and `toSupplyScores` holds no file of the engine and no element table of the
+form, and that a bundle of `mountRatingForm` and `buildSupplyScores` holds no file of the engine and no element table of the
 runtime.

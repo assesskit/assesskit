@@ -4,11 +4,11 @@ import type { ContentRoot } from "../roots/index.js";
 import type { Lexicon, SpeechHook } from "../speech/index.js";
 import {
   applyPresentation,
-  mediaScaleOf,
+  mediaScale,
   mountContentSupports,
   mountSpoken,
   mountVariantNotice,
-  presentationOf,
+  resolvePresentation,
   type SupportPanel,
 } from "../supports/index.js";
 import type { PciHost } from "./pci.js";
@@ -92,10 +92,10 @@ export function mountDeliverySupports(context: SupportsContext): DeliverySupport
       const key = JSON.stringify(view.supports);
       if (key !== look) {
         look = key;
-        const presentation = presentationOf(view.supports);
+        const presentation = resolvePresentation(view.supports);
         applyPresentation(contentHost, presentation);
         pci.setPresentation(presentation);
-        content.setMediaScale(mediaScaleOf(view.supports));
+        content.setMediaScale(mediaScale(view.supports));
       }
       panel?.update(view.supports);
       variant.update(view.current?.variant);

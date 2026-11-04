@@ -8,8 +8,8 @@
 export { type ActionEnvelope, checkActionEnvelope } from "./action-envelope.js";
 export { type Caller, checkCaller } from "./caller.js";
 export type { Clock } from "./clock.js";
-export { type DocumentSource, type ItemDocuments, type ViewDocuments, viewDocuments } from "./documents.js";
-export type { CatFailure, HostApplyOptions, HostSession, HostStep, SessionCallOptions } from "./host-session.js";
+export { type DocumentSource, type ItemDocuments, resolveViewDocuments, type ViewDocuments } from "./documents.js";
+export type { CallOptions, CatFailure, HostApplyOptions, HostSession, HostStep } from "./host-session.js";
 export {
   checkAllowList,
   checkLtiFrame,

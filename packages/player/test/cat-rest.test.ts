@@ -2608,7 +2608,7 @@ describe("the exports", () => {
       "CAT_SCOPES",
       "createCatRestHandler",
       "createRestCatPort",
-      "scopesOf",
+      "listScopes",
     ]);
   });
 });

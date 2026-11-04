@@ -2,7 +2,7 @@ import { checkFunction, checkRecord } from "@assesskit/runtime/checks";
 import type { ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { buildSingle } from "@assesskit/runtime/values";
-import type { HostApplyOptions, HostSession, SessionCallOptions } from "../protocol/index.js";
+import type { CallOptions, HostApplyOptions, HostSession } from "../protocol/index.js";
 import { checkCallOptions } from "../protocol/internal.js";
 import type { StepSink } from "./forward.js";
 import type { ToolScore, ToolScoreStore } from "./tool-score-store.js";
@@ -22,7 +22,7 @@ export interface ToolScoreIntakeOptions {
    *
    * @defaultValue none, so that the steps carry no scorer
    */
-  readonly scoredBy?: (session: string, item: ItemKey, options?: SessionCallOptions) => string | Promise<string>;
+  readonly scoredBy?: (session: string, item: ItemKey, options?: CallOptions) => string | Promise<string>;
 }
 
 /** What the wiring of the scores of tool items gives the host. */
@@ -44,7 +44,7 @@ export interface ToolScoreIntake {
    * @throws `DataError` when the session refuses the score.
    * @throws the error of the store, of `scoredBy` or of the session host, as each rejects.
    */
-  readonly onScore: (session: string, item: ItemKey, score: ToolScore, options?: SessionCallOptions) => Promise<void>;
+  readonly onScore: (session: string, item: ItemKey, score: ToolScore, options?: CallOptions) => Promise<void>;
   /**
    * A step sink that supplies the kept final score of each item whose requests the step made, for the requests that are
    * still open. A tool may give a final score while the candidate is still in the item, and the runtime makes the requests
@@ -103,7 +103,7 @@ export function createToolScoreIntake(options: ToolScoreIntakeOptions): ToolScor
   const applyOptionsOf = async (
     session: string,
     item: ItemKey,
-    callOptions: SessionCallOptions | undefined,
+    callOptions: CallOptions | undefined,
   ): Promise<HostApplyOptions> => {
     const signal = callOptions?.signal;
     return {
@@ -140,7 +140,7 @@ export function createToolScoreIntake(options: ToolScoreIntakeOptions): ToolScor
     session: string,
     item: ItemKey,
     score: ToolScore,
-    callOptions: SessionCallOptions | undefined,
+    callOptions: CallOptions | undefined,
     only?: ReadonlySet<string>,
   ): Promise<void> => {
     if (!score.final) return;

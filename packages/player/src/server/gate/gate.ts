@@ -14,7 +14,7 @@ import { type QtiPackage, resolveReference } from "@assesskit/runtime/package";
 import type { FileValue } from "@assesskit/runtime/values";
 import type { CryptoKey } from "jose";
 import * as v from "valibot";
-import type { SessionCallOptions } from "../../protocol/index.js";
+import type { CallOptions } from "../../protocol/index.js";
 import { checkCallOptions } from "../../protocol/internal.js";
 import type { FileStore } from "../internal.js";
 import { contentTypeOf } from "./content-type.js";
@@ -38,7 +38,7 @@ export interface AssetGateOptions {
   /** The origin that serves the gate, `https` and without a path, such as `https://assets.example`. */
   readonly origin: string;
   /** Returns the package that a session delivers. Its `options.signal` ends the wait of the call that asked. */
-  readonly packages: (session: string, options?: SessionCallOptions) => Promise<QtiPackage>;
+  readonly packages: (session: string, options?: CallOptions) => Promise<QtiPackage>;
   /** The storage of the files that candidates upload. */
   readonly files: FileStore;
   /**
@@ -73,7 +73,7 @@ export interface AssetGate {
    * @param session - The identifier of the session.
    * @param prefixes - Directories of the package, each `""` or ending in `/`.
    * @param now - The time in epoch milliseconds.
-   * @param options - See {@link SessionCallOptions}.
+   * @param options - See {@link CallOptions}.
    * @returns The base URL of each prefix, `https://<origin>/g/<token>/`; the URL of a file is the base plus its path.
    * @throws `DataError` when an argument has the wrong type or a prefix is not a directory.
    * @throws `signal.reason` when the signal has aborted.
@@ -82,7 +82,7 @@ export interface AssetGate {
     session: string,
     prefixes: Iterable<string>,
     now: number,
-    options?: SessionCallOptions,
+    options?: CallOptions,
   ): Promise<Readonly<Record<string, string>>>;
   /**
    * Signs the URL of one file of a candidate for `uploadTtlSeconds` from `now`.
@@ -90,12 +90,12 @@ export interface AssetGate {
    * @param session - The identifier of the session.
    * @param file - The file value that names the file in the host's store.
    * @param now - The time in epoch milliseconds.
-   * @param options - See {@link SessionCallOptions}.
+   * @param options - See {@link CallOptions}.
    * @returns The URL, `https://<origin>/f/<token>/<reference>`.
    * @throws `DataError` when an argument has the wrong type, or the reference is `.` or `..`, which a URL takes as a step.
    * @throws `signal.reason` when the signal has aborted.
    */
-  signFile(session: string, file: FileValue, now: number, options?: SessionCallOptions): Promise<string>;
+  signFile(session: string, file: FileValue, now: number, options?: CallOptions): Promise<string>;
   /**
    * Answers a request for a path of the form `/g/<token>/<package path>` or `/f/<token>/<reference>`.
    *
@@ -113,7 +113,7 @@ export interface AssetGate {
    * @throws `DataError` when an argument has the wrong type.
    * @throws `signal.reason` when the signal has aborted.
    */
-  serve(request: { readonly path: string }, now: number, options?: SessionCallOptions): Promise<GateResponse>;
+  serve(request: { readonly path: string }, now: number, options?: CallOptions): Promise<GateResponse>;
 }
 
 /** The headers of every response: the token is in the URL, so no referrer carries it, and nothing is sniffed. */
@@ -236,7 +236,7 @@ export function createAssetGate(options: AssetGateOptions): AssetGate {
     token: string,
     rest: string,
     now: number,
-    options: SessionCallOptions | undefined,
+    options: CallOptions | undefined,
   ): Promise<GateResponse> => {
     const claims = await claimsOf(key, token, PACKAGE_USE, now);
     const session = claims?.session;
@@ -257,7 +257,7 @@ export function createAssetGate(options: AssetGateOptions): AssetGate {
     token: string,
     rest: string,
     now: number,
-    options: SessionCallOptions | undefined,
+    options: CallOptions | undefined,
   ): Promise<GateResponse> => {
     const claims = await claimsOf(key, token, FILE_USE, now);
     const reference = claims?.reference;

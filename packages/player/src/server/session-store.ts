@@ -1,4 +1,4 @@
-import type { SessionCallOptions } from "../protocol/index.js";
+import type { CallOptions } from "../protocol/index.js";
 
 /** What a session store holds for one session. */
 export interface StoredSession {
@@ -32,31 +32,31 @@ export interface SessionStore {
    *
    * @param session - The identifier of the session.
    * @param record - The state, the principal and the first envelope.
-   * @param options - See {@link SessionCallOptions}. A store that cannot tell whether it stored the record ignores the signal,
+   * @param options - See {@link CallOptions}. A store that cannot tell whether it stored the record ignores the signal,
    * because it rejects only when nothing was stored.
    * @returns `false` when the session already exists, and then stores nothing.
    */
   create(
     session: string,
     record: Pick<StoredSession, "state" | "principal" | "envelope">,
-    options?: SessionCallOptions,
+    options?: CallOptions,
   ): Promise<boolean>;
   /**
    * Returns the record of a session.
    *
    * @param session - The identifier of the session.
-   * @param options - See {@link SessionCallOptions}. A store may ignore them.
+   * @param options - See {@link CallOptions}. A store may ignore them.
    * @returns The record, or `undefined` when there is none.
    */
-  load(session: string, options?: SessionCallOptions): Promise<StoredSession | undefined>;
+  load(session: string, options?: CallOptions): Promise<StoredSession | undefined>;
   /**
    * Saves a step if the stored version is still `record.version`, and then stores `record.version + 1`.
    *
    * @param session - The identifier of the session.
    * @param record - The new record, with the version it was loaded at.
-   * @param options - See {@link SessionCallOptions}. A store that cannot tell whether it saved the record ignores the signal,
+   * @param options - See {@link CallOptions}. A store that cannot tell whether it saved the record ignores the signal,
    * because it rejects only when nothing was saved.
    * @returns `false` when another save came first, and then stores nothing.
    */
-  save(session: string, record: SessionSave, options?: SessionCallOptions): Promise<boolean>;
+  save(session: string, record: SessionSave, options?: CallOptions): Promise<boolean>;
 }

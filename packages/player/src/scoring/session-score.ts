@@ -90,7 +90,7 @@ function progressOf(pending: PendingWork): ScoringProgress {
  * result, or `SCORE` or `MAXSCORE` is not a finite number, or `MAXSCORE` is not above 0.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, outcome variables}
  */
-export function sessionScore(result: OfficialResult, pending: PendingWork): SessionScore {
+export function buildSessionScore(result: OfficialResult, pending: PendingWork): SessionScore {
   if (!isOfficialResult(result)) {
     throw new DataError(
       "A score is read from the results report that SessionHost.results returned; a copy, or the report of a practice session, is not official.",

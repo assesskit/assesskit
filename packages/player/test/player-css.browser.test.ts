@@ -1,7 +1,7 @@
 import { type ColorTheme, PNP_COLOR_THEMES } from "@assesskit/runtime/pnp";
 import { beforeEach, describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { presentationOf } from "../src/player/supports/index.js";
+import { resolvePresentation } from "../src/player/supports/index.js";
 import {
   COLOR_THEME_PAIRS,
   channels,
@@ -1033,8 +1033,9 @@ describe("the color themes of the PNP", () => {
   /** Returns the attributes that a term sets, as the player builds them from a profile. */
   const attributesOf = (colorTheme: ColorTheme): Record<string, string> =>
     Object.fromEntries(
-      presentationOf([onSupport("text-appearance", { name: "text-appearance", replaceAccessModes: [], colorTheme })])
-        .attributes,
+      resolvePresentation([
+        onSupport("text-appearance", { name: "text-appearance", replaceAccessModes: [], colorTheme }),
+      ]).attributes,
     );
 
   /** The ratios of a theme, as a candidate reads it: the text, then the colors around it. */

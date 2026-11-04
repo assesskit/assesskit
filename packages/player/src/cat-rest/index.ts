@@ -18,4 +18,4 @@ export {
   type RestCatPortOptions,
 } from "./rest-port.js";
 export type { CatOperation } from "./route.js";
-export { CAT_SCOPES, scopesOf } from "./scopes.js";
+export { CAT_SCOPES, listScopes } from "./scopes.js";

@@ -1,4 +1,4 @@
-import type { SessionCallOptions } from "../protocol/index.js";
+import type { CallOptions } from "../protocol/index.js";
 
 /**
  * The host's scheduler of time-outs, such as a job queue.
@@ -14,7 +14,7 @@ export interface Scheduler {
    *
    * @param session - The identifier of the session.
    * @param at - The time in epoch milliseconds.
-   * @param options - See {@link SessionCallOptions}. A queue may ignore them.
+   * @param options - See {@link CallOptions}. A queue may ignore them.
    */
-  schedule(session: string, at: number, options?: SessionCallOptions): Promise<void>;
+  schedule(session: string, at: number, options?: CallOptions): Promise<void>;
 }

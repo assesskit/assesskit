@@ -77,7 +77,7 @@ function typedScore(request: ScoringTarget, score: ScoreInput): Value | null {
  * @throws `DataError` when `request` is not a scoring request, `scorer` is not a scorer, or the score does not fit the
  * declaration of the outcome, and a `DataError` of the runtime when the score is not a value of its base type.
  */
-export function toSupplyScores(
+export function buildSupplyScores(
   request: Pick<ScoringRequest, "id" | "outcome" | "declaration">,
   score: ScoreInput,
   scorer: Scorer,

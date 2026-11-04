@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
 import { EN_MESSAGES } from "../src/index.js";
 import { ID_MESSAGES } from "../src/messages/id/index.js";
 import { checkPresentation } from "../src/player/presentation/internal.js";
-import { mediaScaleOf, presentationOf } from "../src/player/supports/index.js";
+import { mediaScale, resolvePresentation } from "../src/player/supports/index.js";
 import { cardKindOf, checkSupportViews, supportLabel } from "../src/player/supports/internal.js";
 import { TOOL_SUPPORT_NAMES } from "../src/player/tools/index.js";
 import { fuzzJson } from "./fuzz.js";
@@ -33,7 +33,7 @@ function lookOf(...supports: SupportView[]): {
   attributes: Record<string, string>;
   properties: Record<string, string>;
 } {
-  const { attributes, properties } = presentationOf(supports);
+  const { attributes, properties } = resolvePresentation(supports);
   return { attributes: entries(attributes), properties: entries(properties) };
 }
 
@@ -261,7 +261,7 @@ describe("appearance", () => {
       onSupport("text-appearance", { name: "text-appearance", replaceAccessModes: [], colorTheme });
 
     it("gives each term of the guide its attribute, and the default none", () => {
-      const looks = PNP_COLOR_THEMES.map((term) => [term, entries(presentationOf([themed(term)]).attributes)]);
+      const looks = PNP_COLOR_THEMES.map((term) => [term, entries(resolvePresentation([themed(term)]).attributes)]);
       expect(Object.fromEntries(looks)).toEqual({
         "yellow-blue": { "data-ak-theme": "yellow-blue" },
         "blue-yellow": { "data-ak-theme": "blue-yellow" },
@@ -316,7 +316,7 @@ describe("appearance", () => {
 
     it("rejects a theme of a profile that is not one", () => {
       const settings = json({ name: "text-appearance", replaceAccessModes: [], colorTheme: "pink" });
-      expect(() => presentationOf([onSupport("text-appearance", settings)])).toThrow(DataError);
+      expect(() => resolvePresentation([onSupport("text-appearance", settings)])).toThrow(DataError);
     });
   });
 
@@ -329,11 +329,11 @@ describe("appearance", () => {
     });
     // Only non-text content is enlarged: the text keeps its size.
     expect(zoom({ ...base, nonText: { zoomAmount: 4 } }).properties).toEqual({});
-    expect(mediaScaleOf([onSupport("magnification", { ...base, allContent: { zoomAmount: 3 } })])).toBe(3);
+    expect(mediaScale([onSupport("magnification", { ...base, allContent: { zoomAmount: 3 } })])).toBe(3);
     expect(
-      mediaScaleOf([onSupport("magnification", { ...base, text: { zoomAmount: 2 }, nonText: { zoomAmount: 4 } })]),
+      mediaScale([onSupport("magnification", { ...base, text: { zoomAmount: 2 }, nonText: { zoomAmount: 4 } })]),
     ).toBe(4);
-    expect(mediaScaleOf([onSupport("magnification", { ...base, text: { zoomAmount: 2 } })])).toBe(1);
+    expect(mediaScale([onSupport("magnification", { ...base, text: { zoomAmount: 2 } })])).toBe(1);
   });
 
   it("zooms to 200 percent when the magnification names no amount", () => {
@@ -343,7 +343,7 @@ describe("appearance", () => {
     ).toEqual({
       "--ak-text-zoom": "2",
     });
-    expect(mediaScaleOf([onSupport("magnification")])).toBe(2);
+    expect(mediaScale([onSupport("magnification")])).toBe(2);
   });
 
   it("treats a size or a zoom of 0 or less as none, since it would show nothing", () => {
@@ -351,7 +351,7 @@ describe("appearance", () => {
     expect(lookOf(onSupport("magnification", { ...base, allContent: { zoomAmount: 0 } })).properties).toEqual({
       "--ak-text-zoom": "2",
     });
-    expect(mediaScaleOf([onSupport("magnification", { ...base, allContent: { zoomAmount: -3 } })])).toBe(2);
+    expect(mediaScale([onSupport("magnification", { ...base, allContent: { zoomAmount: -3 } })])).toBe(2);
     const size = settings({ name: "text-appearance", replaceAccessModes: [], fontSize: -1 });
     expect(lookOf(onSupport("text-appearance", size)).properties).toEqual({});
   });
@@ -375,7 +375,7 @@ describe("appearance", () => {
       attributes: {},
       properties: {},
     });
-    expect(mediaScaleOf([supportView("magnification", { state: "option", active: false })])).toBe(1);
+    expect(mediaScale([supportView("magnification", { state: "option", active: false })])).toBe(1);
   });
 
   it("ignores the supports that change nothing of the look", () => {
@@ -391,25 +391,25 @@ describe("appearance", () => {
         ].includes(name),
     ).map((name) => onSupport(name));
     expect(lookOf(...others)).toEqual({ attributes: {}, properties: {} });
-    expect(mediaScaleOf(others)).toBe(1);
+    expect(mediaScale(others)).toBe(1);
   });
 
   it("rejects supports that are not a list of the runtime's views", () => {
-    expect(() => presentationOf(json({}))).toThrow(
+    expect(() => resolvePresentation(json({}))).toThrow(
       new DataError("The list of supports is invalid: expected an array, found an object."),
     );
-    expect(() => mediaScaleOf(json([1]))).toThrow(
+    expect(() => mediaScale(json([1]))).toThrow(
       new DataError("The list of supports is invalid at [0]: expected an object, found 1."),
     );
-    expect(() => presentationOf(json(null))).toThrow(
+    expect(() => resolvePresentation(json(null))).toThrow(
       new DataError("The list of supports is invalid: expected an array, found null."),
     );
   });
 });
 
 describe("presentation", () => {
-  it("accepts what presentationOf builds", () => {
-    const look = presentationOf([onSupport("high-contrast"), onSupport("magnification")]);
+  it("accepts what resolvePresentation builds", () => {
+    const look = resolvePresentation([onSupport("high-contrast"), onSupport("magnification")]);
     expect(() => checkPresentation(look, "The presentation")).not.toThrow();
   });
 
@@ -572,12 +572,12 @@ describe("properties", () => {
   it("builds the same valid presentation twice for any supports, and sets nothing for a list of supports that are off", () => {
     fc.assert(
       fc.property(fc.array(supportArbitrary, { maxLength: 12 }), (supports) => {
-        const first = presentationOf(supports);
-        expect(entries(first.attributes)).toEqual(entries(presentationOf(supports).attributes));
+        const first = resolvePresentation(supports);
+        expect(entries(first.attributes)).toEqual(entries(resolvePresentation(supports).attributes));
         expect(() => checkPresentation(first, "The presentation")).not.toThrow();
-        const off = presentationOf(supports.map((support) => ({ ...support, active: false })));
+        const off = resolvePresentation(supports.map((support) => ({ ...support, active: false })));
         expect([off.attributes.size, off.properties.size]).toEqual([0, 0]);
-        expect(mediaScaleOf(supports)).toBeGreaterThanOrEqual(1);
+        expect(mediaScale(supports)).toBeGreaterThanOrEqual(1);
       }),
     );
   });

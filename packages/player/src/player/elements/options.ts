@@ -12,7 +12,7 @@ import { DataError } from "@assesskit/runtime/errors";
 import type { FileValue, Value } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";
-import type { SessionCallOptions } from "../../protocol/index.js";
+import type { CallOptions } from "../../protocol/index.js";
 
 /** Where uploads, recordings and drawings are kept: the host's storage, which values refer to. */
 export interface InteractionFiles {
@@ -41,7 +41,7 @@ export interface InteractionFiles {
    * @param options - Its `signal` aborts when the mount is destroyed.
    * @returns The file value, which the response holds until the bytes are stored with {@link InteractionFiles.fill}.
    */
-  reserve?(mimeType: string, fileName?: string, options?: SessionCallOptions): Promise<FileValue>;
+  reserve?(mimeType: string, fileName?: string, options?: CallOptions): Promise<FileValue>;
   /**
    * Stores the bytes of a reserved file, retrying as the host sees fit. The end of the mount does not abort it, because a
    * recording that a time limit or a destroy stops still has to arrive. Required unless the option `record` is `false`.
@@ -50,7 +50,7 @@ export interface InteractionFiles {
    * @param bytes - The bytes.
    * @param options - Its `signal` is the caller's alone.
    */
-  fill?(file: FileValue, bytes: Blob, options?: SessionCallOptions): Promise<void>;
+  fill?(file: FileValue, bytes: Blob, options?: CallOptions): Promise<void>;
 }
 
 /** The state of a custom interaction when the hook mounts it; later changes of the host do not reach the hook. */
@@ -164,13 +164,13 @@ function checkedFiles(files: Readonly<Record<string, unknown>>, record: boolean)
     },
     ...(typeof reserve === "function"
       ? {
-          reserve: (mimeType: string, fileName?: string, options?: SessionCallOptions) =>
+          reserve: (mimeType: string, fileName?: string, options?: CallOptions) =>
             named("reserve", reserve, [mimeType, fileName, options]),
         }
       : {}),
     ...(typeof fill === "function"
       ? {
-          fill: async (file: FileValue, bytes: Blob, options?: SessionCallOptions) => {
+          fill: async (file: FileValue, bytes: Blob, options?: CallOptions) => {
             await Reflect.apply(fill, files, [file, bytes, options]);
           },
         }

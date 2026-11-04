@@ -104,7 +104,7 @@ function checkView(view: unknown): asserts view is ScorerView {
  * @throws `DataError` when `view` is not a scorer view, or what it holds is not a submission, and a `DataError` of the runtime when a
  * value is not a value.
  */
-export function toSubmission(view: ScorerView): Submission {
+export function buildSubmission(view: ScorerView): Submission {
   checkView(view);
   const { request, rubric, scoringRubric, items } = view;
   const { id, outcome, mode, variableIdentifierRef, lti, declaration, covers, requestedAt } = request;

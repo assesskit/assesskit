@@ -38,7 +38,7 @@ export interface SpokenOptions {
   readonly messages: Messages;
   /** The language of content that states none, a BCP 47 tag. */
   readonly language: string;
-  /** The voice that reads: the host's text-to-speech, or `webSpeech()`. */
+  /** The voice that reads: the host's text-to-speech, or `createWebSpeech()`. */
   readonly voice: SpeechHook;
   /**
    * The pronunciation lexicons of the item, in order of preference; `setLexicons` replaces them.
@@ -67,7 +67,7 @@ export interface Spoken {
    * Replaces the pronunciation lexicons that the next reading uses, in order of preference, such as those of the next item.
    *
    * @param lexicons - The lexicons, in order of preference.
-   * @throws `DataError` when `lexicons` is not a list of lexicons that `parseLexicon` made.
+   * @throws `DataError` when `lexicons` is not a list of lexicons that `readLexicon` made.
    */
   setLexicons(lexicons: readonly Lexicon[]): void;
   /** Stops the voice and takes the controls and the echo away. */

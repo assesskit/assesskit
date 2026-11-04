@@ -1,7 +1,7 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers and OAuth parameters are those of their specifications.
 
 import { ServiceError } from "@assesskit/player";
-import { CAT_SCOPES, type CatAuthorizer, createCatRestHandler, scopesOf } from "@assesskit/player/cat-rest";
+import { CAT_SCOPES, type CatAuthorizer, createCatRestHandler, listScopes } from "@assesskit/player/cat-rest";
 import type { CatPort } from "@assesskit/runtime/cat";
 import { DataError, ReadError, SecurityError } from "@assesskit/runtime/errors";
 
@@ -173,7 +173,7 @@ export function engineServer(options: EngineServerOptions): (request: Request) =
     if (token === undefined) return false;
     const grant = grants.get(token);
     if (grant === undefined || grant.expiresAt <= now()) return { denied: "invalid-token" };
-    if (!scopesOf(operation).some((scope) => grant.scopes.has(scope))) return { denied: "insufficient-scope" };
+    if (!listScopes(operation).some((scope) => grant.scopes.has(scope))) return { denied: "insufficient-scope" };
     return { port: portOf(engine, grant.clientId, owners) };
   };
 

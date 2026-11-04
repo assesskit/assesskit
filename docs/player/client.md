@@ -130,14 +130,14 @@ first save. A session that was saved stays, and a new call resumes it.
 | `lexicons`   | `(item: string) => readonly string[]` | The paths of the pronunciation lexicons that the item whose document is at `item` depends on. Default: none.                                                                                                                                                       |
 | `clock`      | `Clock`                               | Stamps actions and times the deadlines; it answers whole milliseconds. Default: the clock of the browser.                                                                                                                                                          |
 | `onError`    | `(error: unknown) => void`            | Receives the errors that the client can only report: a listener that threw, and a failure of the timer's step or of the answer loop that no call waits for. Default: `reportError` of the page.                                                                    |
-| `maxIdle`    | `number`                              | The longest gap between steps, in milliseconds, that counts as time on task: a gap above it counts as suspended ([a learner who is away](#a-learner-who-is-away)). Default: none, so every gap counts.                                                             |
+| `maxIdleMs`  | `number`                              | The longest gap between steps, in milliseconds, that counts as time on task: a gap above it counts as suspended ([a learner who is away](#a-learner-who-is-away)). Default: none, so every gap counts.                                                             |
 | `cat`        | `CatSessionPort`                      | The port of the CAT engines: the session then answers its own CAT requests, with an in-browser port, never `createRestCatPort` ([CAT](cat.md#the-option-cat)). Default: none.                                                                                      |
 | `signal`     | `AbortSignal`                         | Stops the creation before its load and its first save. Default: none.                                                                                                                                                                                              |
 
 It stamps each action with `stamp(state, action, now)`, saves the state of each accepted step before the step takes effect, and
 fires a `time` action at each maximum time with `setTimeout`, so a time-out happens on the device without a server. A store that
 has the session resumes it. The candidate can suspend and resume. Results of practice are never official: nothing here brands a
-report, so `sessionScore` refuses them.
+report, so `buildSessionScore` refuses them.
 
 An item alone is a session of `{ kind: "item", item, base }`; `documents.item` is `base`. It serves a preview, a practice item and a
 lesson page whose items each have a session of their own, which [`mountItem`](delivery.md#items-in-a-page) shows without the chrome.
@@ -154,7 +154,7 @@ The server's session host finds them the same way for an exam.
 ### A learner who is away
 
 A learner who closes the page and comes back three days later has not worked in between, but the clock of every limit and every
-duration ran. `maxIdle` closes such a gap. The first action after a gap above it suspends the session at the latest step, resumes it
+duration ran. `maxIdleMs` closes such a gap. The first action after a gap above it suspends the session at the latest step, resumes it
 now and then applies the action, so that the durations and the running maximum times leave the gap out exactly as an explicit
 `suspend` and `resume` would.
 
@@ -164,7 +164,7 @@ sequenceDiagram
   participant S as Session
   participant E as Engine
   C->>S: action at now
-  alt now - latest step > maxIdle, and in progress
+  alt now - latest step > maxIdleMs, and in progress
     alt the action is a time action
       S-->>C: dropped, nothing saved
     end
@@ -179,15 +179,15 @@ sequenceDiagram
   end
 ```
 
-| Rule               | Behavior                                                                                                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Choosing a value   | Above the longest pause that a learner takes while working: a gap above it counts in full as suspended.                                                                   |
-| Limits             | A running maximum time stops with the gap, and resumes with the next action.                                                                                              |
-| Saving             | The suspension, the resumption and the action are saved once, so that a crash leaves all of them or none. The step listeners get their events in order.                   |
-| A `time` action    | One that finds a gap above `maxIdle` is dropped: the timer fires it and the host can send it, but nothing is saved or armed again, so an abandoned session costs nothing. |
-| Applies to         | Actions of the candidate and of the host, while the session is in progress. A session that is suspended or ended has no gap to close.                                     |
-| A refused action   | Saves nothing, so the next action still closes the gap.                                                                                                                   |
-| The view before it | A view that the session gives before the first action after the gap counts the gap, so the timers in it show the time as passed. The action's view is right.              |
+| Rule               | Behavior                                                                                                                                                                    |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Choosing a value   | Above the longest pause that a learner takes while working: a gap above it counts in full as suspended.                                                                     |
+| Limits             | A running maximum time stops with the gap, and resumes with the next action.                                                                                                |
+| Saving             | The suspension, the resumption and the action are saved once, so that a crash leaves all of them or none. The step listeners get their events in order.                     |
+| A `time` action    | One that finds a gap above `maxIdleMs` is dropped: the timer fires it and the host can send it, but nothing is saved or armed again, so an abandoned session costs nothing. |
+| Applies to         | Actions of the candidate and of the host, while the session is in progress. A session that is suspended or ended has no gap to close.                                       |
+| A refused action   | Saves nothing, so the next action still closes the gap.                                                                                                                     |
+| The view before it | A view that the session gives before the first action after the gap counts the gap, so the timers in it show the time as passed. The action's view is right.                |
 
 ### The host side
 
@@ -205,9 +205,9 @@ sequenceDiagram
   L-->>C: the view after the step
   L-->>H: step events: scoring-requested
   H->>L: host.pending(), host.scorerView(request)
-  H->>S: toSubmission(view)
+  H->>S: buildSubmission(view)
   S-->>H: score
-  H->>L: host.apply(toSupplyScores(request, score, scorer))
+  H->>L: host.apply(buildSupplyScores(request, score, scorer))
   L-->>C: the new view through subscribe
 ```
 

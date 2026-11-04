@@ -13,10 +13,10 @@ import * as v from "valibot";
 import { AccessError } from "../errors.js";
 import {
   type ActionEnvelope,
+  type CallOptions,
   type Clock,
   checkViewEnvelope,
   type DispatchResult,
-  type SessionCallOptions,
   type SessionClient,
   type ViewDocuments,
   type ViewEnvelope,
@@ -40,7 +40,7 @@ export const FLUSH_BEFORE_DEADLINE_MS = 10_000;
  * @remarks The client passes the signal of the call that sends the request, so that the transport can stop waiting for the
  * answer. A transport that cannot may ignore it.
  */
-export type Transport = (request: ActionEnvelope | ViewRequest, options?: SessionCallOptions) => Promise<ViewEnvelope>;
+export type Transport = (request: ActionEnvelope | ViewRequest, options?: CallOptions) => Promise<ViewEnvelope>;
 
 /** The options of {@link createRemoteSession}. */
 export interface RemoteSessionOptions {

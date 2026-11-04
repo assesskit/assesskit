@@ -11,19 +11,19 @@ flowchart LR
   range["Range of the content"] --> skip["Leaves out hidden and suppressed content,<br/>and what the restrictions say"]
   skip --> read["Reads SSML, data-ssml, lexicons,<br/>alt text and typed values"]
   read --> request["SpeechRequest<br/>ssml, text, lang, rate, pitch, volume"]
-  request --> hook["SpeechHook<br/>the host's voice or webSpeech()"]
+  request --> hook["SpeechHook<br/>the host's voice or createWebSpeech()"]
 ```
 
 ```ts
 import { EN_MESSAGES } from "@assesskit/player";
-import { buildSpeechRequest, parseLexicon } from "@assesskit/player/player";
+import { buildSpeechRequest, readLexicon } from "@assesskit/player/player";
 
 const host = document.createElement("div");
 const root = host.attachShadow({ mode: "open" });
 root.innerHTML = `<p>Sigmund <span data-ssml='{"sub":{"alias":"Froyd"}}'>Freud</span> works at the W3C.</p>`;
 document.body.append(host);
 
-const lexicon = parseLexicon(`<lexicon xmlns="http://www.w3.org/2005/01/pronunciation-lexicon" version="1.0"
+const lexicon = readLexicon(`<lexicon xmlns="http://www.w3.org/2005/01/pronunciation-lexicon" version="1.0"
   alphabet="ipa" xml:lang="en"><lexeme><grapheme>W3C</grapheme><alias>World Wide Web Consortium</alias></lexeme></lexicon>`);
 
 const range = document.createRange();
@@ -121,7 +121,7 @@ an element reads its text.
 
 ### Lexicons
 
-`parseLexicon(source)` reads a PLS 1.0 document: the package resource of type `pls` that an item depends on. It throws `DataError` when the document is not a lexicon with `version="1.0"`, an `alphabet` and an
+`readLexicon(source)` reads a PLS 1.0 document: the package resource of type `pls` that an item depends on. It throws `DataError` when the document is not a lexicon with `version="1.0"`, an `alphabet` and an
 `xml:lang`. The entries follow PLS 1.0: every grapheme of a lexeme gets its pronunciation, which is the first with
 `prefer="true"`, else the first in document order, taking the lexemes of the same grapheme together. A lexeme with a
 `role` is left out, because roles select a pronunciation by part of speech, which the player does not know.
@@ -170,10 +170,10 @@ A link is an `a` with an `href`.
 
 A voice is a `SpeechHook`: `speak(request)` says a request, stopping what it said first, and resolves when it ends or is
 stopped; `stop()` stops it. The host's text-to-speech that takes SSML uses `request.ssml` and keeps everything:
-phonemes, prosody, breaks, the voice of links. The default is `webSpeech()`, the Web Speech API of the browser, which
+phonemes, prosody, breaks, the voice of links. The default is `createWebSpeech()`, the Web Speech API of the browser, which
 ignores SSML.
 
-`webSpeech()` speaks `request.text`, in which the aliases stand in for the text they replace. It maps the request to an
+`createWebSpeech()` speaks `request.text`, in which the aliases stand in for the text they replace. It maps the request to an
 utterance:
 
 | Request  | Utterance                                                                                                         |
@@ -185,7 +185,7 @@ utterance:
 
 A field that the request lacks stays the voice's own. `speak` rejects with `DataError` for a request that is not one,
 and with `AssesskitError` when the voice fails; a stop is not a failure. Phonemes, prosody, breaks, the voice of links and
-the language of parts are lost with `webSpeech()`; use a host voice for full fidelity.
+the language of parts are lost with `createWebSpeech()`; use a host voice for full fidelity.
 
 ## Typing echo
 
@@ -225,9 +225,9 @@ support changes or the content is replaced. It throws `DataError` for a value th
 | `DataError`                                | An option of a request is not of its type: a reading type or a restriction type that is not a term of the vocabulary, a rate that is not a positive whole number of words per minute, a pitch or a volume outside 0 to 1 | Fix the value; the message names it and says what is valid                                                |
 | `DataError`                                | The range is not a `Range`, a lexicon is not a PLS document (its root, version `1.0`, an alphabet and an `xml:lang`), or the field of the typing echo is not an `input` or a `textarea`                                  | Pass what the call asks for                                                                               |
 | `DataError`                                | `speak` gets something that is not a speech request                                                                                                                                                                      | Pass the request that `buildSpeechRequest` returned                                                       |
-| `AssesskitError`                           | The voice fails: the utterance of `webSpeech()` reports an error that is not a stop, `The voice failed: …`                                                                                                               | Read the reason in the message; check that the browser has a voice for the language, or give a host voice |
+| `AssesskitError`                           | The voice fails: the utterance of `createWebSpeech()` reports an error that is not a stop, `The voice failed: …`                                                                                                         | Read the reason in the message; check that the browser has a voice for the language, or give a host voice |
 | No sound, no error                         | The reading type is `screen-reader`, or the range holds only what the restrictions leave out                                                                                                                             | `buildSpeechRequest` returns `undefined`; there is nothing to say                                         |
-| Speech without phonemes, prosody or breaks | `webSpeech()` ignores SSML                                                                                                                                                                                               | Use a host voice that takes `request.ssml`                                                                |
+| Speech without phonemes, prosody or breaks | `createWebSpeech()` ignores SSML                                                                                                                                                                                         | Use a host voice that takes `request.ssml`                                                                |
 
 A voice that fails while the typing echo speaks does not stop the typing.
 
@@ -235,8 +235,8 @@ A voice that fails while the typing echo speaks does not stop the typing.
 
 | Not included                                  | Why                                                                                                                              |
 | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| A speech engine                               | The browser's `webSpeech()` is the default; a host voice takes the SSML and keeps everything                                     |
-| SSML in `webSpeech()`                         | The Web Speech API ignores SSML: phonemes, prosody, breaks and the voice of links are lost; the text keeps the aliases           |
+| A speech engine                               | The browser's `createWebSpeech()` is the default; a host voice takes the SSML and keeps everything                               |
+| SSML in `createWebSpeech()`                   | The Web Speech API ignores SSML: phonemes, prosody, breaks and the voice of links are lost; the text keeps the aliases           |
 | A screen reader                               | A candidate with the reading type `screen-reader` reads the DOM with their own; the player only keeps what is suppressed from it |
 | Voice selection by the candidate              | The host's voice decides; the request carries `lang`, `rate`, `pitch` and `volume`                                               |
 | Pronunciation beyond the lexicons of the item | The lexicons that the item names are applied; the host adds none of its own                                                      |

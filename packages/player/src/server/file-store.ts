@@ -1,5 +1,5 @@
 import type { FileValue } from "@assesskit/runtime/values";
-import type { SessionCallOptions } from "../protocol/index.js";
+import type { CallOptions } from "../protocol/index.js";
 
 /** The host's storage of the files that candidates upload, record or draw: file values are references to it. */
 export interface FileStore {
@@ -12,7 +12,7 @@ export interface FileStore {
    * @param options - Its `signal` ends the wait of the call that asked.
    * @returns The file value, whose reference names the stored file.
    */
-  put(bytes: Uint8Array, mimeType: string, fileName?: string, options?: SessionCallOptions): Promise<FileValue>;
+  put(bytes: Uint8Array, mimeType: string, fileName?: string, options?: CallOptions): Promise<FileValue>;
   /**
    * Returns the bytes of a stored file.
    *
@@ -20,5 +20,5 @@ export interface FileStore {
    * @param options - Its `signal` ends the wait of the call that asked.
    * @returns The bytes, or `undefined` when there are none.
    */
-  read(file: FileValue, options?: SessionCallOptions): Promise<Uint8Array | undefined>;
+  read(file: FileValue, options?: CallOptions): Promise<Uint8Array | undefined>;
 }

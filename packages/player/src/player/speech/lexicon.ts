@@ -111,7 +111,7 @@ function readHeader(root: XmlElement): { readonly alphabet: string; readonly lan
  * runtime's XML reader.
  * @see {@link https://www.w3.org/TR/pronunciation-lexicon/ | Pronunciation Lexicon Specification 1.0}
  */
-export function parseLexicon(source: string | Uint8Array): Lexicon {
+export function readLexicon(source: string | Uint8Array): Lexicon {
   const root = parseXml(source);
   const { alphabet, language } = readHeader(root);
   const candidates = new Map<string, Candidate[]>();
@@ -132,7 +132,7 @@ export function parseLexicon(source: string | Uint8Array): Lexicon {
 }
 
 /**
- * Checks the lexicons that a caller passes, as `parseLexicon` makes them.
+ * Checks the lexicons that a caller passes, as `readLexicon` makes them.
  *
  * @param lexicons - The value to check.
  * @throws `DataError` when they are not an array of lexicons.

@@ -8,8 +8,8 @@ import {
 import type { DeliveryEvent, HostAction, PendingWork, Refusal, ScorerView } from "@assesskit/runtime/delivery";
 import type { AssessmentResult } from "@assesskit/runtime/results";
 
-/** The options of a session call that waits on a store or a service. */
-export interface SessionCallOptions {
+/** The options of a call that waits on a store, a service or the host. */
+export interface CallOptions {
   /**
    * Stops the call before it applies anything. Work already saved stays saved.
    *
@@ -19,7 +19,7 @@ export interface SessionCallOptions {
 }
 
 /** The options of {@link HostSession.apply}. */
-export interface HostApplyOptions extends SessionCallOptions {
+export interface HostApplyOptions extends CallOptions {
   /**
    * Who supplies a score, such as the rater or the scoring service: a non-empty string that a session host passes to its
    * log with the step of a `supply-scores` action. A local session ignores it.
@@ -73,7 +73,7 @@ export interface HostSession<TResult extends AssessmentResult = AssessmentResult
    */
   apply(action: HostAction, options?: HostApplyOptions): Promise<HostStep>;
   /** Returns what the engine waits on the host for: scoring requests without a value, and CAT requests. */
-  pending(options?: SessionCallOptions): Promise<PendingWork>;
+  pending(options?: CallOptions): Promise<PendingWork>;
   /**
    * Returns what a scorer needs to rate a request: the correct responses, and the scoring rubric of the request when it
    * has one.
@@ -82,9 +82,9 @@ export interface HostSession<TResult extends AssessmentResult = AssessmentResult
    * @remarks In exam mode, call it only from a rater's endpoint, never from a candidate's. A local session holds the keys
    * by design, for practice.
    */
-  scorerView(request: string, options?: SessionCallOptions): Promise<ScorerView>;
+  scorerView(request: string, options?: CallOptions): Promise<ScorerView>;
   /** Returns the results report of the session; it is provisional while scoring requests are pending. */
-  results(options?: SessionCallOptions): Promise<TResult>;
+  results(options?: CallOptions): Promise<TResult>;
 }
 
 const CALL_OPTIONS = ["signal"] as const;
@@ -95,7 +95,7 @@ const HOST_APPLY_OPTIONS = ["signal", "scoredBy"] as const;
  *
  * @throws `DataError` when they are not absent or an object with a `signal` that is an `AbortSignal` and no other property.
  */
-export function checkCallOptions(options: unknown): asserts options is SessionCallOptions | undefined {
+export function checkCallOptions(options: unknown): asserts options is CallOptions | undefined {
   if (options === undefined) return;
   checkRecord(options, "The options must be an object");
   checkProperties(options, "The options", CALL_OPTIONS);

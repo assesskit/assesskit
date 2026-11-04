@@ -18,12 +18,7 @@ import { describe, expect, it } from "vitest";
 import assetGateGuide from "../../../docs/player/asset-gate.md?raw";
 import serverGuide from "../../../docs/player/server.md?raw";
 import { AccessError, ServiceError } from "../src/index.js";
-import {
-  type HostApplyOptions,
-  isOfficialResult,
-  type SessionCallOptions,
-  type ViewEnvelope,
-} from "../src/protocol/index.js";
+import { type CallOptions, type HostApplyOptions, isOfficialResult, type ViewEnvelope } from "../src/protocol/index.js";
 import {
   type AssetGate,
   CANDIDATE_ACTION_TYPES,
@@ -1416,34 +1411,34 @@ describe("createSessionHost", () => {
   });
 });
 
-describe("the option maxIdle of the session host", () => {
+describe("the option maxIdleMs of the session host", () => {
   const Hour = 3600 * SECOND;
   const timed = (): ReturnType<typeof examFiles> => examFiles({ limits: '<qti-time-limits max-time="600"/>' });
   const practice = { clientActions: CANDIDATE_ACTION_TYPES };
   const typesOf = (step: StepEvents | undefined): string[] => step?.events.map(({ type }) => type) ?? [];
 
   it("throws at creation when the client may not suspend, as in an exam by default, and names what to do", async () => {
-    await expect(examHost({ maxIdle: Hour })).rejects.toThrow(
-      /^The option maxIdle counts a long gap as a suspension.*Add "suspend" to clientActions/u,
+    await expect(examHost({ maxIdleMs: Hour })).rejects.toThrow(
+      /^The option maxIdleMs counts a long gap as a suspension.*Add "suspend" to clientActions/u,
     );
-    await expect(examHost({ maxIdle: Hour, clientActions: EXAM_CLIENT_ACTIONS })).rejects.toThrow(DataError);
-    await expect(examHost({ maxIdle: Hour, ...practice })).resolves.toBeDefined();
+    await expect(examHost({ maxIdleMs: Hour, clientActions: EXAM_CLIENT_ACTIONS })).rejects.toThrow(DataError);
+    await expect(examHost({ maxIdleMs: Hour, ...practice })).resolves.toBeDefined();
     await expect(examHost({ ...practice })).resolves.toBeDefined();
   });
 
   it("checks the option", async () => {
     const options = (text: string): Parameters<typeof examHost>[0] => JSON.parse(text);
-    await expect(examHost(options('{"maxIdle":0}'))).rejects.toThrow(
-      "The option maxIdle must be a positive integer, found 0.",
+    await expect(examHost(options('{"maxIdleMs":0}'))).rejects.toThrow(
+      "The option maxIdleMs must be a positive integer, found 0.",
     );
-    await expect(examHost(options('{"maxIdle":"5"}'))).rejects.toThrow(
-      'The option maxIdle must be a positive integer, found "5".',
+    await expect(examHost(options('{"maxIdleMs":"5"}'))).rejects.toThrow(
+      'The option maxIdleMs must be a positive integer, found "5".',
     );
-    await expect(examHost(options('{"maxIdle":null}'))).rejects.toThrow(
-      "The option maxIdle must be a positive integer, found null.",
+    await expect(examHost(options('{"maxIdleMs":null}'))).rejects.toThrow(
+      "The option maxIdleMs must be a positive integer, found null.",
     );
-    await expect(examHost(options('{"maxIdle":2.5}'))).rejects.toThrow(
-      "The option maxIdle must be a positive integer, found 2.5.",
+    await expect(examHost(options('{"maxIdleMs":2.5}'))).rejects.toThrow(
+      "The option maxIdleMs must be a positive integer, found 2.5.",
     );
   });
 
@@ -1453,7 +1448,7 @@ describe("the option maxIdle of the session host", () => {
     without.clock.advance(3 * DAY);
     expect((await without.host.handle(ALICE, request(1, answer("A")))).refusal?.code).toBe("time-over");
 
-    const { host, clock, store, logged } = await examHost({ ...practice, maxIdle: Hour }, timed());
+    const { host, clock, store, logged } = await examHost({ ...practice, maxIdleMs: Hour }, timed());
     await host.start(ALICE, { seed: 7 });
     clock.advance(3 * DAY);
     const reply = await host.handle(ALICE, request(1, answer("A")));
@@ -1473,7 +1468,7 @@ describe("the option maxIdle of the session host", () => {
     await explicit.host.handle(ALICE, request(3, answer("A")));
     const expected = await explicit.host.session(ALICE.session).results();
 
-    const { host, clock } = await examHost({ ...practice, maxIdle: Hour }, timed());
+    const { host, clock } = await examHost({ ...practice, maxIdleMs: Hour }, timed());
     await host.start(ALICE, { seed: 7 });
     clock.advance(3 * DAY);
     await host.handle(ALICE, request(1, answer("A")));
@@ -1481,7 +1476,7 @@ describe("the option maxIdle of the session host", () => {
   });
 
   it("drops the time action of the job of the scheduler that finds a gap: nothing is saved or scheduled, and the next request closes the gap", async () => {
-    const { host, clock, store, scheduler } = await examHost({ ...practice, maxIdle: Hour }, timed());
+    const { host, clock, store, scheduler } = await examHost({ ...practice, maxIdleMs: Hour }, timed());
     await host.start(ALICE, { seed: 7 });
     const jobs = scheduler.jobs.length;
     clock.advance(3 * DAY);
@@ -1496,7 +1491,7 @@ describe("the option maxIdle of the session host", () => {
   });
 
   it("closes the gap once when the request is handled again after another request saved first", async () => {
-    const { host, clock, store, logged } = await examHost({ ...practice, maxIdle: Hour }, timed());
+    const { host, clock, store, logged } = await examHost({ ...practice, maxIdleMs: Hour }, timed());
     await host.start(ALICE, { seed: 7 });
     clock.advance(3 * DAY);
     store.conflictNext(1);
@@ -1508,7 +1503,7 @@ describe("the option maxIdle of the session host", () => {
   });
 
   it("applies the time action of the job when the gap is no longer than it", async () => {
-    const { host, clock, store } = await examHost({ ...practice, maxIdle: Hour }, timed());
+    const { host, clock, store } = await examHost({ ...practice, maxIdleMs: Hour }, timed());
     await host.start(ALICE, { seed: 7 });
     clock.advance(600 * SECOND);
     const step = await host.session(ALICE.session).apply({ type: "time" });
@@ -1517,7 +1512,7 @@ describe("the option maxIdle of the session host", () => {
   });
 
   it("closes the gap for the proctor, and for a suspended session closes none", async () => {
-    const { host, clock, logged } = await examHost({ ...practice, maxIdle: Hour }, timed());
+    const { host, clock, logged } = await examHost({ ...practice, maxIdleMs: Hour }, timed());
     await host.start(ALICE, { seed: 7 });
     clock.advance(3 * DAY);
     await host.proctor(ALICE.session, { type: "suspend" });
@@ -1540,7 +1535,7 @@ describe("the option maxIdle of the session host", () => {
 
 describe("the signals of the session host", () => {
   const reason = new Error("The caller left.");
-  type Received = Record<"load" | "create" | "save" | "schedule" | "packages", (SessionCallOptions | undefined)[]>;
+  type Received = Record<"load" | "create" | "save" | "schedule" | "packages", (CallOptions | undefined)[]>;
 
   /** A session host whose store, scheduler and package source record the options they get. */
   async function observed(extra: Partial<Parameters<typeof createSessionHost>[0]> = {}, files = examFiles()) {

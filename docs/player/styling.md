@@ -73,7 +73,7 @@ the player, with a rule such as `:host([data-ak-theme="ext:school"]) { --ak-fg: 
 ## What the player sets
 
 The player sets these on the host of the root, as inline custom properties on the same element as the attributes. A
-property that is not set has its default. `presentationOf` builds them from a candidate's supports and `applyPresentation`
+property that is not set has its default. `resolvePresentation` builds them from a candidate's supports and `applyPresentation`
 sets them ([supports](supports.md)); a frame of a portable custom interaction gets them on its `html` element
 ([PCI](pci.md)).
 

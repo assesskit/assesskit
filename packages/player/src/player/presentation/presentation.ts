@@ -5,7 +5,7 @@ import { DataError } from "@assesskit/runtime/errors";
  * The look that a candidate's supports ask for, as the attributes and the custom properties that `player.css` reads.
  *
  * @remarks
- * `presentationOf` builds it. Both maps hold only what the supports set; a name that is absent has its default. The
+ * `resolvePresentation` builds it. Both maps hold only what the supports set; a name that is absent has its default. The
  * styling guide lists the names.
  */
 export interface Presentation {
@@ -40,7 +40,7 @@ const PRESENTATION_PROPERTIES = [
 ] as const;
 
 /**
- * Checks a presentation, as a host passes it from JavaScript: two maps, with the names that {@link presentationOf} can
+ * Checks a presentation, as a host passes it from JavaScript: two maps, with the names that {@link resolvePresentation} can
  * set and text for values.
  *
  * @param value - The value to check.
@@ -74,7 +74,7 @@ export function checkPresentation(value: unknown, label: string): asserts value 
  * element of a frame.
  *
  * @remarks
- * Only the names of {@link presentationOf} are touched, so the other attributes and properties of the element stay.
+ * Only the names of {@link resolvePresentation} are touched, so the other attributes and properties of the element stay.
  *
  * @param target - The element.
  * @param presentation - The presentation.

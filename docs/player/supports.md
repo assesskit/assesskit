@@ -6,7 +6,7 @@ decide which candidate has which support, and it does not choose the variant: th
 
 ```mermaid
 flowchart LR
-  view["view.supports"] --> look["presentationOf, mediaScaleOf<br/>applyPresentation"]
+  view["view.supports"] --> look["resolvePresentation, mediaScale<br/>applyPresentation"]
   view --> panel["mountSupportPanel<br/>buttons for the options,<br/>lists of the settings"]
   view --> content["mountContentSupports<br/>cards, tracks, alternative text"]
   view --> spoken["mountSpoken<br/>reading aloud"]
@@ -16,22 +16,22 @@ flowchart LR
   engine --> view
 ```
 
-| Part                                  | What it does                                                                                               |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `presentationOf`, `applyPresentation` | The look: themes, color themes, colors, text size and face, spacing, zoom, single column, keyword emphasis |
-| `mountSupportPanel`                   | The buttons that turn the supports that are options on and off, and the lists of their settings            |
-| `mountContentSupports`                | Cards of the catalog, text tracks of media and the alternative text of images                              |
-| `mountSpoken`                         | Reading aloud: the controls, the word-by-word cursor, the typing echo and the reading type                 |
-| `mountVariantNotice`                  | The variant that the runtime delivered, and its language                                                   |
-| `PciFrame.setPresentation`            | The look inside the frame of a portable custom interaction ([PCI](pci.md))                                 |
-| `mountTools`                          | The tools that supports put on the screen ([tools](tools.md))                                              |
+| Part                                       | What it does                                                                                               |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `resolvePresentation`, `applyPresentation` | The look: themes, color themes, colors, text size and face, spacing, zoom, single column, keyword emphasis |
+| `mountSupportPanel`                        | The buttons that turn the supports that are options on and off, and the lists of their settings            |
+| `mountContentSupports`                     | Cards of the catalog, text tracks of media and the alternative text of images                              |
+| `mountSpoken`                              | Reading aloud: the controls, the word-by-word cursor, the typing echo and the reading type                 |
+| `mountVariantNotice`                       | The variant that the runtime delivered, and its language                                                   |
+| `PciFrame.setPresentation`                 | The look inside the frame of a portable custom interaction ([PCI](pci.md))                                 |
+| `mountTools`                               | The tools that supports put on the screen ([tools](tools.md))                                              |
 
 The parts do not navigate and do not build the chrome. The chrome mounts them, calls `update` with `view.supports` for every
 view, and sends the `support` and `support-settings` actions when a part asks for one ([in the player](#in-the-player)).
 
 ```ts
 import { selectMessages } from "@assesskit/player";
-import { applyPresentation, mountSupportPanel, presentationOf } from "@assesskit/player/player";
+import { applyPresentation, mountSupportPanel, resolvePresentation } from "@assesskit/player/player";
 
 const supports = [
   { name: "high-contrast", state: "option", active: true },
@@ -51,7 +51,7 @@ chrome.querySelector("button")?.click();
 requests; // => [["high-contrast", false]]
 
 const host = document.createElement("div");
-const look = presentationOf(supports);
+const look = resolvePresentation(supports);
 look.attributes; // => new Map([["data-ak-contrast", "high"]])
 look.properties; // => new Map([["--ak-text-zoom", "2"]])
 applyPresentation(host, look);
@@ -89,7 +89,7 @@ itself. `mountItem` ([items in a page](delivery.md#items-in-a-page)) mounts the 
   of magnification, and the preferences of reading aloud and of braille. A choice sends `{ type: "support-settings", settings }`, the state keeps it, and the next view applies it, so
   it holds for later items and after a reload ([the settings](#the-settings)).
 - **The magnification** of non-text content reaches media sized in pixels at once: the shell sets the media scale of the
-  content root from `mediaScaleOf` with every change of the supports, and the item is not drawn again, so what the candidate
+  content root from `mediaScale` with every change of the supports, and the item is not drawn again, so what the candidate
   typed and chose stays.
 
 ## The support action
@@ -110,7 +110,7 @@ is assigned with `support-not-available`, and records the supports that were on 
 
 ## The look
 
-`presentationOf(supports)` builds a `Presentation`: the attributes and custom properties that [player.css](styling.md)
+`resolvePresentation(supports)` builds a `Presentation`: the attributes and custom properties that [player.css](styling.md)
 reads. `applyPresentation(target, presentation)` sets them on the host of a content root, or on the `html` element of a
 frame, and takes off those that an earlier presentation set. Other attributes and properties of the element stay.
 
@@ -126,7 +126,7 @@ frame, and takes off those that an earlier presentation set. Other attributes an
 | `layout-single-column`    | `data-ak-single-column`                                                                          |
 | `keyword-emphasis`        | `data-ak-keyword-emphasis`                                                                       |
 
-`mediaScaleOf(supports)` gives the factor for the pixel sizes of media, from `allContent` or `nonText`; it is the `mediaScale`
+`mediaScale(supports)` gives the factor for the pixel sizes of media, from `allContent` or `nonText`; it is the `mediaScale`
 option of the content root and the argument of `setMediaScale` ([content](content.md#the-media-scale)), and it is 1 without
 a magnification.
 
@@ -157,7 +157,7 @@ flowchart LR
   list["List in the panel"] -- "support-settings" --> state
   host["Control of a host,<br/>chrome: false or mountItem"] -- "support-settings" --> state
   state --> view["view.supports"]
-  view --> look["presentationOf, mediaScaleOf"]
+  view --> look["resolvePresentation, mediaScale"]
   look --> root["Content root and PCI frames"]
 ```
 
@@ -215,11 +215,11 @@ The guide asks that the candidate can change the amount of magnification at any 
 the `zoom-amount` of the profile. The list of the zoom sets `zoomAmount` of `allContent`, or of `text` and `nonText` when the
 profile magnifies them apart.
 
-| Type         | What grows                                                                                                          |
-| ------------ | ------------------------------------------------------------------------------------------------------------------- |
-| `allContent` | The text of the content root (`--ak-text-zoom`) and media sized in pixels (`mediaScaleOf`); also with no type named |
-| `text`       | The text of the content root, which reflows in its containers                                                       |
-| `nonText`    | Media sized in pixels; an image never grows past the width of its container                                         |
+| Type         | What grows                                                                                                        |
+| ------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `allContent` | The text of the content root (`--ak-text-zoom`) and media sized in pixels (`mediaScale`); also with no type named |
+| `text`       | The text of the content root, which reflows in its containers                                                     |
+| `nonText`    | Media sized in pixels; an image never grows past the width of its container                                       |
 
 The content root is the main content of the guide: the item with its interactions, the stimuli, the rubric and the feedback.
 At 400 percent in a page 1280 pixels wide, which WCAG 1.4.10 takes as 320 pixels, the text reflows with no scrolling in two
@@ -323,17 +323,17 @@ support. The popup is a group with a Close button.
 
 `mountSpoken(host, root, options)` applies the spoken support to a content root and puts the controls into `host`.
 
-| Option     | Type                 | Meaning                                                                     |
-| ---------- | -------------------- | --------------------------------------------------------------------------- |
-| `messages` | `Messages`           | The text of the interface.                                                  |
-| `language` | `string`             | The language of content that states none, a BCP 47 tag.                     |
-| `voice`    | `SpeechHook`         | The voice: a host's text-to-speech, or `webSpeech()` ([speech](speech.md)). |
-| `lexicons` | `readonly Lexicon[]` | The pronunciation lexicons of the item. Default: none.                      |
+| Option     | Type                 | Meaning                                                                           |
+| ---------- | -------------------- | --------------------------------------------------------------------------------- |
+| `messages` | `Messages`           | The text of the interface.                                                        |
+| `language` | `string`             | The language of content that states none, a BCP 47 tag.                           |
+| `voice`    | `SpeechHook`         | The voice: a host's text-to-speech, or `createWebSpeech()` ([speech](speech.md)). |
+| `lexicons` | `readonly Lexicon[]` | The pronunciation lexicons of the item. Default: none.                            |
 
 `update(supports)` reads the `spoken` support that is on. Call it after `show` of the root settles, and again when the
 supports change. It throws `DataError` for settings that reading aloud cannot use, such as a pitch above 1.
 `setLexicons(lexicons)` replaces the lexicons for the next reading, such as when the item changes; it throws `DataError`
-unless `lexicons` is a list of what `parseLexicon` makes.
+unless `lexicons` is a list of what `readLexicon` makes.
 
 | Reading type                           | What it does                                                                                                                               |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |

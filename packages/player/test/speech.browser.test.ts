@@ -7,14 +7,14 @@ import { ID_MESSAGES } from "../src/messages/id/index.js";
 import {
   applyReadingType,
   buildSpeechRequest,
+  createWebSpeech,
   echoTyping,
   type Lexicon,
-  parseLexicon,
+  readLexicon,
   type SpeechHook,
   type SpeechOptions,
   type SpeechRequest,
   type SpeechSettings,
-  webSpeech,
 } from "../src/player/index.js";
 import { mountContent, wholeRoot } from "./content-fixture.js";
 import type { ContentRoot } from "./css-fixture.js";
@@ -79,7 +79,7 @@ function built(range: Range, options: SpeechOptions): SpeechRequest | undefined 
 }
 
 const pls = (lexemes: string, attributes = 'alphabet="ipa" xml:lang="en"'): Lexicon =>
-  parseLexicon(
+  readLexicon(
     `<lexicon xmlns="http://www.w3.org/2005/01/pronunciation-lexicon" version="1.0" ${attributes}>${lexemes}</lexicon>`,
   );
 
@@ -787,7 +787,7 @@ describe("echoTyping", () => {
   });
 });
 
-describe("webSpeech", () => {
+describe("createWebSpeech", () => {
   /** Replaces the voice of the browser by one that records the utterances; the test ends them. */
   function fakeVoice(): { readonly spoken: SpeechSynthesisUtterance[]; readonly cancel: ReturnType<typeof vi.fn> } {
     const spoken: SpeechSynthesisUtterance[] = [];
@@ -814,7 +814,7 @@ describe("webSpeech", () => {
 
   it("speaks the text of the request in its language, and resolves when the voice ends", async () => {
     const { spoken } = fakeVoice();
-    const done = webSpeech().speak(request);
+    const done = createWebSpeech().speak(request);
     const utterance = await utteranceOf(spoken);
     expect(utterance.text).toBe("Hello there");
     expect(utterance.lang).toBe("en-GB");
@@ -824,14 +824,14 @@ describe("webSpeech", () => {
 
   it("leaves the rate, the pitch and the volume of the voice alone when the request has none", async () => {
     const { spoken } = fakeVoice();
-    void webSpeech().speak(request);
+    void createWebSpeech().speak(request);
     const utterance = await utteranceOf(spoken);
     expect([utterance.rate, utterance.pitch, utterance.volume]).toEqual([1, 1, 1]);
   });
 
   it("maps 180 words per minute to the rate 1, the pitch 0.5 to 1, and takes the volume as it is", async () => {
     const { spoken } = fakeVoice();
-    void webSpeech().speak({ ...request, rate: 240, pitch: 0.25, volume: 0.8 });
+    void createWebSpeech().speak({ ...request, rate: 240, pitch: 0.25, volume: 0.8 });
     const utterance = await utteranceOf(spoken);
     expect(utterance.rate).toBeCloseTo(240 / 180, 5);
     expect(utterance.pitch).toBeCloseTo(0.5, 5);
@@ -840,10 +840,10 @@ describe("webSpeech", () => {
 
   it("keeps the rate within what the Web Speech API allows", async () => {
     const { spoken } = fakeVoice();
-    void webSpeech().speak({ ...request, rate: 5000 });
+    void createWebSpeech().speak({ ...request, rate: 5000 });
     expect((await utteranceOf(spoken)).rate).toBe(10);
     spoken.length = 0;
-    void webSpeech().speak({ ...request, rate: 1 });
+    void createWebSpeech().speak({ ...request, rate: 1 });
     expect((await utteranceOf(spoken)).rate).toBeCloseTo(0.1, 5);
   });
 
@@ -855,13 +855,13 @@ describe("webSpeech", () => {
     const lexicons = [pls("<lexeme><grapheme>DSSML</grapheme><alias>data S S M L</alias></lexeme>")];
     const built = read(content, {}, { lexicons });
     if (built === undefined) throw new Error("No request.");
-    void webSpeech().speak(built);
+    void createWebSpeech().speak(built);
     expect((await utteranceOf(spoken)).text).toBe("The World Wide Web Consortium says read and data S S M L.");
   });
 
   it("stops the voice before it speaks, and resolves what it stopped", async () => {
     const { spoken, cancel } = fakeVoice();
-    const first = webSpeech().speak(request);
+    const first = createWebSpeech().speak(request);
     const utterance = await utteranceOf(spoken);
     expect(cancel).toHaveBeenCalledTimes(1);
     utterance.dispatchEvent(Object.assign(new Event("error"), { error: "interrupted" }));
@@ -870,13 +870,13 @@ describe("webSpeech", () => {
 
   it("stops with stop", () => {
     const { cancel } = fakeVoice();
-    webSpeech().stop();
+    createWebSpeech().stop();
     expect(cancel).toHaveBeenCalledTimes(1);
   });
 
   it("rejects with a AssesskitError when the voice fails", async () => {
     const { spoken } = fakeVoice();
-    const done = webSpeech().speak(request);
+    const done = createWebSpeech().speak(request);
     const utterance = await utteranceOf(spoken);
     utterance.dispatchEvent(Object.assign(new Event("error"), { error: "synthesis-failed" }));
     await expect(done).rejects.toThrow(AssesskitError);
@@ -885,7 +885,7 @@ describe("webSpeech", () => {
 
   it("rejects a request that is not one with a DataError", async () => {
     fakeVoice();
-    await expect(webSpeech().speak(JSON.parse('{"text":3}'))).rejects.toThrow(DataError);
-    await expect(webSpeech().speak(JSON.parse("null"))).rejects.toThrow(DataError);
+    await expect(createWebSpeech().speak(JSON.parse('{"text":3}'))).rejects.toThrow(DataError);
+    await expect(createWebSpeech().speak(JSON.parse("null"))).rejects.toThrow(DataError);
   });
 });

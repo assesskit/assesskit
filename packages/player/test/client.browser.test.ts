@@ -11,7 +11,7 @@ import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { AUTOSAVE_MS, createRemoteSession, FLUSH_BEFORE_DEADLINE_MS } from "../src/client/index.js";
 import { createLocalSession } from "../src/client/local/index.js";
 import { ServiceError } from "../src/index.js";
-import type { ActionEnvelope, SessionCallOptions, ViewRequest } from "../src/protocol/index.js";
+import type { ActionEnvelope, CallOptions, ViewRequest } from "../src/protocol/index.js";
 import { examDefinition, examFiles, examHost, packageOf } from "./exam-fixture.js";
 import { answer, localOptions, Q1, SECOND, statusOfQ1 } from "./local-fixture.js";
 import { waitFor } from "./wait.js";
@@ -44,7 +44,7 @@ async function remote(
   const setup = await examHost(limits, options.files, inject("fixtures").asset);
   const calls: Sent[] = [];
   const signals: (AbortSignal | undefined)[] = [];
-  const transport = async (envelope: Sent, callOptions?: SessionCallOptions) => {
+  const transport = async (envelope: Sent, callOptions?: CallOptions) => {
     calls.push(envelope);
     signals.push(callOptions?.signal);
     const waiting = options.wait?.(envelope, calls.length);

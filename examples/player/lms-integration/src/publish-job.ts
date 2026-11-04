@@ -1,5 +1,5 @@
 import type { SessionScore } from "@assesskit/player/scoring";
-import { sessionScore } from "@assesskit/player/scoring";
+import { buildSessionScore } from "@assesskit/player/scoring";
 import type { SessionHost, StepEvents } from "@assesskit/player/server";
 import { DataError } from "@assesskit/runtime/errors";
 import type { CallOptions } from "@interopkit/core";
@@ -109,7 +109,7 @@ export async function runPublishJob(
     const state = host.session(session);
     let score: SessionScore;
     try {
-      score = sessionScore(await state.results(call), await state.pending(call));
+      score = buildSessionScore(await state.results(call), await state.pending(call));
     } catch (error) {
       if (!(error instanceof DataError)) throw error;
       await outbox.markFailed(session, error.message, call);

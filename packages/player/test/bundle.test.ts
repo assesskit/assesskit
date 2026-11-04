@@ -162,9 +162,9 @@ describe("the item bundle", () => {
 describe("the practice bundle", () => {
   const practice = bundled(`
     import { createLocalSession } from "./client/local/index.ts";
-    import { toSubmission, toSupplyScores } from "./scoring/index.ts";
+    import { buildSubmission, buildSupplyScores } from "./scoring/index.ts";
     import { deployCatSections } from "./cat/index.ts";
-    export { createLocalSession, toSubmission, toSupplyScores, deployCatSections };
+    export { createLocalSession, buildSubmission, buildSupplyScores, deployCatSections };
   `);
 
   it("holds the scoring and the deployment of a page that runs practice on a device", async () => {
@@ -191,8 +191,8 @@ describe("the practice bundle", () => {
 describe("the rater bundle", () => {
   const rater = bundled(`
     import { mountRatingForm } from "./player/index.ts";
-    import { toSupplyScores } from "./scoring/index.ts";
-    export { mountRatingForm, toSupplyScores };
+    import { buildSupplyScores } from "./scoring/index.ts";
+    export { mountRatingForm, buildSupplyScores };
   `);
 
   it("holds the rating form and the action that supplies a score", async () => {

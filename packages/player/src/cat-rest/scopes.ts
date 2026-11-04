@@ -32,6 +32,6 @@ const OPERATION_SCOPES: Readonly<Record<CatOperation, string>> = {
  * @returns A token that carries one of them may use the operation.
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding, section 4.3}
  */
-export function scopesOf(operation: CatOperation): readonly string[] {
+export function listScopes(operation: CatOperation): readonly string[] {
   return [CAT_SCOPES.api, OPERATION_SCOPES[operation]];
 }

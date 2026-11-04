@@ -117,7 +117,7 @@ module in the package is on an origin that the frame loads no scripts from.
 | `stylesheets`       | `string[]`                        | URLs of the item's stylesheets, loaded after `player.css`                                                                                  |
 | `status`            | `PciStatus`                       | `interacting`, `suspended`, `closed`, `solution` or `review`; the interaction is not to accept input in the last three                     |
 | `state`             | `string \| null`                  | The state that `getState` gave before, to restore. Default: `null`                                                                         |
-| `presentation`      | `Presentation`                    | The look that the candidate's supports ask for, from `presentationOf` ([supports](supports.md)). Default: none                             |
+| `presentation`      | `Presentation`                    | The look that the candidate's supports ask for, from `resolvePresentation` ([supports](supports.md)). Default: none                        |
 | `response`          | `PciVariable`                     | The response variable the interaction is bound to, with its value                                                                          |
 | `templateVariables` | `Map<string, PciVariable>`        | The template variables bound to the interaction, by identifier. Default: empty                                                             |
 | `contextVariables`  | `Map<string, PciVariable>`        | The context variables bound to it, by identifier. Default: empty                                                                           |
@@ -295,7 +295,7 @@ The frame loads `player.css`, which reads the attributes and custom properties o
 ([styling](styling.md#themes)). The `presentation` option is set there before anything is drawn, and
 `frame.setPresentation(presentation)` replaces it while the interaction runs, so that a candidate who turns high contrast
 on, or whose zoom changes, sees it in the frame too. A presentation set before the frame starts is the one it starts with.
-Only the names of `presentationOf` are touched. The interaction is told nothing; it sees the CSS change. `setPresentation`
+Only the names of `resolvePresentation` are touched. The interaction is told nothing; it sees the CSS change. `setPresentation`
 throws `DataError` for a value that is not a presentation, and does nothing once the frame is gone.
 
 ## The name and the focus

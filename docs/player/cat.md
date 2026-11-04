@@ -30,7 +30,7 @@ flowchart LR
 | `@assesskit/player/cat-rest` | server | `createRestCatPort(options)`                        | A client of a remote engine, over the REST/JSON binding of CAT 1.0.                           |
 | `@assesskit/player/cat-rest` | server | `createCatRestHandler(port, options)`               | The engine side of the binding: a `Request` to a `Response`, over any `CatPort`.              |
 | `@assesskit/player/cat-rest` | server | `CatAuthorizer`, `CatAuthorization`, `CatOperation` | The callback that authorizes a request, what it answers, and the names of the six operations. |
-| `@assesskit/player/cat-rest` | server | `CAT_SCOPES`, `scopesOf(operation)`                 | The scopes of the binding, and the scopes that enable an operation.                           |
+| `@assesskit/player/cat-rest` | server | `CAT_SCOPES`, `listScopes(operation)`               | The scopes of the binding, and the scopes that enable an operation.                           |
 | `@assesskit/player/cat-rest` | server | `CatEngine`, `CatEngines`, `CatEngineResolver`      | The engines that `createRestCatPort` reaches, by the reference that a package names.          |
 | `@assesskit/player/cat-rest` | server | `CatFetch`, `CatFetchRequest`, `CatFetchResponse`   | The part of `fetch` that `createRestCatPort` uses.                                            |
 | `@assesskit/player/cat-rest` | server | `OAuthClientCredentials`                            | The client credentials with which `createRestCatPort` asks for a token.                       |
@@ -60,7 +60,7 @@ flowchart TD
   q{"Does the standard carry QTI constructs,<br/>and nobody uses it without QTI?"}
   q -->|yes| a["assesskit: CAT 1.0 REST binding, in cat-rest"]
   q -->|"no: it serves any learning tool"| i["interopkit: LTI 1.3, Caliper 1.2"]
-  i -->|"plugs in through ports"| p["the player: LtiLogin, forward.log,<br/>sessionScore, createToolScoreIntake"]
+  i -->|"plugs in through ports"| p["the player: LtiLogin, forward.log,<br/>buildSessionScore, createToolScoreIntake"]
 ```
 
 ## Why the token request is written here
@@ -349,7 +349,7 @@ flowchart LR
 | `onError`      | none                                 | `(error, request, operation) => void`: called once for every answer of 500, with the error behind it. Never for a refusal of the caller, for `server_busy`, or after an abort. It is not awaited, and its own failure is ignored.                                                                          |
 
 ```ts
-import { CAT_SCOPES, createCatRestHandler, scopesOf } from "@assesskit/player/cat-rest";
+import { CAT_SCOPES, createCatRestHandler, listScopes } from "@assesskit/player/cat-rest";
 
 const engine = {
   createSection: async () => ({ sectionIdentifier: "s1" }),
@@ -367,7 +367,7 @@ const handle = createCatRestHandler(engine, {
     if (token === undefined) return false;
     const scopes = tokens.get(token);
     if (scopes === undefined) return { denied: "invalid-token" };
-    return scopesOf(operation).some((scope) => scopes.has(scope)) ? true : { denied: "insufficient-scope" };
+    return listScopes(operation).some((scope) => scopes.has(scope)) ? true : { denied: "insufficient-scope" };
   },
 });
 const create = (token) =>
@@ -384,15 +384,15 @@ const create = (token) =>
 
 `authorize` decides, before any of the body is read, and its result is one of these:
 
-| Result                                      | The handler                                                                                                                      |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `true`                                      | Serves the request with the `port` that it was created with.                                                                     |
-| `false`                                     | Answers 401 with `WWW-Authenticate: Bearer`: the request carries no credentials, or you do not say why.                          |
-| `{ port }`                                  | Serves the request with that port: the port of the caller, for several clients on one root.                                      |
-| `{ denied: "invalid-token" }`               | Answers 401 with `WWW-Authenticate: Bearer error="invalid_token"`: the token is unknown, expired or malformed.                   |
-| `{ denied: "insufficient-scope", scopes? }` | Answers 403 with the code minor `forbidden` and `error="insufficient_scope"`, naming `scopes`, by default `scopesOf(operation)`. |
+| Result                                      | The handler                                                                                                                        |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `true`                                      | Serves the request with the `port` that it was created with.                                                                       |
+| `false`                                     | Answers 401 with `WWW-Authenticate: Bearer`: the request carries no credentials, or you do not say why.                            |
+| `{ port }`                                  | Serves the request with that port: the port of the caller, for several clients on one root.                                        |
+| `{ denied: "invalid-token" }`               | Answers 401 with `WWW-Authenticate: Bearer error="invalid_token"`: the token is unknown, expired or malformed.                     |
+| `{ denied: "insufficient-scope", scopes? }` | Answers 403 with the code minor `forbidden` and `error="insufficient_scope"`, naming `scopes`, by default `listScopes(operation)`. |
 
-`scopesOf(operation)` gives the scopes of the binding that enable an operation: `CAT_SCOPES.api`, and `CAT_SCOPES.configure` for the
+`listScopes(operation)` gives the scopes of the binding that enable an operation: `CAT_SCOPES.api`, and `CAT_SCOPES.configure` for the
 sections or `CAT_SCOPES.deliver` for the sessions (binding section 4.3). Any other result, or a step that throws, is a fault of the
 host: 500, and `onError`.
 

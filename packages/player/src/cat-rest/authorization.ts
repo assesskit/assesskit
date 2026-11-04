@@ -4,7 +4,7 @@ import type { CatPort } from "@assesskit/runtime/cat";
 import { methodsSchema, parseWith } from "@assesskit/runtime/checks";
 import * as v from "valibot";
 import type { CatOperation } from "./route.js";
-import { scopesOf } from "./scopes.js";
+import { listScopes } from "./scopes.js";
 import { failureResponse } from "./status.js";
 
 /**
@@ -17,7 +17,7 @@ import { failureResponse } from "./status.js";
  * - `{ denied: "invalid-token" }` answers 401 with `error="invalid_token"`: the request carries a token that is not valid.
  * - `{ denied: "insufficient-scope" }` answers 403 with the code minor `forbidden` and `error="insufficient_scope"`: the
  *   token is valid and does not carry the scope of the operation. `scopes` names the scopes that would do, by default
- *   those of `scopesOf(operation)`.
+ *   those of `listScopes(operation)`.
  *
  * @see {@link https://www.rfc-editor.org/rfc/rfc6750#section-3.1 | RFC 6750, error codes}
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding, security and scopes}
@@ -35,7 +35,7 @@ export type CatAuthorization =
   | {
       /** The token is valid and lacks the scope of the operation. */
       readonly denied: "insufficient-scope";
-      /** The scopes that would do, as scope tokens; by default those of `scopesOf(operation)`. */
+      /** The scopes that would do, as scope tokens; by default those of `listScopes(operation)`. */
       readonly scopes?: readonly string[];
     };
 
@@ -102,7 +102,7 @@ export function grantOf(result: unknown, operation: CatOperation): Grant {
       }),
     };
   }
-  const scopes = decision.scopes ?? scopesOf(operation);
+  const scopes = decision.scopes ?? listScopes(operation);
   return {
     serve: false,
     response: failureResponse(403, "The token does not carry the scope of this operation.", {

@@ -4,7 +4,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES } from "../src/index.js";
 import { ID_MESSAGES } from "../src/messages/id/index.js";
-import { type Lexicon, type Pronunciation, parseLexicon } from "../src/player/speech/index.js";
+import { type Lexicon, type Pronunciation, readLexicon } from "../src/player/speech/index.js";
 import {
   applyDataSsml,
   checkSpeechRequest,
@@ -117,15 +117,15 @@ describe("data-ssml", () => {
   });
 });
 
-describe("parseLexicon", () => {
+describe("readLexicon", () => {
   it("reads the lexicon of PLS 1.0: the language, the phonemes and the default alphabet", () => {
-    const parsed = parseLexicon(lexicon("<lexeme><grapheme>tomato</grapheme><phoneme>təmei̥ɾou̥</phoneme></lexeme>"));
+    const parsed = readLexicon(lexicon("<lexeme><grapheme>tomato</grapheme><phoneme>təmei̥ɾou̥</phoneme></lexeme>"));
     expect(parsed.language).toBe("en-US");
     expect(parsed.entries.get("tomato")).toEqual({ kind: "phoneme", alphabet: "ipa", ph: "təmei̥ɾou̥" });
   });
 
   it("reads an alias and the alphabet of a phoneme that differs from the default", () => {
-    const parsed = parseLexicon(
+    const parsed = readLexicon(
       lexicon(
         '<lexeme><grapheme>W3C</grapheme><alias>World Wide Web Consortium</alias></lexeme><lexeme><grapheme>x</grapheme><phoneme alphabet="x-sampa">eks</phoneme></lexeme>',
       ),
@@ -135,7 +135,7 @@ describe("parseLexicon", () => {
   });
 
   it("gives every grapheme of a lexeme its pronunciation", () => {
-    const parsed = parseLexicon(
+    const parsed = readLexicon(
       lexicon(
         "<lexeme><grapheme>nihongo</grapheme><grapheme>日本語</grapheme><grapheme>にほんご</grapheme><phoneme>ɲihoŋo</phoneme></lexeme>",
         'alphabet="ipa" xml:lang="ja"',
@@ -147,11 +147,11 @@ describe("parseLexicon", () => {
   });
 
   it("takes the first pronunciation with prefer true, else the first", () => {
-    const first = parseLexicon(
+    const first = readLexicon(
       lexicon("<lexeme><grapheme>a</grapheme><phoneme>one</phoneme><phoneme>two</phoneme></lexeme>"),
     );
     expect(first.entries.get("a")).toMatchObject({ ph: "one" });
-    const preferred = parseLexicon(
+    const preferred = readLexicon(
       lexicon(
         '<lexeme><grapheme>a</grapheme><phoneme>one</phoneme><phoneme prefer="true">two</phoneme><alias prefer="true">three</alias></lexeme>',
       ),
@@ -160,7 +160,7 @@ describe("parseLexicon", () => {
   });
 
   it("collects the pronunciations of a grapheme in several lexemes in document order", () => {
-    const parsed = parseLexicon(
+    const parsed = readLexicon(
       lexicon(
         '<lexeme><grapheme>a</grapheme><phoneme>one</phoneme></lexeme><lexeme><grapheme>a</grapheme><phoneme prefer="true">two</phoneme></lexeme>',
       ),
@@ -169,7 +169,7 @@ describe("parseLexicon", () => {
   });
 
   it("leaves out a lexeme with a role, because the player knows no part of speech", () => {
-    const parsed = parseLexicon(
+    const parsed = readLexicon(
       lexicon(
         '<lexeme role="ex:noun"><grapheme>file</grapheme><phoneme>faɪl</phoneme></lexeme><lexeme><grapheme>eu</grapheme><alias>Europe</alias></lexeme>',
       ),
@@ -179,21 +179,21 @@ describe("parseLexicon", () => {
   });
 
   it("reduces white space in a grapheme to a space (PLS 1.0 Appendix C)", () => {
-    const parsed = parseLexicon(lexicon("<lexeme><grapheme>New\n   York</grapheme><alias>Nyu Yok</alias></lexeme>"));
+    const parsed = readLexicon(lexicon("<lexeme><grapheme>New\n   York</grapheme><alias>Nyu Yok</alias></lexeme>"));
     expect(parsed.entries.get("New York")).toEqual({ kind: "alias", alias: "Nyu Yok" });
   });
 
   it("reads bytes as well as text", () => {
     const bytes = new TextEncoder().encode(lexicon("<lexeme><grapheme>a</grapheme><alias>b</alias></lexeme>"));
-    expect(parseLexicon(bytes).entries.get("a")).toEqual({ kind: "alias", alias: "b" });
+    expect(readLexicon(bytes).entries.get("a")).toEqual({ kind: "alias", alias: "b" });
   });
 
   it("refuses a document that is not a PLS 1.0 lexicon with an alphabet and a language", () => {
-    expect(() => parseLexicon("<lexicon/>")).toThrow(DataError);
-    expect(() => parseLexicon(lexicon("").replace(`${PLS}`, PLS.replace("1.0", "2.0")))).toThrow(DataError);
-    expect(() => parseLexicon(lexicon("", 'xml:lang="en"'))).toThrow(/alphabet/u);
-    expect(() => parseLexicon(lexicon("", 'alphabet="ipa"'))).toThrow(/xml:lang/u);
-    expect(() => parseLexicon(JSON.parse("3"))).toThrow(DataError);
+    expect(() => readLexicon("<lexicon/>")).toThrow(DataError);
+    expect(() => readLexicon(lexicon("").replace(`${PLS}`, PLS.replace("1.0", "2.0")))).toThrow(DataError);
+    expect(() => readLexicon(lexicon("", 'xml:lang="en"'))).toThrow(/alphabet/u);
+    expect(() => readLexicon(lexicon("", 'alphabet="ipa"'))).toThrow(/xml:lang/u);
+    expect(() => readLexicon(JSON.parse("3"))).toThrow(DataError);
   });
 });
 

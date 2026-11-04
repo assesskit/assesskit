@@ -11,25 +11,25 @@ sequenceDiagram
   participant H as Host<br/>(server)
   participant R as Rater or<br/>scoring service
   E-->>H: pending(state).scoring: a scoring request
-  H->>H: toSubmission(scorerView)
+  H->>H: buildSubmission(scorerView)
   H->>R: Submission as JSON, with the correct responses
   Note over R: mountSubmission shows it to a person,<br/>mountRatingForm collects the ratings
   R-->>H: the score, or the ratings
-  H->>H: toSupplyScores(request, score, scorer)
+  H->>H: buildSupplyScores(request, score, scorer)
   H->>E: apply(state, action with at)
   E-->>H: scores-applied, or scores-replaced for a second score
 ```
 
 | Step                                  | Where                                | Function                                          |
 | ------------------------------------- | ------------------------------------ | ------------------------------------------------- |
-| Turn a request into a JSON submission | shared, `@assesskit/player/scoring`  | `toSubmission`                                    |
+| Turn a request into a JSON submission | shared, `@assesskit/player/scoring`  | `buildSubmission`                                 |
 | Check a submission that arrived       | shared, `@assesskit/player/protocol` | `checkSubmission`                                 |
 | Show a submission to a rater          | browser, `@assesskit/player/player`  | `mountSubmission`                                 |
 | Show a rating form                    | browser, `@assesskit/player/player`  | `mountRatingForm` ([rating](rating.md))           |
 | Turn ratings into a score             | shared, `@assesskit/runtime/asi`     | `rubricScore`, which the form calls               |
-| Turn the rater's score into an action | shared, `@assesskit/player/scoring`  | `toSupplyScores`                                  |
+| Turn the rater's score into an action | shared, `@assesskit/player/scoring`  | `buildSupplyScores`                               |
 | Give the action to the engine         | server or device, the host session   | `session(id).apply(action)`, `host.apply(action)` |
-| Read the score of a session           | shared, `@assesskit/player/scoring`  | `sessionScore`                                    |
+| Read the score of a session           | shared, `@assesskit/player/scoring`  | `buildSessionScore`                               |
 
 On a device the page learns of a request from `host.subscribeSteps` on `scoring-requested`, and checks `host.pending()` once after
 `createLocalSession` ([client](client.md#the-host-side)); a server's rater endpoint calls `session(id).pending()` and
@@ -43,7 +43,7 @@ responses of the items, so the host gives it only to authorized raters.
 import { readAsi } from "@assesskit/runtime/asi";
 import { createEngine } from "@assesskit/runtime/delivery";
 import { buildSingle } from "@assesskit/runtime/values";
-import { toSubmission, toSupplyScores } from "@assesskit/player/scoring";
+import { buildSubmission, buildSupplyScores } from "@assesskit/player/scoring";
 
 const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="essay"
     title="Essay" time-dependent="false">
@@ -75,13 +75,13 @@ if (!submitted.ok) throw new Error(submitted.refusal.message);
 // The host sends the submission to the rater as JSON.
 const [request] = engine.pending(submitted.state).scoring;
 if (request === undefined) throw new Error("No request waits.");
-const submission = toSubmission(engine.scorerView(submitted.state, request.id));
+const submission = buildSubmission(engine.scorerView(submitted.state, request.id));
 submission.request; // => "item:essay:1:SCORE"
 submission.declaration; // => { cardinality: "single", baseType: "float", normalMinimum: 0, normalMaximum: 10 }
 submission.parts[0]?.value; // => { cardinality: "single", baseType: "string", value: { base: { string: "Dear Sir" } } }
 
 // The rater scores it; the host gives the score to the engine.
-const action = toSupplyScores(request, 7.5, "human");
+const action = buildSupplyScores(request, 7.5, "human");
 action; // => { type: "supply-scores", request: "item:essay:1:SCORE", value: { cardinality: "single", baseType: "float", value: 7.5 }, scorer: "human" }
 const scored = engine.apply(submitted.state, { ...action, at: 3_000 });
 if (!scored.ok) throw new Error(scored.refusal.message);
@@ -89,19 +89,19 @@ scored.events.map(({ type }) => type); // => ["scores-applied", "outcome-process
 engine.pending(scored.state).scoring.length; // => 0
 
 // The rater changes the score: the second supply replaces the first.
-const again = engine.apply(scored.state, { ...toSupplyScores(request, 8, "human"), at: 4_000 });
+const again = engine.apply(scored.state, { ...buildSupplyScores(request, 8, "human"), at: 4_000 });
 if (!again.ok) throw new Error(again.refusal.message);
 again.events.map(({ type }) => type); // => ["scores-replaced", "outcome-processed"]
 ```
 
 ## The submission
 
-`toSubmission(view)` takes what `Engine.scorerView(state, request.id)` returns. One submission is one scoring request, so it
+`buildSubmission(view)` takes what `Engine.scorerView(state, request.id)` returns. One submission is one scoring request, so it
 rates one outcome. It is JSON text as it is: `JSON.parse(JSON.stringify(submission))` equals it.
 
 | Property                | Type                               | Meaning                                                                                                                                                                 |
 | ----------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `request`               | `string`                           | The identifier of the request, `item:<ref>:<instance>:<outcome>` or `test:<outcome>`, which `toSupplyScores` answers                                                    |
+| `request`               | `string`                           | The identifier of the request, `item:<ref>:<instance>:<outcome>` or `test:<outcome>`, which `buildSupplyScores` answers                                                 |
 | `outcome`               | `string`                           | The identifier of the outcome                                                                                                                                           |
 | `mode`                  | `"human"` or `"externalMachine"`   | Who is to score it                                                                                                                                                      |
 | `variableIdentifierRef` | `string`                           | The `variable-identifier-ref` of the declaration; absent when it has none                                                                                               |
@@ -145,7 +145,7 @@ shown.
 
 ## The score
 
-`toSupplyScores(request, score, scorer)` builds the `supply-scores` action for one request and one value.
+`buildSupplyScores(request, score, scorer)` builds the `supply-scores` action for one request and one value.
 
 | Argument  | Type                                                       | Meaning                                                                                                                                   |
 | --------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
@@ -166,7 +166,7 @@ Until a request is supplied the results report is provisional: the item result h
 
 ## The score of a session
 
-`sessionScore(result, pending)` reads the score of a session as plain data, for a gradebook or any other place that wants it. A host
+`buildSessionScore(result, pending)` reads the score of a session as plain data, for a gradebook or any other place that wants it. A host
 calls it from a job and not from a step: it reads `results()` and `pending()` from `session(id)` at the time it needs the score,
 and gives both to the function. The function is pure: the same report and pending work give the same score.
 
@@ -174,7 +174,7 @@ and gives both to the function. The function is pure: the same report and pendin
 flowchart LR
   J[A job of the host] --> R["session(id).results()"]
   J --> P["session(id).pending()"]
-  R --> S[sessionScore]
+  R --> S[buildSessionScore]
   P --> S
   S --> O["SessionScore: progress, timestamp,<br/>score, maximum, rawScore"]
   O --> G[Any sink: a gradebook, a report]
@@ -248,17 +248,17 @@ Raters have their own tools. The display adds no controls: the [rating form](rat
 
 ## Errors
 
-| Call                            | Throws `DataError` when                                                                                                                                                                                                                        |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `toSubmission(view)`            | `view` is not a scorer view, a part of it has the wrong type, or what it holds is not a submission                                                                                                                                             |
-| `toSupplyScores(request, ...)`  | `request` is not a scoring request, `scorer` is not `human` or `externalMachine`, or the score does not fit the declaration, such as a single string for a single float outcome: `The outcome SCORE is a single float, found a single string.` |
-| `sessionScore(result, pending)` | `result` is not the report of a session host, has no test result and not exactly one item result, `SCORE` or `MAXSCORE` is not a finite number, or `MAXSCORE` is not above 0                                                                   |
-| `checkSubmission(value)`        | `value` is not a submission: see [protocol](protocol.md#errors)                                                                                                                                                                                |
-| `mountSubmission`, `update`     | an option or the submission is not valid, or the host has a shadow root                                                                                                                                                                        |
+| Call                                 | Throws `DataError` when                                                                                                                                                                                                                        |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `buildSubmission(view)`              | `view` is not a scorer view, a part of it has the wrong type, or what it holds is not a submission                                                                                                                                             |
+| `buildSupplyScores(request, ...)`    | `request` is not a scoring request, `scorer` is not `human` or `externalMachine`, or the score does not fit the declaration, such as a single string for a single float outcome: `The outcome SCORE is a single float, found a single string.` |
+| `buildSessionScore(result, pending)` | `result` is not the report of a session host, has no test result and not exactly one item result, `SCORE` or `MAXSCORE` is not a finite number, or `MAXSCORE` is not above 0                                                                   |
+| `checkSubmission(value)`             | `value` is not a submission: see [protocol](protocol.md#errors)                                                                                                                                                                                |
+| `mountSubmission`, `update`          | an option or the submission is not valid, or the host has a shadow root                                                                                                                                                                        |
 
 ## Not included
 
-| Not included                                 | Why                                                                                      |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| A rating form, assignment and double scoring | They are the workflow of the host, which differs for each                                |
-| A machine scorer                             | A scoring service reads the submission and answers with a score through `toSupplyScores` |
+| Not included                                 | Why                                                                                         |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| A rating form, assignment and double scoring | They are the workflow of the host, which differs for each                                   |
+| A machine scorer                             | A scoring service reads the submission and answers with a score through `buildSupplyScores` |

@@ -1,6 +1,6 @@
 import { DataError } from "@assesskit/runtime/errors";
 import type { StylesheetFetch } from "../roots/index.js";
-import { type Lexicon, parseLexicon } from "../speech/index.js";
+import { type Lexicon, readLexicon } from "../speech/index.js";
 
 /** What the lexicons of the shell need of the player. */
 export interface LexiconsContext {
@@ -47,7 +47,7 @@ export function createLexicons(context: LexiconsContext): Lexicons {
     const response = await fetch(assets(path), { credentials: "omit", referrerPolicy: "no-referrer" });
     if (!response.ok) return undefined;
     try {
-      return parseLexicon(await response.text());
+      return readLexicon(await response.text());
     } catch (error) {
       if (error instanceof DataError) return undefined;
       throw error;

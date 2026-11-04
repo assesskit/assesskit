@@ -4,7 +4,7 @@ Each example is a package of its own, with the dependencies that only it needs, 
 
 ```mermaid
 flowchart LR
-  runtime["@assesskit/runtime and @assesskit/player<br/>define CatPort, LtiLogin, forward.log,<br/>sessionScore, createToolScoreIntake"] --> port{{"The ports"}}
+  runtime["@assesskit/runtime and @assesskit/player<br/>define CatPort, LtiLogin, forward.log,<br/>buildSessionScore, createToolScoreIntake"] --> port{{"The ports"}}
   example["An example in this folder<br/>implements the port"] -.->|implements| port
   library["The library of another family,<br/>such as measurekit or interopkit"] --> example
   host["Your host"] -->|"copies it or writes its own"| example

@@ -75,7 +75,7 @@ export interface SubmissionSupplied {
  * It holds the correct responses of the items, so it goes only to authorized raters.
  */
 export interface Submission {
-  /** The identifier of the scoring request, which `toSupplyScores` answers. */
+  /** The identifier of the scoring request, which `buildSupplyScores` answers. */
   readonly request: string;
   /** The identifier of the outcome. */
   readonly outcome: string;

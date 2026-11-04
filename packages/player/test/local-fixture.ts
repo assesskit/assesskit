@@ -1,7 +1,7 @@
 import type { CandidateAction, CandidateView, DeliveryEvent } from "@assesskit/runtime/delivery";
 import { buildSingle } from "@assesskit/runtime/values";
 import type { createLocalSession, LocalStore } from "../src/client/local/index.js";
-import type { SessionCallOptions } from "../src/protocol/index.js";
+import type { CallOptions } from "../src/protocol/index.js";
 import { examDefinition, fakeClock } from "./exam-fixture.js";
 
 /** A second in milliseconds. */
@@ -31,8 +31,8 @@ export interface TestLocalStore extends LocalStore {
   readonly savedEvents: Map<string, (readonly DeliveryEvent[])[]>;
   /** The options of each call of `load` and of `save`, in order. */
   readonly received: {
-    readonly load: (SessionCallOptions | undefined)[];
-    readonly save: (SessionCallOptions | undefined)[];
+    readonly load: (CallOptions | undefined)[];
+    readonly save: (CallOptions | undefined)[];
   };
   /** Makes the next saves reject with the error. */
   failNext(times: number, error?: Error): void;

@@ -1,6 +1,6 @@
 import type { CandidateAction, CandidateView, Refusal } from "@assesskit/runtime/delivery";
 import type { ViewDocuments } from "./documents.js";
-import type { SessionCallOptions } from "./host-session.js";
+import type { CallOptions } from "./host-session.js";
 
 /** What a session client answers to an action: the view after it, and the engine's refusal when it did not apply. */
 export interface DispatchResult {
@@ -40,7 +40,7 @@ export interface SessionClient {
    * together after a pause; the promise then resolves when they were answered.
    *
    * @param action - The action.
-   * @param options - See {@link SessionCallOptions}.
+   * @param options - See {@link CallOptions}.
    * @returns The view after the action, and the refusal when the engine did not apply it.
    * @throws `DataError` when the host refuses the action as outside the policy or malformed.
    * @throws `SecurityError` when the action is above the limits on its size; a remote client refuses it before it sends it.
@@ -49,7 +49,7 @@ export interface SessionClient {
    * that is in flight stays in doubt, and the client sends it again before the next one. Held `set-responses` are sent
    * all the same.
    */
-  dispatch(action: CandidateAction, options?: SessionCallOptions): Promise<DispatchResult>;
+  dispatch(action: CandidateAction, options?: CallOptions): Promise<DispatchResult>;
   /**
    * Asks the session for its latest view and resolves with it, for a candidate who waits for someone else to act: a proctor
    * who pauses a test lists no action for the candidate, and a resume reaches the client only when it asks.
@@ -59,14 +59,14 @@ export interface SessionClient {
    * request `{ "type": "view" }`, which the host answers as `SessionHost.view` does and which changes nothing there. A
    * local client builds the view of the state at the time of the call. Both call the listeners with the view they get.
    *
-   * @param options - See {@link SessionCallOptions}.
+   * @param options - See {@link CallOptions}.
    * @returns The latest view.
    * @throws `DataError` when the client is closed or the host refuses the request.
    * @throws `ServiceError` when the host cannot be reached or cannot save.
    * @throws `signal.reason` when the signal aborts. Nothing is sent when it aborted before the call, and a view request in
    * flight is not in doubt, because it changes nothing at the host.
    */
-  refresh(options?: SessionCallOptions): Promise<CandidateView>;
+  refresh(options?: CallOptions): Promise<CandidateView>;
   /**
    * Calls the listener with every new view.
    *

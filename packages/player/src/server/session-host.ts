@@ -3,11 +3,11 @@ import type { ActionLimits, Engine, StartOptions } from "@assesskit/runtime/deli
 import type { QtiPackage } from "@assesskit/runtime/package";
 import type {
   Caller,
+  CallOptions,
   Clock,
   HostSession,
   HostStep,
   OfficialResult,
-  SessionCallOptions,
   ViewEnvelope,
 } from "../protocol/index.js";
 import type { ForwardOptions } from "./forward.js";
@@ -35,7 +35,7 @@ export interface SessionHostOptions {
   /** The asset gate that signs the prefixes of each envelope. */
   readonly gate: AssetGate;
   /** Returns the package that a session delivers; the gate takes the same function. It may ignore the options. */
-  readonly packages: (session: string, options?: SessionCallOptions) => Promise<QtiPackage>;
+  readonly packages: (session: string, options?: CallOptions) => Promise<QtiPackage>;
   /**
    * The types of action a client may send, `suspend` and `resume` among them only if the host lets candidates pause.
    *
@@ -65,7 +65,7 @@ export interface SessionHostOptions {
    *
    * @defaultValue none, so that every gap counts
    */
-  readonly maxIdle?: number;
+  readonly maxIdleMs?: number;
   /**
    * The limits on the size of an action, which replace the defaults of the runtime's `readCandidateAction` field by field.
    *
@@ -101,28 +101,28 @@ export interface SessionHost {
    * @throws `signal.reason` when the signal aborts before the store or the scheduler is called. A call that waits on one
    * rejects when the service does.
    */
-  start(caller: Caller, options: Omit<StartOptions, "at"> & SessionCallOptions): Promise<ViewEnvelope>;
+  start(caller: Caller, options: Omit<StartOptions, "at"> & CallOptions): Promise<ViewEnvelope>;
   /**
    * Checks that the session is bound to the caller's principal.
    *
    * @param caller - The session and the authenticated principal.
-   * @param options - See {@link SessionCallOptions}.
+   * @param options - See {@link CallOptions}.
    * @throws `AccessError` (`not-bound`) when it is not, or the session does not exist.
    * @throws `signal.reason` when the signal aborts before the session is loaded.
    */
-  check(caller: Caller, options?: SessionCallOptions): Promise<void>;
+  check(caller: Caller, options?: CallOptions): Promise<void>;
   /**
    * Returns the current view of the session as an envelope with fresh asset tokens and the sequence number of the latest
    * request answered: what a page needs after a reload, or after the proctor acted. The client's next request carries
    * that number plus one.
    *
    * @param caller - The session and the authenticated principal.
-   * @param options - See {@link SessionCallOptions}.
+   * @param options - See {@link CallOptions}.
    * @returns The envelope.
    * @throws `AccessError` (`not-bound`) as {@link SessionHost.check} does.
    * @throws `signal.reason` when the signal aborts before the session is loaded.
    */
-  view(caller: Caller, options?: SessionCallOptions): Promise<ViewEnvelope>;
+  view(caller: Caller, options?: CallOptions): Promise<ViewEnvelope>;
   /**
    * Handles a request of the client: checks the caller, answers a repeated sequence number with the stored answer,
    * refuses a stale one, applies the client-action policy, stamps and applies the action, saves, and answers with the
@@ -136,7 +136,7 @@ export interface SessionHost {
    *
    * @param caller - The session and the authenticated principal.
    * @param envelope - The request as it arrived, parsed from JSON: an `ActionEnvelope` or a `ViewRequest`, both of `@assesskit/player/protocol`.
-   * @param options - See {@link SessionCallOptions}.
+   * @param options - See {@link CallOptions}.
    * @returns The envelope that answers it.
    * @throws `AccessError` (`not-bound`) when the session is not bound to the caller's principal.
    * @throws `DataError` when the envelope or the action is not valid, the action is outside the policy, or the sequence number is stale.
@@ -144,14 +144,14 @@ export interface SessionHost {
    * @throws `ServiceError` when the session cannot be saved after the retries.
    * @throws `signal.reason` when the signal aborts before a load, including the load of a retry. Nothing was applied.
    */
-  handle(caller: Caller, envelope: unknown, options?: SessionCallOptions): Promise<ViewEnvelope>;
+  handle(caller: Caller, envelope: unknown, options?: CallOptions): Promise<ViewEnvelope>;
   /**
    * Applies an action on the proctor's authority, such as a break or the end of a part. A refusal of the engine is in the
    * step and changes nothing.
    *
    * @param session - The identifier of the session.
    * @param action - The action.
-   * @param options - See {@link SessionCallOptions}.
+   * @param options - See {@link CallOptions}.
    * @returns The events of the step, or the refusal.
    * @throws `DataError` when the session does not exist or the action is not valid.
    * @throws `ServiceError` when the session cannot be saved after the retries.
@@ -160,7 +160,7 @@ export interface SessionHost {
   proctor(
     session: string,
     action: { readonly type: (typeof PROCTOR_ACTIONS)[number] },
-    options?: SessionCallOptions,
+    options?: CallOptions,
   ): Promise<HostStep>;
   /**
    * Returns the host side of a session: the actions of the host, its pending work, its scorer views and its official

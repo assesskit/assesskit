@@ -37,7 +37,7 @@ import {
   LTI_STORAGE_FRAME,
   LTI_TOOL_FRAME,
   REFUSAL_CODES,
-  viewDocuments,
+  resolveViewDocuments,
 } from "../src/protocol/index.js";
 import {
   type CatAnswerer,
@@ -303,7 +303,7 @@ describe("REFUSAL_CODES", () => {
   });
 });
 
-describe("viewDocuments", () => {
+describe("resolveViewDocuments", () => {
   const view = (current: unknown): CandidateView =>
     JSON.parse(JSON.stringify({ test: { identifier: "t", title: "T" }, current }));
   const source = {
@@ -315,7 +315,7 @@ describe("viewDocuments", () => {
   };
 
   it("names the documents of the item presented and the test", () => {
-    expect(viewDocuments(view({ key: { ref: "q1", instance: 1 } }), source)).toEqual({
+    expect(resolveViewDocuments(view({ key: { ref: "q1", instance: 1 } }), source)).toEqual({
       test: "tests/t.xml",
       item: "items/q1.xml",
       stimuli: ["stimuli/s.xml"],
@@ -325,10 +325,12 @@ describe("viewDocuments", () => {
 
   it("resolves against the root of the package for a variant, an unknown item, no item, and no source", () => {
     const root = { test: "tests/t.xml", item: "", stimuli: [], lexicons: [] };
-    expect(viewDocuments(view({ key: { ref: "q1", instance: 1 }, variant: { resource: "v" } }), source)).toEqual(root);
-    expect(viewDocuments(view({ key: { ref: "q9", instance: 1 } }), source)).toEqual(root);
-    expect(viewDocuments(view(undefined), source)).toEqual(root);
-    expect(viewDocuments(view({ key: { ref: "q1", instance: 1 } }), undefined)).toEqual({
+    expect(resolveViewDocuments(view({ key: { ref: "q1", instance: 1 }, variant: { resource: "v" } }), source)).toEqual(
+      root,
+    );
+    expect(resolveViewDocuments(view({ key: { ref: "q9", instance: 1 } }), source)).toEqual(root);
+    expect(resolveViewDocuments(view(undefined), source)).toEqual(root);
+    expect(resolveViewDocuments(view({ key: { ref: "q1", instance: 1 } }), undefined)).toEqual({
       test: "",
       item: "",
       stimuli: [],
@@ -556,15 +558,15 @@ describe("stepAfterIdle", () => {
     return current;
   }
 
-  it("applies the action as the engine does when no maxIdle is given, however long the gap", () => {
+  it("applies the action as the engine does when no maxIdleMs is given, however long the gap", () => {
     const now = Start + 3 * Day;
-    const taken = stepAfterIdle(runtime, { state: begin, action: choose("A"), now, maxIdle: undefined });
+    const taken = stepAfterIdle(runtime, { state: begin, action: choose("A"), now, maxIdleMs: undefined });
     expect(taken).toEqual({ step: engine.apply(begin, stamp(begin, choose("A"), now)), at: now });
   });
 
-  it("counts a gap above maxIdle as a suspension at the latest step and a resumption now, with the events in order", () => {
+  it("counts a gap above maxIdleMs as a suspension at the latest step and a resumption now, with the events in order", () => {
     const now = Start + 3 * Day;
-    const taken = stepAfterIdle(runtime, { state: begin, action: choose("A"), now, maxIdle: 3600 * 1000 });
+    const taken = stepAfterIdle(runtime, { state: begin, action: choose("A"), now, maxIdleMs: 3600 * 1000 });
     if (taken?.step.ok !== true) throw new Error("The action must be accepted.");
     expect(types(taken.step.events).slice(0, 3)).toEqual(["suspended", "resumed", "presented"]);
     expect(taken.step.events.slice(0, 2).map(({ at }) => at)).toEqual([Start, now]);
@@ -574,28 +576,28 @@ describe("stepAfterIdle", () => {
 
   it("leaves the clocks and the durations as an explicit suspension does, so that a running maximum time stops with the gap", () => {
     const now = Start + 3 * Day;
-    const taken = stepAfterIdle(runtime, { state: begin, action: choose("A"), now, maxIdle: 3600 * 1000 });
+    const taken = stepAfterIdle(runtime, { state: begin, action: choose("A"), now, maxIdleMs: 3600 * 1000 });
     if (taken?.step.ok !== true) throw new Error("The action must be accepted.");
     expect(taken.step.state).toEqual(explicit(begin, choose("A"), now));
     expect(engine.results(taken.step.state)).toEqual(engine.results(explicit(begin, choose("A"), now)));
-    // The limit of the first item is ten minutes: without maxIdle the gap has used it, and with it none has passed.
-    const without = stepAfterIdle(runtime, { state: begin, action: choose("A"), now, maxIdle: undefined });
+    // The limit of the first item is ten minutes: without maxIdleMs the gap has used it, and with it none has passed.
+    const without = stepAfterIdle(runtime, { state: begin, action: choose("A"), now, maxIdleMs: undefined });
     expect(without?.step.ok === false ? without.step.refusal.code : "accepted").toBe("time-over");
     expect(engine.view(taken.step.state, now).timers.map(({ remaining }) => remaining)).toEqual([600_000]);
   });
 
-  it("treats a gap as long as maxIdle as time on task", () => {
+  it("treats a gap as long as maxIdleMs as time on task", () => {
     const now = Start + 3600 * 1000;
-    const taken = stepAfterIdle(runtime, { state: begin, action: choose("A"), now, maxIdle: 3600 * 1000 });
+    const taken = stepAfterIdle(runtime, { state: begin, action: choose("A"), now, maxIdleMs: 3600 * 1000 });
     expect(taken).toEqual({ step: engine.apply(begin, stamp(begin, choose("A"), now)), at: now });
   });
 
-  it("drops a time action that finds a gap above maxIdle, and applies one that does not", () => {
+  it("drops a time action that finds a gap above maxIdleMs, and applies one that does not", () => {
     const time: HostAction = { type: "time" };
     expect(
-      stepAfterIdle(runtime, { state: begin, action: time, now: Start + 3 * Day, maxIdle: 3600 * 1000 }),
+      stepAfterIdle(runtime, { state: begin, action: time, now: Start + 3 * Day, maxIdleMs: 3600 * 1000 }),
     ).toBeUndefined();
-    const soon = stepAfterIdle(runtime, { state: begin, action: time, now: Start + 1000, maxIdle: 3600 * 1000 });
+    const soon = stepAfterIdle(runtime, { state: begin, action: time, now: Start + 1000, maxIdleMs: 3600 * 1000 });
     expect(soon?.step.ok).toBe(true);
   });
 
@@ -607,25 +609,25 @@ describe("stepAfterIdle", () => {
       state: suspended.state,
       action: { type: "resume" },
       now,
-      maxIdle: 3600 * 1000,
+      maxIdleMs: 3600 * 1000,
     });
     expect(types(resumed?.step.ok ? resumed.step.events : [])).toEqual(["resumed", "presented"]);
     const ended = engine.apply(begin, stamp(begin, { type: "end-test" }, Start + 1000));
     if (!ended.ok) throw new Error("The test must end.");
-    const refused = stepAfterIdle(runtime, { state: ended.state, action: choose("A"), now, maxIdle: 3600 * 1000 });
+    const refused = stepAfterIdle(runtime, { state: ended.state, action: choose("A"), now, maxIdleMs: 3600 * 1000 });
     expect(refused?.step.ok === false ? refused.step.refusal.code : "accepted").toBe("ended");
   });
 
   it("gives the refusal of the action and leaves the state as it was", () => {
     const now = Start + 3 * Day;
     const action: CandidateAction = { type: "submit", item: { ref: "q2", instance: 1 } };
-    const taken = stepAfterIdle(runtime, { state: begin, action, now, maxIdle: 3600 * 1000 });
+    const taken = stepAfterIdle(runtime, { state: begin, action, now, maxIdleMs: 3600 * 1000 });
     expect(taken?.step.ok === false ? taken.step.refusal.code : "accepted").toBe("not-current");
     expect(taken?.at).toBe(now);
   });
 
   it("stamps the action at the latest step when the clock is behind it", () => {
-    const taken = stepAfterIdle(runtime, { state: begin, action: choose("A"), now: Start - 5000, maxIdle: 1000 });
+    const taken = stepAfterIdle(runtime, { state: begin, action: choose("A"), now: Start - 5000, maxIdleMs: 1000 });
     expect(taken?.at).toBe(Start);
   });
 });
@@ -1007,15 +1009,15 @@ describe("the host side of a session host and of a local session", () => {
   });
 });
 
-describe("the option maxIdle of a session host and of a local session", () => {
+describe("the option maxIdleMs of a session host and of a local session", () => {
   const Alice = { session: "exam-1", principal: "alice" };
   const Hour = 3600 * 1000;
 
   it("gives equal steps and results for one script with a gap above it", async () => {
     const files = examFiles({ limits: '<qti-time-limits max-time="600"/>' });
-    const { host, logged, clock } = await examHost({ clientActions: CANDIDATE_ACTION_TYPES, maxIdle: Hour }, files);
+    const { host, logged, clock } = await examHost({ clientActions: CANDIDATE_ACTION_TYPES, maxIdleMs: Hour }, files);
     await host.start(Alice, { seed: 1 });
-    const setup = localOptions({ definition: examDefinition(packageOf(files)), maxIdle: Hour });
+    const setup = localOptions({ definition: examDefinition(packageOf(files)), maxIdleMs: Hour });
     const local = await createLocalSession({ ...setup.options, seed: 1 });
     const feed: (readonly DeliveryEvent[])[] = [];
     local.host.subscribeSteps((events) => feed.push(events));
@@ -1072,7 +1074,7 @@ describe("properties", () => {
   const seq = fc.integer({ min: 0, max: Number.MAX_SAFE_INTEGER });
   const payload = fc.jsonValue();
 
-  it("reaches the state of an explicit suspension for every gap above maxIdle, and the state of the engine for any other", () => {
+  it("reaches the state of an explicit suspension for every gap above maxIdleMs, and the state of the engine for any other", () => {
     const engine = createEngine(examDefinition(packageOf(examFiles({ limits: '<qti-time-limits max-time="600"/>' }))));
     const started = engine.start({ seed: 1, at: 0 });
     if (!started.ok) throw new Error("The fixture session must start.");
@@ -1086,10 +1088,13 @@ describe("properties", () => {
       fc.property(
         fc.integer({ min: 0, max: 10 * 24 * 3600 * 1000 }),
         fc.integer({ min: 1, max: 24 * 3600 * 1000 }),
-        (gap, maxIdle) => {
-          const taken = stepAfterIdle({ engine, stamp }, { state: started.state, action: answered, now: gap, maxIdle });
+        (gap, maxIdleMs) => {
+          const taken = stepAfterIdle(
+            { engine, stamp },
+            { state: started.state, action: answered, now: gap, maxIdleMs },
+          );
           const direct = engine.apply(started.state, stamp(started.state, answered, gap));
-          if (gap <= maxIdle) {
+          if (gap <= maxIdleMs) {
             expect(taken?.step).toEqual(direct);
             return;
           }

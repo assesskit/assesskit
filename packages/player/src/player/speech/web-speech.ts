@@ -45,7 +45,7 @@ const STOPPED = ["canceled", "interrupted"];
  * @returns A hook whose `speak` rejects with `DataError` for a request that is not one, and with `AssesskitError` when
  * the voice fails.
  */
-export function webSpeech(): SpeechHook {
+export function createWebSpeech(): SpeechHook {
   return {
     speak: async (request) => {
       checkSpeechRequest(request);

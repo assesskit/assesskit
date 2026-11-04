@@ -7,7 +7,12 @@ import {
   resolveReference,
   resolveResourcePath,
 } from "@assesskit/runtime/package";
-import { type DocumentSource, type ItemDocuments, type ViewDocuments, viewDocuments } from "../../protocol/index.js";
+import {
+  type DocumentSource,
+  type ItemDocuments,
+  resolveViewDocuments,
+  type ViewDocuments,
+} from "../../protocol/index.js";
 import { dependenciesOf } from "./dependencies.js";
 
 /** A test of a package with its structure resolved, which every session of the test shares. */
@@ -122,5 +127,5 @@ function sourceOf(pkg: QtiPackage, identifier: string): DocumentSource | undefin
  * @throws `ReadError` when a document of the package that the lookup needs cannot be read.
  */
 export function locateDocuments(view: CandidateView, pkg: QtiPackage): ViewDocuments {
-  return viewDocuments(view, sourceOf(pkg, view.test.identifier));
+  return resolveViewDocuments(view, sourceOf(pkg, view.test.identifier));
 }

@@ -1,4 +1,4 @@
-import { webSpeech } from "../speech/index.js";
+import { createWebSpeech } from "../speech/index.js";
 import type { Body } from "./body.js";
 import { createLexicons, type Lexicons } from "./lexicons.js";
 import type { ItemSettings } from "./settings.js";
@@ -44,7 +44,7 @@ export function mountContentAttachments(context: ContentAttachmentsContext): Con
     contentHost,
     content: body.content,
     pci: body.pci,
-    voice: hooks.voice ?? webSpeech(),
+    voice: hooks.voice ?? createWebSpeech(),
     ...(panel === undefined ? {} : { panel }),
   });
   const lexicons = createLexicons({
