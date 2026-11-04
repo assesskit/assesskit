@@ -576,14 +576,14 @@ export const RUNTIME_RULES: readonly Rule[] = [
   {
     rule: "compileScoring refuses more responses than the limit responses.",
     file: `${SCORING}/compile-scoring.ts`,
-    find: 'checkLimit(responses.length, "compileScoring was given responses:", "responses", limits);',
+    find: 'checkLimit(responses.length, "compileScoring was given responses:", "responses");',
     replace: "",
     test: SCORING_TEST,
   },
   {
     rule: "A key that QTI's own expressions score holds at most the limit entries, counted before it is read.",
     file: `${SCORING}/compile-scoring.ts`,
-    find: 'checkLimit(entriesOf(response.key), `${named} has a key of entries:`, "entries", limits);',
+    find: 'checkLimit(entriesOf(response.key), `${named} has a key of entries:`, "entries");',
     replace: "",
     test: SCORING_TEST,
   },

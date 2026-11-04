@@ -19,7 +19,7 @@ const LAYERS: Readonly<Record<string, readonly string[]>> = {
   processing: ["values", "asi"],
   interactions: ["values", "asi"],
   pci: ["values", "asi"],
-  content: ["values", "asi", "pnp"],
+  content: ["values", "asi", "pnp", "metadata"],
   cat: ["values", "asi", "results", "metadata"],
   package: ["xml", "asi", "metadata", "usage"],
   validate: [
@@ -46,6 +46,7 @@ const LAYERS: Readonly<Record<string, readonly string[]>> = {
     "interactions",
     "pci",
     "content",
+    "metadata",
     "cat",
     "package",
     "validate",

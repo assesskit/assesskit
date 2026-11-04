@@ -121,15 +121,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   "@assesskit/runtime/errors": { gzip: 500, holds: [] },
   "@assesskit/runtime/interactions": {
     gzip: 21_500,
-    holds: [
-      "runtime/asi",
-      "runtime/checks",
-      "runtime/checks-internal",
-      "runtime/errors",
-      "runtime/random",
-      "runtime/values",
-      "valibot",
-    ],
+    holds: ["runtime/asi", "runtime/checks", "runtime/checks-internal", "runtime/errors", "runtime/values", "valibot"],
   },
   "@assesskit/runtime/pci": {
     gzip: 11_000,
@@ -217,6 +209,8 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
       "runtime/checks-internal",
       "runtime/content",
       "runtime/errors",
+      "runtime/keys",
+      "runtime/operators",
       "runtime/processing",
       "runtime/random",
       "runtime/values",
