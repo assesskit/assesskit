@@ -4,7 +4,8 @@ import { describeInteractions, type InteractionKind, validateResponse } from "@a
 import { afterEach, describe, expect, inject, it } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import { EN_MESSAGES } from "../src/index.js";
-import { createContentRoot, createInteractionRenderers, InteractionElement } from "../src/player/index.js";
+import { createInteractionRenderers, InteractionElement } from "../src/player/elements/index.js";
+import { buildContentRoot } from "../src/player/roots/internal.js";
 import { PLAYER_CSS, stylesheet } from "./css-fixture.js";
 import { memoryFiles, settle } from "./graphic-fixture.js";
 import { STATIC_URL } from "./interactions-fixture.js";
@@ -67,13 +68,16 @@ describe("the graphic items of the examples of 1EdTech", () => {
       const host = document.createElement("div");
       document.body.append(host);
       hosts.push(host);
-      const content = createContentRoot(host, {
-        messages: EN_MESSAGES,
-        assets: (file) => `${asset}/c/${token}/corpus/${file}`,
-        fetch: async () => ({ ok: false, status: 404, text: async () => "" }),
-        stylesheet: stylesheet(PLAYER_CSS),
-        interactions: createInteractionRenderers({ messages: EN_MESSAGES, files, staticUrl: STATIC_URL }),
-      });
+      const content = buildContentRoot(
+        host,
+        {
+          messages: EN_MESSAGES,
+          assets: (file) => `${asset}/c/${token}/corpus/${file}`,
+          fetch: async () => ({ ok: false, status: 404, text: async () => "" }),
+          stylesheet: stylesheet(PLAYER_CSS),
+        },
+        createInteractionRenderers({ messages: EN_MESSAGES, files, staticUrl: STATIC_URL }),
+      );
       await content.show({ body: { nodes: item.body?.children ?? [], base: path } });
       const descriptors = describeInteractions(item);
       const graphic = descriptors.filter(({ kind }) => GRAPHIC.has(kind));

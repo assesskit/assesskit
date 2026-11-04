@@ -9,3 +9,4 @@
 export { cardKindOf } from "./cards.js";
 export { checkSupportViews } from "./check.js";
 export { supportLabel, TOOL_EXTENSIONS } from "./names.js";
+export { mountVariantNotice } from "./variant.js";

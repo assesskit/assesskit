@@ -10,7 +10,12 @@ import {
 import { DataError } from "@assesskit/runtime/errors";
 import type { Braille, SupportName } from "@assesskit/runtime/pnp";
 import { renderCard } from "../catalogs/index.js";
-import { type BodyRenderer, type BodyRendererOptions, createBodyRenderer } from "../content/index.js";
+import {
+  type BodyRenderer,
+  type BodyRendererOptions,
+  createBodyRenderer,
+  type InteractionRenderers,
+} from "../content/index.js";
 import {
   enableSorting,
   enableTabs,
@@ -27,7 +32,8 @@ import { followFragmentLinks } from "./links.js";
 import { loadStylesheet, type StylesheetFetch } from "./stylesheet.js";
 
 /** The options of {@link createContentRoot}: those of the renderer, but for what each content brings, and the root's own. */
-export interface ContentRootOptions extends Omit<BodyRendererOptions, "base" | "withholdMedia" | "variables"> {
+export interface ContentRootOptions
+  extends Omit<BodyRendererOptions, "base" | "withholdMedia" | "variables" | "interactions"> {
   /** The fetch that loads item stylesheets from the URLs that `assets` gives. */
   readonly fetch: StylesheetFetch;
   /**
@@ -111,7 +117,6 @@ const ROOT_OPTION_NAMES = [
   "messages",
   "assets",
   "origins",
-  "interactions",
   "view",
   "mediaScale",
   "fileUrl",
@@ -128,7 +133,7 @@ const ROOT_OPTION_NAMES = [
  * host is contained by `player.css` (`contain: layout paint`, `isolation: isolate`), so that fixed-position item CSS
  * cannot cover the chrome and a modal dialog is not clipped, because the top layer is outside it.
  *
- * The root builds the DOM with the renderer (`createBodyRenderer`): it refuses what the renderer refuses, loads each item
+ * The root builds the DOM with the renderer of content: it refuses what the renderer refuses, loads each item
  * stylesheet through `fetch` and sanitizes it, withholds media where a hazard remains and says so in a notice, and
  * typesets MathML. It decides nothing of QTI: it shows the content that the view resolved.
  *
@@ -139,11 +144,29 @@ const ROOT_OPTION_NAMES = [
  * type.
  */
 export function createContentRoot(host: HTMLElement, options: ContentRootOptions): ContentRoot {
+  return buildContentRoot(host, options, new Map());
+}
+
+/**
+ * Creates a content root that draws interactions with the given renderers: what `createContentRoot` does, for the mounts.
+ *
+ * @param host - See {@link createContentRoot}.
+ * @param options - See {@link createContentRoot}.
+ * @param interactions - The renderers of the interactions by `kind`; an interaction without one is drawn as a placeholder.
+ * @returns The content root.
+ * @throws `DataError` as {@link createContentRoot} does.
+ */
+export function buildContentRoot(
+  host: HTMLElement,
+  options: ContentRootOptions,
+  interactions: InteractionRenderers,
+): ContentRoot {
   if (!(host instanceof HTMLElement)) throw new DataError(`The host must be an element, found ${describe(host)}.`);
   checkRecord(options, "The options must be an object");
   checkProperties(options, "The options", ROOT_OPTION_NAMES);
   checkFunction(options.fetch, "The option fetch must be a function");
-  const { stylesheet, typesetter, fetch: fetcher, ...rendererOptions } = options;
+  const { stylesheet, typesetter, fetch: fetcher, ...rest } = options;
+  const rendererOptions = { ...rest, interactions };
   if (!(stylesheet instanceof CSSStyleSheet)) {
     throw new DataError(`The option stylesheet must be a CSSStyleSheet, found ${describe(stylesheet)}.`);
   }

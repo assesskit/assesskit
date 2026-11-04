@@ -1,5 +1,5 @@
 import type { Value } from "@assesskit/runtime/values";
-import type { InteractionFiles } from "../src/player/index.js";
+import type { InteractionFiles } from "../src/player/elements/index.js";
 import { NO_RECORDING } from "./files-fixture.js";
 import { mountScene, type Scene } from "./interactions-fixture.js";
 

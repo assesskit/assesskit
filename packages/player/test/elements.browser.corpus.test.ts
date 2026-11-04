@@ -3,7 +3,7 @@ import { ReadError, SecurityError } from "@assesskit/runtime/errors";
 import { describeInteractions, validateResponse } from "@assesskit/runtime/interactions";
 import { describe, expect, it } from "vitest";
 import { commands } from "vitest/browser";
-import type { InteractionElement } from "../src/player/index.js";
+import type { InteractionElement } from "../src/player/elements/index.js";
 import { mountItem, type Scene } from "./interactions-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
 

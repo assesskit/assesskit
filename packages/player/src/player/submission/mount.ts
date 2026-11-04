@@ -38,12 +38,11 @@ function contentIn(
 ): (nodes: readonly BodyNode[], view: View, base: string) => HTMLElement {
   return (nodes, view, base) => {
     const host = html("div", { class: "ak-submission-content" });
-    const { messages, assets, origins, interactions, fileUrl, typesetter, stylesheet } = settings;
+    const { messages, assets, origins, fileUrl, typesetter, stylesheet } = settings;
     const root = createContentRoot(host, {
       messages,
       assets,
       origins,
-      interactions,
       view,
       stylesheet,
       fetch: NO_STYLESHEETS,

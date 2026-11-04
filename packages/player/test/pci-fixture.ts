@@ -9,7 +9,7 @@ import {
   type PciFiles,
   type PciFrame,
   type PciFrameOptions,
-} from "../src/player/pci/internal.js";
+} from "../src/player/pci/index.js";
 import { waitFor } from "./wait.js";
 
 /** The origins of the servers of the global setup. */

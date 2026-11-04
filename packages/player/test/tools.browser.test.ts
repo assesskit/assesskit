@@ -10,10 +10,10 @@ import {
   type ToolOptions,
   type ToolSlot,
   type ToolSlots,
-  type ToolSupportName,
   type Tools,
   type ToolsInput,
 } from "../src/player/index.js";
+import type { ToolSupportName } from "../src/player/tools/internal.js";
 import { PLAYER_CSS } from "./css-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
 import { supportView } from "./supports-fixture.js";

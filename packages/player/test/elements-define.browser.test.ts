@@ -1,6 +1,6 @@
 import { AssesskitError } from "@assesskit/runtime/errors";
 import { describe, expect, it } from "vitest";
-import { defineElements } from "../src/player/index.js";
+import { defineElements } from "../src/player/elements/index.js";
 
 // The registry of custom elements belongs to the page, so a name that another class holds is a state of a page of its own.
 describe("defineElements", () => {

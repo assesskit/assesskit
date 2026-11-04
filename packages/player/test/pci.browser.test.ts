@@ -12,7 +12,7 @@ import {
   type PciEvent,
   type PciFiles,
   type PciFrameOptions,
-} from "../src/player/pci/internal.js";
+} from "../src/player/pci/index.js";
 import type { FrameTheme } from "./fixtures/commands.js";
 import {
   asset,

@@ -5,9 +5,8 @@
  *
  * @module @assesskit/player/player
  */
-export * from "./content/index.js";
 export * from "./delivery/index.js";
-export * from "./elements/index.js";
+export type { CustomInteractionHook, CustomInteractionState } from "./elements/index.js";
 export type { LtiLogin } from "./lti-frame/index.js";
 export * from "./math/index.js";
 export * from "./rating/index.js";

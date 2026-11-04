@@ -7,18 +7,18 @@ import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { EN_MESSAGES, selectMessages } from "../src/index.js";
 import { ID_MESSAGES } from "../src/messages/id/index.js";
-import { ExtendedTextInteractionElement, readRecordAttributes } from "../src/player/elements/internal.js";
 import {
-  createContentRoot,
   createInteractionRenderers,
-  createMathTypesetter,
   defineElements,
   InteractionElement,
   type InteractionFiles,
   type InteractionOptions,
   MAX_RECORDING_SECONDS,
-} from "../src/player/index.js";
+} from "../src/player/elements/index.js";
+import { ExtendedTextInteractionElement, readRecordAttributes } from "../src/player/elements/internal.js";
+import { createMathTypesetter } from "../src/player/index.js";
 import { RECORDER_START_LIMIT_MS } from "../src/player/recording/index.js";
+import { buildContentRoot } from "../src/player/roots/internal.js";
 import {
   audioContextRuns,
   fakeMicrophone,
@@ -1988,12 +1988,15 @@ describe("the example of the guide", () => {
     const messages = selectMessages("en");
     const host = document.createElement("div");
     document.body.append(host);
-    const root = createContentRoot(host, {
-      messages,
-      assets: (path) => `https://assets.example/g/token/${path}`,
-      fetch: (url, request) => fetch(url, request),
-      stylesheet: stylesheet(PLAYER_CSS),
-      interactions: createInteractionRenderers({
+    const root = buildContentRoot(
+      host,
+      {
+        messages,
+        assets: (path) => `https://assets.example/g/token/${path}`,
+        fetch: (url, request) => fetch(url, request),
+        stylesheet: stylesheet(PLAYER_CSS),
+      },
+      createInteractionRenderers({
         messages,
         files: {
           upload: async () => {
@@ -2004,7 +2007,7 @@ describe("the example of the guide", () => {
         },
         staticUrl: "https://assets.example/static/",
       }),
-    });
+    );
     await root.show({ body: { nodes: parsed.item.body.children, base: "items/cities/item.xml" } });
     const descriptors = new Map(describeInteractions(parsed.item).map((d) => [d.responseIdentifier, d]));
     for (const element of root.root.querySelectorAll("*")) {

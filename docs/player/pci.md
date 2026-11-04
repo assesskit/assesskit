@@ -336,17 +336,18 @@ None for the protocol: the player loads modules by the configuration files of th
 
 Each file of `src/player/pci/` holds one concept.
 
-| File                | Concept                                                                         |
-| ------------------- | ------------------------------------------------------------------------------- |
-| `csp.ts`            | The content security policy of a frame                                          |
-| `describe-frame.ts` | The title of a frame and the message that starts it                             |
-| `files.ts`          | Variables and files: encoding and decoding                                      |
-| `host.ts`           | The frame of an interaction                                                     |
-| `internal.ts`       | What other folders and tests use of the host, which the package does not export |
-| `modules.ts`        | Locating the modules of an interaction                                          |
-| `options.ts`        | The events and the options of a frame                                           |
-| `protocol.ts`       | The messages between the player and the frame                                   |
-| `read-message.ts`   | Reading a message of the frame                                                  |
+| File                | Concept                                                                       |
+| ------------------- | ----------------------------------------------------------------------------- |
+| `csp.ts`            | The content security policy of a frame                                        |
+| `describe-frame.ts` | The title of a frame and the message that starts it                           |
+| `files.ts`          | Variables and files: encoding and decoding                                    |
+| `host.ts`           | The frame of an interaction                                                   |
+| `index.ts`          | What the mounts use of the frame; the package does not export it              |
+| `internal.ts`       | Helpers that other folders and tests share, which the package does not export |
+| `modules.ts`        | Locating the modules of an interaction                                        |
+| `options.ts`        | The events and the options of a frame                                         |
+| `protocol.ts`       | The messages between the player and the frame                                 |
+| `read-message.ts`   | Reading a message of the frame                                                |
 
 ## References
 

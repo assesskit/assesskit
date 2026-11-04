@@ -1,5 +1,5 @@
 import { EN_MESSAGES } from "@assesskit/player";
-import { mountPciFrame, type PciEvent, type PciFrame, type PciStatus } from "../../../player/src/player/pci/internal.js";
+import { mountPciFrame, type PciEvent, type PciFrame, type PciStatus } from "../../../player/src/player/pci/index.js";
 import { createRandom } from "@assesskit/runtime";
 import { createScoringOperators } from "@assesskit/runtime/operators";
 import { createItemVariables, runResponseProcessing } from "@assesskit/runtime/processing";

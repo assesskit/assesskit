@@ -3,13 +3,13 @@ import { describeInteractions, type InteractionDescriptor } from "@assesskit/run
 import type { Value } from "@assesskit/runtime/values";
 import { inject } from "vitest";
 import { EN_MESSAGES } from "../src/index.js";
+import { createBodyRenderer } from "../src/player/content/index.js";
 import {
-  createBodyRenderer,
   createInteractionRenderers,
   InteractionElement,
   type InteractionOptions,
   type ResponseDetail,
-} from "../src/player/index.js";
+} from "../src/player/elements/index.js";
 import { type ContentRoot, mount } from "./css-fixture.js";
 import { NO_RECORDING } from "./files-fixture.js";
 

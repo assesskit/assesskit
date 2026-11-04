@@ -26,7 +26,7 @@ export interface ResponseDetail {
  * @remarks
  * Its `detail` is a {@link ResponseDetail}.
  */
-export type ResponseEvent = CustomEvent<ResponseDetail>;
+type ResponseEvent = CustomEvent<ResponseDetail>;
 
 declare global {
   interface HTMLElementEventMap {

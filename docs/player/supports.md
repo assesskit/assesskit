@@ -10,7 +10,7 @@ flowchart LR
   view --> panel["mountSupportPanel<br/>buttons for the options,<br/>lists of the settings"]
   view --> content["mountContentSupports<br/>cards, tracks, alternative text"]
   view --> spoken["mountSpoken<br/>reading aloud"]
-  view --> variant["mountVariantNotice"]
+  view --> variant["the notice of the variant"]
   view --> tools["mountTools<br/>tools of the supports"]
   panel -- "support and support-settings actions" --> engine["Session client and runtime"]
   engine --> view
@@ -22,7 +22,7 @@ flowchart LR
 | `mountSupportPanel`                        | The buttons that turn the supports that are options on and off, and the lists of their settings            |
 | `mountContentSupports`                     | Cards of the catalog, text tracks of media and the alternative text of images                              |
 | `mountSpoken`                              | Reading aloud: the controls, the word-by-word cursor, the typing echo and the reading type                 |
-| `mountVariantNotice`                       | The variant that the runtime delivered, and its language                                                   |
+| The notice of the variant                  | The variant that the runtime delivered, and its language                                                   |
 | The frame of a portable custom interaction | The look inside it ([PCI](pci.md))                                                                         |
 | `mountTools`                               | The tools that supports put on the screen ([tools](tools.md))                                              |
 
@@ -68,15 +68,15 @@ host.getAttribute("data-ak-contrast"); // => "high"
 host that draws its own chrome (`chrome: false`) keeps the parts that act on the content and mounts the panel and the tools
 itself. `mountItem` ([items in a page](delivery.md#items-in-a-page)) mounts the same parts, without the panel and the tools.
 
-| Part                   | Where it is                                      | When it is updated                                                                                      |
-| ---------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `applyPresentation`    | The host of the content root, and the PCI frames | When the supports of the view differ from the last view's                                               |
-| `setMediaScale`        | The content root                                 | Together with `applyPresentation`; the content is not drawn again                                       |
-| `mountSupportPanel`    | Above the content, in a region named Supports    | With every view. Not drawn with `chrome: false` or in `mountItem`                                       |
-| `mountVariantNotice`   | Above the content                                | With every view                                                                                         |
-| `mountContentSupports` | The content root                                 | When the content was drawn again or the supports of the view differ from the last view's                |
-| `mountSpoken`          | Above the content, and the content root          | Together with `mountContentSupports`                                                                    |
-| `mountTools`           | Above the content, and over the item             | When the item or the supports of the view differ from the last view's ([tools](tools.md#in-the-player)) |
+| Part                      | Where it is                                      | When it is updated                                                                                      |
+| ------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `applyPresentation`       | The host of the content root, and the PCI frames | When the supports of the view differ from the last view's                                               |
+| `setMediaScale`           | The content root                                 | Together with `applyPresentation`; the content is not drawn again                                       |
+| `mountSupportPanel`       | Above the content, in a region named Supports    | With every view. Not drawn with `chrome: false` or in `mountItem`                                       |
+| The notice of the variant | Above the content                                | With every view                                                                                         |
+| `mountContentSupports`    | The content root                                 | When the content was drawn again or the supports of the view differ from the last view's                |
+| `mountSpoken`             | Above the content, and the content root          | Together with `mountContentSupports`                                                                    |
+| `mountTools`              | Above the content, and over the item             | When the item or the supports of the view differ from the last view's ([tools](tools.md#in-the-player)) |
 
 - **Options** are the supports whose state is `option`. A button sends `{ type: "support", name, active }` through the session
   client, so in an exam the host receives it like any other action (the default client-action policy allows it). The button
@@ -355,16 +355,12 @@ the root, and stops when the support goes.
 
 ## The variant
 
-`mountVariantNotice(host, options)` shows which version of a question the runtime delivered (`CandidateItem.variant`). The runtime
+The notice of the variant, which both mounts draw, shows which version of a question the runtime delivered (`CandidateItem.variant`). The runtime
 chooses it at the first presentation, from the hazards the candidate avoids and the language of the `item-translation`
-support, and fixes it for the session. The player shows the choice and decides nothing.
+support, and fixes it for the session. The player shows the choice and decides nothing. It is written in the language of the
+interface.
 
-| Option     | Type       | Meaning                                                                       |
-| ---------- | ---------- | ----------------------------------------------------------------------------- |
-| `messages` | `Messages` | The text of the interface.                                                    |
-| `language` | `string`   | The language of the interface, in which the language of the variant is named. |
-
-`update(variant)` takes `CandidateItem.variant`. For a variant with a language it says, in a note, "Language of this
+For a variant with a language it says, in a note, "Language of this
 version: Indonesian", with the name in the language of the interface and marked with the language it names (WCAG 3.1.2). A
 variant without a language says that an adapted version is shown. `undefined`, the question itself, shows nothing. The
 `language` of a variant also belongs in the `language` of `RootContent`, so that the content has the right `lang`
@@ -439,7 +435,7 @@ Each file of `src/player/supports/`, `src/player/presentation/` holds one concep
 | `supports/settings.ts`         | The lists of the settings that the candidate changes                          |
 | `supports/spoken.ts`           | `mountSpoken`                                                                 |
 | `supports/styles.ts`           | The stylesheet of the parts in the chrome                                     |
-| `supports/variant.ts`          | `mountVariantNotice`                                                          |
+| `supports/variant.ts`          | The notice of the variant                                                     |
 | `presentation/index.ts`        | The public API                                                                |
 | `presentation/internal.ts`     | Helpers that other folders and tests share, which the package does not export |
 | `presentation/presentation.ts` | The presentation of the supports, its check and its application               |

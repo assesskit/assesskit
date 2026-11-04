@@ -1,5 +1,6 @@
 import type { ItemKey } from "@assesskit/runtime/delivery";
 import type { CandidateAction, CandidateItem, CandidateView } from "@assesskit/runtime/delivery/wire";
+import type { InteractionRenderers } from "../content/index.js";
 import {
   createInteractionRenderers,
   END_ATTEMPT_EVENT,
@@ -8,7 +9,8 @@ import {
 } from "../elements/index.js";
 import { ExtendedTextInteractionElement } from "../elements/internal.js";
 import { createMathTypesetter } from "../math/index.js";
-import { type ContentRoot, createContentRoot } from "../roots/index.js";
+import type { ContentRoot } from "../roots/index.js";
+import { buildContentRoot } from "../roots/internal.js";
 import { modalFeedbackOf, rootContentOf } from "./content.js";
 import { createPciHost, type PciHost } from "./pci.js";
 import type { Sender } from "./sender.js";
@@ -119,26 +121,30 @@ function createPci(context: BodyContext): PciHost {
 /** Creates the content root of the player, with the renderers of the interactions of the package and the host's hooks. */
 function createRoot(context: BodyContext, pci: PciHost): ContentRoot {
   const { messages, client, files, staticUrl, hooks, mathjax } = context;
-  return createContentRoot(context.host, {
-    messages,
-    assets: (path) => client.assets(path),
-    fetch: context.fetch,
-    stylesheet: context.stylesheet,
-    origins: context.origins,
-    interactions: new Map([
-      ...createInteractionRenderers({
-        messages,
-        files,
-        staticUrl,
-        onError: context.report,
-        ...(hooks.record === undefined ? {} : { record: hooks.record }),
-        ...(hooks.customInteraction === undefined ? {} : { customInteraction: hooks.customInteraction }),
-      }),
-      ["portable-custom-interaction", pci.render],
-    ]),
-    fileUrl: (file) => files.url(file),
-    ...(mathjax === undefined ? {} : { typesetter: createMathTypesetter(mathjax) }),
-  });
+  const interactions: InteractionRenderers = new Map([
+    ...createInteractionRenderers({
+      messages,
+      files,
+      staticUrl,
+      onError: context.report,
+      ...(hooks.record === undefined ? {} : { record: hooks.record }),
+      ...(hooks.customInteraction === undefined ? {} : { customInteraction: hooks.customInteraction }),
+    }),
+    ["portable-custom-interaction", pci.render],
+  ]);
+  return buildContentRoot(
+    context.host,
+    {
+      messages,
+      assets: (path) => client.assets(path),
+      fetch: context.fetch,
+      stylesheet: context.stylesheet,
+      origins: context.origins,
+      fileUrl: (file) => files.url(file),
+      ...(mathjax === undefined ? {} : { typesetter: createMathTypesetter(mathjax) }),
+    },
+    interactions,
+  );
 }
 
 /**

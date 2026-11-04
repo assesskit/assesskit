@@ -17,7 +17,7 @@ import { ID_MESSAGES } from "../src/messages/id/index.js";
 import { checkPresentation } from "../src/player/presentation/internal.js";
 import { mediaScale, resolvePresentation } from "../src/player/supports/index.js";
 import { cardKindOf, checkSupportViews, supportLabel } from "../src/player/supports/internal.js";
-import { TOOL_SUPPORT_NAMES } from "../src/player/tools/index.js";
+import { TOOL_SUPPORT_NAMES } from "../src/player/tools/internal.js";
 import { fuzzJson } from "./fuzz.js";
 import { onSupport, supportView } from "./supports-fixture.js";
 

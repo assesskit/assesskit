@@ -7,7 +7,7 @@ import { html } from "../internal.js";
 import { adoptSupportStyles } from "./styles.js";
 
 /** The options of {@link mountVariantNotice}. */
-export interface VariantNoticeOptions {
+interface VariantNoticeOptions {
   /** The text of the interface. */
   readonly messages: Messages;
   /** The language of the interface, a BCP 47 tag, in which the language of the variant is named. */
@@ -15,7 +15,7 @@ export interface VariantNoticeOptions {
 }
 
 /** The notice of the variant of a question that is shown. */
-export interface VariantNotice {
+interface VariantNotice {
   /**
    * Shows the variant that the runtime delivered, or nothing when the question itself is delivered.
    *

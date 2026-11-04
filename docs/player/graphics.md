@@ -1,14 +1,14 @@
 # Graphic interactions
 
-`createInteractionRenderers` of `@assesskit/player/player` draws the seven interactions that work on an image with the
+`mountItem` and `mountDelivery` of `@assesskit/player/player` draw the seven interactions that work on an image with the
 others: hotspot, select point, graphic order, graphic associate, graphic gap match, position object and drawing. The element,
-its properties and events, the hints, the board that carries the choices in places, and the options (`messages`, `files`,
-`staticUrl`) are in [interactions](interactions.md). This guide holds what is particular to an image. The renderers draw what
+its properties and events, the hints, the board that carries the choices in places, and the options (`files`, `staticUrl`) are
+in [interactions](interactions.md). This guide holds what is particular to an image. The renderers draw what
 the runtime describes and decide nothing of QTI: the descriptor of the runtime's `interactions` says which choices stand where, and the runtime's
 `validateResponse` says whether a response is valid.
 
-The drawing is the one kind that needs `files`: `upload(bytes, mimeType, fileName?)` stores a picture and returns its file
-value, and `url(file)` returns where the picture of a file value loads from. The other six never call it.
+The drawing is the one kind that needs `files`: `files.upload` stores a picture and returns its file
+value, and `files.url(file)` returns where the picture of a file value loads from. The other six never call it.
 
 ```mermaid
 flowchart LR
@@ -17,18 +17,17 @@ flowchart LR
   pointer["Pointer, tap or drag"] --> pick["Chooses a place or a point"]
   keyboard["Arrow keys and Enter"] --> pick
   areas --> pick
-  pick --> response["Response in the units of the image,<br/>sent as ak-response"]
+  pick --> response["Response in the units of the image,<br/>sent to the session"]
 ```
 
 ## Quick start
 
-Draw a hotspot interaction in a content root, choose the hotspot of Glasgow and read the response that the element reports:
+Mount a hotspot interaction, choose the hotspot of Glasgow and read the response that the session holds:
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
-import { describeInteractions } from "@assesskit/runtime/interactions";
-import { selectMessages } from "@assesskit/player";
-import { createContentRoot, createInteractionRenderers, InteractionElement } from "@assesskit/player/player";
+import { createLocalSession } from "@assesskit/player/client/local";
+import { mountItem } from "@assesskit/player/player";
 import css from "@assesskit/player/player.css?inline"; // any bundler that imports a file as text
 
 const parsed = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
@@ -43,45 +42,47 @@ const parsed = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd
     </qti-hotspot-interaction>
   </qti-item-body>
 </qti-assessment-item>`);
-if (parsed.kind !== "item" || parsed.item.body === undefined) throw new Error("The document is not an item.");
+if (parsed.kind !== "item") throw new Error("The document is not an item.");
 
-const messages = selectMessages("en");
-const player = new CSSStyleSheet();
-player.replaceSync(css);
+const saved = new Map();
+const client = await createLocalSession({
+  definition: { kind: "item", item: parsed.item, base: "items/map/item.xml" },
+  store: {
+    load: async (session) => saved.get(session),
+    save: async (session, { state }) => void saved.set(session, state),
+  },
+  session: "map-1",
+  seed: 1,
+  assets: (path) => `https://assets.example/g/token/${path}`,
+});
+
+const stylesheet = new CSSStyleSheet();
+stylesheet.replaceSync(css);
 const host = document.createElement("div");
 document.body.append(host);
-const root = createContentRoot(host, {
-  messages,
-  assets: (path) => `https://assets.example/g/token/${path}`,
-  fetch: (url, request) => fetch(url, request),
-  stylesheet: player,
-  interactions: createInteractionRenderers({
-    messages,
-    files: {
-      upload: async () => {
-        throw new Error("This item has no drawing.");
-      },
-      url: () => "",
+const mounted = mountItem(host, {
+  client,
+  files: {
+    upload: async () => {
+      throw new Error("This item has no drawing.");
     },
-    staticUrl: "https://assets.example/static/",
-    record: false,
-  }),
+    read: async () => new Uint8Array(),
+    url: () => "",
+  },
+  staticUrl: "https://assets.example/static/",
+  stylesheet,
+  fetch: (url, request) => fetch(url, request),
+  hooks: { record: false },
 });
-await root.show({ body: { nodes: parsed.item.body.children, base: "items/map/item.xml" } });
 
-// The host gives each element the descriptor of its interaction, as it does for each view.
-const descriptors = new Map(describeInteractions(parsed.item).map((d) => [d.responseIdentifier, d]));
-for (const element of root.root.querySelectorAll("*")) {
-  const descriptor = element instanceof InteractionElement ? descriptors.get(element.responseIdentifier) : undefined;
-  if (element instanceof InteractionElement && descriptor !== undefined) element.descriptor = descriptor;
-}
-
-const responses = [];
-root.root.addEventListener("ak-response", (event) => responses.push(event.detail));
-root.root.querySelectorAll('input[type="radio"]')[1].click();
-responses.length; // => 1
-responses[0].responseIdentifier; // => "RESPONSE"
-responses[0].value.value; // => "B"
+const content = host.shadowRoot.querySelector(".ak-content-host").shadowRoot;
+while (content.querySelectorAll('input[type="radio"]').length < 2)
+  await new Promise((resolve) => setTimeout(resolve, 10));
+content.querySelectorAll('input[type="radio"]')[1].click();
+const status = host.shadowRoot.querySelector("[role=status]");
+while (status.textContent !== "Answers saved.") await new Promise((resolve) => setTimeout(resolve, 10));
+client.view.current.responses.get("RESPONSE").value; // => "B"
+mounted.destroy();
 ```
 
 ## The interactions

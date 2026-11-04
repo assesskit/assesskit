@@ -8,7 +8,7 @@ import { createInteraction, InteractionElement } from "./element.js";
 export const END_ATTEMPT_EVENT = "ak-end-attempt";
 
 /** What an {@link EndAttemptEvent} says: the response variable of the interaction that the candidate pressed. */
-export interface EndAttemptDetail {
+interface EndAttemptDetail {
   /** The response variable of the end attempt interaction. */
   readonly responseIdentifier: string;
 }
@@ -19,7 +19,7 @@ export interface EndAttemptDetail {
  * @remarks
  * Its `detail` is an {@link EndAttemptDetail}.
  */
-export type EndAttemptEvent = CustomEvent<EndAttemptDetail>;
+type EndAttemptEvent = CustomEvent<EndAttemptDetail>;
 
 declare global {
   interface HTMLElementEventMap {

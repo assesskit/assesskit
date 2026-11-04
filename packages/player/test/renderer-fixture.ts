@@ -1,7 +1,7 @@
 import { type BodyNode, readAsi } from "@assesskit/runtime/asi";
 import axe from "axe-core";
 import { EN_MESSAGES } from "../src/index.js";
-import { type BodyRenderer, type BodyRendererOptions, createBodyRenderer } from "../src/player/index.js";
+import { type BodyRenderer, type BodyRendererOptions, createBodyRenderer } from "../src/player/content/index.js";
 import { type ContentRoot, mount } from "./css-fixture.js";
 
 /** The namespaces that the markup of an item can use: the ASI namespace as the default, and the prefixes `m`, `ssml` and `cml`. */

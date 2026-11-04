@@ -1,16 +1,15 @@
 # Interaction elements
 
-`createInteractionRenderers` of `@assesskit/player/player` draws the interactions of an item: choice, order, associate,
+`mountItem` and `mountDelivery` of `@assesskit/player/player` draw the interactions of an item: choice, order, associate,
 match, gap match, inline choice, text entry, extended text, hot text, slider, end attempt, media, upload and custom, and the
 seven that work on an image: hotspot, select point, graphic order, graphic associate, graphic gap match, position object and
-drawing ([graphics](graphics.md)). The other kinds are drawn by other renderers that a host adds to the same map
-([content](content.md#interactions)). The
+drawing ([graphics](graphics.md)). The portable custom interaction is drawn in a frame ([PCI](pci.md)). The
 renderers draw the content and the controls. They decide nothing of QTI: the runtime's `interactions` gives the descriptors and the
-validity of a response, and the host gives each element its descriptor, its value and whether it is disabled.
+validity of a response, and the mount gives each element its descriptor, its value and whether it is disabled, from the view.
 
 ```mermaid
 sequenceDiagram
-  participant H as Host
+  participant H as Mount
   participant R as Renderer of a kind
   participant E as Interaction element
   participant C as Candidate
@@ -25,13 +24,12 @@ sequenceDiagram
 
 ## Quick start
 
-Draw a choice interaction in a content root, check a box and read the response that the element reports:
+Mount an item with a choice interaction, check a box and read the response that the session holds:
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
-import { describeInteractions } from "@assesskit/runtime/interactions";
-import { selectMessages } from "@assesskit/player";
-import { createContentRoot, createInteractionRenderers, InteractionElement } from "@assesskit/player/player";
+import { createLocalSession } from "@assesskit/player/client/local";
+import { mountItem } from "@assesskit/player/player";
 import css from "@assesskit/player/player.css?inline"; // any bundler that imports a file as text
 
 const parsed = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
@@ -46,66 +44,66 @@ const parsed = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`);
-if (parsed.kind !== "item" || parsed.item.body === undefined) throw new Error("The document is not an item.");
+if (parsed.kind !== "item") throw new Error("The document is not an item.");
 
-const messages = selectMessages("en");
-const player = new CSSStyleSheet();
-player.replaceSync(css);
+const saved = new Map();
+const client = await createLocalSession({
+  definition: { kind: "item", item: parsed.item, base: "items/cities/item.xml" },
+  store: {
+    load: async (session) => saved.get(session),
+    save: async (session, { state }) => void saved.set(session, state),
+  },
+  session: "cities-1",
+  seed: 1,
+  assets: (path) => `https://assets.example/g/token/${path}`,
+});
+
+const stylesheet = new CSSStyleSheet();
+stylesheet.replaceSync(css);
 const host = document.createElement("div");
 document.body.append(host);
-const root = createContentRoot(host, {
-  messages,
-  assets: (path) => `https://assets.example/g/token/${path}`,
-  fetch: (url, request) => fetch(url, request),
-  stylesheet: player,
-  interactions: createInteractionRenderers({
-    messages,
-    files: {
-      upload: async () => {
-        throw new Error("This item has no upload.");
-      },
-      url: () => "",
+const mounted = mountItem(host, {
+  client,
+  files: {
+    upload: async () => {
+      throw new Error("This item has no upload.");
     },
-    staticUrl: "https://assets.example/static/",
-    record: false,
-  }),
+    read: async () => new Uint8Array(),
+    url: () => "",
+  },
+  staticUrl: "https://assets.example/static/",
+  stylesheet,
+  fetch: (url, request) => fetch(url, request),
+  hooks: { record: false },
 });
-await root.show({ body: { nodes: parsed.item.body.children, base: "items/cities/item.xml" } });
 
-// The host gives each element the descriptor of its interaction, as it does for each view.
-const descriptors = new Map(describeInteractions(parsed.item).map((d) => [d.responseIdentifier, d]));
-for (const element of root.root.querySelectorAll("*")) {
-  const descriptor = element instanceof InteractionElement ? descriptors.get(element.responseIdentifier) : undefined;
-  if (element instanceof InteractionElement && descriptor !== undefined) element.descriptor = descriptor;
-}
-
-const responses = [];
-root.root.addEventListener("ak-response", (event) => responses.push(event.detail));
-root.root.querySelectorAll('input[type="checkbox"]')[1].click();
-responses.length; // => 1
-responses[0].responseIdentifier; // => "RESPONSE"
-responses[0].value.values; // => ["B"]
+const content = host.shadowRoot.querySelector(".ak-content-host").shadowRoot;
+while (content.querySelectorAll('input[type="checkbox"]').length < 3)
+  await new Promise((resolve) => setTimeout(resolve, 10));
+content.querySelectorAll('input[type="checkbox"]')[1].click();
+const status = host.shadowRoot.querySelector("[role=status]");
+while (status.textContent !== "Answers saved.") await new Promise((resolve) => setTimeout(resolve, 10));
+client.view.current.responses.get("RESPONSE").values; // => ["B"]
+mounted.destroy();
 ```
 
 ## Options
 
-| Option              | Type                    | Meaning                                                                                                                                                                                                                                                                                                      |
-| ------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `messages`          | `Messages`              | The text of the interface, from `selectMessages`; the same as the content root's.                                                                                                                                                                                                                            |
-| `files`             | `InteractionFiles`      | Where uploads and recordings are kept: `upload(bytes, mimeType, fileName?)` gives the `FileValue` that the response holds, `url(file)` plays it; `reserve(mimeType, fileName?)` names the file of a recording as it starts and `fill(file, bytes)` stores its bytes, both needed unless `record` is `false`. |
-| `staticUrl`         | `string`                | The base URL of the static files on the asset origin, ending in `/`. `recorder-worklet.js` is under it.                                                                                                                                                                                                      |
-| `record`            | `boolean`               | Whether an upload of audio offers a recording. Default: `true`; then `files` needs `reserve` and `fill`.                                                                                                                                                                                                     |
-| `customInteraction` | `CustomInteractionHook` | Draws custom interactions. Default: none, so that a custom interaction says it is not supported.                                                                                                                                                                                                             |
-| `onError`           | `(error) => void`       | Receives the errors that a recording can only report: the host could not name the file or store the bytes. Default: `reportError` of the page.                                                                                                                                                               |
+The interactions take their options from the mount: `files`, `staticUrl` and `language` with `catalogs` for the text of the
+interface ([delivery](delivery.md#options)), and these hooks.
 
-`createInteractionRenderers` throws `DataError` for an option of another type, a `staticUrl` that is not an absolute `http`
-or `https` URL ending in `/`, and an option that is not in the table. It defines the custom elements first
-(`defineElements`, which does nothing the second time and throws `AssesskitError` when another class holds the name of an
-interaction).
+| Hook                | Type                    | Meaning                                                                                                                                        |
+| ------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `record`            | `boolean`               | Whether an upload of audio offers a recording. Default: `true`; then `files` needs `reserve` and `fill`.                                       |
+| `customInteraction` | `CustomInteractionHook` | Draws custom interactions. Default: none, so that a custom interaction says it is not supported.                                               |
+| `onError`           | `(error) => void`       | Receives the errors that a recording can only report: the host could not name the file or store the bytes. Default: `reportError` of the page. |
+
+The mount defines the custom elements first (it does nothing the second time and throws `AssesskitError` when another class holds the
+name of an interaction). `files.upload`, `files.reserve` and `files.url` are those of the mount's `files`: `upload` gives the `FileValue` that the response holds, `url(file)` plays it, and `reserve` names the file of a recording before its bytes come and `fill` stores them.
 
 ## The element
 
-Each interaction is one custom element, `qti-` and its kind, that extends `InteractionElement`. The host sets four properties
+Each interaction is one custom element, `qti-` and its kind. The mount sets four properties
 and listens for one event, so that it never reads the controls.
 
 | Property             | Meaning                                                                                                                                                                              |
@@ -281,11 +279,11 @@ that the runtime knows nothing of them and another player ignores them:
     data-ak-record-start="15" data-ak-record-limit="45" data-ak-record-once="true"/>
 ```
 
-| Attribute              | Default                 | Meaning                                                                                                                                                                      |
-| ---------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `data-ak-record-start` | none: Record only       | Seconds after the interaction is shown at which recording starts by itself, with a countdown. `0` starts at once. Record stays, to start earlier.                            |
-| `data-ak-record-limit` | `MAX_RECORDING_SECONDS` | The longest recording in seconds, at most `MAX_RECORDING_SECONDS` (600, which bounds memory: the WAV path holds 192 kB for each second). It ends the recording as Stop does. |
-| `data-ak-record-once`  | none                    | `true`: no second recording and no Remove once a recording has started, or when a file is there.                                                                             |
+| Attribute              | Default           | Meaning                                                                                                                                              |
+| ---------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-ak-record-start` | none: Record only | Seconds after the interaction is shown at which recording starts by itself, with a countdown. `0` starts at once. Record stays, to start earlier.    |
+| `data-ak-record-limit` | 600               | The longest recording in seconds, at most 600 ( which bounds memory: the WAV path holds 192 kB for each second). It ends the recording as Stop does. |
+| `data-ak-record-once`  | none              | `true`: no second recording and no Remove once a recording has started, or when a file is there.                                                     |
 
 A value that is not a whole number of seconds counts as absent. A blueprint's prepare and respond times are one item with
 `max-time` of their sum and the prompt on screen throughout; no item needs extra seconds for storing.
@@ -350,7 +348,7 @@ stop();
 host.querySelector("button"); // => null
 ```
 
-Pass the hook as the `customInteraction` option of `createInteractionRenderers`.
+Pass the hook as `hooks.customInteraction` of `mountItem` or `mountDelivery`.
 
 `state` holds the response and `disabled` at that moment; the hook does not hear of later changes of the host. `set` checks the
 value, and ignores it while the candidate cannot respond. The function that the hook returns runs when the element
@@ -410,7 +408,7 @@ An interaction never throws at the candidate: it says in words what is wrong and
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
 | `DataError`                               | A descriptor is not that of the kind and the response variable of the element, or is malformed                                                                                                                     | Give each element the descriptor that the runtime's `interactions` made for it                    |
 | `DataError`                               | `files.upload` or `files.reserve` gives something that is not a file value, `reserve` or `fill` is missing while `record` is not `false`, or `staticUrl` is not an absolute `http` or `https` URL that ends in `/` | Return the `FileValue` of the store; fix `staticUrl`                                              |
-| `DataError`                               | A renderer is given a node of another kind, or the option `interactions` is not a `Map` from kind to function                                                                                                      | Register each renderer under the kind it draws                                                    |
+| `DataError`                               | A renderer is given a node of another kind                                                                                                                                                                         | Register each renderer under the kind it draws                                                    |
 | A message under the control               | The response breaks a rule: a limit, a pattern, a type, a missing answer                                                                                                                                           | The candidate follows the hint; the texts are in the table above                                  |
 | "This file type is not accepted"          | The file's type is not in `accept`                                                                                                                                                                                 | Offer the types the item lists, or change the item                                                |
 | A message that the file could not be sent | `files.upload` rejected                                                                                                                                                                                            | The host's store failed: check it; no response is given, so nothing wrong is saved                |
@@ -455,35 +453,35 @@ the recording worklet (`pnpm compat:engines`).
 
 Each file of `src/player/elements/`, `src/player/media/`, `src/player/recording/` holds one concept.
 
-| File                             | Concept                                                                       |
-| -------------------------------- | ----------------------------------------------------------------------------- |
-| `elements/board-element.ts`      | The element of an interaction on a board                                      |
-| `elements/define.ts`             | `defineElements`                                                              |
-| `elements/editor.ts`             | The XHTML field of an extended text                                           |
-| `elements/element.ts`            | `InteractionElement`, the base of every interaction element                   |
-| `elements/end-attempt.ts`        | The end attempt element and its event                                         |
-| `elements/hints.ts`              | The hints and limits in words                                                 |
-| `elements/index.ts`              | The public API                                                                |
-| `elements/internal.ts`           | Helpers that other folders and tests share, which the package does not export |
-| `elements/notes.ts`              | The limits, hints and announcements of an interaction                         |
-| `elements/options.ts`            | The options of the renderers, checked                                         |
-| `elements/parts.ts`              | The parts that interactions share: prompt, choices, orientation               |
-| `elements/pointer.ts`            | The distance of a drag                                                        |
-| `elements/renderers.ts`          | `createInteractionRenderers`                                                  |
-| `elements/selection.ts`          | The element of a choice-based interaction                                     |
-| `elements/text.ts`               | The text fields of the text interactions                                      |
-| `elements/upload.ts`             | The upload element and its recording                                          |
-| `elements/values.ts`             | Reading and building responses                                                |
-| `media/companion.ts`             | A recording that follows another                                              |
-| `media/index.ts`                 | The public API                                                                |
-| `media/playback.ts`              | The rules of playing a recording                                              |
-| `media/settings.ts`              | What an item asks of the player                                               |
-| `media/tracks.ts`                | Text tracks                                                                   |
-| `recording/index.ts`             | The public API                                                                |
-| `recording/names.ts`             | The name of the recorder processor                                            |
-| `recording/recorder.ts`          | Recording the microphone                                                      |
-| `recording/wav.ts`               | The WAV encoder                                                               |
-| `the other files of `elements/`` | The element of each kind of interaction, with its renderer                    |
+| File                             | Concept                                                                                                              |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `elements/board-element.ts`      | The element of an interaction on a board                                                                             |
+| `elements/define.ts`             | The registration of the custom elements                                                                              |
+| `elements/editor.ts`             | The XHTML field of an extended text                                                                                  |
+| `elements/element.ts`            | The base of every interaction element                                                                                |
+| `elements/end-attempt.ts`        | The end attempt element and its event                                                                                |
+| `elements/hints.ts`              | The hints and limits in words                                                                                        |
+| `elements/index.ts`              | The elements and their renderers, for the mounts; the package exports the hook and the state of a custom interaction |
+| `elements/internal.ts`           | Helpers that other folders and tests share, which the package does not export                                        |
+| `elements/notes.ts`              | The limits, hints and announcements of an interaction                                                                |
+| `elements/options.ts`            | The options of the renderers, checked                                                                                |
+| `elements/parts.ts`              | The parts that interactions share: prompt, choices, orientation                                                      |
+| `elements/pointer.ts`            | The distance of a drag                                                                                               |
+| `elements/renderers.ts`          | The renderers of the kinds                                                                                           |
+| `elements/selection.ts`          | The element of a choice-based interaction                                                                            |
+| `elements/text.ts`               | The text fields of the text interactions                                                                             |
+| `elements/upload.ts`             | The upload element and its recording                                                                                 |
+| `elements/values.ts`             | Reading and building responses                                                                                       |
+| `media/companion.ts`             | A recording that follows another                                                                                     |
+| `media/index.ts`                 | The public API                                                                                                       |
+| `media/playback.ts`              | The rules of playing a recording                                                                                     |
+| `media/settings.ts`              | What an item asks of the player                                                                                      |
+| `media/tracks.ts`                | Text tracks                                                                                                          |
+| `recording/index.ts`             | The public API                                                                                                       |
+| `recording/names.ts`             | The name of the recorder processor                                                                                   |
+| `recording/recorder.ts`          | Recording the microphone                                                                                             |
+| `recording/wav.ts`               | The WAV encoder                                                                                                      |
+| `the other files of `elements/`` | The element of each kind of interaction, with its renderer                                                           |
 
 ## References
 

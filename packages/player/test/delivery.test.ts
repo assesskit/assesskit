@@ -10,9 +10,9 @@ import {
   confirmationText,
   planActions,
   REFUSAL_MESSAGES,
+  resolveItemSettings,
   spokenText,
 } from "../src/player/delivery/internal.js";
-import { resolveItemSettings } from "../src/player/delivery/settings.js";
 import { REFUSAL_REASONS } from "../src/protocol/index.js";
 import { examDefinition, examFiles, packageOf } from "./exam-fixture.js";
 

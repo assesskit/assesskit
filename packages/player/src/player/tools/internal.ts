@@ -22,7 +22,15 @@ export {
   setAngle,
 } from "./calculator-engine.js";
 export { checkToolsInput } from "./check-input.js";
-export { ANGLE_UNITS, LENGTH_UNITS, type ProtractorSpec, type RuleSpec } from "./model.js";
+export {
+  ANGLE_UNITS,
+  LENGTH_UNITS,
+  type ProtractorSpec,
+  type RuleSpec,
+  SLOT_TOOLS,
+  TOOL_SUPPORT_NAMES,
+  type ToolSupportName,
+} from "./model.js";
 export { formatNumber } from "./numbers.js";
 export { resolveTools } from "./resolve.js";
 export {

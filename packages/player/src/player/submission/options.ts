@@ -3,7 +3,6 @@ import type { ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { FileValue } from "@assesskit/runtime/values";
 import { type Messages, selectMessages } from "../../messages/index.js";
-import type { InteractionRenderers } from "../content/index.js";
 import { readRenderOptions } from "../content/internal.js";
 import type { MountFiles, MountOptions } from "../delivery/index.js";
 import { createMathTypesetter, type MathTypesetter } from "../math/index.js";
@@ -32,12 +31,6 @@ export interface SubmissionOptions
    */
   readonly files?: SubmissionFiles;
   /**
-   * The renderers of interactions by kind.
-   *
-   * @defaultValue An empty map, so that each interaction is a placeholder
-   */
-  readonly interactions?: InteractionRenderers;
-  /**
    * Returns the path in the package of the document of an item instance, such as `items/q1/item.xml`, against which the
    * relative references of its content resolve.
    *
@@ -62,23 +55,11 @@ export interface SubmissionSettings {
   readonly origins: readonly string[];
   /** Typesets the expressions, when the host gave MathJax. */
   readonly typesetter: MathTypesetter | undefined;
-  /** The renderers of interactions. */
-  readonly interactions: InteractionRenderers;
   /** The path of the document of an item instance. */
   readonly itemPath: (item: ItemKey) => string;
 }
 
-const OPTION_NAMES = [
-  "assets",
-  "stylesheet",
-  "language",
-  "catalogs",
-  "files",
-  "origins",
-  "mathjax",
-  "interactions",
-  "itemPath",
-];
+const OPTION_NAMES = ["assets", "stylesheet", "language", "catalogs", "files", "origins", "mathjax", "itemPath"];
 
 /** The schemes that the page may load a file of a candidate from. */
 const FILE_PROTOCOLS: readonly string[] = ["http:", "https:"];
@@ -119,11 +100,10 @@ export function readSubmissionOptions(options: unknown): SubmissionSettings {
   }
   // `selectMessages` checks the catalogs, language by language, down to each message.
   const text = selectMessages(language, catalogs as Readonly<Record<string, Partial<Messages>>>);
-  const { assets, origins, interactions } = readRenderOptions({
+  const { assets, origins } = readRenderOptions({
     messages: text,
     assets: options.assets,
     origins: options.origins,
-    interactions: options.interactions,
   });
   if (!(options.stylesheet instanceof CSSStyleSheet)) {
     throw new DataError(`The option stylesheet must be a CSSStyleSheet, found ${describe(options.stylesheet)}.`);
@@ -136,7 +116,6 @@ export function readSubmissionOptions(options: unknown): SubmissionSettings {
     fileUrl,
     origins: [...origins],
     typesetter: mathjax === undefined ? undefined : createMathTypesetter(mathjax),
-    interactions,
     itemPath: (item) => {
       const path: unknown = Reflect.apply(itemPath, undefined, [item]);
       checkString(path, "The path that itemPath returned");

@@ -240,18 +240,6 @@ describe("mountSubmission", () => {
     expect(el(scorer, "qti-rubric-block").getAttribute("data-use")).toBe("scoring");
   });
 
-  it("draws the interactions with the renderers the host gives", () => {
-    const interactions: SubmissionOptions["interactions"] = new Map([
-      [
-        "extended-text-interaction",
-        (interaction, renderer) =>
-          renderer.element("qti-extended-text-interaction", interaction, [document.createTextNode("[review]")]),
-      ],
-    ]);
-    const { shadow } = show(submission(), { interactions });
-    expect(contents(shadow)[0]?.textContent).toContain("[review]");
-  });
-
   it("shows the rubric of the scorer view before the items", () => {
     const rubric = itemBody("<p>Rate the content once.</p><ul><li>Task 1</li></ul>");
     const { shadow } = show(submission({ rubric }));

@@ -17,19 +17,19 @@ import { afterEach, beforeEach, describe, expect, inject, it } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import { EN_MESSAGES } from "../src/index.js";
 import { ID_MESSAGES } from "../src/messages/id/index.js";
+import { createInteractionRenderers, InteractionElement } from "../src/player/elements/index.js";
 import {
   applyPresentation,
   createContentRoot,
-  createInteractionRenderers,
-  InteractionElement,
   mountContentSupports,
   mountSpoken,
   mountSupportPanel,
-  mountVariantNotice,
   resolvePresentation,
   type SpeechHook,
   type SpeechRequest,
 } from "../src/player/index.js";
+import { buildContentRoot } from "../src/player/roots/internal.js";
+import { mountVariantNotice } from "../src/player/supports/internal.js";
 import { audioPlaysToEnd, needsAudio } from "./audio.js";
 import { computed, mount, PLAYER_CSS, stylesheet } from "./css-fixture.js";
 import { NO_RECORDING } from "./files-fixture.js";
@@ -1739,17 +1739,20 @@ describe("supports and a media interaction", () => {
     const parsed = readAsi(MediaItem);
     if (parsed.kind !== "item" || parsed.item.body === undefined) throw new Error("not an item");
     const host = tracked(document.createElement("div"));
-    const root = createContentRoot(host, {
-      messages: EN_MESSAGES,
-      assets: (path) => `${ASSETS}${path}`,
-      fetch: (url, request) => fetch(url, request),
-      stylesheet: stylesheet(PLAYER_CSS),
-      interactions: createInteractionRenderers({
+    const root = buildContentRoot(
+      host,
+      {
+        messages: EN_MESSAGES,
+        assets: (path) => `${ASSETS}${path}`,
+        fetch: (url, request) => fetch(url, request),
+        stylesheet: stylesheet(PLAYER_CSS),
+      },
+      createInteractionRenderers({
         messages: EN_MESSAGES,
         files: { upload: () => Promise.reject(new Error("The test has no upload.")), url: () => "", ...NO_RECORDING },
         staticUrl: STATIC_URL,
       }),
-    });
+    );
     cleanups.push(() => root.destroy());
     await root.show({
       body: { nodes: parsed.item.body.children, base: ITEM_PATH },

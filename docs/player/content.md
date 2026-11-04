@@ -1,14 +1,15 @@
 # Content rendering
 
 The content of an item is the typed tree that the runtime's `asi` reads: text, HTML elements, QTI elements, interactions, and
-MathML and SSML kept as XML. `createBodyRenderer` of `@assesskit/player/player` builds the DOM for such nodes, and
-`createContentRoot` shows an item with its stimuli in a shadow root of its own. They draw what the runtime's engine resolved
-(feedback, template content, printed values and hidden choices, `resolveContent` of the runtime); they decide nothing of QTI.
+MathML and SSML kept as XML. `createContentRoot` of `@assesskit/player/player` builds the DOM for such nodes and shows an
+item with its stimuli in a shadow root of its own. It draws what the runtime's engine resolved (feedback, template content,
+printed values and hidden choices, `resolveContent` of the runtime) and decides nothing of QTI. `mountItem` and `mountDelivery`
+([delivery](delivery.md)) draw the interactions in it.
 
 ```mermaid
 flowchart LR
   nodes["Typed content<br/>from the runtime's asi"] --> policy["URL policy and<br/>attribute allowlist"]
-  policy --> renderer["BodyRenderer<br/>createElementNS, never innerHTML"]
+  policy --> renderer["Renderer of content<br/>createElementNS, never innerHTML"]
   renderer --> body["DOM of the item,<br/>its stimuli and its feedback"]
   interactions["Interaction renderers<br/>by kind"] --> renderer
   sheets["Item stylesheets<br/>sanitized"] --> root
@@ -60,18 +61,17 @@ stimuli share one root, so that `label for`, `aria-describedby` and `data-catalo
 stylesheets neither leak into the page nor take their rules from it. `player.css` gives the host `contain: layout paint` and
 `isolation: isolate`, so that the fixed-position CSS of an item cannot cover the page's chrome ([styling](styling.md)).
 
-| Option         | Type                          | Meaning                                                                                                                                                                       |
-| -------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `messages`     | `Messages`                    | The text of the interface, from `selectMessages`.                                                                                                                             |
-| `assets`       | `(path: string) => string`    | Turns the path of a file in the package into the URL to load it from.                                                                                                         |
-| `fetch`        | `StylesheetFetch`             | Loads item stylesheets; `fetch` of the page fits. It is called with `credentials: "omit"`, `referrerPolicy: "no-referrer"` and, when a mount drives the root, a `signal`.     |
-| `stylesheet`   | `CSSStyleSheet`               | The player's stylesheet, built from `player.css`. Every root adopts it first. Keep one root that lives as long as the player ([styling](styling.md)).                         |
-| `origins`      | `readonly string[]`           | The origins besides the package's that content may reference, such as `https://media.example`. Default: none.                                                                 |
-| `interactions` | `InteractionRenderers`        | The renderers of interactions by kind. Default: none, so that each interaction is a placeholder.                                                                              |
-| `view`         | `View`                        | The view whose rubric blocks are drawn. Default: `candidate`.                                                                                                                 |
-| `mediaScale`   | `number`                      | The factor for the pixel `width` and `height` of images, video and objects, which the magnification of non-text content sets; `setMediaScale` changes it later. Default: `1`. |
-| `fileUrl`      | `(file: FileValue) => string` | The URL of a file value that a printed variable prints, such as an upload under review. Default: none, so that a file prints as its name.                                     |
-| `typesetter`   | `MathTypesetter`              | From `createMathTypesetter` ([math](math.md)). Default: none, so that the browser renders MathML.                                                                             |
+| Option       | Type                          | Meaning                                                                                                                                                                       |
+| ------------ | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `messages`   | `Messages`                    | The text of the interface, from `selectMessages`.                                                                                                                             |
+| `assets`     | `(path: string) => string`    | Turns the path of a file in the package into the URL to load it from.                                                                                                         |
+| `fetch`      | `StylesheetFetch`             | Loads item stylesheets; `fetch` of the page fits. It is called with `credentials: "omit"`, `referrerPolicy: "no-referrer"` and, when a mount drives the root, a `signal`.     |
+| `stylesheet` | `CSSStyleSheet`               | The player's stylesheet, built from `player.css`. Every root adopts it first. Keep one root that lives as long as the player ([styling](styling.md)).                         |
+| `origins`    | `readonly string[]`           | The origins besides the package's that content may reference, such as `https://media.example`. Default: none.                                                                 |
+| `view`       | `View`                        | The view whose rubric blocks are drawn. Default: `candidate`.                                                                                                                 |
+| `mediaScale` | `number`                      | The factor for the pixel `width` and `height` of images, video and objects, which the magnification of non-text content sets; `setMediaScale` changes it later. Default: `1`. |
+| `fileUrl`    | `(file: FileValue) => string` | The URL of a file value that a printed variable prints, such as an upload under review. Default: none, so that a file prints as its name.                                     |
+| `typesetter` | `MathTypesetter`              | From `createMathTypesetter` ([math](math.md)). Default: none, so that the browser renders MathML.                                                                             |
 
 `root.show(content)` replaces what the root showed. The DOM is built before the promise settles; the promise settles when
 the item's stylesheets are adopted and the expressions are typeset.
@@ -134,20 +134,10 @@ pixels, such as `50%`, stay.
 
 ## The renderer
 
-`createBodyRenderer(options)` returns a `BodyRenderer` with two methods.
-
-| Method                          | Meaning                                                                                                               |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `nodes(nodes)`                  | Renders the nodes, in order. It throws `DataError` for a node that is not an object whose `kind` names an element.    |
-| `element(name, node, children)` | Builds the element `name` for a node, around the children given, with the attributes the renderer keeps for the node. |
-
-Its options are those of the root's table without `fetch`, `stylesheet` and `typesetter`, and with these:
-
-| Option          | Type               | Meaning                                                                                             |
-| --------------- | ------------------ | --------------------------------------------------------------------------------------------------- |
-| `base`          | `string`           | The path in the package of the document the nodes come from. Default: `""`, the package root.       |
-| `withholdMedia` | `boolean`          | Whether media and animation are withheld because a hazard remains. Default: `false`.                |
-| `variables`     | `ContentVariables` | The variables that printed variables still in the nodes read. Default: none, so they print nothing. |
+The root builds the DOM of the nodes with one renderer, which every other part of the player shares: the prompts and choices of the
+interactions, the feedback and the cards of the catalogs draw their content with it, so that they all follow the same rules for
+URLs, languages and media. A node that is not an object whose `kind` names an element is a `DataError`. The renderer builds the
+element for a node around its children, with the attributes it keeps for the node.
 
 ### What a node becomes
 
@@ -293,28 +283,10 @@ assistive technology: `aria-sort` says the state). The selected tab differs by w
 
 ## Interactions
 
-An interaction is drawn by the renderer registered for its kind in the `interactions` map, and as a placeholder when there is
-none. `createInteractionRenderers` ([interactions](interactions.md)) gives the renderers of twenty-one kinds. A renderer gets the interaction and the `BodyRenderer`, and returns the element; the sample registers one, and renders an `img`
-with the URL policy of the options:
-
-```ts
-import { selectMessages } from "@assesskit/player";
-import { createBodyRenderer } from "@assesskit/player/player";
-
-const body = createBodyRenderer({
-  messages: selectMessages("en"),
-  assets: (path) => `https://assets.example/${path}`,
-  base: "items/a/item.xml",
-  interactions: new Map([
-    ["choice-interaction", (interaction, renderer) => renderer.element("qti-choice-interaction", interaction, [])],
-  ]),
-});
-const [image] = body.nodes([{ kind: "img", src: "map.png", alt: "A map" }]);
-image.outerHTML; // => '<img src="https://assets.example/items/a/map.png" alt="A map">'
-```
-
-`body.element` sets the attributes the player keeps, and `body.nodes` renders the content of a prompt or a choice with the
-same rules, so an interaction needs no code of its own for URLs, languages or media.
+An interaction is drawn by the renderer registered for its kind, and as a placeholder when there is none: `qti-` and its kind
+with `data-ak-placeholder`, around its content. A content root alone registers none. `mountItem` and `mountDelivery` register the
+renderers of twenty-one kinds ([interactions](interactions.md)). A renderer gets the interaction and the renderer of content, and
+returns the element, so an interaction needs no code of its own for URLs, languages or media.
 
 ## Stylesheets
 
@@ -358,16 +330,16 @@ Test feedback is a field of `show`: the entries from the runtime's `selectTestFe
 
 ## Errors
 
-`createContentRoot` and `createBodyRenderer` throw the runtime's `DataError` for a call that is wrong. Content that is hostile or broken is not an error: the renderer leaves out what it refuses and the page stays whole.
+`createContentRoot` throws the runtime's `DataError` for a call that is wrong. Content that is hostile or broken is not an error: the renderer leaves out what it refuses and the page stays whole.
 
-| Error                                                            | When                                                                                                                                                                                                               | What to do                                                                                                |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| `DataError`                                                      | The host is not an element, or has a shadow root that the player did not attach, or one that an earlier root left with content                                                                                     | Pass an element with no shadow root, or destroy the earlier root first                                    |
-| `DataError`                                                      | `stylesheet` is not a `CSSStyleSheet`, `interactions` is not a `Map` from kind to function, `variables` holds something other than `Map`s, or `origins` has an entry that is not an absolute `http` or `https` URL | Fix the option; the message names it                                                                      |
-| `DataError`                                                      | A node is not an object whose `kind` names an element, or a text node's value is not a string                                                                                                                      | Pass the nodes that `readAsi` of the runtime returns                                                      |
-| A notice in the root                                             | An item stylesheet failed to load, or a hazard of the profile remains and the media is withheld                                                                                                                    | Check the stylesheet's URL and that its origin is in `origins`; the notice says what was withheld         |
-| An element left out, an attribute dropped, a link without `href` | The attribute is not on the allowlist, the URL is outside `origins`, or a stylesheet rule is on the removal list                                                                                                   | Serve the file from an origin in `origins`; see [Attributes](#attributes) and [Stylesheets](#stylesheets) |
-| The error of `onError`                                           | A stylesheet's fetch failed, with no call to carry the error                                                                                                                                                       | Log it; the default is `reportError` of the page                                                          |
+| Error                                                            | When                                                                                                                           | What to do                                                                                                |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `DataError`                                                      | The host is not an element, or has a shadow root that the player did not attach, or one that an earlier root left with content | Pass an element with no shadow root, or destroy the earlier root first                                    |
+| `DataError`                                                      | `stylesheet` is not a `CSSStyleSheet`, or `origins` has an entry that is not an absolute `http` or `https` URL                 | Fix the option; the message names it                                                                      |
+| `DataError`                                                      | A node is not an object whose `kind` names an element, or a text node's value is not a string                                  | Pass the nodes that `readAsi` of the runtime returns                                                      |
+| A notice in the root                                             | An item stylesheet failed to load, or a hazard of the profile remains and the media is withheld                                | Check the stylesheet's URL and that its origin is in `origins`; the notice says what was withheld         |
+| An element left out, an attribute dropped, a link without `href` | The attribute is not on the allowlist, the URL is outside `origins`, or a stylesheet rule is on the removal list               | Serve the file from an origin in `origins`; see [Attributes](#attributes) and [Stylesheets](#stylesheets) |
+| The error of `onError`                                           | A stylesheet's fetch failed, with no call to carry the error                                                                   | Log it; the default is `reportError` of the page                                                          |
 
 ## Not included
 
@@ -401,38 +373,38 @@ would give and hostile stylesheets, and checks that the browser asks no other or
 
 Each file of `src/player/content/`, `src/player/roots/`, `src/player/catalogs/`, `src/player/feedback/` holds one concept.
 
-| File                        | Concept                                                                       |
-| --------------------------- | ----------------------------------------------------------------------------- |
-| `content/attributes.ts`     | The attributes of an element that the player keeps, and the sizes of media    |
-| `content/context.ts`        | The renderer that interaction renderers use, and the context of one rendering |
-| `content/embed.ts`          | Embedding a file by its media type                                            |
-| `content/foreign.ts`        | MathML, SSML and CML kept as XML, drawn with their namespaces                 |
-| `content/html-elements.ts`  | The HTML elements of the schema, and the name of an element in the DOM        |
-| `content/index.ts`          | The public API                                                                |
-| `content/internal.ts`       | Helpers that other folders and tests share, which the package does not export |
-| `content/media.ts`          | The `audio`, `video` and `img` elements                                       |
-| `content/nodes.ts`          | Rendering the nodes of content                                                |
-| `content/object.ts`         | The `qti-object` element                                                      |
-| `content/options.ts`        | The options of the renderer, checked, with their defaults                     |
-| `content/printed.ts`        | The printed variable                                                          |
-| `content/renderer.ts`       | `createBodyRenderer`                                                          |
-| `content/sortable-table.ts` | Sorting a table by a column                                                   |
-| `content/srcset.ts`         | The candidates of a `srcset`                                                  |
-| `content/tabs.ts`           | The tabs of a tablist                                                         |
-| `content/urls.ts`           | The URL policy for the references of content                                  |
-| `roots/build.ts`            | The DOM of the content of a root, in reading order                            |
-| `roots/content.ts`          | What a root shows, and its check                                              |
-| `roots/hazards.ts`          | The hazards that remain, and their notice                                     |
-| `roots/index.ts`            | The public API                                                                |
-| `roots/internal.ts`         | Helpers that other folders and tests share, which the package does not export |
-| `roots/links.ts`            | Links to an `id` inside a shadow root                                         |
-| `roots/root.ts`             | `createContentRoot`                                                           |
-| `roots/stylesheet.ts`       | Item stylesheets: fetching and sanitizing                                     |
-| `catalogs/cards.ts`         | The card of a catalog for a support                                           |
-| `catalogs/index.ts`         | The public API                                                                |
-| `feedback/dialog.ts`        | Modal feedback in a dialog                                                    |
-| `feedback/index.ts`         | The public API                                                                |
-| `feedback/render.ts`        | Modal and test feedback as elements                                           |
+| File                        | Concept                                                                            |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| `content/attributes.ts`     | The attributes of an element that the player keeps, and the sizes of media         |
+| `content/context.ts`        | The renderer that interaction renderers use, and the context of one rendering      |
+| `content/embed.ts`          | Embedding a file by its media type                                                 |
+| `content/foreign.ts`        | MathML, SSML and CML kept as XML, drawn with their namespaces                      |
+| `content/html-elements.ts`  | The HTML elements of the schema, and the name of an element in the DOM             |
+| `content/index.ts`          | The renderer of content, for the folders that draw; the package does not export it |
+| `content/internal.ts`       | Helpers that other folders and tests share, which the package does not export      |
+| `content/media.ts`          | The `audio`, `video` and `img` elements                                            |
+| `content/nodes.ts`          | Rendering the nodes of content                                                     |
+| `content/object.ts`         | The `qti-object` element                                                           |
+| `content/options.ts`        | The options of the renderer, checked, with their defaults                          |
+| `content/printed.ts`        | The printed variable                                                               |
+| `content/renderer.ts`       | The renderer of content                                                            |
+| `content/sortable-table.ts` | Sorting a table by a column                                                        |
+| `content/srcset.ts`         | The candidates of a `srcset`                                                       |
+| `content/tabs.ts`           | The tabs of a tablist                                                              |
+| `content/urls.ts`           | The URL policy for the references of content                                       |
+| `roots/build.ts`            | The DOM of the content of a root, in reading order                                 |
+| `roots/content.ts`          | What a root shows, and its check                                                   |
+| `roots/hazards.ts`          | The hazards that remain, and their notice                                          |
+| `roots/index.ts`            | The public API                                                                     |
+| `roots/internal.ts`         | Helpers that other folders and tests share, which the package does not export      |
+| `roots/links.ts`            | Links to an `id` inside a shadow root                                              |
+| `roots/root.ts`             | `createContentRoot`                                                                |
+| `roots/stylesheet.ts`       | Item stylesheets: fetching and sanitizing                                          |
+| `catalogs/cards.ts`         | The card of a catalog for a support                                                |
+| `catalogs/index.ts`         | The public API                                                                     |
+| `feedback/dialog.ts`        | Modal feedback in a dialog                                                         |
+| `feedback/index.ts`         | The public API                                                                     |
+| `feedback/render.ts`        | Modal and test feedback as elements                                                |
 
 ## References
 

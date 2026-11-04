@@ -7,10 +7,10 @@ import {
   mediaScale,
   mountContentSupports,
   mountSpoken,
-  mountVariantNotice,
   resolvePresentation,
   type SupportPanel,
 } from "../supports/index.js";
+import { mountVariantNotice } from "../supports/internal.js";
 import type { PciHost } from "./pci.js";
 
 /** What the supports of the shell need of the player. */
