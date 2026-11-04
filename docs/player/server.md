@@ -20,7 +20,7 @@ sequenceDiagram
   H->>Q: schedule(session, each maximum time)
   H->>S: save(session, record at its version)
   alt another request saved first
-    H->>S: load again, handle again, up to MAX_SAVE_RETRIES
+    H->>S: load again, handle again, up to 3 times
   end
   H->>F: the events of the step
   H-->>R: ViewEnvelope with signed asset prefixes
@@ -30,11 +30,10 @@ sequenceDiagram
 | Export                                                                 | Purpose                                                                              |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | `createSessionHost`, `SessionHost`, `SessionHostOptions`               | The session host of exam mode                                                        |
-| `MAX_SAVE_RETRIES`                                                     | How many times a request is handled again after a version conflict                   |
 | `CANDIDATE_ACTION_TYPES`, `EXAM_CLIENT_ACTIONS`, `CandidateActionType` | The client-action policy                                                             |
 | `SessionStore`, `StoredSession`, `SessionSave`                         | The storage of sessions                                                              |
 | `Scheduler`, `FileStore`, `ToolScoreStore`, `ToolScore`                | The scheduler of time-outs, the storage of files, the storage of the scores of tools |
-| `createAssetGate`, `collectAssetPrefixes` and the gate's types         | The [asset gate](asset-gate.md)                                                      |
+| `createAssetGate` and the gate's types                                 | The [asset gate](asset-gate.md)                                                      |
 | `StepEvents`, `StepSink`, `SuppliedGrade`, `ForwardOptions`            | What the host does with the events of each step                                      |
 | `createToolScoreIntake`, `ToolScoreIntake`, `ToolScoreIntakeOptions`   | The scores of tool items                                                             |
 | `SYSTEM_CLOCK`                                                         | The clock of the machine                                                             |
@@ -200,8 +199,7 @@ what the parse has built. 32 MiB of empty objects take more than a gigabyte. An 
    content, among them the pronunciation lexicons of the item. A refusal of the engine is in the envelope and the state stays as it was; the `seq` is still stored, so a repeat
    of the refused request gets the same refusal.
 
-When another request saved first, the host loads the record again and handles the request again, up to `MAX_SAVE_RETRIES`
-(3) times, and then throws `ServiceError` with status 409. Repeats are safe because `seq` makes the request idempotent.
+When another request saved first, the host loads the record again and handles the request again, up to 3 times, and then throws `ServiceError` with status 409. Repeats are safe because `seq` makes the request idempotent.
 
 If the scheduler fails, nothing is saved and the request can be sent again, so no time-out is lost. If the log fails, the
 step stays saved and the error reaches the caller. A step is numbered by the version of the record it saved, `"start"` for the

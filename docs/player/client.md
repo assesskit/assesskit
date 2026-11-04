@@ -19,7 +19,7 @@ sequenceDiagram
   participant C as Remote session client
   participant H as Session host
   P->>C: dispatch(set-responses)
-  Note over C: Held and merged by item,<br/>sent AUTOSAVE_MS after the last one
+  Note over C: Held and merged by item,<br/>sent 1 s after the last one
   P->>C: dispatch(submit)
   C->>H: the held responses first, then ActionEnvelope (seq + 1)
   alt no answer arrives
@@ -28,7 +28,7 @@ sequenceDiagram
   H-->>C: ViewEnvelope (same seq)
   C->>C: readView, resolve assets, notify listeners
   C-->>P: DispatchResult {view, refusal?}
-  Note over C,H: At FLUSH_BEFORE_DEADLINE_MS before a timer ends, the held<br/>responses go; at 0 an empty set-responses learns the time-out
+  Note over C,H: 10 s before a timer ends, the held<br/>responses go; at 0 an empty set-responses learns the time-out
 ```
 
 ## Quick start
@@ -82,8 +82,8 @@ client.close();
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Sequence     | One request at a time, each with the next `seq`. The answer is read with `readView`; an answer to another `seq` is a `DataError`.                                                                                                                                                                                                                                                                                       |
 | Lost answers | A request that got no answer, such as a network failure, may have been applied. It is sent again, unchanged, before any later request, and the host answers a repeated `seq` with the answer it stored. A request that the host rejected (`DataError`, `AccessError` or `SecurityError`) is not sent again.                                                                                                             |
-| Autosave     | `set-responses` actions are held and merged, by item, and sent `AUTOSAVE_MS` (1000) after the last. Every promise of a held action resolves with the answer to the merged request.                                                                                                                                                                                                                                      |
-| Flush        | The held responses go first before any other action, when the page becomes hidden, and `FLUSH_BEFORE_DEADLINE_MS` (10,000) before the nearest timer reaches 0.                                                                                                                                                                                                                                                          |
+| Autosave     | `set-responses` actions are held and merged, by item, and sent 1,000 ms after the last. Every promise of a held action resolves with the answer to the merged request.                                                                                                                                                                                                                                                  |
+| Flush        | The held responses go first before any other action, when the page becomes hidden, and 10,000 ms before the nearest timer reaches 0.                                                                                                                                                                                                                                                                                    |
 | Deadline     | At 0 the client sends the held responses, or an empty `set-responses` for the item presented, to learn from the host whether the time-out happened. The host's view shows a passed deadline as applied.                                                                                                                                                                                                                 |
 | Assets       | `assets(path)` joins the base URL of the longest prefix of the latest envelope that holds the path with the path. A path no prefix holds gets `about:blank`, which loads nothing.                                                                                                                                                                                                                                       |
 | Refresh      | `refresh(options?)` sends the held responses, then `{ "type": "view" }`, and resolves with the view the host gives. The host changes nothing, and the client goes on from the `seq` of the answer. A candidate whom a proctor paused has no action to send, so this is how the client learns of the resume ([the proctor](server.md#the-proctor)). A local client builds the view of its state at the time of the call. |

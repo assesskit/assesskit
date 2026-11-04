@@ -7,10 +7,4 @@
 
 export type { Clock } from "../protocol/index.js";
 export { BROWSER_CLOCK } from "./clock.js";
-export {
-  AUTOSAVE_MS,
-  createRemoteSession,
-  FLUSH_BEFORE_DEADLINE_MS,
-  type RemoteSessionOptions,
-  type Transport,
-} from "./remote.js";
+export { createRemoteSession, type RemoteSessionOptions, type Transport } from "./remote.js";

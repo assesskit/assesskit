@@ -23,12 +23,10 @@ flowchart TD
   served -- yes --> r200p["200 with the media type"]
 ```
 
-| Export                                              | Purpose                                                                         |
-| --------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `createAssetGate(options)`                          | Creates the gate: `sign`, `signFile` and `serve`.                               |
-| `collectAssetPrefixes(view, pkg)`                   | The prefixes that a view needs.                                                 |
-| `AssetGate`, `AssetGateOptions`, `GateResponse`     | The gate, its options and its answer.                                           |
-| `DEFAULT_TTL_SECONDS`, `DEFAULT_UPLOAD_TTL_SECONDS` | The default lifetimes of a token for a prefix and for a file: `3600` and `300`. |
+| Export                                          | Purpose                                           |
+| ----------------------------------------------- | ------------------------------------------------- |
+| `createAssetGate(options)`                      | Creates the gate: `sign`, `signFile` and `serve`. |
+| `AssetGate`, `AssetGateOptions`, `GateResponse` | The gate, its options and its answer.             |
 
 ## Quick start
 
@@ -111,7 +109,7 @@ though the store never answers. `FileStore.put` and `read` take the options afte
 
 ## Prefixes
 
-`collectAssetPrefixes(view, pkg)` gives the prefixes that a view needs: one for the content root and one for each portable
+The session host collects the prefixes that a view needs and signs them: one for the content root and one for each portable
 custom interaction in it.
 
 | Prefix                        | The deepest directory that holds                                                                                                                                                                                                                                                                                                                                                 |
@@ -196,7 +194,7 @@ The gate throws `DataError` for a call that is wrong and answers a request with 
 | Error or status                        | When                                                                                                                                                                                                                     | What to do                                                                                                                                                                             |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DataError`                            | An option is of the wrong type, `key` is not an HMAC key with SHA-256 for signing and verifying, or `origin` is not an `https` origin without a path (`http` on `localhost`, `127.0.0.1` or `[::1]` only)                | Fix the option; the message names it                                                                                                                                                   |
-| `DataError`                            | A prefix is not a directory in normal form: empty, or segments that each end in `/`, with no `.`, `..`, empty segment, backslash or control character                                                                    | Pass the prefixes of `collectAssetPrefixes`                                                                                                                                            |
+| `DataError`                            | A prefix is not a directory in normal form: empty, or segments that each end in `/`, with no `.`, `..`, empty segment, backslash or control character                                                                    | Pass the prefixes of the content root and of the modules                                                                                                                               |
 | `DataError`                            | A file value or a session is of the wrong type, or the reference of a file is `.` or `..`, which a URL takes as a step out of the token                                                                                  | Pass what `FileStore.put` and the session host gave; a store names a file otherwise                                                                                                    |
 | `403`                                  | The MAC is wrong, the token is for another purpose or another file, it expired, or the path is outside the prefix of the token                                                                                           | A page that stayed open longer than `ttlSeconds` has an expired token: raise `ttlSeconds`, or have the page call `SessionClient.refresh` at an interval below it ([client](client.md)) |
 | `404`                                  | The path is not a gate URL, the file does not exist in the package or the store, or the rules never serve it: not a web asset, declared as a document, included by a document, named by an adaptive section, or QTI data | Check the path and the extension; a QTI document is never served, whatever the token                                                                                                   |
