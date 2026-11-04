@@ -1,7 +1,7 @@
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import fc from "fast-check";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,7 +9,6 @@ import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { runCli } from "../src/cli/index.js";
 import {
   buildReport,
-  defaultSchemaDirectory,
   EXIT_CODES,
   exitCodeOf,
   fetchSchemas,
@@ -22,10 +21,9 @@ import {
   sha256,
   USAGE,
   UsageError,
-  userCacheDirectory,
 } from "../src/cli/internal.js";
 import { DataError, type Issue } from "../src/index.js";
-import { SCHEMA_FILES, type SchemaFile } from "../src/node/index.js";
+import { defaultSchemaDirectory, SCHEMA_FILES, type SchemaFile } from "../src/node/index.js";
 import { FUZZ } from "./fuzz.js";
 
 /** The SHA-256 of "abc" is the vector of FIPS 180-4 B.1; the others come from `shasum -a 256`. */
@@ -264,7 +262,7 @@ describe("running the command line", () => {
 describe("options of the command line", () => {
   it("fills in what the options leave out", () => {
     const resolved = resolveOptions({});
-    expect(resolved.schemaDirectory).toBe(defaultSchemaDirectory(SCHEMA_FILES));
+    expect(resolved.schemaDirectory).toBe(defaultSchemaDirectory());
     expect(resolved.fetch).toBe(fetch);
     expect(typeof resolved.stdout).toBe("function");
     expect(typeof resolved.stderr).toBe("function");
@@ -503,48 +501,6 @@ describe("fetching the schemas", () => {
     const result = await fetchSchemas(freshDirectory("own"), [a], { fetch: fetchUrl });
     expect(asked).toEqual([`${base}/a.xsd`]);
     expect(result.failures).toEqual([]);
-  });
-});
-
-describe("the cache directory of a platform", () => {
-  it("is Library/Caches on macOS, whatever the environment says", () => {
-    expect(userCacheDirectory("darwin", { XDG_CACHE_HOME: "/x" }, "/Users/ada")).toBe("/Users/ada/Library/Caches");
-  });
-
-  it("is $XDG_CACHE_HOME or ~/.cache elsewhere, and ignores a variable that is not an absolute path", () => {
-    expect(userCacheDirectory("linux", { XDG_CACHE_HOME: "/var/cache/ada" }, "/home/ada")).toBe("/var/cache/ada");
-    expect(userCacheDirectory("linux", {}, "/home/ada")).toBe("/home/ada/.cache");
-    expect(userCacheDirectory("linux", { XDG_CACHE_HOME: "cache" }, "/home/ada")).toBe("/home/ada/.cache");
-    expect(userCacheDirectory("linux", { XDG_CACHE_HOME: "" }, "/home/ada")).toBe("/home/ada/.cache");
-    expect(userCacheDirectory("freebsd", {}, "/home/ada")).toBe("/home/ada/.cache");
-  });
-
-  it("is %LOCALAPPDATA% on Windows, or AppData\\Local below the home directory", () => {
-    expect(userCacheDirectory("win32", { LOCALAPPDATA: "D:\\Data\\Local" }, "C:\\Users\\ada")).toBe("D:\\Data\\Local");
-    expect(userCacheDirectory("win32", {}, "C:\\Users\\ada")).toBe("C:\\Users\\ada\\AppData\\Local");
-    expect(userCacheDirectory("win32", { LOCALAPPDATA: "Local" }, "C:\\Users\\ada")).toBe(
-      "C:\\Users\\ada\\AppData\\Local",
-    );
-  });
-});
-
-describe("the default schema directory", () => {
-  const first: SchemaFile = { url: "https://example.org/a.xsd", file: "a.xsd", sha256: ABC };
-  const second: SchemaFile = { url: "https://example.org/b.xsd", file: "b.xsd", sha256: BETA };
-
-  it("is assesskit/schemas/<version> in the user cache directory, the version being the start of the SHA-256 of the list", () => {
-    // `printf 'a.xsd <hash>\nb.xsd <hash>\n' | shasum -a 256` starts with 123a6930c83f; the list of `a.xsd` alone with b7e2901c34c0.
-    const cache = userCacheDirectory(process.platform, process.env, homedir());
-    expect(defaultSchemaDirectory([first, second])).toBe(join(cache, "assesskit", "schemas", "123a6930c83f"));
-    expect(defaultSchemaDirectory([first])).toBe(join(cache, "assesskit", "schemas", "b7e2901c34c0"));
-  });
-
-  it("changes when a schema is added or its hash changes, and not when only the address does", () => {
-    const moved = { ...first, url: "https://mirror.example/a.xsd" };
-    const changed = { ...first, sha256: BETA };
-    expect(defaultSchemaDirectory([moved])).toBe(defaultSchemaDirectory([first]));
-    expect(defaultSchemaDirectory([changed])).not.toBe(defaultSchemaDirectory([first]));
-    expect(defaultSchemaDirectory([first, second])).not.toBe(defaultSchemaDirectory([first]));
   });
 });
 

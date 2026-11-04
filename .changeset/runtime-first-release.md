@@ -30,6 +30,8 @@ record whose count differs from the entries is a `ReadError`. A document that de
 A validation lists at most `maxFindings` issues, 1,000 by default, and ends a longer list with the error
 `assesskit/validate/findings-stopped`; `validateResults`, `validatePnpNamespace` and `validateXmlFiles` take the option too.
 `readModuleResolution` refuses a file longer than 65,536 characters before it parses it.
+`defaultSchemaDirectory()` of `@assesskit/runtime/node` returns the directory that `assesskit schemas fetch` writes the schemas to, so that a program loads what the command fetched with `loadSchemaSet(defaultSchemaDirectory())`.
+`insideShape(shape, coords, point)` of `@assesskit/runtime/processing` is the hit test of the shapes of QTI that `qti-inside` and `qti-map-response-point` make, the edge included, for a scorer of the points of a response.
 The default limits keep the worst input of every reader within a budget of 256 MiB of heap, measured and pinned by a test: an XML
 document has at most 10 MiB (`maxBytes`) and 300,000 nodes (`maxNodes`), and a file of a package at most 64 MiB (`maxEntryBytes`);
 SECURITY.md has the peak of each reader and what raising a limit costs. `readPackageFile` reads a ZIP file by ranges, its end and

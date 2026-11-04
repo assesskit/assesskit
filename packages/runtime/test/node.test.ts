@@ -15,7 +15,7 @@ import {
   writeSync,
 } from "node:fs";
 import { createServer } from "node:net";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
@@ -27,8 +27,16 @@ import {
   writeManifest,
   writePackage,
 } from "../src/index.js";
-import { loadSchemaSet, readPackageFile, SCHEMA_FILES, validateXmlFiles, writePackageFile } from "../src/node/index.js";
-import { PRIMARY_SCHEMAS, selectSchema } from "../src/node/internal.js";
+import {
+  defaultSchemaDirectory,
+  loadSchemaSet,
+  readPackageFile,
+  SCHEMA_FILES,
+  type SchemaFile,
+  validateXmlFiles,
+  writePackageFile,
+} from "../src/node/index.js";
+import { PRIMARY_SCHEMAS, pinnedSchemaDirectory, selectSchema, userCacheDirectory } from "../src/node/internal.js";
 import { parseXml } from "../src/xml/index.js";
 
 // Reads of the ZIP file are counted, to show that they are ranges; every other function is the real one.
@@ -490,5 +498,56 @@ describe("validating documents", () => {
       "The schemas must be a SchemaSet that loadSchemaSet returned.",
     );
     await expect(validateXmlFiles(JSON.parse("null"), [])).rejects.toThrow(DataError);
+  });
+});
+
+/** The SHA-256 of "abc" and of "beta", the hashes that the lists of the tests below pin. */
+const ABC = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+const BETA = "f44e64e75f3948e9f73f8dfa94721c4ce8cbb4f265c4790c702b2d41cfbf2753";
+
+describe("the cache directory of a platform", () => {
+  it("is Library/Caches on macOS, whatever the environment says", () => {
+    expect(userCacheDirectory("darwin", { XDG_CACHE_HOME: "/x" }, "/Users/ada")).toBe("/Users/ada/Library/Caches");
+  });
+
+  it("is $XDG_CACHE_HOME or ~/.cache elsewhere, and ignores a variable that is not an absolute path", () => {
+    expect(userCacheDirectory("linux", { XDG_CACHE_HOME: "/var/cache/ada" }, "/home/ada")).toBe("/var/cache/ada");
+    expect(userCacheDirectory("linux", {}, "/home/ada")).toBe("/home/ada/.cache");
+    expect(userCacheDirectory("linux", { XDG_CACHE_HOME: "cache" }, "/home/ada")).toBe("/home/ada/.cache");
+    expect(userCacheDirectory("linux", { XDG_CACHE_HOME: "" }, "/home/ada")).toBe("/home/ada/.cache");
+    expect(userCacheDirectory("freebsd", {}, "/home/ada")).toBe("/home/ada/.cache");
+  });
+
+  it("is %LOCALAPPDATA% on Windows, or AppData\\Local below the home directory", () => {
+    expect(userCacheDirectory("win32", { LOCALAPPDATA: "D:\\Data\\Local" }, "C:\\Users\\ada")).toBe("D:\\Data\\Local");
+    expect(userCacheDirectory("win32", {}, "C:\\Users\\ada")).toBe("C:\\Users\\ada\\AppData\\Local");
+    expect(userCacheDirectory("win32", { LOCALAPPDATA: "Local" }, "C:\\Users\\ada")).toBe(
+      "C:\\Users\\ada\\AppData\\Local",
+    );
+  });
+});
+
+describe("the default schema directory", () => {
+  it("is the directory of the pinned list of the runtime, which `assesskit schemas fetch` fills", () => {
+    expect(defaultSchemaDirectory()).toBe(pinnedSchemaDirectory(SCHEMA_FILES));
+    expect(defaultSchemaDirectory()).toMatch(/assesskit[\\/]schemas[\\/][0-9a-f]{12}$/);
+  });
+
+  const first: SchemaFile = { url: "https://example.org/a.xsd", file: "a.xsd", sha256: ABC };
+  const second: SchemaFile = { url: "https://example.org/b.xsd", file: "b.xsd", sha256: BETA };
+
+  it("is assesskit/schemas/<version> in the user cache directory, the version being the start of the SHA-256 of the list", () => {
+    // `printf 'a.xsd <hash>\nb.xsd <hash>\n' | shasum -a 256` starts with 123a6930c83f; the list of `a.xsd` alone with b7e2901c34c0.
+    const cache = userCacheDirectory(process.platform, process.env, homedir());
+    expect(pinnedSchemaDirectory([first, second])).toBe(join(cache, "assesskit", "schemas", "123a6930c83f"));
+    expect(pinnedSchemaDirectory([first])).toBe(join(cache, "assesskit", "schemas", "b7e2901c34c0"));
+  });
+
+  it("changes when a schema is added or its hash changes, and not when only the address does", () => {
+    const moved = { ...first, url: "https://mirror.example/a.xsd" };
+    const changed = { ...first, sha256: BETA };
+    expect(pinnedSchemaDirectory([moved])).toBe(pinnedSchemaDirectory([first]));
+    expect(pinnedSchemaDirectory([changed])).not.toBe(pinnedSchemaDirectory([first]));
+    expect(pinnedSchemaDirectory([first, second])).not.toBe(pinnedSchemaDirectory([first]));
   });
 });

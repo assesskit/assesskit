@@ -3,4 +3,6 @@
  *
  * @module
  */
+
+export { pinnedSchemaDirectory, userCacheDirectory } from "./schema-directory.js";
 export { PRIMARY_SCHEMAS, selectSchema } from "./select-schema.js";

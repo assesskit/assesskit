@@ -17,5 +17,4 @@ export {
 export { resolveOptions } from "./options.js";
 export { packageVersion } from "./package-version.js";
 export { buildReport, EXIT_CODES, exitCodeOf, formatJson, formatText } from "./report.js";
-export { defaultSchemaDirectory, userCacheDirectory } from "./schema-directory.js";
 export { parseCommand, USAGE, UsageError } from "./usage.js";

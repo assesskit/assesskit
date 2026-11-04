@@ -1,7 +1,7 @@
+import { createHash } from "node:crypto";
 import { homedir } from "node:os";
 import { join, posix, win32 } from "node:path";
-import type { SchemaFile } from "../node/index.js";
-import { sha256 } from "./fetch-schemas.js";
+import { SCHEMA_FILES, type SchemaFile } from "./schema-files.js";
 
 /** The characters of the hash of the pinned list that name its directory: 48 bits, far from a collision between releases. */
 const VERSION_LENGTH = 12;
@@ -32,15 +32,26 @@ export function userCacheDirectory(
 }
 
 /**
- * Returns the directory that `assesskit validate` reads the schemas from and `assesskit schemas fetch` writes them to when no option
- * names one: `assesskit/schemas/<version>` in the user cache directory. The version is the start of the SHA-256 of the pinned
- * list, so that a release that pins other schemas uses another directory and a release that pins the same schemas shares it.
+ * Returns the directory in the user cache directory that holds a list of pinned schemas: `assesskit/schemas/<version>`. The
+ * version is the start of the SHA-256 of the list, so that a release that pins other schemas uses another directory and a
+ * release that pins the same schemas shares it.
  *
  * @param schemas - The pinned schemas.
  * @returns The directory.
  */
-export function defaultSchemaDirectory(schemas: readonly SchemaFile[]): string {
-  const list = schemas.map(({ file, sha256: hash }) => `${file} ${hash}\n`).join("");
-  const version = sha256(new TextEncoder().encode(list)).slice(0, VERSION_LENGTH);
+export function pinnedSchemaDirectory(schemas: readonly SchemaFile[]): string {
+  const list = schemas.map(({ file, sha256 }) => `${file} ${sha256}\n`).join("");
+  const version = createHash("sha256").update(list).digest("hex").slice(0, VERSION_LENGTH);
   return join(userCacheDirectory(process.platform, process.env, homedir()), "assesskit", "schemas", version);
+}
+
+/**
+ * Returns the directory that `assesskit validate` reads the schemas from and `assesskit schemas fetch` writes them to when no option
+ * names one, which is the directory to give {@link loadSchemaSet} after that command ran: `assesskit/schemas/<version>` in the
+ * user cache directory, where the version is the start of the SHA-256 of {@link SCHEMA_FILES}.
+ *
+ * @returns The directory.
+ */
+export function defaultSchemaDirectory(): string {
+  return pinnedSchemaDirectory(SCHEMA_FILES);
 }

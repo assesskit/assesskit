@@ -1501,6 +1501,12 @@ describe("reading declarations", () => {
       ),
     );
     expect(issue).toMatchObject({ rule: "assesskit/asi/invalid-value", severity: "error" });
+    const numeric = readIssue(() =>
+      readAsi(
+        `<qti-outcome-declaration ${NAMESPACE} identifier="O" cardinality="single" base-type="float"><qti-match-table><qti-match-table-entry source-value="1" target-value="1.5"/></qti-match-table></qti-outcome-declaration>`,
+      ),
+    );
+    expect(numeric).toMatchObject({ rule: "assesskit/asi/invalid-value", severity: "error" });
   });
 
   it("qti-outcome-declaration: reads the attributes and leaves normal-minimum out when the document omits it", () => {
@@ -4536,7 +4542,7 @@ describe("the guide", () => {
   it("shows the results that the samples of the conventions give", async () => {
     const guide = readFileSync(new URL("../../../docs/runtime/conventions.md", import.meta.url), "utf8");
     const asi = await import("../src/asi/index.js");
-    expect(await runGuideSamples(guide, { "@assesskit/runtime/asi": asi })).toBe(6);
+    expect(await runGuideSamples(guide, { "@assesskit/runtime/asi": asi })).toBe(8);
   });
 });
 

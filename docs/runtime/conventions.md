@@ -276,6 +276,40 @@ rubric &&
 rubric && rubricScore(rubric, [{ criterion: "content", score: 2 }]); // => null
 ```
 
+### Placing a block in a document
+
+`buildScoringRubricBlock` and `buildScoreCoversBlock` return a node, not a document, and `writeAsi` writes documents. The model is
+plain data: put the node among the content of the item body, or in `rubricBlocks` of a test, in a copy of the model, and write
+the document that holds it.
+
+```ts
+import { buildScoringRubricBlock, readAsi, readScoringRubrics, writeAsi } from "@assesskit/runtime/asi";
+
+const read = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+    identifier="essay" title="Essay" time-dependent="false">
+  <qti-item-body><p>Write an essay about your town.</p></qti-item-body>
+</qti-assessment-item>`);
+if (read.kind !== "item" || read.item.body === undefined) throw new Error("The document is not an item with a body.");
+const block = buildScoringRubricBlock({
+  outcomeIdentifier: "SCORE",
+  kind: "holistic",
+  language: "en",
+  criteria: [
+    {
+      identifier: "quality",
+      weight: 1,
+      levels: [
+        { score: 0, quality: "Weak", description: "Errors block meaning." },
+        { score: 1, quality: "Adequate", description: "Errors do not block meaning." },
+      ],
+    },
+  ],
+});
+const item = { ...read.item, body: { ...read.item.body, children: [...read.item.body.children, block] } };
+readScoringRubrics(item).get("SCORE")?.kind; // => "holistic"
+writeAsi({ kind: "item", item }).includes('class="external-scoring-rubric"'); // => true
+```
+
 ### CASE alignment
 
 The fields follow the rubric of the IMS Competencies and Academic Standards Exchange (CASE) Service 1.0 Information Model

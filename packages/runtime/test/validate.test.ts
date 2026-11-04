@@ -521,6 +521,17 @@ describe("the declarations", () => {
     expect(check({ declarations: outcome("N", "single", "integer", "", table("7")) })).toEqual([]);
   });
 
+  it("refuses the base-type name that a match table gives for a number, and accepts the number of an interpolation table", () => {
+    const match = (target: string): string =>
+      `<qti-match-table><qti-match-table-entry source-value="1" target-value="${target}"/></qti-match-table>`;
+    const interpolation = (target: string): string =>
+      `<qti-interpolation-table><qti-interpolation-table-entry source-value="1" target-value="${target}"/></qti-interpolation-table>`;
+    expect(rulesOf(check({ declarations: outcome("N", "single", "float", "", match("float")) }))).toEqual([
+      "assesskit/validate/declared-value",
+    ]);
+    expect(check({ declarations: outcome("N", "single", "float", "", interpolation("7.5")) })).toEqual([]);
+  });
+
   it("reports an xi:include that was left in the document, and nothing for one that was resolved", () => {
     const include = '<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="body.xml"/>';
     const issues = only(check({ body: include }), "assesskit/validate/unresolved-include");

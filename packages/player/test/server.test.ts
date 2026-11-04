@@ -1163,6 +1163,25 @@ describe("createSessionHost", () => {
     expect(first?.kind === "item" && first.status).toBe("closed");
   });
 
+  it("reads the stored state for the pending work, which takes a passed deadline only when a time action arrives", async () => {
+    const essay = `<?xml version="1.0" encoding="UTF-8"?>
+<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="q1" title="Item q1" adaptive="false" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float" external-scored="human"/>
+  <qti-item-body><qti-extended-text-interaction response-identifier="RESPONSE"/></qti-item-body>
+</qti-assessment-item>`;
+    const limits = '<qti-time-limits max-time="600"/>';
+    const { host, clock } = await examHost({}, { ...examFiles({ limits }), "items/q1/item.xml": essay });
+    await host.start(ALICE, { seed: 7 });
+    const written = new Map([["RESPONSE", buildSingle("string", "An essay.")]]);
+    await host.handle(ALICE, request(1, { type: "set-responses", item: Q1, responses: written }));
+    clock.advance(700 * SECOND);
+    const session = host.session(ALICE.session);
+    expect((await session.pending()).scoring).toEqual([]);
+    await session.apply({ type: "time" });
+    expect((await session.pending()).scoring.map(({ id }) => id)).toEqual(["item:q1:1:SCORE"]);
+  });
+
   it("restores a session from the store in a host with no memory of it", async () => {
     const first = await examHost();
     await first.host.start(ALICE, { seed: 7 });

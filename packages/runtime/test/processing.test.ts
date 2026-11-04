@@ -31,6 +31,7 @@ import {
   type ItemSessionFilter,
   type ItemSessionView,
   type ItemVariables,
+  insideShape,
   isQti2TemplateUri,
   listOperands,
   normalizeValue,
@@ -1795,6 +1796,128 @@ describe("shapes", () => {
     expect(() => expressionOf(`<qti-inside shape="square" coords="1,1,1">${bv("point", "1 1")}</qti-inside>`)).toThrow(
       ReadError,
     );
+  });
+
+  it("is the test that qti-inside makes, offered to a scorer of the points of a response, the edge included", () => {
+    expect([insideShape("rect", [10, 10, 20, 30], [10, 30]), insideShape("rect", [10, 10, 20, 30], [21, 15])]).toEqual([
+      true,
+      false,
+    ]);
+    expect(insideShape("rect", [20, 30, 10, 10], [15, 20])).toBe(true);
+    expect([insideShape("circle", [10, 10, 5], [13, 14]), insideShape("circle", [10, 10, 5], [14, 14])]).toEqual([
+      true,
+      false,
+    ]);
+    expect([
+      insideShape("ellipse", [10, 10, 6, 2], [16, 10]),
+      insideShape("ellipse", [10, 10, 6, 2], [10, 13]),
+    ]).toEqual([true, false]);
+    const triangle = [0, 0, 10, 0, 0, 10];
+    expect(
+      [
+        [2, 2],
+        [5, 5],
+        [6, 6],
+        [0, 0],
+        [10, 0],
+      ].map((point) => insideShape("poly", triangle, point as [number, number])),
+    ).toEqual([true, true, false, true, true]);
+    expect(insideShape("default", [], [999, 999])).toBe(true);
+  });
+
+  it("tests a concave polygon by an even-odd ray cast, its corners and edges inside", () => {
+    // An L: the square of 10 without the square of 5 at its upper right.
+    const corners = [0, 0, 10, 0, 10, 5, 5, 5, 5, 10, 0, 10];
+    const verdicts = [
+      [2, 8],
+      [8, 2],
+      [7, 7],
+      [5, 5],
+      [10, 5],
+      [5, 8],
+      [11, 2],
+    ].map((point) => insideShape("poly", corners, point as [number, number]));
+    expect(verdicts).toEqual([true, true, false, true, true, true, false]);
+  });
+
+  it("agrees with qti-inside for every shape and point", () => {
+    const area = fc.oneof(
+      fc.tuple(
+        fc.constant("rect" as const),
+        fc.array(fc.integer({ min: 0, max: 100 }), { minLength: 4, maxLength: 4 }),
+      ),
+      fc.tuple(
+        fc.constant("circle" as const),
+        fc.array(fc.integer({ min: 0, max: 100 }), { minLength: 3, maxLength: 3 }),
+      ),
+      fc.tuple(
+        fc.constant("ellipse" as const),
+        fc.array(fc.integer({ min: 0, max: 100 }), { minLength: 4, maxLength: 4 }),
+      ),
+      fc.tuple(
+        fc.constant("poly" as const),
+        fc
+          .integer({ min: 3, max: 6 })
+          .chain((corners) =>
+            fc.array(fc.integer({ min: 0, max: 100 }), { minLength: 2 * corners, maxLength: 2 * corners }),
+          ),
+      ),
+    );
+    fc.assert(
+      fc.property(
+        area,
+        fc.integer({ min: -10, max: 110 }),
+        fc.integer({ min: -10, max: 110 }),
+        ([shape, coords], x, y) => {
+          const operator = inside(shape, coords.join(","), `${x} ${y}`);
+          expect(insideShape(shape, coords, [x, y])).toBe(operator);
+        },
+      ),
+      FUZZ,
+    );
+  });
+
+  it("refuses a shape, coordinates and a point that plain JavaScript or JSON gives with the wrong type", () => {
+    const test = (shape: unknown, coords: unknown, point: unknown): unknown =>
+      insideShape(shape as "rect", coords as number[], point as [number, number]);
+    for (const shape of [json("null"), json("1"), "square", "RECT"]) {
+      expect(() => test(shape, [1, 2, 3, 4], [1, 1])).toThrow(DataError);
+    }
+    expect(() => test("square", [1, 2, 3, 4], [1, 1])).toThrow(
+      'The shape must be "circle", "default", "ellipse", "poly" or "rect", found "square".',
+    );
+    for (const coords of [json("null"), json('"1,2,3,4"'), json("{}")]) {
+      expect(() => test("rect", coords, [1, 1])).toThrow("The coordinates must be an array of non-negative numbers");
+    }
+    expect(() => test("rect", json("[1,2,3,null]"), [1, 1])).toThrow(
+      "The coordinates of a rect must be non-negative numbers that fit it: found null.",
+    );
+    for (const coords of [
+      [1, 2, 3, "4"],
+      [-1, 2, 3, 4],
+      [Number.NaN, 2, 3, 4],
+      [1, 2, 3, Number.POSITIVE_INFINITY],
+    ]) {
+      expect(() => test("rect", coords, [1, 1])).toThrow(DataError);
+    }
+    expect(() => test("rect", [1, 2, 3], [1, 1])).toThrow(
+      "The coordinates of a rect must be non-negative numbers that fit it: the 3 coordinates do not fit a rect.",
+    );
+    expect(() => test("poly", [0, 0, 1, 1], [1, 1])).toThrow(DataError);
+    // biome-ignore lint/suspicious/noSparseArray: the hole is what the check refuses.
+    expect(() => test("circle", [1, , 3], [1, 1])).toThrow("an array with a hole at index 1");
+    for (const point of [
+      json("null"),
+      json('"1 1"'),
+      [1],
+      [1, 2, 3],
+      ["1", "2"],
+      [Number.NaN, 1],
+      [1, Number.POSITIVE_INFINITY],
+    ]) {
+      expect(() => test("default", [], point)).toThrow(DataError);
+    }
+    expect(() => test("default", [], [1])).toThrow("The point must be an array of two finite numbers, found an array");
   });
 });
 

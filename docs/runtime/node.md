@@ -21,15 +21,16 @@ flowchart LR
   pkg -- "writePackageFile" --> zip
 ```
 
-| Export                                       | Purpose                                                                                                                                 |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `SCHEMA_FILES`, `SchemaFile`                 | The pinned list: URL, file name and SHA-256 of every schema.                                                                            |
-| `loadSchemaSet(directory)`                   | Checks the files of `SCHEMA_FILES` in a directory and returns a `SchemaSet`.                                                            |
-| `SchemaSet`                                  | The schemas of a directory, compiled when first needed and reused; `close()` frees them.                                                |
-| `validateXmlFiles(schemas, files, options?)` | Parses each document with `parseXml`, then validates it; returns `Issue`s, at most `maxFindings` (1,000 by default) over all the files. |
-| `XmlFile`                                    | A document: `path` and `content` (text or bytes).                                                                                       |
-| `readPackageFile(path, options?)`            | Reads a package from a ZIP file or an unpacked directory.                                                                               |
-| `writePackageFile(path, manifest, files)`    | Writes a package as a ZIP file.                                                                                                         |
+| Export                                       | Purpose                                                                                                                                                                                |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SCHEMA_FILES`, `SchemaFile`                 | The pinned list: URL, file name and SHA-256 of every schema.                                                                                                                           |
+| `defaultSchemaDirectory()`                   | The directory that `assesskit schemas fetch` writes the schemas to and `assesskit validate` reads them from: `loadSchemaSet(defaultSchemaDirectory())` loads what the command fetched. |
+| `loadSchemaSet(directory)`                   | Checks the files of `SCHEMA_FILES` in a directory and returns a `SchemaSet`.                                                                                                           |
+| `SchemaSet`                                  | The schemas of a directory, compiled when first needed and reused; `close()` frees them.                                                                                               |
+| `validateXmlFiles(schemas, files, options?)` | Parses each document with `parseXml`, then validates it; returns `Issue`s, at most `maxFindings` (1,000 by default) over all the files.                                                |
+| `XmlFile`                                    | A document: `path` and `content` (text or bytes).                                                                                                                                      |
+| `readPackageFile(path, options?)`            | Reads a package from a ZIP file or an unpacked directory.                                                                                                                              |
+| `writePackageFile(path, manifest, files)`    | Writes a package as a ZIP file.                                                                                                                                                        |
 
 ## Quick start
 
@@ -73,7 +74,7 @@ does not write unpacked directories. Both functions throw a `DataError` for a pa
 ## Getting the schemas
 
 Download each `url` of `SCHEMA_FILES` into one directory under its `file` name. `assesskit schemas fetch` of the [command line](cli.md)
-does that into the user cache directory and checks every hash; in this repository, `pnpm schemas` runs the same code
+does that into the user cache directory, which `defaultSchemaDirectory()` returns, and checks every hash; in this repository, `pnpm schemas` runs the same code
 into `.cache/schemas` (the files are about 140 MB); `pnpm schemas:pin` writes new hashes into
 `packages/runtime/src/node/schema-files.json` when a schema changes. `loadSchemaSet` throws a `DataError` that lists every file
 that is missing, unreadable or has another hash. The files read during a compilation are checked again, so a file changed
@@ -211,6 +212,7 @@ Each file of `src/node/` holds one concept.
 | --------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `schema-files.ts`, `schema-files.json`                    | The pinned list of schemas                                                          |
 | `schema-set.ts`                                           | Loading, verifying and compiling a set of schemas                                   |
+| `schema-directory.ts`                                     | Where the schemas live by default: the user cache directory and the version         |
 | `select-schema.ts`                                        | Choosing the schema of a document                                                   |
 | `validate-xml-files.ts`                                   | Validating documents and reporting issues                                           |
 | `package-file.ts`, `directory-files.ts`, `file-source.ts` | Reading and writing packages as files and directories, and the ranges of a ZIP file |

@@ -313,7 +313,8 @@ identifiers and MIME types, ranges such as `xs:int`, the uniqueness of `id`s, or
 be represented otherwise, so it is checked. A DOCTYPE or a document over a limit is a `SecurityError` of the XML reader.
 
 The schema defines the target value of a `qti-match-table-entry` as one of the base type names, which cannot be intended;
-the runtime follows the schema, so another text is an `assesskit/asi/invalid-value`.
+the runtime follows the schema, so another text is an `assesskit/asi/invalid-value`, and a numeric table is a
+`qti-interpolation-table` ([spec gaps](spec-gaps.md)).
 
 ## Writing
 
@@ -322,6 +323,9 @@ the runtime follows the schema, so another text is an `assesskit/asi/invalid-val
 property, a value of the wrong type, a `kind` that does not match, more members than a place takes, a member that the
 place does not accept, or text where the place takes none. Text without characters writes nothing, and two texts in a row
 read back as one.
+
+`writeAsi` writes a document, not a node: a node that a builder returns, such as the block of `buildScoringRubricBlock`, goes into the model of its
+document first ([Conventions](conventions.md#placing-a-block-in-a-document)).
 
 ## Conventions
 

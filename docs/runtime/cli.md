@@ -171,7 +171,7 @@ $ assesskit schemas fetch
 The schemas in /Users/ada/Library/Caches/assesskit/schemas/d48c89edf713 are current.
 ```
 
-The default directory, for `--dir` and for `--schemas`, is `assesskit/schemas/<version>` in the user cache directory of the
+The default directory, for `--dir` and for `--schemas`, is `defaultSchemaDirectory()` of [node](node.md#getting-the-schemas): `assesskit/schemas/<version>` in the user cache directory of the
 platform. `<version>` is the first 12 characters of the SHA-256 of the lines `<file> <sha256>` of `SCHEMA_FILES`, so that a
 release that pins other schemas uses another directory and a release that pins the same schemas shares the first.
 
@@ -239,14 +239,14 @@ None. No specification defines this command line. What it checks is defined else
 
 Each file of `src/cli/` holds one concept.
 
-| File                                                            | Concept                                                              |
-| --------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `bin.ts`, `run.ts`, `options.ts`, `usage.ts`                    | The program, the dispatch of a command and its options               |
-| `validate-command.ts`, `schemas-command.ts`                     | The two commands                                                     |
-| `check-path.ts`, `check-document.ts`, `check-package.ts`        | What a path names, and the issues of a document or package           |
-| `report.ts`                                                     | The report, its formats and the exit codes                           |
-| `fetch-schemas.ts`, `schema-directory.ts`, `package-version.ts` | Downloading the schemas, where they live, the version                |
-| `internal.ts`                                                   | What other modules and the tests use and the package does not export |
+| File                                                     | Concept                                                              |
+| -------------------------------------------------------- | -------------------------------------------------------------------- |
+| `bin.ts`, `run.ts`, `options.ts`, `usage.ts`             | The program, the dispatch of a command and its options               |
+| `validate-command.ts`, `schemas-command.ts`              | The two commands                                                     |
+| `check-path.ts`, `check-document.ts`, `check-package.ts` | What a path names, and the issues of a document or package           |
+| `report.ts`                                              | The report, its formats and the exit codes                           |
+| `fetch-schemas.ts`, `package-version.ts`                 | Downloading the schemas, the version                                 |
+| `internal.ts`                                            | What other modules and the tests use and the package does not export |
 
 ## References
 

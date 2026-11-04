@@ -1,7 +1,6 @@
 import { checkFunction, checkString } from "../checks.js";
 import { checkOptions } from "../checks-internal.js";
-import { SCHEMA_FILES } from "../node/index.js";
-import { defaultSchemaDirectory } from "./schema-directory.js";
+import { defaultSchemaDirectory } from "../node/index.js";
 
 /** Options of {@link runCli}: what the command line touches besides its arguments. */
 export interface RunCliOptions {
@@ -44,7 +43,7 @@ export function resolveOptions(options: RunCliOptions): Required<RunCliOptions> 
   const {
     stdout = (text) => void process.stdout.write(text),
     stderr = (text) => void process.stderr.write(text),
-    schemaDirectory = defaultSchemaDirectory(SCHEMA_FILES),
+    schemaDirectory = defaultSchemaDirectory(),
     fetch: fetchUrl = fetch,
   } = options;
   checkFunction(stdout, "The option stdout must be a function of a text");

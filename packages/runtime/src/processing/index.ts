@@ -25,6 +25,7 @@ export { DEFAULT_PROCESSING_LIMITS, type ProcessingLimits } from "./limits.js";
 export { evaluateTestExpression, runOutcomeProcessing } from "./outcome-processing.js";
 export { DEFAULT_RANDOM_MIN, DEFAULT_RANDOM_STEP } from "./random-values.js";
 export { runResponseProcessing } from "./response-processing.js";
+export { insideShape } from "./shapes.js";
 export {
   OPERATOR_SIGNATURES,
   type OperandSignature,
