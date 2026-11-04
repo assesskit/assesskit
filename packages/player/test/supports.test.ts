@@ -549,7 +549,7 @@ describe("the support action and the runtime's engine", () => {
     for (const name of ["magnification", "spoken", "hazard-avoidance"] as const) {
       const step = engine.apply(state, stamp(state, { type: "support", name, active: false }, 10));
       expect(step.ok).toBe(false);
-      if (!step.ok) expect(step.refusal.code).toBe("support-not-available");
+      if (!step.ok) expect(step.refusal.reason).toBe("support-not-available");
     }
   });
 

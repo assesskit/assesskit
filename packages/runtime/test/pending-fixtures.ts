@@ -209,7 +209,7 @@ export interface Played {
 /** Starts a session with the seed 1 at the time 0, unless the options say otherwise. */
 export function begun(engine: Engine, options: Partial<StartOptions> = {}): Played {
   const step = engine.start({ seed: 1, at: 0, ...options });
-  return step.ok ? step : fail(`The start was refused: ${step.refusal.code}.`);
+  return step.ok ? step : fail(`The start was refused: ${step.refusal.reason}.`);
 }
 
 /** Applies actions in order, each of which must be accepted; returns the last state and the events of every step. */
@@ -219,7 +219,7 @@ export function played(engine: Engine, state: DeliveryState, ...actions: Action[
   for (const action of actions) {
     const step = engine.apply(current, action);
     if (!step.ok) {
-      fail(`The action ${action.type} at ${action.at} was refused: ${step.refusal.code}: ${step.refusal.message}`);
+      fail(`The action ${action.type} at ${action.at} was refused: ${step.refusal.reason}: ${step.refusal.message}`);
     }
     current = step.state;
     events.push(...step.events);

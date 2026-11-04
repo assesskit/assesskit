@@ -478,7 +478,7 @@ const UNSUBMITTED = ["initial", "pendingSubmission"];
 const numAttempts = (result) =>
   result.variables.find(({ identifier }) => identifier === "numAttempts")?.candidateResponse?.value ?? 0;
 const isSubmitted = (result) => numAttempts(result) > 1 || !UNSUBMITTED.includes(result.sessionStatus);
-const refused = (code, message) => ({ ok: false, refusal: { code, message } });
+const refused = (reason, message) => ({ ok: false, refusal: { reason, message } });
 
 // A section is { refs, length, maxChanges }; an action outside the sections, and every action but a move and a new attempt, passes.
 const withReview = (engine, sections) => ({
@@ -518,7 +518,7 @@ const play = (action) => {
   at += 1;
   const step = reviewing.apply(state, { ...action, at });
   if (step.ok) state = step.state;
-  return step.ok ? "accepted" : step.refusal.code;
+  return step.ok ? "accepted" : step.refusal.reason;
 };
 const key = (ref) => ({ ref, instance: 1 });
 const answer = (ref) => ({

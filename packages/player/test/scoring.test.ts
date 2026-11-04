@@ -555,7 +555,7 @@ describe("buildSupplyScores", () => {
     const { state } = essayView();
     const stray: ScoringRequest = { ...essayRequest(), id: "item:other:1:SCORE" };
     const step = engine.apply(state, { ...buildSupplyScores(stray, 1, "human"), at: 3_000 });
-    expect(step.ok ? "accepted" : step.refusal.code).toBe("unknown-request");
+    expect(step.ok ? "accepted" : step.refusal.reason).toBe("unknown-request");
   });
 });
 

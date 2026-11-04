@@ -2,9 +2,9 @@
  * Why the engine refuses an action that is well formed but that the rules do not allow.
  *
  * @remarks
- * The delivery guide lists the codes and says when each is given.
+ * The delivery guide lists the reasons and says when each is given.
  */
-export type RefusalCode =
+export type RefusalReason =
   | "attempts-exhausted"
   | "awaiting-cat"
   | "clock-regression"
@@ -31,17 +31,17 @@ export type RefusalCode =
 /** The engine's answer to a well-formed action that the rules do not allow; the state stays as it was. */
 export interface Refusal {
   /** Why the action is refused. */
-  readonly code: RefusalCode;
+  readonly reason: RefusalReason;
   /** A sentence that says what the rule demands. */
   readonly message: string;
 }
 
 /** Returns a refusal. */
-export function refusal(code: RefusalCode, message: string): Refusal {
-  return { code, message };
+export function refusal(reason: RefusalReason, message: string): Refusal {
+  return { reason, message };
 }
 
 /** Returns a refused step. */
-export function refuse(code: RefusalCode, message: string): { readonly ok: false; readonly refusal: Refusal } {
-  return { ok: false, refusal: refusal(code, message) };
+export function refuse(reason: RefusalReason, message: string): { readonly ok: false; readonly refusal: Refusal } {
+  return { ok: false, refusal: refusal(reason, message) };
 }

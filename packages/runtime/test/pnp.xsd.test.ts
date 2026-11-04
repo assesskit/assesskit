@@ -112,7 +112,7 @@ describe("writePnp", () => {
 
   it("shows that the schema refuses a color theme, and that what the writer makes of one passes", async () => {
     const document = `<access-for-all-pnp xmlns="${PNP_NAMESPACE}"><text-appearance><color-theme>yellow-blue</color-theme></text-appearance></access-for-all-pnp>`;
-    expect(await issuesOf(document)).toMatchObject([{ code: "assesskit/node/xsd-invalid" }]);
+    expect(await issuesOf(document)).toMatchObject([{ rule: "assesskit/node/xsd-invalid" }]);
     expect(await issuesOf(writePnp(readPnp(document)))).toEqual([]);
   });
 
@@ -152,11 +152,11 @@ describe("writePnp", () => {
     const document = (children: string): string =>
       `<access-for-all-pnp xmlns="${PNP_NAMESPACE}">${children}</access-for-all-pnp>`;
     expect(await issuesOf(document("<spoken><volume>2</volume></spoken>"))).toMatchObject([
-      { code: "assesskit/node/xsd-invalid" },
+      { rule: "assesskit/node/xsd-invalid" },
     ]);
     expect(
       await issuesOf(document("<spoken><restriction-type>ext:iowa-reading</restriction-type></spoken>")),
-    ).toMatchObject([{ code: "assesskit/node/xsd-invalid" }]);
+    ).toMatchObject([{ rule: "assesskit/node/xsd-invalid" }]);
     expect(await issuesOf(document("<spoken><restriction-type>ext:iowa.reading</restriction-type></spoken>"))).toEqual(
       [],
     );

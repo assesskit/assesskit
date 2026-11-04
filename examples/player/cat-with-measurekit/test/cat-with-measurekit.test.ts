@@ -1075,11 +1075,11 @@ async function sit(
   const act = (state: DeliveryState, action: Parameters<typeof stamp>[1]): DeliveryState => {
     const step = engine.apply(state, stamp(state, action, tick()));
     if (!step.ok)
-      throw new Error(`The action ${action.type} was refused: ${step.refusal.code}: ${step.refusal.message}`);
+      throw new Error(`The action ${action.type} was refused: ${step.refusal.reason}: ${step.refusal.message}`);
     return step.state;
   };
   const started = engine.start({ seed: 1, at: 0 });
-  if (!started.ok) throw new Error(`The start was refused: ${started.refusal.code}.`);
+  if (!started.ok) throw new Error(`The start was refused: ${started.refusal.reason}.`);
   let state = started.state;
   let turn = 0;
   const drain = async (): Promise<void> => {

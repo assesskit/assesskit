@@ -666,14 +666,14 @@ describe("the variables that a PCI is bound to", () => {
 
 describe("checks of a PCI", () => {
   const codes = (interaction: PortableCustomInteraction, configuration: PciModuleConfiguration): string[] =>
-    validatePortableInteraction(interaction, configuration).map(({ code }) => code);
+    validatePortableInteraction(interaction, configuration).map(({ rule }) => rule);
   const configured: PciModuleConfiguration = { primary: resolution({ m: "modules/m" }) };
 
   it("reports an interaction with neither a module attribute nor qti-interaction-modules", () => {
     const [issue] = validatePortableInteraction(interactionOf(""), configured);
     expect(issue).toEqual({
       severity: "error",
-      code: "assesskit/pci/no-module",
+      rule: "assesskit/pci/no-module",
       message:
         'The interaction with the response identifier "R" has neither a module attribute nor a qti-interaction-modules element, so no module can be loaded for it.',
       location: { element: "qti-portable-custom-interaction" },
@@ -706,7 +706,7 @@ describe("checks of a PCI", () => {
     const [warning] = validatePortableInteraction(interaction("urn-fdc-hmhco.com-pci-tapToReveal"), configured);
     expect(warning).toMatchObject({
       severity: "warning",
-      code: "assesskit/pci/type-identifier",
+      rule: "assesskit/pci/type-identifier",
     });
     expect(warning?.message).toContain('"urn-fdc-hmhco.com-pci-tapToReveal"');
     expect(codes(interaction("my-pci"), configured)).toEqual(["assesskit/pci/type-identifier"]);

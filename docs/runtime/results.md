@@ -109,7 +109,7 @@ the wrong type, an identifier that is not one, a date that is not an `xs:dateTim
 variable declares, a term outside its vocabulary, or text with a character that XML 1.0 does not allow. Input that is not
 text, bytes or an element is a `DataError`, and text or bytes that break a limit of `parseXml` are a `SecurityError`.
 
-| Code                                     | Meaning                                                                               |
+| Rule                                     | Meaning                                                                               |
 | ---------------------------------------- | ------------------------------------------------------------------------------------- |
 | `assesskit/results/not-results`          | The root is not `assessmentResult` of the RR namespace.                               |
 | `assesskit/results/missing-attribute`    | A required attribute is missing, such as `datestamp`, or `baseType` outside a record. |

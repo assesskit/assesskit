@@ -61,10 +61,10 @@ export function check(parts: ItemParts = {}, options = {}): readonly Issue[] {
   return validateAsi(read(itemXml(parts)), options);
 }
 
-export const codesOf = (issues: readonly Issue[]): string[] => issues.map(({ code }) => code);
+export const rulesOf = (issues: readonly Issue[]): string[] => issues.map(({ rule }) => rule);
 
-/** The issues of the given code. */
-export const only = (issues: readonly Issue[], code: string): Issue[] => issues.filter((issue) => issue.code === code);
+/** The issues of the given rule. */
+export const only = (issues: readonly Issue[], rule: string): Issue[] => issues.filter((issue) => issue.rule === rule);
 
 export const response = (identifier: string, cardinality: string, baseType: string, content = ""): string =>
   `<qti-response-declaration identifier="${identifier}" cardinality="${cardinality}" base-type="${baseType}">${content}</qti-response-declaration>`;
@@ -103,7 +103,7 @@ export type Fixture = readonly [declarations: string, body: string];
 
 /** A rule set B with an item that breaks it and one that keeps it. */
 export interface AttributeRule {
-  readonly code: string;
+  readonly rule: string;
   readonly broken: Fixture;
   readonly kept: Fixture;
 }
@@ -127,17 +127,17 @@ export const MEDIA = (attributes: string): string =>
 
 export const ATTRIBUTE_RULES: readonly AttributeRule[] = [
   {
-    code: "RULE_SET_INTERACTION_01B",
+    rule: "RULE_SET_INTERACTION_01B",
     broken: [single("string"), textEntry(' string-identifier="R"')],
     kept: [single("string"), textEntry("")],
   },
   {
-    code: "RULE_SET_INTERACTION_01B",
+    rule: "RULE_SET_INTERACTION_01B",
     broken: [single("boolean"), textEntry("")],
     kept: [single("float"), textEntry("")],
   },
   {
-    code: "RULE_SET_INTERACTION_02B",
+    rule: "RULE_SET_INTERACTION_02B",
     broken: [
       multiple("identifier"),
       interaction("qti-choice-interaction", ' max-choices="1" min-choices="2"', choice("A")),
@@ -148,12 +148,12 @@ export const ATTRIBUTE_RULES: readonly AttributeRule[] = [
     ],
   },
   {
-    code: "RULE_SET_INTERACTION_03B",
+    rule: "RULE_SET_INTERACTION_03B",
     broken: [single("string"), '<qti-extended-text-interaction response-identifier="R" string-identifier="R"/>'],
     kept: [single("string"), '<qti-extended-text-interaction response-identifier="R"/>'],
   },
   {
-    code: "RULE_SET_INTERACTION_04B",
+    rule: "RULE_SET_INTERACTION_04B",
     broken: [
       multiple("identifier"),
       interaction("qti-hotspot-interaction", ' max-choices="1" min-choices="2"', `${IMAGE}${hotspot("S1")}`),
@@ -164,7 +164,7 @@ export const ATTRIBUTE_RULES: readonly AttributeRule[] = [
     ],
   },
   {
-    code: "RULE_SET_INTERACTION_05B",
+    rule: "RULE_SET_INTERACTION_05B",
     broken: [
       ordered("identifier"),
       interaction("qti-graphic-order-interaction", ' max-choices="1" min-choices="2"', `${IMAGE}${hotspot("S1")}`),
@@ -175,17 +175,17 @@ export const ATTRIBUTE_RULES: readonly AttributeRule[] = [
     ],
   },
   {
-    code: "RULE_SET_INTERACTION_06B",
+    rule: "RULE_SET_INTERACTION_06B",
     broken: [multiple("point"), POSITION(' max-choices="1" min-choices="2"')],
     kept: [multiple("point"), POSITION(' max-choices="2" min-choices="2"')],
   },
   {
-    code: "RULE_SET_INTERACTION_07B",
+    rule: "RULE_SET_INTERACTION_07B",
     broken: [multiple("point"), interaction("qti-select-point-interaction", ' max-choices="1" min-choices="2"', IMAGE)],
     kept: [multiple("point"), interaction("qti-select-point-interaction", ' max-choices="2" min-choices="2"', IMAGE)],
   },
   {
-    code: "RULE_SET_INTERACTION_08B",
+    rule: "RULE_SET_INTERACTION_08B",
     broken: [
       ordered("identifier"),
       interaction("qti-order-interaction", ' max-choices="1" min-choices="2"', `${choice("A")}${choice("B")}`),
@@ -196,7 +196,7 @@ export const ATTRIBUTE_RULES: readonly AttributeRule[] = [
     ],
   },
   {
-    code: "RULE_SET_INTERACTION_09B",
+    rule: "RULE_SET_INTERACTION_09B",
     broken: [
       multiple("identifier"),
       interaction("qti-hottext-interaction", ' max-choices="1" min-choices="2"', HOTTEXT),
@@ -204,7 +204,7 @@ export const ATTRIBUTE_RULES: readonly AttributeRule[] = [
     kept: [multiple("identifier"), interaction("qti-hottext-interaction", ' max-choices="2" min-choices="2"', HOTTEXT)],
   },
   {
-    code: "RULE_SET_INTERACTION_10B",
+    rule: "RULE_SET_INTERACTION_10B",
     broken: [
       multiple("pair"),
       interaction(
@@ -223,7 +223,7 @@ export const ATTRIBUTE_RULES: readonly AttributeRule[] = [
     ],
   },
   {
-    code: "RULE_SET_INTERACTION_11B",
+    rule: "RULE_SET_INTERACTION_11B",
     broken: [
       multiple("directedPair"),
       interaction("qti-match-interaction", ' max-associations="1" min-associations="2"', sets),
@@ -234,7 +234,7 @@ export const ATTRIBUTE_RULES: readonly AttributeRule[] = [
     ],
   },
   {
-    code: "RULE_SET_INTERACTION_12B",
+    rule: "RULE_SET_INTERACTION_12B",
     broken: [
       multiple("pair"),
       interaction(
@@ -253,37 +253,37 @@ export const ATTRIBUTE_RULES: readonly AttributeRule[] = [
     ],
   },
   {
-    code: "RULE_SET_INTERACTION_13B",
+    rule: "RULE_SET_INTERACTION_13B",
     broken: [single("integer"), MEDIA(' min-plays="2" max-plays="1"')],
     kept: [single("integer"), MEDIA(' min-plays="1" max-plays="1"')],
   },
   {
-    code: "RULE_SET_INTERACTION_14B",
+    rule: "RULE_SET_INTERACTION_14B",
     broken: [single("integer"), '<qti-slider-interaction response-identifier="R" lower-bound="10" upper-bound="0"/>'],
     kept: [single("integer"), '<qti-slider-interaction response-identifier="R" lower-bound="0" upper-bound="10"/>'],
   },
   {
-    code: "RULE_SET_INTERACTION_15B",
+    rule: "RULE_SET_INTERACTION_15B",
     broken: [single("string"), interaction("qti-drawing-interaction", "", IMAGE)],
     kept: [single("file"), interaction("qti-drawing-interaction", "", IMAGE)],
   },
   {
-    code: "RULE_SET_INTERACTION_16B",
+    rule: "RULE_SET_INTERACTION_16B",
     broken: [single("string"), '<qti-upload-interaction response-identifier="R" type="image/png"/>'],
     kept: [single("file"), '<qti-upload-interaction response-identifier="R" type="image/png"/>'],
   },
   {
-    code: "RULE_SET_INTERACTION_17B",
+    rule: "RULE_SET_INTERACTION_17B",
     broken: [single("string"), '<p><qti-end-attempt-interaction response-identifier="R" title="Hint"/></p>'],
     kept: [single("boolean"), '<p><qti-end-attempt-interaction response-identifier="R" title="Hint"/></p>'],
   },
   {
-    code: "RULE_SET_INTERACTION_18B",
+    rule: "RULE_SET_INTERACTION_18B",
     broken: [multiple("pair"), interaction("qti-gap-match-interaction", "", `${GAP_TEXT}${GAP_PARAGRAPH}`)],
     kept: [multiple("directedPair"), interaction("qti-gap-match-interaction", "", `${GAP_TEXT}${GAP_PARAGRAPH}`)],
   },
   {
-    code: "RULE_SET_INTERACTION_18B",
+    rule: "RULE_SET_INTERACTION_18B",
     broken: [
       multiple("directedPair"),
       interaction(
@@ -302,7 +302,7 @@ export const ATTRIBUTE_RULES: readonly AttributeRule[] = [
     ],
   },
   {
-    code: "RULE_SET_INTERACTION_19B",
+    rule: "RULE_SET_INTERACTION_19B",
     broken: [
       multiple("pair"),
       interaction("qti-graphic-gap-match-interaction", "", `${IMAGE}${GAP_TEXT}${associableHotspot}`),
@@ -344,7 +344,7 @@ const GAP_IMG = (attributes: string): string =>
   `<qti-gap-img identifier="G" ${attributes}><img src="a.png" alt="a" width="10" height="10"/></qti-gap-img>`;
 
 /** Fixtures of the rule sets about `match-max` and `match-min`: the element, and the markup for a given pair of attributes. */
-export const MATCH_LIMITS: readonly (readonly [code: string, build: (limits: string) => Fixture])[] = [
+export const MATCH_LIMITS: readonly (readonly [rule: string, build: (limits: string) => Fixture])[] = [
   [
     "RULE_SET_INTERACTION-RELATED_1",
     (limits) => [

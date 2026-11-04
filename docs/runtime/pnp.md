@@ -157,9 +157,9 @@ schema allows several appointments; none means every assignment of the candidate
 profile: a field of the wrong type, a key that differs from the name of its setting, a name that no set can list, a
 parameter outside its vocabulary, a list that must not be empty, or text with a character that XML 1.0 does not allow.
 Input that is not text, bytes or an element is a `DataError`, and text or bytes that break a limit of `parseXml` are a
-`SecurityError`. The codes are those of [results](results.md#errors) with the module `pnp`:
+`SecurityError`. The rules are those of [results](results.md#errors) with the module `pnp`:
 
-| Code                                                                                                      | Meaning                                                                           |
+| Rule                                                                                                      | Meaning                                                                           |
 | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | `assesskit/pnp/not-pnp`                                                                                   | The root is neither `access-for-all-pnp` nor `access-for-all-pnp-records`.        |
 | `assesskit/pnp/missing-attribute`                                                                         | A required attribute is missing: `xml:lang` or `source-system`.                   |

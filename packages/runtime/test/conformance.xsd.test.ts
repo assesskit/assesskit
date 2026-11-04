@@ -65,7 +65,7 @@ describe("a run over packages", () => {
     ]);
     expect(input("level/invalid.zip")?.validation).toMatchObject({ valid: false, summary: { errors: 7 } });
     expect(input("level/not-a-package.zip")?.validation).toMatchObject({
-      issues: [{ code: "assesskit/package/zip" }],
+      issues: [{ rule: "assesskit/package/zip" }],
     });
   });
 

@@ -189,7 +189,7 @@ describe("mapping an element to a model", () => {
       const missing = issueOf(failure(() => child.required("id")));
       expect(missing).toEqual({
         severity: "error",
-        code: "assesskit/demo/missing-attribute",
+        rule: "assesskit/demo/missing-attribute",
         message: "The element b needs the attribute id.",
         location: { line: 2, column: 3, element: "a/b" },
       });
@@ -201,7 +201,7 @@ describe("mapping an element to a model", () => {
       expect(invalid.message).toBe(
         'The attribute n of the element b is invalid. The text "x" is not a number. (line 2, column 3)',
       );
-      expect(issueOf(invalid).code).toBe("assesskit/demo/invalid-attribute");
+      expect(issueOf(invalid).rule).toBe("assesskit/demo/invalid-attribute");
     });
 
     it("does not catch an error that is not a DataError", () => {
@@ -270,7 +270,7 @@ describe("mapping an element to a model", () => {
       const reader = open(xml);
       expect(() => reader.require("c")).toThrow("The element a needs the element c, found the element b.");
       const empty = open(`<a xmlns="${Ns}"/>`);
-      expect(issueOf(failure(() => empty.require("c"))).code).toBe("assesskit/demo/missing-element");
+      expect(issueOf(failure(() => empty.require("c"))).rule).toBe("assesskit/demo/missing-element");
       expect(() => empty.require("c")).toThrow("found no more elements.");
     });
 
@@ -312,7 +312,7 @@ describe("mapping an element to a model", () => {
       const reader = open(`<a xmlns="${Ns}" xmlns:xsi="${XSI_NAMESPACE}" xsi:schemaLocation="u v" id="1" extra="2"/>`);
       reader.required("id");
       expect(issueOf(failure(() => reader.done()))).toMatchObject({
-        code: "assesskit/demo/unexpected-attribute",
+        rule: "assesskit/demo/unexpected-attribute",
         message: "The element a has the attribute extra, which the schema does not define for it.",
       });
       expect(() => open(`<a xmlns="${Ns}" xmlns:p="urn:p" p:x="1"/>`).done()).toThrow(
@@ -365,7 +365,7 @@ describe("mapping an element to a model", () => {
       expect(reader.base()).toBe("items/");
       expect(() => reader.done()).not.toThrow();
       expect(open(`<a xmlns="${Ns}"/>`).base()).toBeUndefined();
-      expect(failure(() => open(`<a xmlns="${Ns}" xml:base="items/"/>`).done()).issues[0]?.code).toBe(
+      expect(failure(() => open(`<a xmlns="${Ns}" xml:base="items/"/>`).done()).issues[0]?.rule).toBe(
         "assesskit/demo/unexpected-attribute",
       );
     });
@@ -376,10 +376,10 @@ describe("mapping an element to a model", () => {
         return Number(text);
       };
       expect(open(`<a xmlns="${Ns}">12</a>`).leaf(integer)).toBe(12);
-      expect(failure(() => open(`<a xmlns="${Ns}" x="1">12</a>`).leaf(integer)).issues[0]?.code).toBe(
+      expect(failure(() => open(`<a xmlns="${Ns}" x="1">12</a>`).leaf(integer)).issues[0]?.rule).toBe(
         "assesskit/demo/unexpected-attribute",
       );
-      expect(failure(() => open(`<a xmlns="${Ns}">x</a>`).leaf(integer)).issues[0]?.code).toBe(
+      expect(failure(() => open(`<a xmlns="${Ns}">x</a>`).leaf(integer)).issues[0]?.rule).toBe(
         "assesskit/demo/invalid-text",
       );
     });
@@ -395,7 +395,7 @@ describe("mapping an element to a model", () => {
       expect(() => createTermConverter(["a"], JSON.parse("null"))).toThrow(
         "The options must be an object, found null.",
       );
-      expect(failure(() => open(`<a xmlns="${Ns}">blue</a>`).text(terms)).issues[0]?.code).toBe(
+      expect(failure(() => open(`<a xmlns="${Ns}">blue</a>`).text(terms)).issues[0]?.rule).toBe(
         "assesskit/demo/invalid-text",
       );
     });
@@ -516,7 +516,7 @@ describe("XInclude", () => {
     const error = thrown(() => resolveIncludes(root, "a.xml", resolver({})));
     expect(error).toMatchObject({ cause: { message: "missing.xml is not in the package." } });
     const issue = issueOf(error);
-    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-resource" });
+    expect(issue).toMatchObject({ rule: "assesskit/xml/xinclude-resource" });
     expect(issue.message).toBe(
       'The document "missing.xml" of an xi:include cannot be read and the include has no xi:fallback: missing.xml is not in the package.',
     );
@@ -528,7 +528,7 @@ describe("XInclude", () => {
     ]);
     const issue = issueOf(thrown(() => resolveIncludes(root, "a.xml", resolver({ "f.xml": "<f/>" }))));
     expect(issue).toMatchObject({
-      code: "assesskit/xml/xinclude-attribute",
+      rule: "assesskit/xml/xinclude-attribute",
       location: { path: "a.xml" },
     });
     expect(issue.message).toBe("An xi:include must not have an xpointer attribute.");
@@ -549,7 +549,7 @@ describe("XInclude", () => {
     ],
   ])("rejects an include with %s", (_name, bad, message) => {
     const issue = issueOf(thrown(() => resolveIncludes(element("a", [bad]), "a.xml", resolver({ "f.xml": "<f/>" }))));
-    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-attribute" });
+    expect(issue).toMatchObject({ rule: "assesskit/xml/xinclude-attribute" });
     expect(issue.message).toBe(message);
   });
 
@@ -560,13 +560,13 @@ describe("XInclude", () => {
           resolveIncludes(element("a", [include("f.xml", children)]), "a.xml", resolver({ "f.xml": "<f/>" })),
         ),
       );
-      expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-structure" });
+      expect(issue).toMatchObject({ rule: "assesskit/xml/xinclude-structure" });
     }
   });
 
   it("rejects an xi:fallback outside an include", () => {
     const issue = issueOf(thrown(() => resolveIncludes(element("a", [xi("fallback")]), "a.xml", resolver({}))));
-    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-structure" });
+    expect(issue).toMatchObject({ rule: "assesskit/xml/xinclude-structure" });
   });
 
   it("rejects includes that form a loop, however long", () => {
@@ -575,7 +575,7 @@ describe("XInclude", () => {
       "b.xml": '<b xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="a.xml"/></b>',
     };
     const issue = issueOf(thrown(() => resolveIncludes(parseXml(documents["a.xml"]), "a.xml", resolver(documents))));
-    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-cycle" });
+    expect(issue).toMatchObject({ rule: "assesskit/xml/xinclude-cycle" });
     expect(issue.message).toBe('The xi:include of "a.xml" includes a document that is already being included.');
   });
 
@@ -585,7 +585,7 @@ describe("XInclude", () => {
     };
     const run = () =>
       resolveIncludes(parseXml(documents["d/a.xml"]), "d/a.xml", (href) => parseXml(documents["d/a.xml"] ?? href));
-    expect(issueOf(thrown(run))).toMatchObject({ code: "assesskit/xml/xinclude-cycle" });
+    expect(issueOf(thrown(run))).toMatchObject({ rule: "assesskit/xml/xinclude-cycle" });
   });
 
   it("allows includes to nest maxIncludeDepth deep and no deeper", () => {
@@ -631,7 +631,7 @@ describe("XInclude", () => {
     expect(resolveIncludes(include("f.xml"), "a.xml", resolver({ "f.xml": "<f/>" }))).toEqual(parseXml("<f/>"));
     const two = include("missing.xml", [xi("fallback", [element("x"), element("y")])]);
     expect(issueOf(thrown(() => resolveIncludes(two, "a.xml", resolver({}))))).toMatchObject({
-      code: "assesskit/xml/xinclude-structure",
+      rule: "assesskit/xml/xinclude-structure",
     });
   });
 
@@ -862,7 +862,7 @@ describe("parsing", () => {
       const issue = issueOf(thrown(() => parseXml(input, { path: "items/a.xml" })));
       expect(issue).toMatchObject({
         severity: "error",
-        code: "assesskit/xml/encoding",
+        rule: "assesskit/xml/encoding",
         location: { path: "items/a.xml" },
       });
       expect(issue.message).toMatch(message);
@@ -953,13 +953,13 @@ describe("parsing", () => {
       }
       expect(parseXml("<a><!-- <!DOCTYPE a> --><![CDATA[<!DOCTYPE a>]]></a>").children).toHaveLength(2);
       expect(issueOf(thrown(() => parseXml("<!doctype a><a/>")))).toMatchObject({
-        code: "assesskit/xml/not-well-formed",
+        rule: "assesskit/xml/not-well-formed",
       });
     });
 
     it("reads no entity but the predefined ones: an entity that no DOCTYPE declares is an error", () => {
       const error = thrown(() => parseXml("<a>&xxe;</a>"));
-      expect(issueOf(error)).toMatchObject({ code: "assesskit/xml/not-well-formed" });
+      expect(issueOf(error)).toMatchObject({ rule: "assesskit/xml/not-well-formed" });
       expect(error).toMatchObject({ cause: expect.any(Error) });
     });
 
@@ -1003,7 +1003,7 @@ describe("parsing", () => {
       const issue = issueOf(error);
       expect(issue).toMatchObject({
         severity: "error",
-        code: "assesskit/xml/not-well-formed",
+        rule: "assesskit/xml/not-well-formed",
         location: { path: "bad.xml", line },
       });
       expect(issue.location?.column).toBeGreaterThanOrEqual(1);
@@ -1018,7 +1018,7 @@ describe("parsing", () => {
       ["a lone surrogate in a comment", "<a><!--\ud83d--></a>", 1, 8],
     ])("rejects %s, which is no character", (_name, xml, line, column) => {
       expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
-        code: "assesskit/xml/not-well-formed",
+        rule: "assesskit/xml/not-well-formed",
         location: { path: "bad.xml", line, column },
       });
       expect(parseXml("<a>\ud83d\ude00</a>").children).toEqual([text("😀")]);
@@ -1032,7 +1032,7 @@ describe("parsing", () => {
       "rejects a namespace declaration with %s, which the parser would strip from the namespace of the element",
       (_name, xml) => {
         expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
-          code: "assesskit/xml/namespace",
+          rule: "assesskit/xml/namespace",
           location: { path: "bad.xml", line: 1, column: 1 },
         });
       },
@@ -1044,7 +1044,7 @@ describe("parsing", () => {
       ["a declaration of a prefix that starts with a digit", '<a xmlns:1p="urn:p"/>'],
     ])("rejects %s: a qualified name has names without a colon on both sides of it", (_name, xml) => {
       expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
-        code: "assesskit/xml/not-well-formed",
+        rule: "assesskit/xml/not-well-formed",
         location: { path: "bad.xml", line: 1, column: 1 },
       });
     });
@@ -1062,7 +1062,7 @@ describe("parsing", () => {
 
     it("rejects XML 1.1, which has other rules for characters and names", () => {
       const issue = issueOf(thrown(() => parseXml('<?xml version="1.1"?><a/>')));
-      expect(issue).toMatchObject({ code: "assesskit/xml/version" });
+      expect(issue).toMatchObject({ rule: "assesskit/xml/version" });
       expect(issue.message).toBe('The document declares XML version "1.1", but the runtime reads XML 1.0.');
     });
 
@@ -1130,7 +1130,7 @@ describe("read errors and locations", () => {
     expect(error.issues).toEqual([
       {
         severity: "error",
-        code: "assesskit/xml/example",
+        rule: "assesskit/xml/example",
         message: "The example is wrong.",
         location: { path: "a.xml", line: 3, column: 7 },
       },

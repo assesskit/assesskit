@@ -723,7 +723,7 @@ describe("the rules of a scoring rubric as written", () => {
     if (marked === undefined || others.length > 0) throw new Error("Expected one marked block.");
     const { rubric, issues } = scoringRubricOf(marked.block, marked.language);
     expect(rubric === undefined, "the rubric is absent exactly when a rule is broken").toBe(issues.length > 0);
-    return issues.map(({ code, path }) => `${code} ${path}`.trim());
+    return issues.map(({ rule, path }) => `${rule} ${path}`.trim());
   }
   const levels = (count: number) => Array.from({ length: count }, (_, score) => String(score));
   const analytic = (criteria: string, attributes = ' data-outcome-identifier="SCORE"') =>
@@ -1322,7 +1322,7 @@ describe("reading the structure of a test", () => {
         `<qti-assessment-section ${NAMESPACE} identifier="S" title="s" visible="true"><qti-adaptive-selection><qti-adaptive-engine-ref identifier="E" href="e.json"/></qti-adaptive-selection><qti-selection select="1"/></qti-assessment-section>`,
       ),
     );
-    expect(issue).toMatchObject({ code: "assesskit/asi/exclusive" });
+    expect(issue).toMatchObject({ rule: "assesskit/asi/exclusive" });
   });
 
   it("qti-adaptive-settings-ref: reads the identifier and the href", () => {
@@ -1499,7 +1499,7 @@ describe("reading declarations", () => {
         `<qti-outcome-declaration ${NAMESPACE} identifier="O" cardinality="single"><qti-match-table><qti-match-table-entry source-value="1" target-value="A"/></qti-match-table></qti-outcome-declaration>`,
       ),
     );
-    expect(issue).toMatchObject({ code: "assesskit/asi/invalid-value", severity: "error" });
+    expect(issue).toMatchObject({ rule: "assesskit/asi/invalid-value", severity: "error" });
   });
 
   it("qti-outcome-declaration: reads the attributes and leaves normal-minimum out when the document omits it", () => {
@@ -2177,7 +2177,7 @@ describe("reading expressions", () => {
       operands: [ONE, RESPONSE],
     });
     const issue = readIssue(() => expressionOf(`<qti-sum><qti-and>${ONE_XML}</qti-and></qti-sum>`));
-    expect(issue).toMatchObject({ code: "assesskit/asi/element" });
+    expect(issue).toMatchObject({ rule: "assesskit/asi/element" });
   });
 
   it("qti-truncate: reads its operand", () => {
@@ -2302,17 +2302,17 @@ describe("reading flow content", () => {
 
   it("refuses text in content that takes elements only, and an element that the content does not take", () => {
     expect(readIssue(() => readAsi(item("<qti-item-body>text</qti-item-body>")))).toMatchObject({
-      code: "assesskit/asi/text",
+      rule: "assesskit/asi/text",
       message: "The element qti-item-body must not contain text.",
     });
     expect(readIssue(() => readAsi(item("<qti-item-body><p><div>x</div></p></qti-item-body>")))).toMatchObject({
-      code: "assesskit/asi/element",
+      rule: "assesskit/asi/element",
       message: "The element p cannot contain div here.",
     });
     expect(
       readIssue(() => readAsi(item("<qti-item-body><p><x:a xmlns:x='urn:x'/></p></qti-item-body>"))),
     ).toMatchObject({
-      code: "assesskit/asi/element",
+      rule: "assesskit/asi/element",
     });
   });
 
@@ -2383,7 +2383,7 @@ describe("reading HTML", () => {
       extensions: [],
     });
     expect(readIssue(() => readAsi(item('<qti-item-body><p><img src="a.png"/></p></qti-item-body>')))).toMatchObject({
-      code: "assesskit/asi/missing-attribute",
+      rule: "assesskit/asi/missing-attribute",
       message: expect.stringContaining("The element img must have the attribute alt."),
     });
   });
@@ -2394,7 +2394,7 @@ describe("reading HTML", () => {
       children: [{ kind: "a", href: "https://example.com/x", type: "text/html" }],
     });
     expect(readIssue(() => readAsi(item("<qti-item-body><p><a>x</a></p></qti-item-body>")))).toMatchObject({
-      code: "assesskit/asi/missing-attribute",
+      rule: "assesskit/asi/missing-attribute",
     });
   });
 
@@ -2454,7 +2454,7 @@ describe("reading HTML", () => {
     expect(table).toMatchObject({ kind: "table", bodies: [], rows: [{ kind: "tr" }, { kind: "tr" }] });
     expect(
       readIssue(() => readAsi(item("<qti-item-body><table><tbody/><tr><td>a</td></tr></table></qti-item-body>"))),
-    ).toMatchObject({ code: "assesskit/asi/exclusive" });
+    ).toMatchObject({ rule: "assesskit/asi/exclusive" });
   });
 
   it("ul, ol, li: hold their items", () => {
@@ -2570,7 +2570,7 @@ describe("reading HTML", () => {
     expect(
       readIssue(() => readAsi(item('<qti-item-body><table><tr><td colspan="x">a</td></tr></table></qti-item-body>'))),
     ).toMatchObject({
-      code: "assesskit/asi/invalid-value",
+      rule: "assesskit/asi/invalid-value",
     });
   });
 
@@ -3004,7 +3004,7 @@ describe("reading interactions", () => {
       readIssue(() =>
         readAsi(item('<qti-item-body><p><qti-end-attempt-interaction response-identifier="H"/></p></qti-item-body>')),
       ),
-    ).toMatchObject({ code: "assesskit/asi/missing-attribute" });
+    ).toMatchObject({ rule: "assesskit/asi/missing-attribute" });
   });
 
   it("qti-media-interaction: reads the plays and the media element", () => {
@@ -3216,7 +3216,7 @@ describe("reading portable custom interactions", () => {
           ),
         ),
       ),
-    ).toMatchObject({ code: "assesskit/asi/missing-attribute" });
+    ).toMatchObject({ rule: "assesskit/asi/missing-attribute" });
     expect(
       readIssue(() =>
         readAsi(
@@ -3225,7 +3225,7 @@ describe("reading portable custom interactions", () => {
           ),
         ),
       ),
-    ).toMatchObject({ code: "assesskit/asi/missing-element" });
+    ).toMatchObject({ rule: "assesskit/asi/missing-element" });
     const [interaction] = bodyOf(
       '<qti-portable-custom-interaction response-identifier="R" custom-interaction-type-identifier="urn:x"><qti-interaction-modules><qti-interaction-module id="m"/></qti-interaction-modules><qti-interaction-markup/></qti-portable-custom-interaction>',
     );
@@ -3354,7 +3354,7 @@ describe("reading feedback, templates, rubric blocks and catalogs", () => {
           item('<qti-modal-feedback outcome-identifier="FB" identifier="m"><qti-content-body/></qti-modal-feedback>'),
         ),
       ),
-    ).toMatchObject({ code: "assesskit/asi/missing-attribute" });
+    ).toMatchObject({ rule: "assesskit/asi/missing-attribute" });
   });
 
   it("catalog, card, card entry, html content, file reference: read the cards of a support by language", () => {
@@ -3404,7 +3404,7 @@ describe("reading feedback, templates, rubric blocks and catalogs", () => {
           ),
         ),
       ),
-    ).toMatchObject({ code: "assesskit/asi/exclusive" });
+    ).toMatchObject({ rule: "assesskit/asi/exclusive" });
   });
 
   it("data-catalog-idref: stays on the element that refers to the catalog", () => {
@@ -3496,7 +3496,7 @@ describe("reading companion materials", () => {
           ),
         ),
       ),
-    ).toMatchObject({ code: "assesskit/asi/invalid-value" });
+    ).toMatchObject({ rule: "assesskit/asi/invalid-value" });
   });
 });
 
@@ -3535,7 +3535,7 @@ describe("reading common attributes and extension points", () => {
   it("dir: accepts ltr, rtl and auto and rejects any other term", () => {
     for (const dir of ["ltr", "rtl", "auto"]) expect(body(` dir="${dir}"`)).toMatchObject({ dir });
     expect(readIssue(() => readAsi(item('<qti-item-body dir="up"><p>x</p></qti-item-body>')))).toMatchObject({
-      code: "assesskit/asi/invalid-value",
+      rule: "assesskit/asi/invalid-value",
     });
   });
 
@@ -3550,7 +3550,7 @@ describe("reading common attributes and extension points", () => {
       });
     }
     expect(readIssue(() => rubric(' view="candidate" use="instructions" data-qti-suppress-tts="none"'))).toMatchObject({
-      code: "assesskit/asi/invalid-value",
+      rule: "assesskit/asi/invalid-value",
     });
   });
 
@@ -3600,7 +3600,7 @@ describe("reading common attributes and extension points", () => {
           `<qti-assessment-stimulus ${NAMESPACE} identifier="st" title="t"><qti-stimulus-body role="boss"><p>x</p></qti-stimulus-body></qti-assessment-stimulus>`,
         ),
       ),
-    ).toMatchObject({ code: "assesskit/asi/invalid-value" });
+    ).toMatchObject({ rule: "assesskit/asi/invalid-value" });
   });
 
   it("data-*: keeps data attributes in extensions, in document order", () => {
@@ -3626,9 +3626,9 @@ describe("reading common attributes and extension points", () => {
         '<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqti_v3p0" identifier="i" title="t" time-dependent="false"/>',
       ),
     );
-    expect(wrong).toMatchObject({ code: "assesskit/asi/document-element" });
+    expect(wrong).toMatchObject({ rule: "assesskit/asi/document-element" });
     expect(wrong.message).toContain("http://www.imsglobal.org/xsd/imsqti_v3p0");
-    expect(readIssue(() => readAsi(`<div ${NAMESPACE}/>`))).toMatchObject({ code: "assesskit/asi/document-element" });
+    expect(readIssue(() => readAsi(`<div ${NAMESPACE}/>`))).toMatchObject({ rule: "assesskit/asi/document-element" });
   });
 
   it("namespaces: writes the ASI namespace and the schema location of version 3.0.1", () => {
@@ -3657,20 +3657,20 @@ describe("reading common attributes and extension points", () => {
       ],
     });
     expect(readIssue(() => readAsi(item('<qti-stylesheet href="a" type="text/css" x="1"/>')))).toMatchObject({
-      code: "assesskit/asi/attribute",
+      rule: "assesskit/asi/attribute",
     });
   });
 
   it("ext: terms: accepts an extension term where the schema allows it and nowhere else", () => {
     expect(rubric(' view="candidate" use="ext:peer-review"')).toMatchObject({ use: "ext:peer-review" });
     expect(readIssue(() => rubric(' view="candidate" use="peer-review"'))).toMatchObject({
-      code: "assesskit/asi/invalid-value",
+      rule: "assesskit/asi/invalid-value",
     });
     expect(readIssue(() => rubric(' view="candidate" use="ext:"'))).toMatchObject({
-      code: "assesskit/asi/invalid-value",
+      rule: "assesskit/asi/invalid-value",
     });
     expect(readIssue(() => rubric(' view="ext:x" use="instructions"'))).toMatchObject({
-      code: "assesskit/asi/invalid-value",
+      rule: "assesskit/asi/invalid-value",
     });
   });
 });
@@ -3718,7 +3718,7 @@ describe("reading input and errors", () => {
     );
     expect(issue).toEqual({
       severity: "error",
-      code: "assesskit/asi/missing-attribute",
+      rule: "assesskit/asi/missing-attribute",
       message: "The element qti-response-declaration must have the attribute cardinality.",
       location: { path: "items/a.xml", line: 2, column: 1, element: "qti-assessment-item/qti-response-declaration" },
     });
@@ -3729,17 +3729,17 @@ describe("reading input and errors", () => {
 
   it("rejects an attribute the schema does not have, a missing one and a value that is not in its form", () => {
     expect(readIssue(() => readAsi(item('<qti-stylesheet href="a.css" type="text/css" color="red"/>')))).toMatchObject({
-      code: "assesskit/asi/attribute",
+      rule: "assesskit/asi/attribute",
       message: "The attribute color is not allowed on qti-stylesheet.",
     });
     expect(
       readIssue(() => readAsi(`<qti-assessment-item ${NAMESPACE} title="t" time-dependent="false"/>`)),
     ).toMatchObject({
-      code: "assesskit/asi/missing-attribute",
+      rule: "assesskit/asi/missing-attribute",
       message: "The element qti-assessment-item must have the attribute identifier.",
     });
     expect(readIssue(() => readAsi(item("", ' adaptive="maybe"')))).toMatchObject({
-      code: "assesskit/asi/invalid-value",
+      rule: "assesskit/asi/invalid-value",
       message:
         'The attribute adaptive of qti-assessment-item is invalid: The text "maybe" is not a boolean: expected true, false, 1 or 0.',
     });
@@ -3755,26 +3755,26 @@ describe("reading input and errors", () => {
           `<qti-assessment-section ${NAMESPACE} identifier="S" title="s" visible="true"><qti-item-session-control max-attempts="9007199254740993"/></qti-assessment-section>`,
         ),
       ),
-    ).toMatchObject({ code: "assesskit/asi/invalid-value" });
+    ).toMatchObject({ rule: "assesskit/asi/invalid-value" });
   });
 
   it("rejects an element the type does not contain, and text where only elements go", () => {
     expect(readIssue(() => readAsi(item("<qti-weight identifier='w' value='1'/>")))).toMatchObject({
-      code: "assesskit/asi/element",
+      rule: "assesskit/asi/element",
       message: "The element qti-assessment-item cannot contain qti-weight here.",
     });
     expect(readIssue(() => readAsi(item("text")))).toMatchObject({
-      code: "assesskit/asi/text",
+      rule: "assesskit/asi/text",
       message: "The element qti-assessment-item must not contain text.",
     });
-    expect(readIssue(() => readAsi(item('<x:y xmlns:x="urn:x"/>')))).toMatchObject({ code: "assesskit/asi/element" });
+    expect(readIssue(() => readAsi(item('<x:y xmlns:x="urn:x"/>')))).toMatchObject({ rule: "assesskit/asi/element" });
     expect(
       readIssue(() =>
         readAsi(
           `<qti-assessment-test ${NAMESPACE} identifier="T" title="t"><xi:include xmlns:xi="${XINCLUDE_NAMESPACE}" href="a.xml"/></qti-assessment-test>`,
         ),
       ),
-    ).toMatchObject({ code: "assesskit/asi/element" });
+    ).toMatchObject({ rule: "assesskit/asi/element" });
   });
 
   it("rejects a second child where the schema allows one, and a missing required one", () => {
@@ -3785,7 +3785,7 @@ describe("reading input and errors", () => {
         ),
       ),
     ).toMatchObject({
-      code: "assesskit/asi/element",
+      rule: "assesskit/asi/element",
       message: "The element qti-assessment-section may have one selection, found 2.",
     });
     expect(
@@ -3795,27 +3795,27 @@ describe("reading input and errors", () => {
         ),
       ),
     ).toMatchObject({
-      code: "assesskit/asi/missing-element",
+      rule: "assesskit/asi/missing-element",
       message: "The element qti-response-if must have a condition.",
     });
     expect(readIssue(() => readAsi(`<qti-assessment-stimulus ${NAMESPACE} identifier="s" title="t"/>`))).toMatchObject({
-      code: "assesskit/asi/missing-element",
+      rule: "assesskit/asi/missing-element",
     });
   });
 
   it("rejects more operands than the operator takes", () => {
     expect(readIssue(() => expressionOf(`<qti-equal>${ONE_XML}${ONE_XML}${ONE_XML}</qti-equal>`))).toMatchObject({
-      code: "assesskit/asi/element",
+      rule: "assesskit/asi/element",
       message: "The element qti-equal may have 2 operands, found 3.",
     });
   });
 
   it("rejects content in an element that must be empty, and an element in a text", () => {
     expect(readIssue(() => responseRuleOf("<qti-exit-response>x</qti-exit-response>"))).toMatchObject({
-      code: "assesskit/asi/text",
+      rule: "assesskit/asi/text",
     });
     expect(readIssue(() => responseRuleOf("<qti-exit-response><qti-null/></qti-exit-response>"))).toMatchObject({
-      code: "assesskit/asi/element",
+      rule: "assesskit/asi/element",
       message: "The element qti-exit-response must be empty, found qti-null.",
     });
     expect(
@@ -3827,7 +3827,7 @@ describe("reading input and errors", () => {
         ),
       ),
     ).toMatchObject({
-      code: "assesskit/asi/element",
+      rule: "assesskit/asi/element",
       message: "The element qti-value must contain text only, found b.",
     });
   });
@@ -3849,12 +3849,12 @@ describe("reading input and errors", () => {
         ),
       ),
     ).toMatchObject({
-      code: "assesskit/asi/exclusive",
+      rule: "assesskit/asi/exclusive",
     });
   });
 
   it("passes the errors of the XML reader on", () => {
-    expect(readIssue(() => readAsi("<a>"))).toMatchObject({ code: "assesskit/xml/not-well-formed" });
+    expect(readIssue(() => readAsi("<a>"))).toMatchObject({ rule: "assesskit/xml/not-well-formed" });
     expect(() => readAsi('<!DOCTYPE a [<!ENTITY e "x">]><a/>')).toThrow(/DOCTYPE/);
     expect(() => readAsi(item(), { limits: { maxBytes: 10 } })).toThrow(/maxBytes/);
   });
@@ -3901,7 +3901,7 @@ function checkVocabulary(row: string): void {
     expect(
       readIssue(() => readAsi(item(body(text)))),
       text,
-    ).toMatchObject({ code: "assesskit/asi/invalid-value" });
+    ).toMatchObject({ rule: "assesskit/asi/invalid-value" });
   }
 }
 
@@ -4017,7 +4017,7 @@ describe("vocabularies of the content: lists", () => {
         readIssue(() => readAsi(item(`<qti-item-body><div aria-relevant="${text}"/></qti-item-body>`))),
         text,
       ).toMatchObject({
-        code: "assesskit/asi/invalid-value",
+        rule: "assesskit/asi/invalid-value",
       });
     }
   });
@@ -4607,7 +4607,7 @@ describe("properties", () => {
             expect(
               readIssue(() => readAsi(item(body))),
               attribute,
-            ).toMatchObject({ code: "assesskit/asi/invalid-value" });
+            ).toMatchObject({ rule: "assesskit/asi/invalid-value" });
           },
         ),
         { numRuns: 30 },

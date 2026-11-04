@@ -84,7 +84,7 @@ export function checkPackage(files: ReadonlyMap<string, Uint8Array>, itemHref: s
   } catch (error) {
     if (!(error instanceof ReadError || error instanceof SecurityError)) throw error;
     return {
-      errors: [{ severity: "error", code: "assesskit/example/unreadable", message: error.message }],
+      errors: [{ severity: "error", rule: "assesskit/example/unreadable", message: error.message }],
       warnings: 0,
     };
   }

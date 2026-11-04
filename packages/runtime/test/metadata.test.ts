@@ -57,8 +57,8 @@ function thrownAs<T extends Error>(type: new (...args: never[]) => T, run: () =>
   throw new Error("The function did not throw.");
 }
 
-function issueCode(run: () => unknown): string | undefined {
-  return thrownAs(ReadError, run).issues[0]?.code;
+function issueRule(run: () => unknown): string | undefined {
+  return thrownAs(ReadError, run).issues[0]?.rule;
 }
 
 /** Drops the positions that `parseXml` adds and the namespace declarations, so that kept XML can be compared. */
@@ -119,7 +119,7 @@ describe("reading the accessibility description", () => {
       }
       for (const term of ["unknown", "ext:", "ext:a-b", "EXT:a", terms[0]?.toUpperCase() ?? ""]) {
         expect(
-          issueCode(() => drd(`<${name}>${term}</${name}>`)),
+          issueRule(() => drd(`<${name}>${term}</${name}>`)),
           `${name} ${term}`,
         ).toBe("assesskit/metadata/invalid-text");
       }
@@ -129,7 +129,7 @@ describe("reading the accessibility description", () => {
   });
 
   it("rejects an element out of the order of the schema", () => {
-    expect(issueCode(() => drd("<hazard>sound</hazard><accessMode>auditory</accessMode>"))).toBe(
+    expect(issueRule(() => drd("<hazard>sound</hazard><accessMode>auditory</accessMode>"))).toBe(
       "assesskit/metadata/unexpected-element",
     );
   });
@@ -140,11 +140,11 @@ describe("reading the accessibility description", () => {
   });
 
   it("rejects an element of the DRD namespace that the schema does not declare, a second atInteroperable and a bad boolean", () => {
-    expect(issueCode(() => drd("<other/>"))).toBe("assesskit/metadata/unexpected-element");
-    expect(issueCode(() => drd("<atInteroperable>true</atInteroperable><atInteroperable>true</atInteroperable>"))).toBe(
+    expect(issueRule(() => drd("<other/>"))).toBe("assesskit/metadata/unexpected-element");
+    expect(issueRule(() => drd("<atInteroperable>true</atInteroperable><atInteroperable>true</atInteroperable>"))).toBe(
       "assesskit/metadata/unexpected-element",
     );
-    expect(issueCode(() => drd("<atInteroperable>yes</atInteroperable>"))).toBe("assesskit/metadata/invalid-text");
+    expect(issueRule(() => drd("<atInteroperable>yes</atInteroperable>"))).toBe("assesskit/metadata/invalid-text");
   });
 });
 
@@ -256,14 +256,14 @@ describe("reading curriculum standards", () => {
 
   it("rejects a labelled GUID without a GUID, an unknown element and an unknown attribute", () => {
     expect(
-      issueCode(() =>
+      issueRule(() =>
         csm(
           "<curriculumStandardsMetadata><setOfGUIDs><labelledGUID><label>l</label></labelledGUID></setOfGUIDs></curriculumStandardsMetadata>",
         ),
       ),
     ).toBe("assesskit/metadata/missing-element");
-    expect(issueCode(() => csm("<other/>"))).toBe("assesskit/metadata/unexpected-element");
-    expect(issueCode(() => csm('<curriculumStandardsMetadata other="1"/>'))).toBe(
+    expect(issueRule(() => csm("<other/>"))).toBe("assesskit/metadata/unexpected-element");
+    expect(issueRule(() => csm('<curriculumStandardsMetadata other="1"/>'))).toBe(
       "assesskit/metadata/unexpected-attribute",
     );
   });
@@ -646,8 +646,8 @@ describe("reading QTI metadata", () => {
     expect(INTERACTION_TYPES).toHaveLength(22);
     for (const type of INTERACTION_TYPES)
       expect(qti(`<interactionType>${type}</interactionType>`).interactionTypes).toEqual([type]);
-    expect(issueCode(() => qti("<interactionType>choice</interactionType>"))).toBe("assesskit/metadata/invalid-text");
-    expect(issueCode(() => qti("<interactionType>choiceinteraction</interactionType>"))).toBe(
+    expect(issueRule(() => qti("<interactionType>choice</interactionType>"))).toBe("assesskit/metadata/invalid-text");
+    expect(issueRule(() => qti("<interactionType>choiceinteraction</interactionType>"))).toBe(
       "assesskit/metadata/invalid-text",
     );
   });
@@ -655,18 +655,18 @@ describe("reading QTI metadata", () => {
   it("accepts the three feedback types and no other", () => {
     expect(FEEDBACK_TYPES).toEqual(["adaptive", "nonadaptive", "none"]);
     for (const type of FEEDBACK_TYPES) expect(qti(`<feedbackType>${type}</feedbackType>`).feedbackType).toBe(type);
-    expect(issueCode(() => qti("<feedbackType>other</feedbackType>"))).toBe("assesskit/metadata/invalid-text");
+    expect(issueRule(() => qti("<feedbackType>other</feedbackType>"))).toBe("assesskit/metadata/invalid-text");
   });
 
   it("accepts the three scoring modes and no other", () => {
     expect(SCORING_MODES).toEqual(["human", "externalmachine", "responseprocessing"]);
     for (const mode of SCORING_MODES) expect(qti(`<scoringMode>${mode}</scoringMode>`).scoringModes).toEqual([mode]);
-    expect(issueCode(() => qti("<scoringMode>externalMachine</scoringMode>"))).toBe("assesskit/metadata/invalid-text");
+    expect(issueRule(() => qti("<scoringMode>externalMachine</scoringMode>"))).toBe("assesskit/metadata/invalid-text");
   });
 
   it("takes a tool string of 256 characters and rejects one of 257", () => {
     expect(qti(`<toolName>${"a".repeat(256)}</toolName>`).toolName).toHaveLength(256);
-    expect(issueCode(() => qti(`<toolVersion>${"a".repeat(257)}</toolVersion>`))).toBe(
+    expect(issueRule(() => qti(`<toolVersion>${"a".repeat(257)}</toolVersion>`))).toBe(
       "assesskit/metadata/invalid-text",
     );
     expect(qti(`<toolVendor>${"\u{1F600}".repeat(256)}</toolVendor>`).toolVendor).toHaveLength(512);
@@ -683,19 +683,19 @@ describe("reading QTI metadata", () => {
     const error = thrownAs(ReadError, () => qti("<timeDependent>maybe</timeDependent>", "item.xml"));
     expect(error.issues[0]).toMatchObject({
       severity: "error",
-      code: "assesskit/metadata/invalid-text",
+      rule: "assesskit/metadata/invalid-text",
       location: { path: "item.xml", line: 1 },
     });
     expect(error.message).toContain("true or false");
   });
 
   it("rejects an element the schema does not declare, a foreign one and a repeated one", () => {
-    expect(issueCode(() => qti("<other/>"))).toBe("assesskit/metadata/unexpected-element");
-    expect(issueCode(() => qti('<x xmlns="urn:x"/>'))).toBe("assesskit/metadata/unexpected-element");
-    expect(issueCode(() => qti("<composite>true</composite><composite>false</composite>"))).toBe(
+    expect(issueRule(() => qti("<other/>"))).toBe("assesskit/metadata/unexpected-element");
+    expect(issueRule(() => qti('<x xmlns="urn:x"/>'))).toBe("assesskit/metadata/unexpected-element");
+    expect(issueRule(() => qti("<composite>true</composite><composite>false</composite>"))).toBe(
       "assesskit/metadata/unexpected-element",
     );
-    expect(issueCode(() => qti("<feedbackType>none</feedbackType><feedbackType>none</feedbackType>"))).toBe(
+    expect(issueRule(() => qti("<feedbackType>none</feedbackType><feedbackType>none</feedbackType>"))).toBe(
       "assesskit/metadata/unexpected-element",
     );
   });
@@ -825,15 +825,15 @@ describe("reading resource metadata", () => {
   });
 
   it("rejects an element that the metadata of a resource does not have, a part twice and parts out of order", () => {
-    const code = (inner: string): string | undefined => issueCode(() => readResourceMetadata(resourceMetadata(inner)));
-    expect(code("<other/>")).toBe("assesskit/metadata/unexpected-element");
-    expect(code("<lom:lom/><lom:lom/>")).toBe("assesskit/metadata/unexpected-element");
-    expect(code("<qmd:qtiMetadata/><qmd:qtiMetadata/>")).toBe("assesskit/metadata/unexpected-element");
-    expect(code("<lom:lom/><qmd:qtiMetadata/>")).toBe("assesskit/metadata/unexpected-element");
-    expect(code("<csmd:curriculumStandardsMetadataSet/><qmd:qtiMetadata/>")).toBe(
+    const rule = (inner: string): string | undefined => issueRule(() => readResourceMetadata(resourceMetadata(inner)));
+    expect(rule("<other/>")).toBe("assesskit/metadata/unexpected-element");
+    expect(rule("<lom:lom/><lom:lom/>")).toBe("assesskit/metadata/unexpected-element");
+    expect(rule("<qmd:qtiMetadata/><qmd:qtiMetadata/>")).toBe("assesskit/metadata/unexpected-element");
+    expect(rule("<lom:lom/><qmd:qtiMetadata/>")).toBe("assesskit/metadata/unexpected-element");
+    expect(rule("<csmd:curriculumStandardsMetadataSet/><qmd:qtiMetadata/>")).toBe(
       "assesskit/metadata/unexpected-element",
     );
-    expect(code("text")).toBe("assesskit/metadata/unexpected-text");
+    expect(rule("text")).toBe("assesskit/metadata/unexpected-text");
   });
 
   it("rejects an external metadata file that has the QTI metadata or the curriculum standards twice", () => {
@@ -841,11 +841,11 @@ describe("reading resource metadata", () => {
       parseXml(
         `<lom xmlns="${LOM_NAMESPACE}" xmlns:qmd="${QTI_METADATA_NAMESPACE}" xmlns:csmd="${CSM_NAMESPACE}">${inner}</lom>`,
       );
-    expect(issueCode(() => readResourceMetadata(external("<qmd:qtiMetadata/><qmd:qtiMetadata/>")))).toBe(
+    expect(issueRule(() => readResourceMetadata(external("<qmd:qtiMetadata/><qmd:qtiMetadata/>")))).toBe(
       "assesskit/metadata/duplicate-element",
     );
     expect(
-      issueCode(() =>
+      issueRule(() =>
         readResourceMetadata(external("<csmd:curriculumStandardsMetadataSet/><csmd:curriculumStandardsMetadataSet/>")),
       ),
     ).toBe("assesskit/metadata/duplicate-element");

@@ -815,7 +815,7 @@ describe("createSessionHost", () => {
     await host.start(ALICE, { seed: 7 });
     const before = store.records.get("exam-1")?.state;
     const reply = await host.handle(ALICE, request(1, { type: "submit", item: { ref: "q2", instance: 1 } }));
-    expect(reply.refusal?.code).toBe("not-current");
+    expect(reply.refusal?.reason).toBe("not-current");
     expect(store.records.get("exam-1")?.state).toBe(before);
     expect(store.records.get("exam-1")?.seq).toBe(1);
   });
@@ -1001,7 +1001,7 @@ describe("createSessionHost", () => {
       ALICE,
       request(2, { type: "mark", item: { ref: "q2", instance: 1 }, marked: true }),
     );
-    expect(refused.refusal?.code).toBe("unknown-item");
+    expect(refused.refusal?.reason).toBe("unknown-item");
   });
 
   it("refuses a mark of a client that the policy does not allow it", async () => {
@@ -1018,7 +1018,7 @@ describe("createSessionHost", () => {
     const suspended = await host.proctor(ALICE.session, { type: "suspend" });
     expect(suspended.refusal).toBeUndefined();
     const during = await host.handle(ALICE, request(2, answer("B")));
-    expect(during.refusal?.code).toBe("suspended");
+    expect(during.refusal?.reason).toBe("suspended");
     expect(viewOf(during).status).toBe("suspended");
     expect(viewOf(during).actions).toEqual([]);
     expect(viewOf(await host.view(ALICE)).status).toBe("suspended");
@@ -1039,7 +1039,7 @@ describe("createSessionHost", () => {
     const version = store.records.get("exam-1")?.version;
     const suspended = await host.proctor(ALICE.session, { type: "suspend" });
     expect(suspended.events).toEqual([]);
-    expect(suspended.refusal?.code).toBe("ended");
+    expect(suspended.refusal?.reason).toBe("ended");
     expect(store.records.get("exam-1")?.version).toBe(version);
     await expect(host.proctor("nobody", { type: "suspend" })).rejects.toThrow(DataError);
     await expect(host.proctor(ALICE.session, JSON.parse('{"type":"move"}'))).rejects.toThrow(
@@ -1083,7 +1083,7 @@ describe("createSessionHost", () => {
     expect(timedOut.refusal).toBeUndefined();
     expect(timedOut.events.map(({ type }) => type)).toContain("time-out");
     const late = await host.handle(ALICE, request(2, answer("B")));
-    expect(late.refusal?.code).toBe("time-over");
+    expect(late.refusal?.reason).toBe("time-over");
     expect(store.records.get("exam-1")?.version).toBe(3);
   });
 
@@ -1123,7 +1123,7 @@ describe("createSessionHost", () => {
     await host.start(ALICE, { seed: 7 });
     clock.advance(700 * SECOND);
     const reply = await host.handle(ALICE, request(1, answer("A")));
-    expect(reply.refusal?.code).toBe("time-over");
+    expect(reply.refusal?.reason).toBe("time-over");
     const first = viewOf(reply).navigation.find((entry) => entry.kind === "item" && entry.key.ref === "q1");
     expect(first?.kind === "item" && first.status).toBe("closed");
   });
@@ -1446,7 +1446,7 @@ describe("the option maxIdleMs of the session host", () => {
     const without = await examHost(practice, timed());
     await without.host.start(ALICE, { seed: 7 });
     without.clock.advance(3 * DAY);
-    expect((await without.host.handle(ALICE, request(1, answer("A")))).refusal?.code).toBe("time-over");
+    expect((await without.host.handle(ALICE, request(1, answer("A")))).refusal?.reason).toBe("time-over");
 
     const { host, clock, store, logged } = await examHost({ ...practice, maxIdleMs: Hour }, timed());
     await host.start(ALICE, { seed: 7 });
@@ -1783,7 +1783,7 @@ describe("the option cat of the session host", () => {
     await expect(host.start(ALICE, { seed: 7 })).rejects.toThrow(ServiceError);
     await expect(host.handle(ALICE, request(1, choose("i1")))).rejects.toThrow(ServiceError);
     const again = await host.handle(ALICE, request(1, choose("i1")));
-    expect(again.refusal?.code).toBe("awaiting-cat");
+    expect(again.refusal?.reason).toBe("awaiting-cat");
     expect(viewOf(again).current?.key).toEqual(item("i1"));
   });
 
@@ -2115,13 +2115,13 @@ describe("a review step with a cap on changes", () => {
   it("keeps the candidate going forward, one answer at a time, until the section is finished", async () => {
     const { first, send } = await reviewHost();
     expect(viewOf(first).current?.key).toEqual(key("a1"));
-    expect((await send(next)).refusal?.code).toBe("skipping-not-allowed");
-    expect((await send(edit("a1"))).refusal?.code).toBe("linear-backward");
+    expect((await send(next)).refusal?.reason).toBe("skipping-not-allowed");
+    expect((await send(edit("a1"))).refusal?.reason).toBe("linear-backward");
     await send(choose("a1"));
     await send(submit("a1"));
     expect(viewOf(await send(next)).current?.key).toEqual(key("a2"));
     for (const action of [previous, edit("a2"), { type: "move", to: key("a1") } as const]) {
-      expect((await send(action)).refusal?.code, JSON.stringify(action)).toBe("linear-backward");
+      expect((await send(action)).refusal?.reason, JSON.stringify(action)).toBe("linear-backward");
     }
     await send(choose("a2"));
     expect((await send(submit("a2"))).refusal).toBeUndefined();
@@ -2136,7 +2136,7 @@ describe("a review step with a cap on changes", () => {
     await send(submit("a1"));
     expect(viewOf(await send(next)).current?.key).toEqual(key("a2"));
     expect((await send(edit("a2"))).refusal).toEqual({
-      code: "attempts-exhausted",
+      reason: "attempts-exhausted",
       message: "No change is left.",
     });
   });
@@ -2162,8 +2162,8 @@ describe("a review step with a cap on changes", () => {
     expect(viewOf(await send(next)).current?.key).toEqual(key("a2"));
     expect(viewOf(await send(next)).current?.key).toEqual(key("b1"));
     expect(port.calls).toContain("createSession");
-    expect((await send(previous)).refusal?.code).toBe("linear-backward");
-    expect((await send(edit("b1"))).refusal?.code).toBe("linear-backward");
+    expect((await send(previous)).refusal?.reason).toBe("linear-backward");
+    expect((await send(edit("b1"))).refusal?.reason).toBe("linear-backward");
     await send(choose("b1"));
     await send(submit("b1"));
     await send(next);
@@ -2177,7 +2177,7 @@ describe("a review step with a cap on changes", () => {
     const { send, host } = await reviewHost();
     expect((await send(choose("a1"))).refusal).toBeUndefined();
     expect((await send(submit("a1"))).refusal).toBeUndefined();
-    expect((await send({ type: "comment", item: key("a1"), text: "Hm." })).refusal?.code).toBe("comment-not-allowed");
+    expect((await send({ type: "comment", item: key("a1"), text: "Hm." })).refusal?.reason).toBe("comment-not-allowed");
     expect((await host.session(ALICE.session).apply({ type: "time" })).refusal).toBeUndefined();
     expect((await send({ type: "end-part" })).refusal).toBeUndefined();
   });
@@ -2186,7 +2186,7 @@ describe("a review step with a cap on changes", () => {
     const { send, repeat, seen } = await reviewHost();
     await send(choose("a1"));
     const refused = await send(next);
-    expect(refused.refusal?.code).toBe("skipping-not-allowed");
+    expect(refused.refusal?.reason).toBe("skipping-not-allowed");
     const calls = seen.length;
     const again = await repeat(2, next);
     expect(again.refusal).toEqual(refused.refusal);
@@ -2222,7 +2222,7 @@ describe("createToolScoreIntake", () => {
     const calls: Call[] = [];
     const reads: string[] = [];
     const answered = new Set<string>();
-    const refusal: { code?: string } = {};
+    const refusal: { reason?: string } = {};
     const rejects: { apply: ((call: Call) => Error | undefined) | undefined; keep: Error | undefined } = {
       apply: undefined,
       keep: undefined,
@@ -2236,11 +2236,11 @@ describe("createToolScoreIntake", () => {
             if (action.type !== "supply-scores") throw new Error("Not a supply.");
             const failure = rejects.apply?.(call);
             if (failure !== undefined) throw failure;
-            if (refusal.code !== undefined) {
-              return { events: [], refusal: { code: refusal.code, message: "no" } } as never;
+            if (refusal.reason !== undefined) {
+              return { events: [], refusal: { reason: refusal.reason, message: "no" } } as never;
             }
             if (!open.includes(action.request)) {
-              return { events: [], refusal: { code: "unknown-request", message: "none" } } as never;
+              return { events: [], refusal: { reason: "unknown-request", message: "none" } } as never;
             }
             answered.add(action.request);
             return { events: [] };
@@ -2569,7 +2569,7 @@ describe("createToolScoreIntake", () => {
 
   it("throws DataError when the session refuses the score for a reason other than a request it does not have", async () => {
     const { onScore, refusal } = intake();
-    refusal.code = "score-type-mismatch";
+    refusal.reason = "score-type-mismatch";
     await expect(onScore("s1", Item, score())).rejects.toThrow(
       new DataError('The session "s1" refused the score of the tool for item:draw:1:SCORE: no'),
     );

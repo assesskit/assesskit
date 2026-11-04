@@ -98,7 +98,7 @@ const { section } = readAsi(`<qti-assessment-section xmlns="http://www.imsglobal
   <qti-assessment-item-ref identifier="item065" href="item065.xml"/>
 </qti-assessment-section>`);
 buildSectionData(section.adaptiveSelection, { settings: new TextEncoder().encode("{}") }); // => { sectionConfiguration: "e30=" }
-validatePool(section, { itemIdentifiers: ["item434", "item999"] }).map(({ code }) => code);
+validatePool(section, { itemIdentifiers: ["item434", "item999"] }).map(({ rule }) => rule);
 // => ["assesskit/cat/item-not-in-pool", "assesskit/cat/item-not-in-section"]
 ```
 
@@ -125,7 +125,7 @@ isSessionEnd(null); // => true
 The result is empty, or has one error for each identifier that only one side lists, first the item references and then the pool,
 each in list order.
 
-| Code                                | Meaning                                                                                                    |
+| Rule                                | Meaning                                                                                                    |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `assesskit/cat/item-not-in-pool`    | The section lists an item that the pool lacks: the engine can never select it.                             |
 | `assesskit/cat/item-not-in-section` | The pool has an item that the section does not list: the engine can select it, and it cannot be presented. |

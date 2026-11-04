@@ -31,15 +31,15 @@ export interface CreateReadErrorOptions {
 /**
  * Builds the `ReadError` for one problem. The issue carries the message as given; the error's message adds the position.
  *
- * @param code - The issue code, `assesskit/xml/<name>`.
+ * @param rule - The rule that the document breaks, `assesskit/xml/<name>`.
  * @param message - A full sentence that says what is wrong and what is expected.
  * @param options - See {@link CreateReadErrorOptions}.
  * @returns The error, with one issue.
  */
-export function createReadError(code: string, message: string, options: CreateReadErrorOptions = {}): ReadError {
+export function createReadError(rule: string, message: string, options: CreateReadErrorOptions = {}): ReadError {
   checkOptions(options);
   const { location } = options;
-  const issue: Issue = { severity: "error", code, message, ...(location ? { location } : {}) };
+  const issue: Issue = { severity: "error", rule, message, ...(location ? { location } : {}) };
   const position = location?.line === undefined ? "" : ` (line ${location.line}, column ${location.column ?? 1})`;
   return new ReadError(`${message}${position}`, [issue], "cause" in options ? { cause: options.cause } : undefined);
 }

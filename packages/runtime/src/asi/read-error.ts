@@ -15,7 +15,7 @@ export interface ReadContext {
  *
  * @param context - Where the reader is.
  * @param element - The element the problem is in.
- * @param code - The issue code, `assesskit/asi/<name>`.
+ * @param rule - The rule that the element breaks, `assesskit/asi/<name>`.
  * @param message - A full sentence that says what is wrong and what is expected.
  * @param options - The `cause`: the error that this one reports.
  * @returns The error.
@@ -23,11 +23,11 @@ export interface ReadContext {
 export function asiError(
   context: ReadContext,
   element: XmlElement,
-  code: string,
+  rule: string,
   message: string,
   options: ErrorOptions = {},
 ): ReadError {
-  return createReadError(code, message, {
+  return createReadError(rule, message, {
     location: locateElement(element, context.path, { trail: context.trail.join("/") }),
     ...options,
   });

@@ -322,11 +322,11 @@ function endWith(session: ItemSession, at: number, interaction: string, context:
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 function revisit(session: ItemSession, at: number, to: "review" | "solution", allowed: boolean): ItemStep {
-  const code = to === "review" ? "review-not-allowed" : "solution-not-allowed";
+  const reason = to === "review" ? "review-not-allowed" : "solution-not-allowed";
   if (session.status === "interacting") {
-    return refuse(code, `The item shows its ${to} only after its session closed.`);
+    return refuse(reason, `The item shows its ${to} only after its session closed.`);
   }
-  if (!allowed) return refuse(code, `The item session control does not allow the ${to} of the item.`);
+  if (!allowed) return refuse(reason, `The item session control does not allow the ${to} of the item.`);
   return applied({ ...session, status: to, updatedAt: at });
 }
 

@@ -67,7 +67,7 @@ export function createSender(context: SenderContext): Sender {
     try {
       const { refusal } = await client.dispatch(action);
       if (refusal === undefined) applied?.();
-      else status.say(messages[REFUSAL_MESSAGES[refusal.code]]);
+      else status.say(messages[REFUSAL_MESSAGES[refusal.reason]]);
     } catch (error) {
       // An action above a limit is the content's, such as a PCI state that is too long: it is not sent again, and the page
       // hears of it.

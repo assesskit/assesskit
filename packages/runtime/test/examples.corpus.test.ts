@@ -65,7 +65,7 @@ function play(engine: Engine, items: ReadonlyMap<string, AssessmentItem>): Deliv
     at += 1000;
     const step = engine.apply(state, { ...action, at });
     if (step.ok) state = step.state;
-    else expect(step.refusal.code).toBe("wrong-submission-mode");
+    else expect(step.refusal.reason).toBe("wrong-submission-mode");
     return step.ok;
   };
   for (let current = state.current; current !== undefined; current = state.current) {

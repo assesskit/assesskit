@@ -11,7 +11,7 @@ const ELEMENT = "qti-assessment-test/qti-rubric-block";
  * each response once, of an item reference of the test and of an item that declares the response. A block below the
  * test is reported where it is found, by the checks of every element.
  *
- * | Code                            | Reported when                                                                           |
+ * | Rule                            | Reported when                                                                           |
  * | ------------------------------- | --------------------------------------------------------------------------------------- |
  * | `assesskit/covers/undeclared-outcome`| a block names an outcome that the test does not declare                                 |
  * | `assesskit/covers/not-external`      | the outcome is not `external-scored`                                                    |

@@ -181,20 +181,20 @@ describe("scoring requests", () => {
       at: 7,
     });
     expect(replaced.state.outcomes.get("TOTAL")).toEqual(buildSingle("float", 6));
-    expect(refusalOf(engine, ended.state, act("skip", "e1", 8)).code).toBe("ended");
+    expect(refusalOf(engine, ended.state, act("skip", "e1", 8)).reason).toBe("ended");
   });
 
   it("refuses a supply for no request, or of a value that does not fit the declaration", () => {
     const submitted = played(engine, begun(engine).state, write("e1", "Text", 1), act("submit", "e1", 2));
     const supply = (request: string, value: Value | null) =>
       ({ type: "supply-scores", request, value, scorer: "human", at: 3 }) as const;
-    expect(refusalOf(engine, submitted.state, supply("item:e1:1:NOPE", buildSingle("float", 1))).code).toBe(
+    expect(refusalOf(engine, submitted.state, supply("item:e1:1:NOPE", buildSingle("float", 1))).reason).toBe(
       "unknown-request",
     );
-    expect(refusalOf(engine, submitted.state, supply("item:e1:1:SCORE", buildSingle("string", "high"))).code).toBe(
+    expect(refusalOf(engine, submitted.state, supply("item:e1:1:SCORE", buildSingle("string", "high"))).reason).toBe(
       "score-type-mismatch",
     );
-    expect(refusalOf(engine, submitted.state, supply("item:e1:1:SCORE", buildSingle("boolean", true))).code).toBe(
+    expect(refusalOf(engine, submitted.state, supply("item:e1:1:SCORE", buildSingle("boolean", true))).reason).toBe(
       "score-type-mismatch",
     );
     const nothing = played(engine, submitted.state, supply("item:e1:1:SCORE", null));
@@ -742,7 +742,7 @@ describe("adaptive sections", () => {
     const request = waiting(engine, second.state);
     expect(request).toMatchObject({ kind: "submit-results", sessionIdentifier: "session-1", id: "cat:A:1:2" });
     // The candidate waits: the next item depends on the answer.
-    expect(refusalOf(engine, second.state, next(7)).code).toBe("awaiting-cat");
+    expect(refusalOf(engine, second.state, next(7)).reason).toBe("awaiting-cat");
     const answeredStage = played(
       engine,
       second.state,
@@ -1045,17 +1045,17 @@ describe("adaptive sections in nonlinear parts and at the end", () => {
   it("refuses what waits for the CAT engine, and a stage with an item the section does not list", () => {
     const engine = engineOf(test(), { cat: CAT_A });
     const start = begun(engine);
-    expect(refusalOf(engine, start.state, next(1)).code).toBe("awaiting-cat");
-    expect(refusalOf(engine, start.state, pick("i1", "B", 1)).code).toBe("awaiting-cat");
+    expect(refusalOf(engine, start.state, next(1)).reason).toBe("awaiting-cat");
+    expect(refusalOf(engine, start.state, pick("i1", "B", 1)).reason).toBe("awaiting-cat");
     expect(
       refusalOf(engine, start.state, { type: "cat-response", request: "cat:A:1:9", response: { ended: true }, at: 1 })
-        .code,
+        .reason,
     ).toBe("unknown-request");
     const stranger = stage(engine, start.state, 1, { itemIdentifiers: ["i1", "nope"], stageLength: 2 });
-    expect(refusalOf(engine, start.state, stranger).code).toBe("unknown-item");
+    expect(refusalOf(engine, start.state, stranger).reason).toBe("unknown-item");
     expect(
       refusalOf(engine, start.state, { type: "cat-response", request: "cat:A:1:1", response: { ended: true }, at: 1 })
-        .code,
+        .reason,
     ).toBe("invalid-response");
     expect(
       refusalOf(engine, start.state, {
@@ -1063,7 +1063,7 @@ describe("adaptive sections in nonlinear parts and at the end", () => {
         request: "cat:A:1:1",
         response: { nextItems: { itemIdentifiers: ["i1"] } },
         at: 1,
-      }).code,
+      }).reason,
     ).toBe("invalid-response");
     // A candidate who waits can still turn a support on, suspend and end the test.
     expect(
@@ -1076,7 +1076,7 @@ describe("adaptive sections in nonlinear parts and at the end", () => {
     const start = begun(limited);
     const tooMany = stage(limited, start.state, 1, { itemIdentifiers: ["i1", "i2", "i3"], stageLength: 3 });
     const refusal = refusalOf(limited, start.state, tooMany);
-    expect(refusal.code).toBe("invalid-response");
+    expect(refusal.reason).toBe("invalid-response");
     expect(refusal.message).toContain("maxPlanNodes");
     const fits = stage(limited, start.state, 1, { itemIdentifiers: ["i1", "i2"], stageLength: 2 });
     expect(played(limited, start.state, fits).state.current).toEqual(key("i1"));
@@ -2068,7 +2068,7 @@ describe("properties", () => {
         let again = replay.state;
         for (const action of log) {
           const step = walker.apply(again, action);
-          if (!step.ok) fail(`The replay refused ${action.type}: ${step.refusal.code}.`);
+          if (!step.ok) fail(`The replay refused ${action.type}: ${step.refusal.reason}.`);
           again = step.state;
         }
         expect(serializeState(again)).toBe(serializeState(state));

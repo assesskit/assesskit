@@ -155,7 +155,7 @@ function readLevel(entry: ListEntry, at: string, draft: Draft): RubricLevel | un
   if (score === undefined || !Number.isFinite(score) || score < 0) {
     const found = text === undefined ? "none" : describe(text);
     const message = `a level needs ${SCORE_ATTRIBUTE}, a finite number of 0 or more, found ${found}`;
-    draft.issues.push({ code: "malformed", path: `${at}.score`, message });
+    draft.issues.push({ rule: "malformed", path: `${at}.score`, message });
     return undefined;
   }
   const quality = normalized(attributeOf(entry, QUALITY_ATTRIBUTE) ?? "");
@@ -172,7 +172,7 @@ function readCriterion(entry: ListEntry, at: string, draft: Draft): RubricCriter
   const identifier = attributeOf(entry, CRITERION_ATTRIBUTE);
   if (identifier === undefined) {
     draft.issues.push({
-      code: "malformed",
+      rule: "malformed",
       path: `${at}.identifier`,
       message: `a criterion needs ${CRITERION_ATTRIBUTE}`,
     });
@@ -181,12 +181,12 @@ function readCriterion(entry: ListEntry, at: string, draft: Draft): RubricCriter
   const weight = weightText === undefined ? DEFAULT_WEIGHT : readDouble(weightText);
   if (weight === undefined || !Number.isFinite(weight) || weight <= 0) {
     const message = `${WEIGHT_ATTRIBUTE} must be a finite number greater than 0, found ${describe(weightText)}`;
-    draft.issues.push({ code: "malformed", path: `${at}.weight`, message });
+    draft.issues.push({ rule: "malformed", path: `${at}.weight`, message });
   }
   const lists = listsOf(entry.children);
   if (lists.length === 0) {
     const message = "a criterion needs an ol with a li for each level";
-    draft.issues.push({ code: "malformed", path: `${at}.levels`, message });
+    draft.issues.push({ rule: "malformed", path: `${at}.levels`, message });
   }
   const levels = entriesOf(lists).map((level, index) => {
     checkEntry(level);
@@ -215,7 +215,7 @@ function readCriterion(entry: ListEntry, at: string, draft: Draft): RubricCriter
 export function scoringRubricOf(block: RubricBlock, language?: string): ScoringRubricRead {
   const draft: Draft = { criteria: [], issues: [] };
   const malformed = (path: string, message: string): void => {
-    draft.issues.push({ code: "malformed", path, message });
+    draft.issues.push({ rule: "malformed", path, message });
   };
   if (!block.view.includes("scorer") || block.view.includes("candidate")) {
     malformed("", `the view must contain scorer and not candidate, found ${block.view.join(" ")}`);

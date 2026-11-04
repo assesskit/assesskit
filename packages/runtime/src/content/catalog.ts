@@ -198,7 +198,7 @@ export function listCatalogs(item: AssessmentItem, node: BodyNode): readonly Cat
  * Checks a catalog against the rules of cards.
  *
  * @remarks
- * | Code                                        | Reported when                                                        |
+ * | Rule                                        | Reported when                                                        |
  * | ------------------------------------------- | -------------------------------------------------------------------- |
  * | `assesskit/content/duplicate-card`          | two cards of the catalog have the same `support`                     |
  * | `assesskit/content/empty-card`              | a card or a card entry has neither HTML content nor a file reference |
@@ -215,8 +215,8 @@ export function validateCatalog(catalog: Catalog): readonly Issue[] {
   checkArray(catalog.cards, "The cards of the catalog must be an array");
   const issues: Issue[] = [];
   const supports = new Set<string>();
-  const report = (code: string, message: string, element: string): void => {
-    issues.push({ severity: "error", code, message, location: { element: `qti-catalog/${element}` } });
+  const report = (rule: string, message: string, element: string): void => {
+    issues.push({ severity: "error", rule, message, location: { element: `qti-catalog/${element}` } });
   };
   for (const card of catalog.cards) {
     const name = describe(card.support);

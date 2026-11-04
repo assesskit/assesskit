@@ -1864,7 +1864,7 @@ describe("the supports with the runtime's engine", () => {
         clock += 10;
         const step = engine.apply(state, stamp(state, { type: "support", name, active }, clock));
         if (step.ok) state = step.state;
-        else refusals.push(step.refusal.code);
+        else refusals.push(step.refusal.reason);
         void render();
       },
     });

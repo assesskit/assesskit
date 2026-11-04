@@ -29,15 +29,15 @@ function accepts(bindings: readonly Binding[], declaration: ValueDeclaration): b
   );
 }
 
-function issue(code: string, message: string, descriptor: InteractionDescriptor): Issue {
-  return { severity: "error", code, message, location: { element: `qti-${descriptor.kind}` } };
+function issue(rule: string, message: string, descriptor: InteractionDescriptor): Issue {
+  return { severity: "error", rule, message, location: { element: `qti-${descriptor.kind}` } };
 }
 
 /**
  * Checks that the response variables of an item suit the interactions bound to them.
  *
  * @remarks
- * | Code                                          | Reported when                                                                           |
+ * | Rule                                          | Reported when                                                                           |
  * | --------------------------------------------- | --------------------------------------------------------------------------------------- |
  * | `assesskit/interactions/response-undeclared`  | an interaction names a response variable that the item does not declare                 |
  * | `assesskit/interactions/binding`              | the variable has a cardinality or base type that the interaction does not accept        |

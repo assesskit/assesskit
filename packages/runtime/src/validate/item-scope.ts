@@ -39,7 +39,7 @@ export function itemVariables(item: AssessmentItem): ReadonlyMap<string, Declare
   return variables;
 }
 
-const UNDECLARED: Pick<Problem, "code"> = { code: "assesskit/validate/undeclared-variable" };
+const UNDECLARED: Pick<Problem, "rule"> = { rule: "assesskit/validate/undeclared-variable" };
 
 /** The variables of an item, as the expressions of its response and template processing read them. */
 export class ItemScope implements RuleScope {
@@ -85,7 +85,7 @@ export class ItemScope implements RuleScope {
     if (this.processing === "template" && (found.kind === "response" || found.kind === "outcome")) {
       return {
         problem: {
-          code: "assesskit/validate/variable-out-of-reach",
+          rule: "assesskit/validate/variable-out-of-reach",
           message: `Template processing reads the ${found.kind} variable ${JSON.stringify(identifier)}, but it may read only template and context variables.`,
         },
       };
@@ -93,7 +93,7 @@ export class ItemScope implements RuleScope {
     if (identifier === DURATION && !this.timeDependent) {
       return {
         problem: {
-          code: "assesskit/validate/duration-not-time-dependent",
+          rule: "assesskit/validate/duration-not-time-dependent",
           message:
             "An expression reads the built-in variable duration, but the item is not time dependent, so its value must not be used.",
         },
@@ -115,7 +115,7 @@ export class ItemScope implements RuleScope {
 
   private weightProblem(weightIdentifier: string): Problem {
     return {
-      code: "assesskit/validate/weight-undefined",
+      rule: "assesskit/validate/weight-undefined",
       message: `The weight ${JSON.stringify(weightIdentifier)} is named in an item, but weights are defined by a qti-assessment-item-ref and apply only to the item variables a test reads, so it is ignored here.`,
     };
   }

@@ -60,13 +60,13 @@ function count(number: number, noun: string): string {
   return `${number} ${noun}${number === 1 ? "" : "s"}`;
 }
 
-/** Formats an issue as `path:line:column (element): severity: message [code]`; the parts that are unknown are left out. */
+/** Formats an issue as `path:line:column (element): severity: message [rule]`; the parts that are unknown are left out. */
 function formatIssue(issue: Issue, target: string): string {
   const { location } = issue;
   const line = location?.line === undefined ? "" : `:${location.line}`;
   const column = location?.column === undefined ? "" : `:${location.column}`;
   const element = location?.element === undefined ? "" : ` (${location.element})`;
-  return `${location?.path ?? target}${line}${column}${element}: ${issue.severity}: ${issue.message} [${issue.code}]`;
+  return `${location?.path ?? target}${line}${column}${element}: ${issue.severity}: ${issue.message} [${issue.rule}]`;
 }
 
 /**

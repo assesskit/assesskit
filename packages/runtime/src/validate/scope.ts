@@ -4,8 +4,8 @@ import type { StaticType } from "./static-type.js";
 
 /** A problem with a variable that an expression names, ready to report. */
 export interface Problem {
-  /** The issue code. */
-  readonly code: string;
+  /** The rule that naming the variable breaks. */
+  readonly rule: string;
   /** A full sentence that says what is wrong and what is expected. */
   readonly message: string;
 }

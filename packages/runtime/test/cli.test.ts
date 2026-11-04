@@ -284,17 +284,17 @@ describe("parsing a command", () => {
 describe("the report", () => {
   const error: Issue = {
     severity: "error",
-    code: "assesskit/node/xsd-invalid",
+    rule: "assesskit/node/xsd-invalid",
     message: "Element 'x': Not expected.",
     location: { path: "items/a.xml", line: 12, column: 5 },
   };
   const warning: Issue = {
     severity: "warning",
-    code: "assesskit/validate/unbound-response",
+    rule: "assesskit/validate/unbound-response",
     message: "The response variable is bound to no interaction.",
     location: { path: "items/b.xml", element: "qti-assessment-item/qti-response-declaration" },
   };
-  const bare: Issue = { severity: "warning", code: "assesskit/x/y", message: "No place." };
+  const bare: Issue = { severity: "warning", rule: "assesskit/x/y", message: "No place." };
 
   it("counts the issues of each severity, and is valid when none is an error", () => {
     expect(buildReport("t", "1.2.3", [warning, bare])).toEqual({

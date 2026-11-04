@@ -125,7 +125,7 @@ test("plans a test of 100 sections, and runs its outcome processing after a subm
   const drafted = played(engine, halfway, pick(ref, "B", halfway.at + 1, instance)).state;
   const submission = act("submit", ref, drafted.at + 1, instance);
   const submitted = engine.apply(drafted, submission);
-  if (!submitted.ok) fail(`The submission was refused: ${submitted.refusal.code}.`);
+  if (!submitted.ok) fail(`The submission was refused: ${submitted.refusal.reason}.`);
   // One point for each item answered rightly, the one submitted included.
   expect(submitted.state.outcomes.get("TOTAL")).toEqual(buildSingle("float", done + 1));
   expect(submitted.events.map((event) => event.type)).toContain("outcome-processed");
@@ -150,7 +150,7 @@ test("replays 1,000 actions from a stored state to the state that they gave", as
     let state = deserializeState(stored);
     for (const action of log) {
       const step = engine.apply(state, action);
-      if (!step.ok) fail(`The action ${action.type} at ${action.at} was refused: ${step.refusal.code}.`);
+      if (!step.ok) fail(`The action ${action.type} at ${action.at} was refused: ${step.refusal.reason}.`);
       state = step.state;
     }
     return state;
@@ -193,7 +193,7 @@ test("reads the inputs of a report of 200 items and runs the outcome processing 
   const drafted = played(engine, almost, pick(ref, "B", almost.at + 1, instance)).state;
   const submission = act("submit", ref, drafted.at + 1, instance);
   const submitted = engine.apply(drafted, submission);
-  if (!submitted.ok) fail(`The submission was refused: ${submitted.refusal.code}.`);
+  if (!submitted.ok) fail(`The submission was refused: ${submitted.refusal.reason}.`);
   const ended = played(engine, submitted.state, next(submitted.state.at + 1)).state;
   const report = engine.results(ended);
   expect(report.itemResults).toHaveLength(total);

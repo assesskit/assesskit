@@ -160,10 +160,10 @@ class ManifestReader {
   private checkIdentifiers(): void {
     const issues: Issue[] = [];
     let count = 0;
-    const report = (reader: ElementReader, code: string, message: string): void => {
+    const report = (reader: ElementReader, rule: string, message: string): void => {
       count += 1;
       if (count > MAX_IDENTIFIER_ISSUES) return;
-      for (const issue of reader.fail(code, message).issues) issues.push(issue);
+      for (const issue of reader.fail(rule, message).issues) issues.push(issue);
     };
     const seen = new Set<string>();
     for (const { reader, identifier } of this.declared) {

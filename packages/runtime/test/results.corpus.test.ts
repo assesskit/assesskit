@@ -80,7 +80,7 @@ describe("results of the 1EdTech examples", () => {
 
   it("refuses full-example.xml, which is not well-formed at line 26", () => {
     expect(issueOf(() => readResults(read("full-example.xml")))).toMatchObject({
-      code: "assesskit/xml/not-well-formed",
+      rule: "assesskit/xml/not-well-formed",
       location: { line: 26 },
     });
   });

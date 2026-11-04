@@ -58,7 +58,7 @@ function thrownAs<T extends Error>(type: new (...args: never[]) => T, run: () =>
   throw new Error("The function did not throw.");
 }
 
-const issueCode = (run: () => unknown): string | undefined => thrownAs(ReadError, run).issues[0]?.code;
+const issueRule = (run: () => unknown): string | undefined => thrownAs(ReadError, run).issues[0]?.rule;
 const securityLimit = (run: () => unknown): string => thrownAs(SecurityError, run).limit;
 
 /** Drops the positions `parseXml` adds and the namespace declarations from everything in a model, so that kept XML compares. */
@@ -248,15 +248,15 @@ describe("reading LTI links", () => {
   });
 
   it("rejects a document that is not a link, has no title, repeats or leaves out a property name, or has a vendor without a code", () => {
-    expect(issueCode(() => readLtiLink("<other/>"))).toBe("assesskit/package/lti-link");
+    expect(issueRule(() => readLtiLink("<other/>"))).toBe("assesskit/package/lti-link");
     expect(
-      issueCode(() => readLtiLink(lti("<blti:title>t</blti:title>", LTI_ROOT.replace("imslticc_v1p0", "other")))),
+      issueRule(() => readLtiLink(lti("<blti:title>t</blti:title>", LTI_ROOT.replace("imslticc_v1p0", "other")))),
     ).toBe("assesskit/package/lti-link");
-    expect(issueCode(() => readLtiLink(lti("<blti:description>d</blti:description>")))).toBe(
+    expect(issueRule(() => readLtiLink(lti("<blti:description>d</blti:description>")))).toBe(
       "assesskit/package/lti-link",
     );
     expect(
-      issueCode(() =>
+      issueRule(() =>
         readLtiLink(
           lti(
             '<blti:title>t</blti:title><blti:custom><lticm:property name="a">1</lticm:property><lticm:property name="a">2</lticm:property></blti:custom>',
@@ -265,12 +265,12 @@ describe("reading LTI links", () => {
       ),
     ).toBe("assesskit/package/lti-property");
     expect(
-      issueCode(() =>
+      issueRule(() =>
         readLtiLink(lti("<blti:title>t</blti:title><blti:custom><lticm:property>1</lticm:property></blti:custom>")),
       ),
     ).toBe("assesskit/package/missing-attribute");
     expect(
-      issueCode(() =>
+      issueRule(() =>
         readLtiLink(lti("<blti:title>t</blti:title><blti:vendor><lticp:name>n</lticp:name></blti:vendor>")),
       ),
     ).toBe("assesskit/package/lti-link");
@@ -384,7 +384,7 @@ describe("opening a package", () => {
       }),
     );
     expect(pkg.document("items/a.xml").kind).toBe("item");
-    expect(issueCode(() => pkg.document("items/b.xml"))).toBe("assesskit/xml/xinclude-resource");
+    expect(issueRule(() => pkg.document("items/b.xml"))).toBe("assesskit/xml/xinclude-resource");
   });
 
   it("rejects an xi:include with an xpointer and a loop of includes", () => {
@@ -396,8 +396,8 @@ describe("opening a package", () => {
         "items/d.xml": `<x xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="d.xml"/></x>`,
       }),
     );
-    expect(issueCode(() => pkg.document("items/a.xml"))).toBe("assesskit/xml/xinclude-attribute");
-    expect(issueCode(() => pkg.document("items/c.xml"))).toBe("assesskit/xml/xinclude-cycle");
+    expect(issueRule(() => pkg.document("items/a.xml"))).toBe("assesskit/xml/xinclude-attribute");
+    expect(issueRule(() => pkg.document("items/c.xml"))).toBe("assesskit/xml/xinclude-cycle");
   });
 
   it("reads and parses a file once for a document, however many includes name it", () => {
@@ -452,10 +452,10 @@ describe("opening a package", () => {
   });
 
   it("rejects a package without a manifest, and a document that is missing or is not an ASI document", () => {
-    expect(issueCode(() => openPackage(memoryFiles({ "a.txt": "x" })))).toBe("assesskit/package/no-manifest");
+    expect(issueRule(() => openPackage(memoryFiles({ "a.txt": "x" })))).toBe("assesskit/package/no-manifest");
     const pkg = openPackage(memoryFiles({ "imsmanifest.xml": manifest, "items/a.xml": "<x/>" }));
-    expect(issueCode(() => pkg.document("items/missing.xml"))).toBe("assesskit/package/missing-file");
-    expect(issueCode(() => pkg.document("items/a.xml"))).toBe("assesskit/asi/document-element");
+    expect(issueRule(() => pkg.document("items/missing.xml"))).toBe("assesskit/package/missing-file");
+    expect(issueRule(() => pkg.document("items/a.xml"))).toBe("assesskit/asi/document-element");
   });
 
   it("throws a DataError for files that are not normalized or not unique, and for arguments of another type", () => {
@@ -655,13 +655,13 @@ describe("reading manifests", () => {
     const metadata = (schema: string, version: string): string =>
       `<metadata><schema>${schema}</schema><schemaversion>${version}</schemaversion></metadata>`;
     expect(
-      issueCode(() => readManifest(manifestXml(resources(), { metadata: metadata("QTI Packages", "3.0.0") }))),
+      issueRule(() => readManifest(manifestXml(resources(), { metadata: metadata("QTI Packages", "3.0.0") }))),
     ).toBe("assesskit/package/invalid-text");
     expect(
-      issueCode(() => readManifest(manifestXml(resources(), { metadata: metadata("qti package", "3.0.0") }))),
+      issueRule(() => readManifest(manifestXml(resources(), { metadata: metadata("qti package", "3.0.0") }))),
     ).toBe("assesskit/package/invalid-text");
     expect(
-      issueCode(() => readManifest(manifestXml(resources(), { metadata: metadata("QTI Package", "3.0.1") }))),
+      issueRule(() => readManifest(manifestXml(resources(), { metadata: metadata("QTI Package", "3.0.1") }))),
     ).toBe("assesskit/package/invalid-text");
   });
 
@@ -676,29 +676,29 @@ describe("reading manifests", () => {
 
   it("rejects a manifest without metadata, without a schema or a version, and with another element in the metadata", () => {
     expect(
-      issueCode(() =>
+      issueRule(() =>
         readManifest(`<manifest xmlns="${CP_NAMESPACE}" identifier="m"><organizations/>${resources()}</manifest>`),
       ),
     ).toBe("assesskit/package/missing-element");
     expect(
-      issueCode(() =>
+      issueRule(() =>
         readManifest(
           manifestXml(resources(), { metadata: "<metadata><schemaversion>3.0.0</schemaversion></metadata>" }),
         ),
       ),
     ).toBe("assesskit/package/missing-element");
     expect(
-      issueCode(() =>
+      issueRule(() =>
         readManifest(manifestXml(resources(), { metadata: "<metadata><schema>QTI Package</schema></metadata>" })),
       ),
     ).toBe("assesskit/package/missing-element");
     expect(
-      issueCode(() =>
+      issueRule(() =>
         readManifest(manifestXml(resources(), { metadata: `${SCHEMA.replace("</metadata>", "<other/></metadata>")}` })),
       ),
     ).toBe("assesskit/package/unexpected-element");
     expect(
-      issueCode(() =>
+      issueRule(() =>
         readManifest(
           manifestXml(resources(), { metadata: SCHEMA.replace("</metadata>", "<lom:lom/><lom:lom/></metadata>") }),
         ),
@@ -716,14 +716,14 @@ describe("reading manifests", () => {
       "<organizations><organization identifier='o'/></organizations>",
       "<organizations><item identifier='i'/></organizations>",
     ]) {
-      expect(issueCode(() => readManifest(manifestXml(resources(), { organizations })))).toBe(
+      expect(issueRule(() => readManifest(manifestXml(resources(), { organizations })))).toBe(
         "assesskit/package/organizations",
       );
     }
-    expect(issueCode(() => readManifest(manifestXml(resources(`<manifest identifier="n"/>`))))).toBe(
+    expect(issueRule(() => readManifest(manifestXml(resources(`<manifest identifier="n"/>`))))).toBe(
       "assesskit/package/unexpected-element",
     );
-    expect(issueCode(() => readManifest(minimal.replace("</manifest>", '<manifest identifier="n"/></manifest>')))).toBe(
+    expect(issueRule(() => readManifest(minimal.replace("</manifest>", '<manifest identifier="n"/></manifest>')))).toBe(
       "assesskit/package/unexpected-element",
     );
   });
@@ -736,7 +736,7 @@ describe("reading manifests", () => {
     }
     for (const type of ["imsqti_item_xmlv3p0 ", "IMSQTI_ITEM_XMLV3P0", "imsqti_item_xmlv2p1", "item", ""]) {
       expect(
-        issueCode(() => readManifest(manifestXml(resources(resourceXml("a", type, "a.xml"))))),
+        issueRule(() => readManifest(manifestXml(resources(resourceXml("a", type, "a.xml"))))),
         type,
       ).toBe("assesskit/package/invalid-attribute");
     }
@@ -749,12 +749,12 @@ describe("reading manifests", () => {
 
   it("requires an identifier and a type, makes the href optional, and rejects an attribute the schema does not declare", () => {
     expect(
-      issueCode(() =>
+      issueRule(() =>
         readManifest(manifestXml('<resources><resource type="webcontent"><file href="a"/></resource></resources>')),
       ),
     ).toBe("assesskit/package/missing-attribute");
     expect(
-      issueCode(() =>
+      issueRule(() =>
         readManifest(manifestXml('<resources><resource identifier="a"><file href="a"/></resource></resources>')),
       ),
     ).toBe("assesskit/package/missing-attribute");
@@ -764,7 +764,7 @@ describe("reading manifests", () => {
       ).resources[0]?.href,
     ).toBeUndefined();
     expect(
-      issueCode(() =>
+      issueRule(() =>
         readManifest(
           manifestXml(
             '<resources><resource identifier="a" type="webcontent" other="1"><file href="a"/></resource></resources>',
@@ -772,10 +772,10 @@ describe("reading manifests", () => {
         ),
       ),
     ).toBe("assesskit/package/unexpected-attribute");
-    expect(issueCode(() => readManifest(minimal.replace('identifier="m"', 'identifier="m" other="1"')))).toBe(
+    expect(issueRule(() => readManifest(minimal.replace('identifier="m"', 'identifier="m" other="1"')))).toBe(
       "assesskit/package/unexpected-attribute",
     );
-    expect(issueCode(() => readManifest(minimal.replace('identifier="m"', "")))).toBe(
+    expect(issueRule(() => readManifest(minimal.replace('identifier="m"', "")))).toBe(
       "assesskit/package/missing-attribute",
     );
   });
@@ -796,7 +796,7 @@ describe("reading manifests", () => {
     const xml = manifestXml(
       resources('<resource identifier="a" type="webcontent"><metadata><other/></metadata><file href="a"/></resource>'),
     );
-    expect(issueCode(() => readManifest(xml))).toBe("assesskit/metadata/unexpected-element");
+    expect(issueRule(() => readManifest(xml))).toBe("assesskit/metadata/unexpected-element");
   });
 
   it("reads files with their metadata, requires the href, and rejects a child other than metadata", () => {
@@ -812,8 +812,8 @@ describe("reading manifests", () => {
     expect(manifest.resources[0]?.files[1]?.metadata).toBeUndefined();
     const withFile = (file: string): string =>
       manifestXml(resources(`<resource identifier="a" type="webcontent">${file}</resource>`));
-    expect(issueCode(() => readManifest(withFile("<file/>")))).toBe("assesskit/package/missing-attribute");
-    expect(issueCode(() => readManifest(withFile('<file href="a"><other/></file>')))).toBe(
+    expect(issueRule(() => readManifest(withFile("<file/>")))).toBe("assesskit/package/missing-attribute");
+    expect(issueRule(() => readManifest(withFile('<file href="a"><other/></file>')))).toBe(
       "assesskit/package/unexpected-element",
     );
   });
@@ -830,14 +830,14 @@ describe("reading manifests", () => {
     expect(manifest.resources[0]?.dependencies).toEqual(["b"]);
     const dependent = (dependency: string): string =>
       manifestXml(resources(resourceXml("a", "webcontent", "a", dependency)));
-    expect(issueCode(() => readManifest(dependent("<dependency/>")))).toBe("assesskit/package/missing-attribute");
-    expect(issueCode(() => readManifest(dependent('<dependency identifierref="a"><x/></dependency>')))).toBe(
+    expect(issueRule(() => readManifest(dependent("<dependency/>")))).toBe("assesskit/package/missing-attribute");
+    expect(issueRule(() => readManifest(dependent('<dependency identifierref="a"><x/></dependency>')))).toBe(
       "assesskit/package/unexpected-element",
     );
     const error = thrownAs(ReadError, () =>
       readManifest(dependent('<dependency identifierref="x"/><dependency identifierref="y"/>')),
     );
-    expect(error.issues.map(({ code }) => code)).toEqual([
+    expect(error.issues.map(({ rule }) => rule)).toEqual([
       "assesskit/package/dangling-reference",
       "assesskit/package/dangling-reference",
     ]);
@@ -858,13 +858,13 @@ describe("reading manifests", () => {
     const duplicate = thrownAs(ReadError, () =>
       readManifest(manifestXml(resources(resourceXml("a", "webcontent", "a"), resourceXml("a", "webcontent", "b")))),
     );
-    expect(duplicate.issues[0]?.code).toBe("assesskit/package/duplicate-identifier");
-    expect(issueCode(() => readManifest(manifestXml(resources(resourceXml("m", "webcontent", "a")))))).toBe(
+    expect(duplicate.issues[0]?.rule).toBe("assesskit/package/duplicate-identifier");
+    expect(issueRule(() => readManifest(manifestXml(resources(resourceXml("m", "webcontent", "a")))))).toBe(
       "assesskit/package/duplicate-identifier",
     );
     const variantOfItself = `<cpx:variant identifier="a" identifierref="b"><cpx:metadata><drd:accessForAllResource/></cpx:metadata></cpx:variant>`;
     expect(
-      issueCode(() =>
+      issueRule(() =>
         readManifest(
           manifestXml(
             resources(resourceXml("a", "webcontent", "a", variantOfItself), resourceXml("b", "webcontent", "b")),
@@ -895,16 +895,16 @@ describe("reading manifests", () => {
   it("rejects a variant without metadata or an accessibility description, with a missing target, or in another namespace", () => {
     const withVariant = (variant: string): string =>
       manifestXml(resources(resourceXml("a", "webcontent", "a", variant), resourceXml("b", "webcontent", "b")));
-    expect(issueCode(() => readManifest(withVariant('<cpx:variant identifier="v" identifierref="b"/>')))).toBe(
+    expect(issueRule(() => readManifest(withVariant('<cpx:variant identifier="v" identifierref="b"/>')))).toBe(
       "assesskit/package/missing-element",
     );
     expect(
-      issueCode(() =>
+      issueRule(() =>
         readManifest(withVariant('<cpx:variant identifier="v" identifierref="b"><cpx:metadata/></cpx:variant>')),
       ),
     ).toBe("assesskit/package/missing-element");
     expect(
-      issueCode(() =>
+      issueRule(() =>
         readManifest(
           withVariant(
             '<cpx:variant identifier="v" identifierref="x"><cpx:metadata><drd:accessForAllResource/></cpx:metadata></cpx:variant>',
@@ -913,7 +913,7 @@ describe("reading manifests", () => {
       ),
     ).toBe("assesskit/package/dangling-reference");
     expect(
-      issueCode(() =>
+      issueRule(() =>
         readManifest(
           withVariant(
             '<cpx:variant identifierref="b"><cpx:metadata><drd:accessForAllResource/></cpx:metadata></cpx:variant>',
@@ -921,25 +921,25 @@ describe("reading manifests", () => {
         ),
       ),
     ).toBe("assesskit/package/missing-attribute");
-    expect(issueCode(() => readManifest(withVariant('<x:variant xmlns:x="urn:x"/>')))).toBe(
+    expect(issueRule(() => readManifest(withVariant('<x:variant xmlns:x="urn:x"/>')))).toBe(
       "assesskit/package/unexpected-element",
     );
   });
 
   it("reads only the content package namespace of the QTI profile, and rejects the IMS CP 1.1 namespace that some samples use", () => {
     expect(
-      issueCode(() => readManifest(minimal.replace(CP_NAMESPACE, "http://www.imsglobal.org/xsd/imscp_v1p1"))),
+      issueRule(() => readManifest(minimal.replace(CP_NAMESPACE, "http://www.imsglobal.org/xsd/imscp_v1p1"))),
     ).toBe("assesskit/package/not-a-manifest");
-    expect(issueCode(() => readManifest('<manifest identifier="m"/>'))).toBe("assesskit/package/not-a-manifest");
+    expect(issueRule(() => readManifest('<manifest identifier="m"/>'))).toBe("assesskit/package/not-a-manifest");
     expect(
-      issueCode(() => readManifest(minimal.replace("<manifest", "<other").replace("</manifest>", "</other>"))),
+      issueRule(() => readManifest(minimal.replace("<manifest", "<other").replace("</manifest>", "</other>"))),
     ).toBe("assesskit/package/not-a-manifest");
     const metadata = `<metadata><schema>QTI Package</schema><schemaversion>3.0.0</schemaversion></metadata>`;
     const wrongMetadata = resourceXml("a", "webcontent", "a").replace(
       "<file",
       '<metadata><q:qtiMetadata xmlns:q="http://www.imsglobal.org/xsd/qti/imsqti_asiv3p0_v1p0"/></metadata><file',
     );
-    expect(issueCode(() => readManifest(manifestXml(resources(wrongMetadata), { metadata })))).toBe(
+    expect(issueRule(() => readManifest(manifestXml(resources(wrongMetadata), { metadata })))).toBe(
       "assesskit/metadata/unexpected-element",
     );
   });
@@ -1047,23 +1047,23 @@ describe("resolvers of a package", () => {
   });
 
   it("reports a reference outside the package, to no item resource, to a missing file or to a document of another kind", () => {
-    expect(issueCode(() => resolvers.items("../../x.xml", "tests/t.xml"))).toBe("assesskit/package/outside-package");
-    expect(issueCode(() => resolvers.items("http://example.com/x.xml", "tests/t.xml"))).toBe(
+    expect(issueRule(() => resolvers.items("../../x.xml", "tests/t.xml"))).toBe("assesskit/package/outside-package");
+    expect(issueRule(() => resolvers.items("http://example.com/x.xml", "tests/t.xml"))).toBe(
       "assesskit/package/outside-package",
     );
-    expect(issueCode(() => resolvers.items("items/other.xml", "tests/t.xml"))).toBe(
+    expect(issueRule(() => resolvers.items("items/other.xml", "tests/t.xml"))).toBe(
       "assesskit/package/unknown-resource",
     );
-    expect(issueCode(() => resolvers.items("media/x.png", ""))).toBe("assesskit/package/unknown-resource");
-    expect(issueCode(() => resolvers.items("sections/s.xml", ""))).toBe("assesskit/package/unknown-resource");
-    expect(issueCode(() => resolvers.sections("../missing.xml", "tests/t.xml"))).toBe("assesskit/package/missing-file");
-    expect(issueCode(() => resolvers.sections("../passages/s.xml", "tests/t.xml"))).toBe(
+    expect(issueRule(() => resolvers.items("media/x.png", ""))).toBe("assesskit/package/unknown-resource");
+    expect(issueRule(() => resolvers.items("sections/s.xml", ""))).toBe("assesskit/package/unknown-resource");
+    expect(issueRule(() => resolvers.sections("../missing.xml", "tests/t.xml"))).toBe("assesskit/package/missing-file");
+    expect(issueRule(() => resolvers.sections("../passages/s.xml", "tests/t.xml"))).toBe(
       "assesskit/package/document-kind",
     );
-    expect(issueCode(() => resolvers.stimuli("../sections/s.xml", "tests/t.xml"))).toBe(
+    expect(issueRule(() => resolvers.stimuli("../sections/s.xml", "tests/t.xml"))).toBe(
       "assesskit/package/document-kind",
     );
-    expect(issueCode(() => resolvers.stimuli("../../x.xml", "tests/t.xml"))).toBe("assesskit/package/outside-package");
+    expect(issueRule(() => resolvers.stimuli("../../x.xml", "tests/t.xml"))).toBe("assesskit/package/outside-package");
   });
 
   it("reports a variant resource that has no main file inside the package, a file of the wrong kind and a missing LTI file", () => {
@@ -1079,17 +1079,17 @@ describe("resolvers of a package", () => {
         { "i.xml": item("i") },
       ),
     );
-    expect(issueCode(() => linked.items("i.xml", ""))).toBe("assesskit/package/resource-href");
+    expect(issueRule(() => linked.items("i.xml", ""))).toBe("assesskit/package/resource-href");
     const kind = createPackageResolvers(
       packageOf(manifestXml(resources(resourceXml("i", "imsqti_item_xmlv3p0", "i.xml"))), {
         "i.xml": `<qti-assessment-test xmlns="${ASI}" identifier="t" title="t"/>`,
       }),
     );
-    expect(issueCode(() => kind.items("i.xml", ""))).toBe("assesskit/package/document-kind");
+    expect(issueRule(() => kind.items("i.xml", ""))).toBe("assesskit/package/document-kind");
     const missing = createPackageResolvers(
       packageOf(manifestXml(resources(resourceXml("l", "imsbasiclti_xmlv1p3", "l.xml")))),
     );
-    expect(issueCode(() => missing.items("l.xml", ""))).toBe("assesskit/package/missing-file");
+    expect(issueRule(() => missing.items("l.xml", ""))).toBe("assesskit/package/missing-file");
   });
 
   it("resolves the outcome declaration and response processing resources that items depend on through the closure", () => {
@@ -1483,7 +1483,7 @@ describe("reading ZIP archives", () => {
     expect(readPackage(buildZip(entries)).paths).toHaveLength(3);
     for (const declaredCount of [1, 2, 4]) {
       const error = thrownAs(ReadError, () => readPackage(buildZip(entries, { declaredCount })));
-      expect(error.issues[0]?.code).toBe("assesskit/package/zip");
+      expect(error.issues[0]?.rule).toBe("assesskit/package/zip");
       expect(error.message).toContain(`declares ${declaredCount} entries, but its central directory holds 3`);
     }
   });
@@ -1503,16 +1503,16 @@ describe("reading ZIP archives", () => {
   it("rejects data that is not an archive, an archive that is cut off, and records that do not agree", () => {
     const manifest = { name: "imsmanifest.xml", data: bytes(manifestXml(resources())) } satisfies RawEntry;
     const zip = buildZip([manifest, { name: "a.txt", data: bytes("hello hello hello") }]);
-    expect(issueCode(() => readPackage(new Uint8Array()))).toBe("assesskit/package/zip");
-    expect(issueCode(() => readPackage(bytes("not a zip archive at all, but long enough to hold an end record")))).toBe(
+    expect(issueRule(() => readPackage(new Uint8Array()))).toBe("assesskit/package/zip");
+    expect(issueRule(() => readPackage(bytes("not a zip archive at all, but long enough to hold an end record")))).toBe(
       "assesskit/package/zip",
     );
-    expect(issueCode(() => readPackage(zip.subarray(0, zip.length - 10)))).toBe("assesskit/package/zip");
-    expect(issueCode(() => readPackage(zip.subarray(0, 40)))).toBe("assesskit/package/zip");
-    expect(issueCode(() => readPackage(buildZip([manifest], { disk: 1 })))).toBe("assesskit/package/zip");
-    expect(issueCode(() => readPackage(buildZip([manifest], { declaredCount: 3 })))).toBe("assesskit/package/zip");
-    expect(issueCode(() => readPackage(buildZip([{ ...manifest, method: 12 }])))).toBe("assesskit/package/zip");
-    expect(issueCode(() => readPackage(buildZip([{ ...manifest, method: 0, declaredCompressedSize: 5 }])))).toBe(
+    expect(issueRule(() => readPackage(zip.subarray(0, zip.length - 10)))).toBe("assesskit/package/zip");
+    expect(issueRule(() => readPackage(zip.subarray(0, 40)))).toBe("assesskit/package/zip");
+    expect(issueRule(() => readPackage(buildZip([manifest], { disk: 1 })))).toBe("assesskit/package/zip");
+    expect(issueRule(() => readPackage(buildZip([manifest], { declaredCount: 3 })))).toBe("assesskit/package/zip");
+    expect(issueRule(() => readPackage(buildZip([{ ...manifest, method: 12 }])))).toBe("assesskit/package/zip");
+    expect(issueRule(() => readPackage(buildZip([{ ...manifest, method: 0, declaredCompressedSize: 5 }])))).toBe(
       "assesskit/package/zip",
     );
   });
@@ -1521,12 +1521,12 @@ describe("reading ZIP archives", () => {
     const manifest = { name: "imsmanifest.xml", data: bytes(manifestXml(resources())) } satisfies RawEntry;
     const read = (entry: RawEntry): Uint8Array | undefined => readPackage(buildZip([manifest, entry])).file("f");
     const data = bytes("hello hello hello");
-    expect(issueCode(() => read({ name: "f", data, crc: 1 }))).toBe("assesskit/package/zip");
-    expect(issueCode(() => read({ name: "f", data, method: 0, declaredSize: 5, declaredCompressedSize: 5 }))).toBe(
+    expect(issueRule(() => read({ name: "f", data, crc: 1 }))).toBe("assesskit/package/zip");
+    expect(issueRule(() => read({ name: "f", data, method: 0, declaredSize: 5, declaredCompressedSize: 5 }))).toBe(
       "assesskit/package/zip",
     );
-    expect(issueCode(() => read({ name: "f", data, declaredSize: 50 }))).toBe("assesskit/package/zip");
-    expect(issueCode(() => read({ name: "f", data, stored: new Uint8Array([0xff, 0xff, 0xff, 0xff]) }))).toBe(
+    expect(issueRule(() => read({ name: "f", data, declaredSize: 50 }))).toBe("assesskit/package/zip");
+    expect(issueRule(() => read({ name: "f", data, stored: new Uint8Array([0xff, 0xff, 0xff, 0xff]) }))).toBe(
       "assesskit/package/zip",
     );
     const inflated = thrownAs(ReadError, () =>
@@ -1534,8 +1534,8 @@ describe("reading ZIP archives", () => {
     );
     expect(inflated.message).toBe('The entry "f" has compressed data that cannot be inflated.');
     expect(inflated.cause).toBeInstanceOf(Error);
-    expect(issueCode(() => read({ name: "f", data, localName: "g" }))).toBe("assesskit/package/zip");
-    expect(issueCode(() => read({ name: "f", data, declaredCompressedSize: 5000 }))).toBe("assesskit/package/zip");
+    expect(issueRule(() => read({ name: "f", data, localName: "g" }))).toBe("assesskit/package/zip");
+    expect(issueRule(() => read({ name: "f", data, declaredCompressedSize: 5000 }))).toBe("assesskit/package/zip");
     expect(read({ name: "f", data })).toEqual(data);
   });
 

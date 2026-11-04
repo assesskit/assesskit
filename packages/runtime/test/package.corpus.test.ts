@@ -74,7 +74,7 @@ describe("the 1EdTech example packages", () => {
         }
         return undefined;
       })();
-      expect(error?.issues[0]?.code, path).toBe("assesskit/package/not-a-manifest");
+      expect(error?.issues[0]?.rule, path).toBe("assesskit/package/not-a-manifest");
     }
   });
 

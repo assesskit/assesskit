@@ -53,7 +53,7 @@ export async function migrateSamples(
     }
     const { errors, run } = checkPackage(migration.files, migration.itemHref);
     if (run === undefined) {
-      const codes = errors.map(({ code }) => code);
+      const codes = errors.map(({ rule }) => rule);
       outcomes.push({ identifier, stage: "invalid", codes: [...new Set(codes)], score: null, answered: false });
     } else if (!run.ok) {
       outcomes.push({ identifier, stage: "not-running", codes: [run.reason], score: null, answered: false });

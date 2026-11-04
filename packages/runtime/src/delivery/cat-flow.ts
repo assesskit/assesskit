@@ -51,8 +51,8 @@ function changed(state: DeliveryState, events: readonly DeliveryEvent[] = [], ou
   return { ok: true, state, events, outcomes };
 }
 
-function refused(code: Refusal["code"], message: string): CatChange {
-  return { ok: false, refusal: refusal(code, message) };
+function refused(reason: Refusal["reason"], message: string): CatChange {
+  return { ok: false, refusal: refusal(reason, message) };
 }
 
 /** The event that reports the request a session has just made. */

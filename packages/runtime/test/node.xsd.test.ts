@@ -79,7 +79,7 @@ describe("validating documents", () => {
     expect(await validateXmlFiles(schemas, [{ path: "choice.xml", content: text }])).toEqual([
       {
         severity: "error",
-        code: "assesskit/node/xsd-invalid",
+        rule: "assesskit/node/xsd-invalid",
         message: `Element '{${ASI}}qti-assessment-item': The attribute 'time-dependent' is required but missing.`,
         location: { path: "choice.xml", line: 3 },
       },
@@ -92,7 +92,7 @@ describe("validating documents", () => {
     const issues = await validateXmlFiles(schemas, [example("results/full-example.xml")]);
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
-      code: "assesskit/xml/not-well-formed",
+      rule: "assesskit/xml/not-well-formed",
       location: { path: "results/full-example.xml" },
     });
   });
@@ -105,7 +105,7 @@ describe("validating documents", () => {
     const include = '<xi:include href="fragments/choice.xml"><xi:fallback><p>Missing.</p></xi:fallback></xi:include>';
     expect(await validateXmlFiles(schemas, [item(`<p>Before.</p>${include}`)])).toEqual([]);
     const issues = await validateXmlFiles(schemas, [item('<xi:include href="a.xml" parse="binary"/>')]);
-    expect(issues.map(({ code }) => code)).toContain("assesskit/node/xsd-invalid");
+    expect(issues.map(({ rule }) => rule)).toContain("assesskit/node/xsd-invalid");
   });
 
   it("rejects an element the schema does not know, with the position of the document", async () => {
@@ -113,7 +113,7 @@ describe("validating documents", () => {
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
       severity: "error",
-      code: "assesskit/node/xsd-invalid",
+      rule: "assesskit/node/xsd-invalid",
     });
     expect(issues[0]?.message).toContain("qti-nothing");
   });
@@ -122,7 +122,7 @@ describe("validating documents", () => {
     const single = "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_itemv3p0p1_v1p0.xsd";
     for (const hint of [ASI_300, single]) {
       const issues = await validateXmlFiles(schemas, [item("<qti-nothing/>", hint)]);
-      expect(issues.map(({ code }) => code)).toEqual(["assesskit/node/xsd-invalid"]);
+      expect(issues.map(({ rule }) => rule)).toEqual(["assesskit/node/xsd-invalid"]);
     }
   });
 
@@ -142,13 +142,13 @@ describe("validating documents", () => {
     expect(issues).toEqual([
       {
         severity: "error",
-        code: "assesskit/node/no-schema",
+        rule: "assesskit/node/no-schema",
         message: "The root element {urn:other}a is not in a namespace that the runtime has a schema for.",
         location: { path: "x.xml" },
       },
       {
         severity: "error",
-        code: "assesskit/node/no-schema",
+        rule: "assesskit/node/no-schema",
         message: "The root element b is not in a namespace that the runtime has a schema for.",
         location: { path: "y.xml" },
       },
@@ -163,7 +163,7 @@ describe("validating documents", () => {
       { path: "deep.xml", content: deep },
       { path: "broken.xml", content: "<a><b></a>" },
     ]);
-    expect(issues.map(({ code, location }) => [code, location?.path])).toEqual([
+    expect(issues.map(({ rule, location }) => [rule, location?.path])).toEqual([
       ["assesskit/xml/security", "xxe.xml"],
       ["assesskit/xml/security", "deep.xml"],
       ["assesskit/xml/not-well-formed", "broken.xml"],
@@ -183,7 +183,7 @@ describe("validating documents", () => {
   it("keeps the first maxFindings issues of all files, and ends a list that stopped with an error", async () => {
     const files = ["first.xml", "second.xml", "third.xml"].map((path) => ({ ...item("<qti-nothing/>"), path }));
     const issues = await validateXmlFiles(schemas, files, { maxFindings: 2 });
-    expect(issues.map(({ code }) => code)).toEqual([
+    expect(issues.map(({ rule }) => rule)).toEqual([
       "assesskit/node/xsd-invalid",
       "assesskit/node/xsd-invalid",
       "assesskit/validate/findings-stopped",
@@ -234,7 +234,7 @@ describe("validating documents", () => {
     for (const [namespace, file] of PRIMARY_SCHEMAS) {
       const issues = await validateXmlFiles(schemas, [{ path: "root.xml", content: `<root xmlns="${namespace}"/>` }]);
       expect(
-        issues.every(({ code }) => code === "assesskit/node/xsd-invalid"),
+        issues.every(({ rule }) => rule === "assesskit/node/xsd-invalid"),
         file,
       ).toBe(true);
     }

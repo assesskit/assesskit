@@ -93,11 +93,11 @@ document.kind === "test" ? readScoreCovers(document.test) : undefined;
 
 ### Checks
 
-`validateTest` reports the covers as errors, with the codes `assesskit/covers/*`: a block for an outcome the test does not declare,
+`validateTest` reports the covers as errors, with the rules `assesskit/covers/*`: a block for an outcome the test does not declare,
 or one that is not `external-scored`; a cover that names an unknown item reference, or a response the item does not declare;
 the same cover twice, or two blocks for one outcome; a block whose `view` lacks `scorer` or contains `candidate`, or that
 lacks `data-outcome-identifier`; an entry without both attributes. A block below the test that carries the class token is a
-warning, because it is not recognized. [Validate](validate.md#test-structure-and-covers) lists the codes.
+warning, because it is not recognized. [Validate](validate.md#test-structure-and-covers) lists the rules.
 
 ### In the engine
 
@@ -324,11 +324,11 @@ sections 7.1.17 (`CFRubric`), 7.1.18 (`CFRubricCriterion`) and 7.1.19 (`CFRubric
 
 ### Checks
 
-`validateAsi` of an item or a test reports the rubrics as errors, with the codes `assesskit/scoring-rubric/*`: a block that breaks
+`validateAsi` of an item or a test reports the rubrics as errors, with the rules `assesskit/scoring-rubric/*`: a block that breaks
 the form of the convention, the shape of its kind, or uses an identifier or a score twice; a block for an outcome that is
 undeclared, not `external-scored`, or not a single integer or float (an integer outcome needs whole points); two blocks for one
 outcome. A rubric whose sums leave the normal range of the outcome, and a block with the class token where it is not
-recognized, are warnings. [Validate](validate.md#scoring-rubrics) lists the codes.
+recognized, are warnings. [Validate](validate.md#scoring-rubrics) lists the rules.
 
 ### In the engine
 

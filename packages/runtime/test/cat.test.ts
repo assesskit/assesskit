@@ -90,7 +90,7 @@ describe("checking an item pool", () => {
     expect(issues).toEqual([
       {
         severity: "error",
-        code: "assesskit/cat/item-not-in-pool",
+        rule: "assesskit/cat/item-not-in-pool",
         message: expect.stringContaining(
           'lists the item "item365", which the item pool of the CAT engine does not contain',
         ),
@@ -104,7 +104,7 @@ describe("checking an item pool", () => {
     expect(issues).toEqual([
       {
         severity: "error",
-        code: "assesskit/cat/item-not-in-section",
+        rule: "assesskit/cat/item-not-in-section",
         message: expect.stringContaining('contains the item "item999", which the adaptive section "sec" does not list'),
         location: { element: "qti-assessment-section" },
       },
@@ -114,7 +114,7 @@ describe("checking an item pool", () => {
   it("reports the item references first and the pool after, each in list order", () => {
     const section = sectionOf("", itemRefs(["a", "b", "c"]));
     const issues = validatePool(section, { itemIdentifiers: ["z", "c", "y"] });
-    expect(issues.map(({ code, message }) => [code, /"(\w)"/.exec(message)?.[1]])).toEqual([
+    expect(issues.map(({ rule, message }) => [rule, /"(\w)"/.exec(message)?.[1]])).toEqual([
       ["assesskit/cat/item-not-in-pool", "a"],
       ["assesskit/cat/item-not-in-pool", "b"],
       ["assesskit/cat/item-not-in-section", "z"],
@@ -124,7 +124,7 @@ describe("checking an item pool", () => {
 
   it("reports every item reference when the pool is empty, absent or null", () => {
     for (const pool of [{}, { itemIdentifiers: [] }, { itemIdentifiers: null }]) {
-      expect(validatePool(SAMPLE, pool).map(({ code }) => code)).toEqual(
+      expect(validatePool(SAMPLE, pool).map(({ rule }) => rule)).toEqual(
         Array(SAMPLE_ITEMS.length).fill("assesskit/cat/item-not-in-pool"),
       );
     }
@@ -135,7 +135,7 @@ describe("checking an item pool", () => {
       "",
       `${itemRefs(["a"])}<qti-assessment-section identifier="inner" title="i" visible="true">${itemRefs(["b"])}</qti-assessment-section>`,
     );
-    expect(validatePool(section, { itemIdentifiers: ["a", "b"] }).map(({ code }) => code)).toEqual([
+    expect(validatePool(section, { itemIdentifiers: ["a", "b"] }).map(({ rule }) => rule)).toEqual([
       "assesskit/cat/item-not-in-section",
     ]);
   });
@@ -1058,10 +1058,10 @@ describe("properties", () => {
         const issues = validatePool(sectionOf("", itemRefs(listed)), { itemIdentifiers: pooled });
         const missingFromPool = new Set(listed.filter((identifier) => !pooled.includes(identifier)));
         const missingFromSection = new Set(pooled.filter((identifier) => !listed.includes(identifier)));
-        expect(issues.filter(({ code }) => code === "assesskit/cat/item-not-in-pool")).toHaveLength(
+        expect(issues.filter(({ rule }) => rule === "assesskit/cat/item-not-in-pool")).toHaveLength(
           missingFromPool.size,
         );
-        expect(issues.filter(({ code }) => code === "assesskit/cat/item-not-in-section")).toHaveLength(
+        expect(issues.filter(({ rule }) => rule === "assesskit/cat/item-not-in-section")).toHaveLength(
           missingFromSection.size,
         );
       }),

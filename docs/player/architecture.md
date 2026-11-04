@@ -162,5 +162,5 @@ port failed.
 | `ServiceError` | A call to a CAT engine fails, or a store conflict outlasts its retries         | `status` and `body` |
 
 `DataError` of the runtime is thrown when an argument has the wrong type or is out of range, or untrusted input is not what it should be, such as an
-envelope. `reason` is a kebab-case code such as `session-exists`. A host maps `AccessError` to 403. `status` is `0` when a service did
+envelope. `reason` is one of the exported union `AccessErrorReason`: `not-bound` or `session-exists`. A host maps `AccessError` to 403. `status` is `0` when a service did
 not answer.

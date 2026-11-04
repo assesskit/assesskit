@@ -40,7 +40,7 @@ import { loadSchemaSet, validateXmlFiles } from "@assesskit/runtime/node";
 const schemas = await loadSchemaSet("./schemas"); // the directory the schemas are in
 const content = await readFile("items/capital.xml");
 const issues = await validateXmlFiles(schemas, [{ path: "items/capital.xml", content }]);
-issues.map((issue) => issue.code); // => ["assesskit/node/xsd-invalid"]
+issues.map((issue) => issue.rule); // => ["assesskit/node/xsd-invalid"]
 issues[0]?.message.includes("The attribute 'time-dependent' is required but missing."); // => true
 issues[0]?.location; // => { path: "items/capital.xml", line: 1 }
 schemas.close(); // frees the compiled schemas
@@ -113,7 +113,7 @@ after loading is never compiled.
 
 `validateXmlFiles` does not throw for a bad document. It returns issues, in the order of the files:
 
-| Code                                                                               | When                                                                                        | `source`                                                          |
+| Rule                                                                               | When                                                                                        | `source`                                                          |
 | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | `assesskit/xml/not-well-formed`, `assesskit/xml/version`, `assesskit/xml/encoding` | `parseXml` rejects the document (the issues of its `ReadError`).                            | as in [xml](xml.md#errors)                                        |
 | `assesskit/xml/security`                                                           | `parseXml` throws a `SecurityError`: a DOCTYPE, or a limit exceeded.                        | The best practices guide for a DOCTYPE, `SECURITY.md` for a limit |

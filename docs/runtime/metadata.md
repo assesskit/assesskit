@@ -180,7 +180,7 @@ term is a `ReadError`, or a `DataError` in the writer. The elements come in the 
 
 ## Errors
 
-| Code                                                         | Class       | Meaning                                                                                           |
+| Rule                                                         | Class       | Meaning                                                                                           |
 | ------------------------------------------------------------ | ----------- | ------------------------------------------------------------------------------------------------- |
 | `assesskit/metadata/invalid-text`                            | `ReadError` | A boolean, term or string that its element does not allow.                                        |
 | `assesskit/metadata/unexpected-element`                      | `ReadError` | An element that the schema does not allow at that place: not declared, repeated, or out of order. |

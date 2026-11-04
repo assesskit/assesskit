@@ -134,7 +134,7 @@ gap takes one choice.
 
 `validateBindings(item)` returns an `Issue` for each violation:
 
-| Code                                          | Reported when                                                                           |
+| Rule                                          | Reported when                                                                           |
 | --------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `assesskit/interactions/response-undeclared`  | an interaction names a response variable that the item does not declare                 |
 | `assesskit/interactions/binding`              | the variable has a cardinality or base type that the interaction does not accept        |

@@ -9,7 +9,7 @@ import {
   type DeliveryEvent,
   type DeliveryState,
   type HostAction,
-  type RefusalCode,
+  type RefusalReason,
   stamp,
   writeCandidateAction,
 } from "@assesskit/runtime/delivery";
@@ -34,7 +34,7 @@ import {
   isOfficialResult,
   LTI_STORAGE_FRAME,
   LTI_TOOL_FRAME,
-  REFUSAL_CODES,
+  REFUSAL_REASONS,
   resolveViewDocuments,
 } from "../src/protocol/index.js";
 import {
@@ -219,7 +219,7 @@ describe("checkViewEnvelope: documents and refusal", () => {
       stimuli: ["stimuli/s1.xml"],
       lexicons: ["items/q1/words.pls"],
     };
-    const refusal = { code: "time-over", message: "The time is over." };
+    const refusal = { reason: "time-over", message: "The time is over." };
     expect(() => checkViewEnvelope(json(JSON.stringify({ ...base, documents, refusal })))).not.toThrow();
   });
 
@@ -251,24 +251,24 @@ describe("checkViewEnvelope: documents and refusal", () => {
     const check = (refusal: string): void =>
       checkViewEnvelope(json(`{"seq":2,"view":{},"assets":{},"refusal":${refusal}}`));
     expect(() => check("5")).toThrow("A view envelope is invalid at refusal: expected an object, found 5.");
-    expect(() => check('{"code":"nope","message":"m"}')).toThrow(
-      'A view envelope is invalid at refusal.code: expected "attempts-exhausted", "awaiting-cat", "clock-regression", "comment-not-allowed", "ended", "invalid-response", "item-closed", "linear-backward", "min-time-not-reached", "not-current", "review-not-allowed", "score-type-mismatch", "setting-not-adjustable", "skipping-not-allowed", "solution-not-allowed", "support-not-available", "suspended", "time-over", "unknown-item", "unknown-request", "value-out-of-range" or "wrong-submission-mode", found "nope".',
+    expect(() => check('{"reason":"nope","message":"m"}')).toThrow(
+      'A view envelope is invalid at refusal.reason: expected "attempts-exhausted", "awaiting-cat", "clock-regression", "comment-not-allowed", "ended", "invalid-response", "item-closed", "linear-backward", "min-time-not-reached", "not-current", "review-not-allowed", "score-type-mismatch", "setting-not-adjustable", "skipping-not-allowed", "solution-not-allowed", "support-not-available", "suspended", "time-over", "unknown-item", "unknown-request", "value-out-of-range" or "wrong-submission-mode", found "nope".',
     );
-    expect(() => check('{"code":"ended","message":1}')).toThrow(
+    expect(() => check('{"reason":"ended","message":1}')).toThrow(
       "A view envelope is invalid at refusal.message: expected a string, found 1.",
     );
-    expect(() => check('{"code":"ended"}')).toThrow(
+    expect(() => check('{"reason":"ended"}')).toThrow(
       'A view envelope is invalid at refusal: missing the property "message".',
     );
-    expect(() => check('{"code":"ended","message":"m","at":1}')).toThrow(
+    expect(() => check('{"reason":"ended","message":"m","at":1}')).toThrow(
       'A view envelope is invalid at refusal: unexpected property "at".',
     );
   });
 });
 
-describe("REFUSAL_CODES", () => {
-  it("lists every refusal code of the runtime", () => {
-    const every: Readonly<Record<RefusalCode, true>> = {
+describe("REFUSAL_REASONS", () => {
+  it("lists every refusal reason of the runtime", () => {
+    const every: Readonly<Record<RefusalReason, true>> = {
       "attempts-exhausted": true,
       "awaiting-cat": true,
       "clock-regression": true,
@@ -292,14 +292,14 @@ describe("REFUSAL_CODES", () => {
       "value-out-of-range": true,
       "wrong-submission-mode": true,
     };
-    expect([...REFUSAL_CODES].sort()).toEqual(Object.keys(every).sort());
-    for (const code of REFUSAL_CODES) expect(() => checkRefusal({ code, message: "m" })).not.toThrow();
+    expect([...REFUSAL_REASONS].sort()).toEqual(Object.keys(every).sort());
+    for (const reason of REFUSAL_REASONS) expect(() => checkRefusal({ reason, message: "m" })).not.toThrow();
   });
 
-  it("are the codes that the table of refusal codes in the delivery guide of the runtime lists", () => {
+  it("are the reasons that the table of refusal reasons in the delivery guide of the runtime lists", () => {
     const guide = readFileSync(resolve(import.meta.dirname, "../../../docs/runtime/delivery.md"), "utf8");
-    const listed = [...guide.matchAll(/^\| `([a-z-]+)` +\| [^|]+ \|$/gm)].map(([, code = ""]) => code);
-    for (const code of REFUSAL_CODES) expect(listed, code).toContain(code);
+    const listed = [...guide.matchAll(/^\| `([a-z-]+)` +\| [^|]+ \|$/gm)].map(([, reason = ""]) => reason);
+    for (const reason of REFUSAL_REASONS) expect(listed, reason).toContain(reason);
   });
 });
 
@@ -398,7 +398,7 @@ describe("the answer loop of CAT requests", () => {
   });
 
   it("reads the pending work again after a refusal unknown-request, which another call caused", async () => {
-    const refusal = { events: [], refusal: { code: "unknown-request", message: "none" } } as const;
+    const refusal = { events: [], refusal: { reason: "unknown-request", message: "none" } } as const;
     const { made, log } = answerer(["r1", "r2"], (id) => (id === "r1" ? refusal : { events: [] }));
     expect(await createCatLoops().join("k", made)).toBeUndefined();
     expect(log).toEqual(["ask r1", "answer r1", "ask r2", "answer r2"]);
@@ -414,7 +414,7 @@ describe("the answer loop of CAT requests", () => {
   });
 
   it("stops at an answer that the engine refuses for another reason than an unknown request", async () => {
-    const refusal = { events: [], refusal: { code: "ended", message: "The test has ended." } } as const;
+    const refusal = { events: [], refusal: { reason: "ended", message: "The test has ended." } } as const;
     const { made } = answerer(["r1"], () => refusal);
     const failed = await createCatLoops().join("k", made);
     expect(failed?.failure).toEqual({ request: "r1", message: "The answer was refused: The test has ended." });
@@ -582,7 +582,7 @@ describe("stepAfterIdle", () => {
     expect(engine.results(taken.step.state)).toEqual(engine.results(explicit(begin, choose("A"), now)));
     // The limit of the first item is ten minutes: without maxIdleMs the gap has used it, and with it none has passed.
     const without = stepAfterIdle(runtime, { state: begin, action: choose("A"), now, maxIdleMs: undefined });
-    expect(without?.step.ok === false ? without.step.refusal.code : "accepted").toBe("time-over");
+    expect(without?.step.ok === false ? without.step.refusal.reason : "accepted").toBe("time-over");
     expect(engine.view(taken.step.state, now).timers.map(({ remaining }) => remaining)).toEqual([600_000]);
   });
 
@@ -615,14 +615,14 @@ describe("stepAfterIdle", () => {
     const ended = engine.apply(begin, stamp(begin, { type: "end-test" }, Start + 1000));
     if (!ended.ok) throw new Error("The test must end.");
     const refused = stepAfterIdle(runtime, { state: ended.state, action: choose("A"), now, maxIdleMs: 3600 * 1000 });
-    expect(refused?.step.ok === false ? refused.step.refusal.code : "accepted").toBe("ended");
+    expect(refused?.step.ok === false ? refused.step.refusal.reason : "accepted").toBe("ended");
   });
 
   it("gives the refusal of the action and leaves the state as it was", () => {
     const now = Start + 3 * Day;
     const action: CandidateAction = { type: "submit", item: { ref: "q2", instance: 1 } };
     const taken = stepAfterIdle(runtime, { state: begin, action, now, maxIdleMs: 3600 * 1000 });
-    expect(taken?.step.ok === false ? taken.step.refusal.code : "accepted").toBe("not-current");
+    expect(taken?.step.ok === false ? taken.step.refusal.reason : "accepted").toBe("not-current");
     expect(taken?.at).toBe(now);
   });
 
@@ -1169,7 +1169,7 @@ describe("properties", () => {
       stimuli: ["stimuli/s1.xml"],
       lexicons: [],
     };
-    const refusal = { code: "time-over", message: "The time is over." };
+    const refusal = { reason: "time-over", message: "The time is over." };
     fuzzJson((value) => checkViewEnvelope(value), [envelope, { ...envelope, documents, refusal }]);
     fuzzJson((value) => checkRefusal(value), [refusal]);
     fuzzJson((value) => checkSubmission(value), [SUBMISSION]);

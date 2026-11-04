@@ -128,7 +128,7 @@ const answered = apply(started.state, {
 const moved = apply(answered.state, { type: "move", to: "next", at: 2_000 });
 console.log(moved.events.map(({ type }) => type).join(" "));
 const refused = engine.apply(moved.state, { type: "move", to: "previous", at: 2_500 });
-console.log(refused.ok ? "accepted" : refused.refusal.code);
+console.log(refused.ok ? "accepted" : refused.refusal.reason);
 
 const second = apply(moved.state, {
   type: "set-responses",
@@ -263,7 +263,7 @@ contradict themselves or are silent, and what the runtime does.
 - [Spec gaps](https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md): where the specifications contradict themselves or are silent, and what the runtime does.
 - [ASI](https://github.com/assesskit/assesskit/blob/main/docs/runtime/asi.md): the model of assessment documents and their content, the reader and the writer, the conventions for external scores, and the element table.
 - [Processing](https://github.com/assesskit/assesskit/blob/main/docs/runtime/processing.md): the variables, template, response and outcome processing, the expressions, the standard templates and the decisions where the specifications are silent.
-- [Validate](https://github.com/assesskit/assesskit/blob/main/docs/runtime/validate.md): the rule sets of BIND section 5, the static types of processing, test structure, covers, scoring rubrics, packages, results and profiles, with every issue code and the decisions.
+- [Validate](https://github.com/assesskit/assesskit/blob/main/docs/runtime/validate.md): the rule sets of BIND section 5, the static types of processing, test structure, covers, scoring rubrics, packages, results and profiles, with every rule of the issues and the decisions.
 - [Delivery](https://github.com/assesskit/assesskit/blob/main/docs/runtime/delivery.md): the engine: its modes, static gate, actions and refusals, navigation and submission, outcome processing, time limits and deadlines, suspension, supports, variants, events and states; the candidate view and the JSON forms of views and actions; the pending work of scoring requests, adaptive sections with a CAT engine and the results report; the plan of a test session; and item sessions.
 - [Values](https://github.com/assesskit/assesskit/blob/main/docs/runtime/values.md): the model, lexical forms, the JSON forms and the regular expressions.
 - [XML](https://github.com/assesskit/assesskit/blob/main/docs/runtime/xml.md): the tree, the encodings, the limits, the writer, XInclude and the readers of models.

@@ -93,7 +93,7 @@ limit, `0` for a rule that allows none.
 The subpath `errors` exports the errors and the types `Issue` and `IssueLocation` without any other module. The player imports
 `AssesskitError` and `DataError` from it.
 
-Validation does not throw. It returns `Issue`s: a severity, a code (`assesskit/<module>/<name>`, or the identifier of a rule
+Validation does not throw. It returns `Issue`s: a severity, the `rule` it breaks (`assesskit/<module>/<name>`, or the identifier of a rule
 set in BIND section 5), a message and, when known, a location with the file path, line, column and element path.
 
 ## Determinism

@@ -12,7 +12,7 @@ const FEDERATED_CONTENT_URN = "urn:fdc:";
  * Checks that a portable custom interaction names modules the configuration defines, and how it names its type.
  *
  * @remarks
- * | Code                                  | Severity | Reported when                                                                                     |
+ * | Rule                                  | Severity | Reported when                                                                                     |
  * | ------------------------------------- | -------- | ------------------------------------------------------------------------------------------------- |
  * | `assesskit/pci/no-module`             | error    | the interaction has neither a `module` attribute nor a `qti-interaction-modules`                  |
  * | `assesskit/pci/module-not-configured` | error    | the `module` or a `qti-interaction-module` has no location in the configurations or its own paths |
@@ -40,7 +40,7 @@ export function validatePortableInteraction(
   if (interaction.module === undefined && interaction.interactionModules === undefined) {
     issues.push({
       severity: "error",
-      code: "assesskit/pci/no-module",
+      rule: "assesskit/pci/no-module",
       message: `The interaction with the response identifier ${describe(interaction.responseIdentifier)} has neither a module attribute nor a qti-interaction-modules element, so no module can be loaded for it.`,
       location: { element: ELEMENT },
     });
@@ -53,7 +53,7 @@ export function validatePortableInteraction(
     if (located.has(id)) continue;
     issues.push({
       severity: "error",
-      code: "assesskit/pci/module-not-configured",
+      rule: "assesskit/pci/module-not-configured",
       message: `The interaction names the module ${describe(id)}, which no module resolution configuration and no qti-interaction-module gives a location. It must name an AMD module that the configuration defines.`,
       location: { element: ELEMENT },
     });
@@ -61,7 +61,7 @@ export function validatePortableInteraction(
   if (!interaction.customInteractionTypeIdentifier.toLowerCase().startsWith(FEDERATED_CONTENT_URN)) {
     issues.push({
       severity: "warning",
-      code: "assesskit/pci/type-identifier",
+      rule: "assesskit/pci/type-identifier",
       message: `The custom-interaction-type-identifier ${describe(interaction.customInteractionTypeIdentifier)} is not a Federated Content URN such as urn:fdc:example.com:2024:pci:graph, which prevents collisions between the names of different implementers.`,
       location: { element: ELEMENT },
     });

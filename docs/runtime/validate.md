@@ -14,7 +14,7 @@ flowchart LR
   pkg["QtiPackage"] -- "validatePackage" --> checks
   results["AssessmentResult"] -- "validateResults" --> checks
   profile["PersonalNeedsProfile"] -- "validatePnp" --> checks
-  checks["Checks<br/>rule sets, declarations, static types,<br/>structure, files, covers, scoring rubrics"] --> issues["Issue[]<br/>severity, code, message, location"]
+  checks["Checks<br/>rule sets, declarations, static types,<br/>structure, files, covers, scoring rubrics"] --> issues["Issue[]<br/>severity, rule, message, location"]
 ```
 
 | Export                                          | Purpose                                                                                               |
@@ -60,7 +60,7 @@ const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/x
 </qti-assessment-item>`);
 
 const issues = validateAsi(document, { path: "capital.xml" });
-issues.map(({ severity, code }) => `${severity} ${code}`);
+issues.map(({ severity, rule }) => `${severity} ${rule}`);
 // => ["warning assesskit/validate/standard-outcome", "error assesskit/validate/undeclared-variable", "error assesskit/validate/assignment-type"]
 issues[1]?.message; // => 'The item declares no response variable "ANSWER", which an expression reads. Declare it with the declaration of its kind.'
 issues[2]?.message; // => 'The variable "SCORE" is a single integer and cannot be set to a single float.'
@@ -69,13 +69,13 @@ issues[2]?.location?.element; // => "qti-assessment-item/qti-response-processing
 
 ## Issues
 
-An `Issue` has a `severity`, a `code`, a `message` that says what is wrong and what is expected, and a `location` with
+An `Issue` has a `severity`, the `rule` it breaks, a `message` that says what is wrong and what is expected, and a `location` with
 the `path` of the file and the `element` path.
 
 - An `error` is content that breaks a rule or fails when it runs. A `warning` is content that runs but deviates from a
   recommendation or cannot do what it appears to.
-- The `code` of the rule sets of the XML binding is the identifier of the rule set, such as `RULE_SET_INTERACTION_02B`. The
-  other codes are `assesskit/validate/<name>`, and `assesskit/covers/<name>` for the covers and `assesskit/scoring-rubric/<name>` for the scoring rubrics of external scores.
+- The `rule` of the rule sets of the XML binding is the identifier of the rule set, such as `RULE_SET_INTERACTION_02B`. The
+  other rules are `assesskit/validate/<name>`, and `assesskit/covers/<name>` for the covers and `assesskit/scoring-rubric/<name>` for the scoring rubrics of external scores.
 - `validateTest` and `validatePackage` check many documents. Each issue names its own file in `location.path`: a test
   is reported at the path `base`, its sections, items and stimuli at the paths the resolvers give, and the files and
   resources of a package at `imsmanifest.xml`.
@@ -101,7 +101,7 @@ Each rule set is checked against the typed model, so `qti-label` (a QTI element)
 elements, as the schema says. A rule set with the suffix `A` forbids an interaction inside another, `B` checks the
 attributes of the interaction and the base type of its response.
 
-| Code                                     | Reported when                                                                                                                                                                                       |
+| Rule                                     | Reported when                                                                                                                                                                                       |
 | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `assesskit/validate/figure-multiplicity` | A `figure` has more than one `figcaption`.                                                                                                                                                          |
 | `RULE_SET_ARIA_ROLES_1`                  | A `source` has a `role`, or an `h1` has a `role` other than `heading`, `tab` or `presentation`.                                                                                                     |
@@ -117,7 +117,7 @@ attributes of the interaction and the base type of its response.
 
 ## Declarations and references
 
-| Code                                             | Reported when                                                                                                                                                     | Source                                  |
+| Rule                                             | Reported when                                                                                                                                                     | Source                                  |
 | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
 | `assesskit/validate/duplicate-identifier`        | A variable, test part, section or item reference identifier is declared twice; two variable mappings of an item reference share a target.                         | Information Model                       |
 | `assesskit/validate/reserved-identifier`         | A declaration of a built-in variable: `numAttempts`, `duration`, `completionStatus`, `QTI_CONTEXT`.                                                               | Information Model                       |
@@ -144,7 +144,7 @@ A bottom-up inference gives every expression a cardinality and base type from `O
 declarations. A type that is not known statically (a custom operator, a record field, a variable without a base type)
 is unknown, and an unknown type passes every check, so a finding is a defect and never a guess.
 
-| Code                                            | Reported when                                                                                                                                             | Source                       |
+| Rule                                            | Reported when                                                                                                                                             | Source                       |
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
 | `assesskit/validate/operand-count`              | An operator has more or fewer operands than its signature allows.                                                                                         | Information Model, operators |
 | `assesskit/validate/operand-type`               | An operand has a base type or cardinality the operator does not take, or operands that must share a base type do not.                                     | Information Model, operators |
@@ -172,7 +172,7 @@ is unknown, and an unknown type passes every check, so a finding is a defect and
 
 ## Test structure and covers
 
-| Code                                       | Reported when                                                                                                                                                                                                   | Source                                    |
+| Rule                                       | Reported when                                                                                                                                                                                                   | Source                                    |
 | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
 | `assesskit/validate/identifier-mismatch`   | A section reference whose identifier differs from its section's (error); an item reference whose identifier differs from its item's (warning).                                                                  | Information Model                         |
 | `assesskit/validate/selection`             | A selection without replacement of more children than the section has, or fewer than it requires.                                                                                                               | Information Model                         |
@@ -200,7 +200,7 @@ document alone.
 rule of the convention is an error, and each issue names the outcome and the path of the rule that is broken, such as
 `criteria[1].levels`.
 
-| Code                                          | Reported when                                                                                                                                                                                                                                                                                                                                                                                                                                             | Source             |
+| Rule                                          | Reported when                                                                                                                                                                                                                                                                                                                                                                                                                                             | Source             |
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
 | `assesskit/scoring-rubric/malformed`          | A block whose `view` lacks `scorer` or has `candidate`; without `data-outcome-identifier`; with an unknown `data-rubric-kind`; with no criteria; a criterion without an identifier or a levels list; a level without `data-score`; a `data-weight` or `data-score` that is not a finite number in range; a block that has the class token of the covers too. A block with the class token in a test part or a section is a warning: it is not recognized. | Runtime convention |
 | `assesskit/scoring-rubric/shape`              | The shape of the kind is broken: fewer than two levels, a holistic rubric with more than one criterion or a weight other than 1, a checklist criterion without two levels of which one scores 0, a single-point criterion without three levels of strictly ascending scores.                                                                                                                                                                              | Runtime convention |
@@ -215,7 +215,7 @@ a duplicate. A shape or duplicate rule is checked once every value of the block 
 
 ## Packages, results and profiles
 
-| Code                                                                         | Reported when                                                                                                                                     | Source                                 |
+| Rule                                                                         | Reported when                                                                                                                                     | Source                                 |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
 | `assesskit/validate/missing-file`                                            | A listed file, or a file that an adaptive section or a portable custom interaction names with a package-relative address, that the package lacks. | XML Binding, CAT, Best Practices Guide |
 | `assesskit/validate/unlisted-file`                                           | A file of the package, or one that a document names, that the manifest does not list.                                                             | XML Binding, CAT                       |

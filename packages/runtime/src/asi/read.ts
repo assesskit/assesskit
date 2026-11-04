@@ -158,7 +158,7 @@ function storeSlot(
   context: ReadContext,
 ): void {
   const { property, min, max } = slot.def;
-  const fail = (code: string, message: string) => asiError(context, element, `assesskit/asi/${code}`, message);
+  const fail = (rule: string, message: string) => asiError(context, element, `assesskit/asi/${rule}`, message);
   if (max === 1) {
     if (members.length > 1)
       throw fail("element", `The element ${element.name} may have one ${property}, found ${members.length}.`);

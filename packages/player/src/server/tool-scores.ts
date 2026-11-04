@@ -129,7 +129,7 @@ export function createToolScoreIntake(options: ToolScoreIntakeOptions): ToolScor
       applyOptions,
     );
     if (step.refusal === undefined) return true;
-    if (step.refusal.code === "unknown-request") return false;
+    if (step.refusal.reason === "unknown-request") return false;
     throw new DataError(
       `The session ${JSON.stringify(session)} refused the score of the tool for ${request}: ${step.refusal.message}`,
     );

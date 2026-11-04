@@ -136,7 +136,7 @@ QTI's own and are not properties.
 
 `validatePortableInteraction` returns `Issue`s:
 
-| Code                                  | Severity | Reported when                                                                                     |
+| Rule                                  | Severity | Reported when                                                                                     |
 | ------------------------------------- | -------- | ------------------------------------------------------------------------------------------------- |
 | `assesskit/pci/no-module`             | error    | the interaction has neither a `module` attribute nor `qti-interaction-modules`                    |
 | `assesskit/pci/module-not-configured` | error    | the `module` or a `qti-interaction-module` has no location in the configurations or its own paths |

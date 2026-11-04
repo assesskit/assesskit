@@ -87,9 +87,9 @@ An optional field the document leaves out is absent from the model, never `undef
 
 `readUsageData` throws `ReadError` with one issue; `writeUsageData` throws `DataError` for a model that is not usage data. Input
 that is not text, bytes or an element is a `DataError`, and text or bytes that break a limit of `parseXml` are a `SecurityError`.
-The codes are those of [results](results.md#errors) with the module `usage`:
+The rules are those of [results](results.md#errors) with the module `usage`:
 
-| Code                                                                                                             | Meaning                                                                                       |
+| Rule                                                                                                             | Meaning                                                                                       |
 | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `assesskit/usage/not-usage-data`                                                                                 | The root is not `usageData` of the UD namespace.                                              |
 | `assesskit/usage/missing-attribute`, `assesskit/usage/invalid-attribute`, `assesskit/usage/unexpected-attribute` | A required attribute is missing, an attribute is not valid, or the schema does not define it. |

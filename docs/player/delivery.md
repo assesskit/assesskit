@@ -257,7 +257,7 @@ A lesson has many items, so none of them takes the focus from the page.
 
 The engine refuses a well-formed action that the rules do not allow, and leaves the state unchanged. The player
 says why, in the language of the interface, in a polite live region with `role="status"` that never takes the focus
-(WCAG 4.1.3). The catalog has a message for each `RefusalCode`, and a test fails when the runtime adds a code that has none.
+(WCAG 4.1.3). The catalog has a message for each `RefusalReason`, and a test fails when the runtime adds a code that has none.
 
 | Case                                             | Message (English)                                                        |
 | ------------------------------------------------ | ------------------------------------------------------------------------ |
@@ -338,7 +338,7 @@ Each file of `src/player/delivery/`, `src/player/lti-frame/` holds one concept.
 | `delivery/notices.ts`       | The notices and the attempts of a view                                        |
 | `delivery/options.ts`       | The options of `mountDelivery`, checked                                       |
 | `delivery/pci.ts`           | The host of the portable custom interactions of a view                        |
-| `delivery/refusals.ts`      | The message of each refusal code                                              |
+| `delivery/refusals.ts`      | The message of each refusal reason                                            |
 | `delivery/sender.ts`        | The actions that the parts send to the session, and what the engine refused   |
 | `delivery/settings.ts`      | The options with their defaults applied                                       |
 | `delivery/shell.ts`         | The elements of the player, in the order they stand on the page               |

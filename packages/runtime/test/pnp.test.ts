@@ -440,7 +440,7 @@ describe("supports", () => {
     }
     for (const text of ["ext:", `${longest}a`, "pink-black", "yellow blue"]) {
       const document = `<text-appearance><color-theme>${text}</color-theme></text-appearance>`;
-      expect(issueOf(() => profileOf(document)).code, text).toBe("assesskit/pnp/invalid-text");
+      expect(issueOf(() => profileOf(document)).rule, text).toBe("assesskit/pnp/invalid-text");
     }
     expect(["black-cream", "ext:school-green", longest].map(isColorTheme)).toEqual([true, true, true]);
     const others: unknown[] = JSON.parse('[null, 5, " default", "ext: ", {}, "default "]');
@@ -450,7 +450,7 @@ describe("supports", () => {
   it("text-appearance: refuses the empty parameters of the guide, which the schema gives a type", () => {
     for (const name of ["font-size", "font-color", "background-color", "line-spacing", "word-spacing"]) {
       const document = `<text-appearance><${name}/></text-appearance>`;
-      expect(issueOf(() => profileOf(document)).code, name).toBe("assesskit/pnp/invalid-text");
+      expect(issueOf(() => profileOf(document)).rule, name).toBe("assesskit/pnp/invalid-text");
     }
   });
 
@@ -686,7 +686,7 @@ describe("namespaces", () => {
     expect(
       issueOf(() => readPnp('<access-for-all-pnp xmlns="http://www.imsglobal.org/xsd/imsafa3p0pnp_v1p0"/>')),
     ).toMatchObject({
-      code: "assesskit/pnp/not-pnp",
+      rule: "assesskit/pnp/not-pnp",
     });
     expect(() => readPnp("<access-for-all-pnp/>")).toThrow("found access-for-all-pnp in no namespace.");
   });
@@ -724,7 +724,7 @@ describe("bulk files", () => {
     const records = (inner: string): string =>
       `<access-for-all-pnp-records xmlns="${PNP_NAMESPACE}">${inner}</access-for-all-pnp-records>`;
     expect(issueOf(() => readPnp(records("")))).toMatchObject({
-      code: "assesskit/pnp/missing-element",
+      rule: "assesskit/pnp/missing-element",
       message: "The element access-for-all-pnp-records needs an access-for-all-pnp-record.",
     });
     expect(() =>
@@ -753,7 +753,7 @@ describe("errors", () => {
   it("refuses a root that is neither of the two, naming the namespace", () => {
     expect(issueOf(() => readPnp(`<profile xmlns="${PNP_NAMESPACE}"/>`))).toEqual({
       severity: "error",
-      code: "assesskit/pnp/not-pnp",
+      rule: "assesskit/pnp/not-pnp",
       message: `The root element must be access-for-all-pnp or access-for-all-pnp-records in the namespace ${PNP_NAMESPACE}, found profile.`,
       location: { line: 1, column: 1, element: "profile" },
     });
@@ -770,7 +770,7 @@ describe("errors", () => {
 
   it("refuses a support or a set that occurs twice, and a parameter that occurs twice", () => {
     expect(issueOf(() => profileOf("<spoken/><spoken/>"))).toMatchObject({
-      code: "assesskit/pnp/repeated-element",
+      rule: "assesskit/pnp/repeated-element",
       message: "The support spoken occurs more than once; the schema allows it once.",
     });
     expect(() => profileOf("<prohibit-set/><prohibit-set/>")).toThrow("The set prohibit-set occurs more than once");
@@ -853,7 +853,7 @@ describe("errors", () => {
 
   it("refuses in a set what a set cannot list: hazard-avoidance, environment, a parameter, an unknown name, a repeat and a custom support", () => {
     expect(issueOf(() => profileOf("<prohibit-set><hazard-avoidance/></prohibit-set>"))).toMatchObject({
-      code: "assesskit/pnp/unexpected-element",
+      rule: "assesskit/pnp/unexpected-element",
       message:
         "The element hazard-avoidance cannot be listed in the set prohibit-set: a set lists predefined supports other than hazard-avoidance and environment.",
     });

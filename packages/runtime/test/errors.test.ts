@@ -3,7 +3,7 @@ import { AssesskitError, DataError, type Issue, ProcessingError, ReadError, Secu
 
 const issue: Issue = {
   severity: "error",
-  code: "assesskit/xml/not-well-formed",
+  rule: "assesskit/xml/not-well-formed",
   message: "The document is not well-formed: the element qti-item-body is not closed.",
   location: { path: "items/choice.xml", line: 12, column: 3, element: "qti-assessment-item/qti-item-body" },
 };

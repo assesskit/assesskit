@@ -92,7 +92,7 @@ sequenceDiagram
 | `resolveStandaloneSessionControl(options?)`                           | The item session control of an item delivered alone, from the option `control`.                      |
 | `ItemSession`, `ItemSessionStatus`                                    | The state of an item session: plain data with its variables, drafts and attempts.                    |
 | `ItemSessionContext`, `ItemAction`, `ItemStep`                        | What a step reads besides the session, the actions of the candidate, and the result of a step.       |
-| `Refusal`, `RefusalCode`, `DeliveryEvent`, …                          | Why a step is refused, and what an accepted step reports.                                            |
+| `Refusal`, `RefusalReason`, `DeliveryEvent`, …                        | Why a step is refused, and what an accepted step reports.                                            |
 
 ## Engine
 
@@ -166,7 +166,7 @@ const answered = engine.apply(started.state, stamp(started.state, answer, 5_000)
 const moved = engine.apply(answered.state, { type: "move", to: "next", at: 9_000 });
 moved.state.outcomes.get("TOTAL"); // => { cardinality: "single", baseType: "float", value: 1 }
 moved.state.current; // => { ref: "q2", instance: 1 }
-engine.apply(moved.state, { type: "move", to: "previous", at: 10_000 }).refusal.code; // => "linear-backward"
+engine.apply(moved.state, { type: "move", to: "previous", at: 10_000 }).refusal.reason; // => "linear-backward"
 const restored = deserializeState(serializeState(moved.state));
 engine.apply(restored, { type: "time", at: 601_000 }).state.status; // => "ended"
 ```
@@ -193,7 +193,7 @@ it is given, and a refusal gives no state. `apply` never throws on a state of it
 
 `createEngine` runs the static gate first: `validateTest`, or `validateAsi` for an item, with the custom operators
 and the template resolver given, so that a custom operator that none serves is an error. Any issue of severity `error` is a
-`DataError` whose message lists the issues with their codes and paths; warnings pass. It then resolves the section
+`DataError` whose message lists the issues with their rules and paths; warnings pass. It then resolves the section
 references and every item reference with its variants, once. An item reference that names a link to a tool is an item
 without response variables and with the outcomes `SCORE` and `MAXSCORE`, single floats scored by the tool
 (`external-scored="externalMachine"`).
@@ -254,10 +254,10 @@ Every action carries `at`. Before the action, the maximum times that passed by `
 `stamp(state, action, now)` sets `at` to max(`now`, `state.at`), so a server whose clock steps back never has an action
 refused; an action stamped earlier than the latest step is refused `clock-regression`.
 
-A refusal is its stable `code` and a `message`. The codes are these; the rules of the item session, which `apply` also
+A refusal is its stable `reason`, of the exported union `RefusalReason`, and a `message`. The reasons are these; the rules of the item session, which `apply` also
 applies, are listed under Item sessions.
 
-| Refusal code             | When                                                                                                                                                                                                                                                                                                                       |
+| Refusal reason           | When                                                                                                                                                                                                                                                                                                                       |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `attempts-exhausted`     | `next-attempt`, or the first action after an attempt, on an item whose session allows no further attempt.                                                                                                                                                                                                                  |
 | `awaiting-cat`           | The next item depends on a CAT engine that has not answered, or a first stage is awaited.                                                                                                                                                                                                                                  |
@@ -1050,7 +1050,7 @@ const right = applyItemAction(
 right.session.status; // => "closed"
 right.session.variables.outcomes.get("SCORE"); // => { cardinality: "single", baseType: "float", value: 1 }
 deriveSessionStatus(right.session, item); // => "final"
-applyItemAction(right.session, answer("bandung", 10_000), context).refusal.code; // => "item-closed"
+applyItemAction(right.session, answer("bandung", 10_000), context).refusal.reason; // => "item-closed"
 ```
 
 `startItemSession(key, at, context, options?)` takes these options:

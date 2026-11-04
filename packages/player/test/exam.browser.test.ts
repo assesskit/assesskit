@@ -89,7 +89,7 @@ describe("exam mode over HTTP", () => {
     const during = (await alice.read(
       await alice.post("handle", { seq: 1, action: { type: "move", to: "next" } }),
     )) as ViewEnvelope;
-    expect(during.refusal?.code).toBe("suspended");
+    expect(during.refusal?.reason).toBe("suspended");
     const reloaded = (await alice.read(await alice.post("view"))) as ViewEnvelope;
     expect((reloaded.view as { status: string }).status).toBe("suspended");
     expect((await alice.post("proctor", { type: "resume" })).ok).toBe(true);
@@ -132,7 +132,7 @@ describe("exam mode over HTTP", () => {
       ],
     };
     const reply = (await alice.read(await alice.post("handle", { seq: 1, action: answer }, late))) as ViewEnvelope;
-    expect(reply.refusal?.code).toBe("time-over");
+    expect(reply.refusal?.reason).toBe("time-over");
   });
 
   it("runs no script of a package page that a browser opens as a document of the asset origin", async () => {

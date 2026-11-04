@@ -124,7 +124,7 @@ export function itemEngine(item: AssessmentItem): Engine {
 
 /** Returns the step, which must have been accepted. */
 export function accepted(step: Step): Extract<Step, { readonly ok: true }> {
-  return step.ok ? step : fail(`The action was refused: ${step.refusal.code}: ${step.refusal.message}`);
+  return step.ok ? step : fail(`The action was refused: ${step.refusal.reason}: ${step.refusal.message}`);
 }
 
 /** Starts a session with the seed 1 at the time 0. */

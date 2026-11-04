@@ -112,8 +112,8 @@ class Expander {
   /** Returns the href of an include after checking its attributes and children. */
   private checkInclude(include: XmlElement, context: Context): string {
     const location = locateElement(include, context.base);
-    const fail = (message: string, code = "assesskit/xml/xinclude-attribute"): ReadError =>
-      createReadError(code, message, { location });
+    const fail = (message: string, rule = "assesskit/xml/xinclude-attribute"): ReadError =>
+      createReadError(rule, message, { location });
     if (findAttribute(include, "xpointer") !== undefined) {
       throw fail("An xi:include must not have an xpointer attribute.");
     }

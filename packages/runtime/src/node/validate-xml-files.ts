@@ -25,11 +25,11 @@ const ENCODER = new TextEncoder();
 const LIBXML2_WARNING = 1;
 
 /** Turns what libxml2 reports for a document into issues of a schema. */
-function issuesOf(error: unknown, code: string, path: string): Issue[] {
+function issuesOf(error: unknown, rule: string, path: string): Issue[] {
   if (!(error instanceof XmlLibError)) throw error;
   return error.details.map((detail) => ({
     severity: detail.level === LIBXML2_WARNING ? "warning" : "error",
-    code,
+    rule,
     message: detail.message.trim(),
     location: {
       path,
@@ -71,7 +71,7 @@ function validateOne(schemas: SchemaSet, file: XmlFile): Issue[] {
     return [
       {
         severity: "error",
-        code: "assesskit/xml/security",
+        rule: "assesskit/xml/security",
         message: error.message,
         location: { path: file.path },
       },
@@ -84,7 +84,7 @@ function validateOne(schemas: SchemaSet, file: XmlFile): Issue[] {
     return [
       {
         severity: "error",
-        code: "assesskit/node/no-schema",
+        rule: "assesskit/node/no-schema",
         message,
         location: { path: file.path },
       },

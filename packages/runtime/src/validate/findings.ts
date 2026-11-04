@@ -37,7 +37,7 @@ export class FindingsLimit {
     return [
       {
         severity: "error",
-        code: "assesskit/validate/findings-stopped",
+        rule: "assesskit/validate/findings-stopped",
         message: `The validation stopped after ${this.maxFindings} issues, so the content may hold more, errors among them. Raise the option maxFindings to list them.`,
       },
     ];
@@ -66,7 +66,7 @@ export class Findings {
     return [...this.issues, ...this.limit.end()];
   }
 
-  private report(severity: Issue["severity"], code: string, message: string, element: string | undefined): void {
+  private report(severity: Issue["severity"], rule: string, message: string, element: string | undefined): void {
     if (!this.limit.take()) return;
     const location = {
       ...(this.path === undefined ? {} : { path: this.path }),
@@ -74,7 +74,7 @@ export class Findings {
     };
     this.issues.push({
       severity,
-      code,
+      rule,
       message,
       ...(Object.keys(location).length === 0 ? {} : { location }),
     });
@@ -83,23 +83,23 @@ export class Findings {
   /**
    * Reports content that breaks a rule.
    *
-   * @param code - The issue code.
+   * @param rule - The rule that the document breaks.
    * @param message - A full sentence that says what is wrong and what is expected.
    * @param element - The element path.
    */
-  error(code: string, message: string, element?: string): void {
-    this.report("error", code, message, element);
+  error(rule: string, message: string, element?: string): void {
+    this.report("error", rule, message, element);
   }
 
   /**
    * Reports content that runs but deviates from a recommendation.
    *
-   * @param code - The issue code.
+   * @param rule - The rule that the document breaks.
    * @param message - A full sentence that says what deviates and what is recommended.
    * @param element - The element path.
    */
-  warning(code: string, message: string, element?: string): void {
-    this.report("warning", code, message, element);
+  warning(rule: string, message: string, element?: string): void {
+    this.report("warning", rule, message, element);
   }
 
   /**

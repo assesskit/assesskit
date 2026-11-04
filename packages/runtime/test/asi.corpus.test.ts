@@ -32,7 +32,7 @@ for (const path of paths) {
   try {
     documents.set(path, readAsi(bytesOf(path), { path }));
   } catch (error) {
-    if (error instanceof ReadError) skipped.set(path, error.issues[0]?.code ?? "");
+    if (error instanceof ReadError) skipped.set(path, error.issues[0]?.rule ?? "");
     else if (error instanceof SecurityError) skipped.set(path, "security");
     else throw error;
   }

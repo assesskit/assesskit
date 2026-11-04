@@ -49,7 +49,7 @@ export function validatePool(section: AssessmentSection, pool: ItemStage): reado
     if (pooled.has(identifier)) continue;
     issues.push({
       severity: "error",
-      code: "assesskit/cat/item-not-in-pool",
+      rule: "assesskit/cat/item-not-in-pool",
       message: `The adaptive section ${name} lists the item ${describe(identifier)}, which the item pool of the CAT engine does not contain, so the engine can never select it. The item references and the pool must agree.`,
       location: { element: `${SECTION_ELEMENT}/qti-assessment-item-ref` },
     });
@@ -58,7 +58,7 @@ export function validatePool(section: AssessmentSection, pool: ItemStage): reado
     if (listed.has(identifier)) continue;
     issues.push({
       severity: "error",
-      code: "assesskit/cat/item-not-in-section",
+      rule: "assesskit/cat/item-not-in-section",
       message: `The item pool of the CAT engine contains the item ${describe(identifier)}, which the adaptive section ${name} does not list, so the engine can select an item that cannot be presented. The item references and the pool must agree.`,
       location: { element: SECTION_ELEMENT },
     });

@@ -302,7 +302,7 @@ describe("catalogs and cards", () => {
       if (found === undefined) throw new Error("The test reads a catalog.");
       return validateCatalog(found);
     };
-    const check = (cards: string): string[] => checkIssues(cards).map(({ code }) => code);
+    const check = (cards: string): string[] => checkIssues(cards).map(({ rule }) => rule);
     const html = "<qti-html-content>x</qti-html-content>";
 
     it("reports nothing for a catalog that follows the rules", () => {
@@ -334,7 +334,7 @@ describe("catalogs and cards", () => {
       expect(checkIssues(doubled)).toEqual([
         {
           severity: "error",
-          code: "assesskit/content/duplicate-default-entry",
+          rule: "assesskit/content/duplicate-default-entry",
           message:
             'More than one qti-card-entry of the qti-card for the support "spoken" is the default, but one may be.',
           location: { element: "qti-catalog/qti-card/qti-card-entry" },

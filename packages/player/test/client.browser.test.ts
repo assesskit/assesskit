@@ -95,7 +95,7 @@ describe("createRemoteSession", () => {
     const { client } = await remote();
     const before = client.view;
     const refused = await client.dispatch({ type: "submit", item: { ref: "q2", instance: 1 } });
-    expect(refused.refusal?.code).toBe("not-current");
+    expect(refused.refusal?.reason).toBe("not-current");
     expect(refused.view.current?.key).toEqual(before.current?.key);
     client.close();
   });
@@ -418,7 +418,7 @@ describe("createLocalSession", () => {
     const { options, store } = localOptions();
     const client = await createLocalSession(options);
     const refused = await client.dispatch({ type: "submit", item: { ref: "q2", instance: 1 } });
-    expect(refused.refusal?.code).toBe("not-current");
+    expect(refused.refusal?.reason).toBe("not-current");
     expect(store.saved.get("practice-1")).toHaveLength(1);
     client.close();
   });
@@ -531,7 +531,7 @@ describe("refresh of a remote session", () => {
     client.subscribe((view) => void seen.push(view.status));
     await host.proctor(ALICE.session, { type: "suspend" });
     const refused = await client.dispatch(Next);
-    expect(refused.refusal?.code).toBe("suspended");
+    expect(refused.refusal?.reason).toBe("suspended");
     expect(client.view.status).toBe("suspended");
     expect(client.view.actions).toEqual([]);
     await host.proctor(ALICE.session, { type: "resume" });

@@ -83,7 +83,7 @@ export {
   planTest,
   type TestPlan,
 } from "./plan.js";
-export type { Refusal, RefusalCode } from "./refusal.js";
+export type { Refusal, RefusalReason } from "./refusal.js";
 export { type ReadTestInputsOptions, readTestInputs, type TestInputs } from "./result-scope.js";
 export { readItemVariables } from "./result-variables.js";
 export type { ScorerItem, ScorerView } from "./scorer-view.js";

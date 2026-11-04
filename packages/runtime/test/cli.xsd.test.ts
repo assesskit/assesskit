@@ -106,7 +106,7 @@ async function expectedForPackage(path: string): Promise<readonly Issue[]> {
   const issues: Issue[] = [];
   for (const file of pkg.paths.filter((each) => each.endsWith(".xml"))) {
     const found = await validateXmlFiles(schemas, [{ path: file, content: pkg.file(file) ?? new Uint8Array() }]);
-    issues.push(...found.filter(({ code }) => code !== "assesskit/node/no-schema"));
+    issues.push(...found.filter(({ rule }) => rule !== "assesskit/node/no-schema"));
   }
   return [...issues, ...validatePackage(pkg)];
 }
@@ -154,7 +154,7 @@ describe("assesskit validate: documents", () => {
     const { code, report: found } = await report(path);
     expect(code).toBe(1);
     expect(found).toMatchObject({ valid: false, summary: { errors: 3, warnings: 0 } });
-    expect(found.issues.map(({ code: each }) => each)).toEqual([
+    expect(found.issues.map(({ rule: each }) => each)).toEqual([
       "assesskit/validate/assignment-type",
       "assesskit/validate/operand-type",
       "assesskit/validate/operand-type",
@@ -166,7 +166,7 @@ describe("assesskit validate: documents", () => {
     const path = example("packaging/items/data-attributes.xml");
     const { code, report: found } = await report(path);
     expect(code).toBe(1);
-    expect(found.issues.map(({ code: each, location }) => [each, location?.line])).toEqual([
+    expect(found.issues.map(({ rule: each, location }) => [each, location?.line])).toEqual([
       ["assesskit/node/xsd-invalid", 15],
       ["assesskit/asi/missing-attribute", 15],
     ]);
@@ -188,28 +188,28 @@ describe("assesskit validate: documents", () => {
   it("applies the rules of Results Reporting to a report: an item result of a test has a sequenceIndex", async () => {
     const { code, report: found } = await report(example("results/conformance-use-case-1.xml"));
     expect(code).toBe(1);
-    expect(found.issues.map(({ code: each }) => each)).toEqual(Array(4).fill("assesskit/validate/sequence-index"));
+    expect(found.issues.map(({ rule: each }) => each)).toEqual(Array(4).fill("assesskit/validate/sequence-index"));
   });
 
   it("reports a document that is not well-formed once, with the position the reader found", async () => {
     const { code, report: found } = await report(example("results/full-example.xml"));
     expect(code).toBe(1);
     expect(found.issues).toMatchObject([
-      { code: "assesskit/xml/not-well-formed", severity: "error", location: { line: 26, column: 13 } },
+      { rule: "assesskit/xml/not-well-formed", severity: "error", location: { line: 26, column: 13 } },
     ]);
   });
 
   it("reports a document that is not in a namespace with a schema, with exit 1", async () => {
     const { code, report: found } = await report(example("packaging/usageData/USAGE-TOTAL-TEST-106391.xml"));
     expect(code).toBe(1);
-    expect(found.issues.map(({ code: each }) => each)).toEqual(["assesskit/node/no-schema"]);
+    expect(found.issues.map(({ rule: each }) => each)).toEqual(["assesskit/node/no-schema"]);
   });
 
   it("reports a document with a DOCTYPE as an error without reading it", async () => {
     const path = write("doctype.xml", '<!DOCTYPE x [<!ENTITY e "boom">]><x>&e;</x>');
     const { code, report: found } = await report(path);
     expect(code).toBe(1);
-    expect(found.issues).toMatchObject([{ code: "assesskit/xml/security", severity: "error" }]);
+    expect(found.issues).toMatchObject([{ rule: "assesskit/xml/security", severity: "error" }]);
   });
 
   it("reads a PNP document, checks its supports and reports the namespaces of the examples of 1EdTech", async () => {
@@ -226,7 +226,7 @@ describe("assesskit validate: documents", () => {
     const contradictory = await report(contradiction);
     expect(contradictory.code).toBe(1);
     expect(contradictory.report.issues).toMatchObject([
-      { code: "assesskit/validate/pnp-prohibited", severity: "error" },
+      { rule: "assesskit/validate/pnp-prohibited", severity: "error" },
     ]);
     const themed = await report(
       write(
@@ -236,8 +236,8 @@ describe("assesskit validate: documents", () => {
     );
     expect(themed.code).toBe(1);
     expect(themed.report.issues).toMatchObject([
-      { code: "assesskit/node/xsd-invalid", severity: "error" },
-      { code: "assesskit/validate/pnp-color-theme", severity: "warning" },
+      { rule: "assesskit/node/xsd-invalid", severity: "error" },
+      { rule: "assesskit/validate/pnp-color-theme", severity: "warning" },
     ]);
     const alternate = write(
       "pnp-alternate.xml",
@@ -245,7 +245,7 @@ describe("assesskit validate: documents", () => {
     );
     const moved = await report(alternate);
     expect(moved.code).toBe(1);
-    expect(moved.report.issues.map(({ code: each }) => each)).toEqual([
+    expect(moved.report.issues.map(({ rule: each }) => each)).toEqual([
       "assesskit/node/no-schema",
       "assesskit/validate/pnp-namespace",
     ]);
@@ -258,10 +258,10 @@ describe("assesskit validate: documents", () => {
     );
     const read = await report(manifest);
     expect(read.code).toBe(1);
-    expect(read.report.issues.map(({ code: each }) => each)).toContain("assesskit/package/missing-attribute");
+    expect(read.report.issues.map(({ rule: each }) => each)).toContain("assesskit/package/missing-attribute");
     // A lone document has no files to include, and a package does: QTI asks for the includes to be resolved first.
     const fragment = await report(example("tests/rtest01-set01.xml"));
-    expect(fragment.report.issues.map(({ code: each }) => each)).toContain("assesskit/validate/unresolved-include");
+    expect(fragment.report.issues.map(({ rule: each }) => each)).toContain("assesskit/validate/unresolved-include");
   });
 
   it("exits with 2 for a path that does not exist, and for a document above the limit maxBytes of parseXml", async () => {
@@ -318,7 +318,7 @@ describe("assesskit validate: packages", () => {
     expect(code).toBe(1);
     expect(found.issues).toMatchObject([
       {
-        code: "assesskit/validate/unlisted-file",
+        rule: "assesskit/validate/unlisted-file",
         severity: "error",
         location: { path: "imsmanifest.xml", element: "manifest/resources" },
       },
@@ -330,7 +330,7 @@ describe("assesskit validate: packages", () => {
     const { code, report: found } = await report(path);
     expect(code).toBe(1);
     expect(found.issues).toEqual(await expectedForPackage(path));
-    const codes = found.issues.map(({ code: each }) => each);
+    const codes = found.issues.map(({ rule: each }) => each);
     expect(codes.indexOf("assesskit/node/xsd-invalid")).toBe(0);
     expect(found.summary.errors).toBe(found.issues.filter(({ severity }) => severity === "error").length);
   });
@@ -338,7 +338,7 @@ describe("assesskit validate: packages", () => {
   it("does not hold an XML file of no schema, such as an LTI link, against the schemas", async () => {
     const path = example("packaging/testWithLti/testWithLti.zip");
     const { report: found } = await report(path);
-    expect(found.issues.map(({ code: each }) => each)).not.toContain("assesskit/node/no-schema");
+    expect(found.issues.map(({ rule: each }) => each)).not.toContain("assesskit/node/no-schema");
     expect(found.issues).toEqual(await expectedForPackage(path));
   });
 

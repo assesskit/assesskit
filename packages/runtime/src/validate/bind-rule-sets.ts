@@ -96,7 +96,7 @@ const CONSTRAINED_FOREIGN = "qti-custom-interaction";
 /** What an extension attribute of a constrained element is named: `data-` and one or more name characters. */
 const DATA_ATTRIBUTE = /^data-[a-zA-Z0-9_.-]+$/;
 
-/** The code of the issue for a `figure` with more than one `figcaption`, which the XML binding allows once at most. */
+/** The rule of the issue for a `figure` with more than one `figcaption`, which the XML binding allows once at most. */
 const FIGURE_CODE = "assesskit/validate/figure-multiplicity";
 
 /** Returns the property of the model for an attribute name: `max-choices` becomes `maxChoices`. */
@@ -160,8 +160,8 @@ export class BindRuleSets {
     if (visit.attributeWildcard === "any" || visit.name === CONSTRAINED_FOREIGN) this.extensionAttributes(visit);
   }
 
-  private error(code: string, message: string, visit: ElementVisit): void {
-    this.findings.error(code, message, elementPath(visit));
+  private error(rule: string, message: string, visit: ElementVisit): void {
+    this.findings.error(rule, message, elementPath(visit));
   }
 
   /**
@@ -224,8 +224,8 @@ export class BindRuleSets {
     const { name, model } = visit;
     const number = INTERACTION_RULE_SETS.get(name);
     if (number === undefined) return;
-    const code = ruleSet(number, "B");
-    const report = (message: string): void => this.error(code, message, visit);
+    const rule = ruleSet(number, "B");
+    const report = (message: string): void => this.error(rule, message, visit);
     if (CHOICE_LIMITS.has(name)) this.checkRange(visit, report, ["max-choices", "min-choices"], true);
     if (ASSOCIATION_LIMITS.has(name)) this.checkRange(visit, report, ["max-associations", "min-associations"], true);
     if (name === "qti-media-interaction") this.checkRange(visit, report, ["max-plays", "min-plays"], false);

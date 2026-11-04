@@ -20,7 +20,7 @@ type OutcomeDeclaration = (AssessmentItem | AssessmentTest)["outcomeDeclarations
  * integer or float that the sums of the rubric fit. A block below the item body or the test is reported where it is
  * found, by the checks of every element.
  *
- * | Code                                          | Severity | Reported when                                                                                                       |
+ * | Rule                                          | Severity | Reported when                                                                                                       |
  * | --------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
  * | `assesskit/scoring-rubric/malformed`          | error    | `view` lacks `scorer` or has `candidate`; no `data-outcome-identifier`; an unknown kind; no criteria; a criterion without an identifier or a levels list; a level without `data-score`; a weight or score out of range; a block with both class tokens |
  * | `assesskit/scoring-rubric/shape`              | error    | the shape that the kind requires is broken, a holistic weight other than 1 included                                  |
@@ -41,9 +41,9 @@ export function checkScoringRubrics(document: AssessmentItem | AssessmentTest, f
   for (const { block, language, outcomeIdentifier } of scoringRubricBlocks(document)) {
     const { rubric, issues } = scoringRubricOf(block, language);
     const subject = outcomeIdentifier === undefined ? "A scoring rubric" : `The scoring rubric of ${outcomeIdentifier}`;
-    for (const { code, path, message } of issues) {
+    for (const { rule, path, message } of issues) {
       const where = path === "" ? "" : ` at ${path}`;
-      findings.error(`assesskit/scoring-rubric/${code}`, `${subject} is invalid${where}: ${message}.`, element);
+      findings.error(`assesskit/scoring-rubric/${rule}`, `${subject} is invalid${where}: ${message}.`, element);
     }
     if (outcomeIdentifier === undefined) continue;
     if (named.has(outcomeIdentifier)) {

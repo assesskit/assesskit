@@ -160,8 +160,9 @@ that the player needs and the runtime lacks is a change in the runtime, with its
   holds `packages/*/src` to it for an error built in a `catch`, and a helper that builds an error for a caught one, such as
   `createReadError`, takes the cause in its options. A broken invariant of the code itself is an `AssesskitError`, never a
   plain `Error`.
-- Validation returns `Issue`s with a stable `code` and a message and does not throw. A refusal of the engine has a `code` and a
-  message too, listed in the [delivery guide](docs/runtime/delivery.md).
+- Validation returns `Issue`s, each with the stable `rule` it breaks and a message, and does not throw. A refusal of the engine is
+  `{ reason, message }`, and an error that names its cause has a `reason`; each `reason` is a kebab-case union the package
+  exports (`RefusalReason`, listed in the [delivery guide](docs/runtime/delivery.md), and `AccessErrorReason`).
 - Identifier-keyed data lives in `Map`s, never in plain objects, so that an identifier such as `__proto__` stays data.
 - A reader of untrusted input bounds it before it builds anything, with a size or a token count before `JSON.parse`, and a list
   of findings has a limit (`maxFindings`): memory follows the tokens and the findings, not the bytes.

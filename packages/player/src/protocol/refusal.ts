@@ -1,15 +1,15 @@
 import { parseWith, type Schema } from "@assesskit/runtime/checks";
-import type { Refusal, RefusalCode } from "@assesskit/runtime/delivery";
+import type { Refusal, RefusalReason } from "@assesskit/runtime/delivery";
 import * as v from "valibot";
 
 /**
- * The refusal codes of the runtime's engine.
+ * The reasons of the refusals of the runtime's engine.
  *
  * @remarks
- * The tests compare the list with a record over `RefusalCode`, so that a code that the runtime adds fails the type
+ * The tests compare the list with a record over `RefusalReason`, so that a reason that the runtime adds fails the type
  * check there until it is listed here.
  */
-export const REFUSAL_CODES = [
+export const REFUSAL_REASONS = [
   "attempts-exhausted",
   "awaiting-cat",
   "clock-regression",
@@ -32,11 +32,11 @@ export const REFUSAL_CODES = [
   "unknown-request",
   "value-out-of-range",
   "wrong-submission-mode",
-] as const satisfies readonly RefusalCode[];
+] as const satisfies readonly RefusalReason[];
 
 /** The schema of a refusal. */
 export const refusalSchema: Schema<Refusal> = v.strictObject({
-  code: v.picklist(REFUSAL_CODES),
+  reason: v.picklist(REFUSAL_REASONS),
   message: v.string(),
 });
 
@@ -44,8 +44,8 @@ export const refusalSchema: Schema<Refusal> = v.strictObject({
  * Checks a refusal that arrived as JSON, as the engine's `Refusal` writes it.
  *
  * @param value - The parsed JSON.
- * @throws `DataError` when it is not an object with the properties `code` and `message` only, `code` one of
- * {@link REFUSAL_CODES} and `message` a string.
+ * @throws `DataError` when it is not an object with the properties `reason` and `message` only, `reason` one of
+ * {@link REFUSAL_REASONS} and `message` a string.
  */
 export function checkRefusal(value: unknown): asserts value is Refusal {
   parseWith(refusalSchema, value, "A refusal");

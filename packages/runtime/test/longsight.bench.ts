@@ -311,7 +311,7 @@ test("processes the outcomes of a test on a submission as fast as Longsight", as
   const drafted = played(engine, state, ...answer(ANSWERED_BEFORE, ++at)).state;
   const submission = act("submit", ref, ++at);
   const submitted = engine.apply(drafted, submission);
-  if (!submitted.ok) fail(`The submission was refused: ${submitted.refusal.code}.`);
+  if (!submitted.ok) fail(`The submission was refused: ${submitted.refusal.reason}.`);
   expect(submitted.state.outcomes.get("TOTAL")).toEqual(buildSingle("float", ANSWERED_BEFORE + 1));
 
   let oracle = startQtiTest(test);

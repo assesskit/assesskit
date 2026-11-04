@@ -154,10 +154,10 @@ export class ExpressionChecker {
 
   private lookup(found: Lookup, here: string): StaticType {
     if ("problem" in found) {
-      this.findings.error(found.problem.code, found.problem.message, here);
+      this.findings.error(found.problem.rule, found.problem.message, here);
       return UNKNOWN;
     }
-    for (const { code, message } of found.warnings ?? []) this.findings.warning(code, message, here);
+    for (const { rule, message } of found.warnings ?? []) this.findings.warning(rule, message, here);
     return found.type;
   }
 
@@ -273,7 +273,7 @@ export class ExpressionChecker {
     if (this.scope.processing === "outcome") {
       const weight = "weightIdentifier" in expression ? expression.weightIdentifier : undefined;
       const problem = weight === undefined ? undefined : this.scope.weight(weight);
-      if (problem !== undefined) this.findings.warning(problem.code, problem.message, here);
+      if (problem !== undefined) this.findings.warning(problem.rule, problem.message, here);
       return;
     }
     if (this.scope.processing === "response" && BIND_OUTCOME_ONLY.has(expression.kind)) {

@@ -71,7 +71,7 @@ async function answerCatRequests(
         return undefined;
       }
       const step = await answerer.answer(request, await answerer.ask(request));
-      if (step.refusal !== undefined && step.refusal.code !== "unknown-request") {
+      if (step.refusal !== undefined && step.refusal.reason !== "unknown-request") {
         throw new DataError(`The answer was refused: ${step.refusal.message}`);
       }
     }

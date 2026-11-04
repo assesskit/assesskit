@@ -392,7 +392,7 @@ describe("vocabularies", () => {
       expect(readResults(termsDocument({ status })).itemResults[0]?.sessionStatus).toBe(status);
     for (const status of ["Final", "pending", "", "completed"]) {
       expect(issueOf(() => readResults(termsDocument({ status })))).toMatchObject({
-        code: "assesskit/results/invalid-attribute",
+        rule: "assesskit/results/invalid-attribute",
       });
     }
   });
@@ -700,7 +700,7 @@ describe("errors", () => {
   it("refuses a root that is not assessmentResult of the RR namespace, naming the namespace and the position", () => {
     expect(issueOf(() => readResults('<usageData xmlns="urn:x"/>'))).toEqual({
       severity: "error",
-      code: "assesskit/results/not-results",
+      rule: "assesskit/results/not-results",
       message: `The root element must be assessmentResult in the namespace ${RESULTS_NAMESPACE}, found {urn:x}usageData.`,
       location: { line: 1, column: 1, element: "usageData" },
     });
@@ -709,21 +709,21 @@ describe("errors", () => {
 
   it("refuses an example of RR that is not well-formed", () => {
     expect(issueOf(() => readResults('<assessmentResult xmlns="x">\n<context>\n</assessmentResult>'))).toMatchObject({
-      code: "assesskit/xml/not-well-formed",
+      rule: "assesskit/xml/not-well-formed",
       location: { line: 3 },
     });
   });
 
   it("refuses a document without a context, which the schema requires", () => {
     expect(issueOf(() => readResults(`<assessmentResult xmlns="${RESULTS_NAMESPACE}"/>`))).toMatchObject({
-      code: "assesskit/results/missing-element",
+      rule: "assesskit/results/missing-element",
       message: "The element assessmentResult needs the element context, found no more elements.",
     });
   });
 
   it("refuses a missing or malformed attribute with the element and the rule", () => {
     expect(issueOf(() => readResults(report('<itemResult identifier="Q" sessionStatus="final"/>')))).toMatchObject({
-      code: "assesskit/results/missing-attribute",
+      rule: "assesskit/results/missing-attribute",
       message: "The element itemResult needs the attribute datestamp.",
       location: { element: "assessmentResult/itemResult" },
     });
@@ -789,7 +789,7 @@ describe("errors", () => {
     expect(
       issueOf(() => readResults(withVariable('<outcomeVariable identifier="O" cardinality="single"/>'))),
     ).toMatchObject({
-      code: "assesskit/results/missing-attribute",
+      rule: "assesskit/results/missing-attribute",
     });
     expect(() => readResults(withVariable('<outcomeVariable identifier="O" cardinality="record"/>'))).not.toThrow();
   });
@@ -800,7 +800,7 @@ describe("errors", () => {
         `<outcomeVariable identifier="O" cardinality="${cardinality}"${baseType === "" ? "" : ` baseType="${baseType}"`}>${values}</outcomeVariable>`,
       );
     expect(issueOf(() => readResults(outcome("single", "integer", "<value>five</value>")))).toMatchObject({
-      code: "assesskit/results/invalid-value",
+      rule: "assesskit/results/invalid-value",
     });
     expect(() => readResults(outcome("single", "boolean", "<value>maybe</value>"))).toThrow("is not a boolean");
     expect(() => readResults(outcome("single", "integer", "<value>1</value><value>2</value>"))).toThrow(

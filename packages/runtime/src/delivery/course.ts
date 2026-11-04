@@ -293,7 +293,7 @@ function gate(issues: readonly Issue[], what: string): void {
   if (errors.length === 0) return;
   const listed = errors.map((issue) => {
     const where = issue.location?.path === undefined ? "" : ` in ${issue.location.path}`;
-    return `${issue.code}${where}: ${issue.message}`;
+    return `${issue.rule}${where}: ${issue.message}`;
   });
   throw new DataError(
     `The ${what} cannot be delivered: the static checks found ${errors.length === 1 ? "an error" : `${errors.length} errors`}. ${listed.join(" ")}`,

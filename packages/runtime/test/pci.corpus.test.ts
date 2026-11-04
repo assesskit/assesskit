@@ -80,7 +80,7 @@ describe("the portable custom interactions of the 1EdTech examples", () => {
     const modules = interaction && resolvePciModules(interaction, { primary });
     expect(modules?.[0]).toEqual({ id: "tap", primary: "modules/tap", packageRelative: true });
     expect(modules?.map(({ id }) => id)).toContain("jquery");
-    expect(interaction && validatePortableInteraction(interaction, { primary }).map(({ code }) => code)).toEqual([
+    expect(interaction && validatePortableInteraction(interaction, { primary }).map(({ rule }) => rule)).toEqual([
       "assesskit/pci/type-identifier",
     ]);
   });
@@ -90,7 +90,7 @@ describe("the portable custom interactions of the 1EdTech examples", () => {
       expect(validatePortableInteraction(interaction, {})).toEqual([]);
     }
     const [interaction] = interactionsOf("packaging/pci/src/measuring_ph.xml");
-    expect(interaction && validatePortableInteraction(interaction, {}).map(({ code }) => code)).toEqual([
+    expect(interaction && validatePortableInteraction(interaction, {}).map(({ rule }) => rule)).toEqual([
       "assesskit/pci/module-not-configured",
       "assesskit/pci/type-identifier",
     ]);
@@ -99,7 +99,7 @@ describe("the portable custom interactions of the 1EdTech examples", () => {
   it("have a Federated Content URN as type identifier, but for the two tap-to-reveal examples, which write dashes", () => {
     const warned = items.flatMap(({ path }) =>
       interactionsOf(path).flatMap((interaction) =>
-        validatePortableInteraction(interaction, {}).some(({ code }) => code === "assesskit/pci/type-identifier")
+        validatePortableInteraction(interaction, {}).some(({ rule }) => rule === "assesskit/pci/type-identifier")
           ? [path]
           : [],
       ),

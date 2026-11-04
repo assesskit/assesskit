@@ -30,7 +30,7 @@ flowchart LR
 | `isXmlLanguage(value)`                                                                         | Tells whether a value can be the value of `xml:lang`.                      |
 | `resolveIncludes(root, base, resolve, options?)`                                               | Replaces each `xi:include` with the root element of the document it names. |
 | `listChildElements(element)`, `findAttribute(element, name, options?)`, `collectText(element)` | The child elements, an attribute and the text of an element.               |
-| `createReadError(code, message, options?)`, `locateElement(element, path, options?)`           | Build the `ReadError` of one problem, and the location of an element.      |
+| `createReadError(rule, message, options?)`, `locateElement(element, path, options?)`           | Build the `ReadError` of one problem, and the location of an element.      |
 | `DEFAULT_XML_LIMITS`, `XmlLimits`                                                              | The limits on size, depth, attributes, nodes and include nesting.          |
 | `XML_NAMESPACE`, `XMLNS_NAMESPACE`, `XSI_NAMESPACE`, `XINCLUDE_NAMESPACE`                      | Namespace URIs the reader and writer treat specially.                      |
 | `XmlElement`, `XmlAttribute`, `XmlNode`, `XmlCharacterData`, `XmlInstruction`                  | The tree.                                                                  |
@@ -188,12 +188,12 @@ reader.done(); // => undefined
 | `next()`, `foreign`                                 | Consume the next child whatever it is, and tell an extension: an element outside the namespaces of the rules.                                    |
 | `takeForeign()`, `extension()`                      | Consume the extensions, which must be in a namespace of their own.                                                                               |
 | `text(parse?)`, `leaf(parse)`                       | The text of an element that has no child elements; `leaf` also finishes the element.                                                             |
-| `fail(code, message)`, `attempt(...)`               | Build a `ReadError` at the element; run a conversion and turn its `DataError` into one.                                                          |
+| `fail(rule, message)`, `attempt(...)`               | Build a `ReadError` at the element; run a conversion and turn its `DataError` into one.                                                          |
 | `done()`                                            | Fail on an attribute, child or text that was not read. Namespace declarations and `xsi:` attributes never count.                                 |
 
 | `ReaderRules` field | Meaning                                                                                           |
 | ------------------- | ------------------------------------------------------------------------------------------------- |
-| `module`            | The module that reads; its issue codes are `assesskit/<module>/<name>`.                           |
+| `module`            | The module that reads; the rules of its issues are `assesskit/<module>/<name>`.                   |
 | `namespaces`        | The namespaces of the schema's elements; an element in another namespace is an extension.         |
 | `path`              | The path of the document, which the issues name. `open` takes it from its options. Default: none. |
 
@@ -201,7 +201,7 @@ reader.done(); // => undefined
 children in the order of the schema. An issue has the line and column of the element and its path, such as
 `assessmentResult/itemResult`.
 
-| Code of an issue       | Meaning                                                                                                         |
+| Rule of an issue       | Meaning                                                                                                         |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `missing-attribute`    | A required attribute is not there.                                                                              |
 | `invalid-attribute`    | An attribute cannot be converted, is not one of its terms, or is not a language tag.                            |
@@ -239,7 +239,7 @@ fail: an attribute or a child that is not there is `undefined` or left out. A re
 
 ## Errors
 
-| Code                               | Class       | Meaning                                                                            |
+| Rule                               | Class       | Meaning                                                                            |
 | ---------------------------------- | ----------- | ---------------------------------------------------------------------------------- |
 | `assesskit/xml/not-well-formed`    | `ReadError` | The document is not well-formed, has a lone surrogate or a bad qualified name.     |
 | `assesskit/xml/version`            | `ReadError` | The document declares XML 1.1.                                                     |

@@ -27,7 +27,7 @@ submission, because the server writes it and the browser shows it.
 | `Caller`, `checkCaller`                                   | The identity that authentication gives to a request.                                                   |
 | `ActionEnvelope`, `checkActionEnvelope`                   | What a client sends: a sequence number and one action.                                                 |
 | `ViewEnvelope`, `checkViewEnvelope`                       | What a host answers: the view, the asset prefixes and, when they apply, the documents and the refusal. |
-| `REFUSAL_CODES`, `checkRefusal`                           | The refusal codes of the engine, and a check of a refusal that arrived as JSON.                        |
+| `REFUSAL_REASONS`, `checkRefusal`                         | The refusal reasons of the engine, and a check of a refusal that arrived as JSON.                      |
 | `ViewDocuments`, `DocumentSource`, `resolveViewDocuments` | Where the content of a view comes from, so that references in it resolve.                              |
 | `LtiFrame`, `checkLtiFrame`, `checkAllowList`             | What the player needs to show a tool, and the checks of it.                                            |
 | `LTI_TOOL_FRAME`, `LTI_STORAGE_FRAME`                     | The names of the two frames of an LTI item.                                                            |
@@ -78,7 +78,7 @@ one is refused.
 ## Refusal
 
 When the engine refuses a well-formed action, the host answers with the view of the state as it was, and the refusal in the
-envelope. A refusal has the properties `code` and `message` of the runtime's `Refusal`. `REFUSAL_CODES` lists the codes, and
+envelope. A refusal has the properties `reason` and `message` of the runtime's `Refusal`. `REFUSAL_REASONS` lists the reasons, and
 the player has a message for each ([delivery](delivery.md#refusals-and-status-messages)).
 
 ## Documents
@@ -220,7 +220,7 @@ Every check throws `DataError` with a sentence that names the path of the first 
 | `checkActionEnvelope`, `checkViewEnvelope` | `value` is not an object, has a property outside the table, or has a `seq` that is not a non-negative safe integer                                                                                                                                                       |
 | `checkActionEnvelope`                      | `action` is missing                                                                                                                                                                                                                                                      |
 | `checkViewEnvelope`                        | `view` is missing, `assets` is not an object of strings, `documents` or `refusal` is malformed                                                                                                                                                                           |
-| `checkRefusal`                             | `value` is not an object with a `code` of `REFUSAL_CODES` and a string `message`                                                                                                                                                                                         |
+| `checkRefusal`                             | `value` is not an object with a `reason` of `REFUSAL_REASONS` and a string `message`                                                                                                                                                                                     |
 | `checkLtiFrame`                            | `value` is not an object of `url`, `storageUrl` and `allow` only, or a URL is not absolute `http` or `https`                                                                                                                                                             |
 | `checkAllowList`                           | the value is empty or has a character outside an allow list                                                                                                                                                                                                              |
 | `checkSubmission`                          | a property outside the form, a field of another type, a time outside the years 1 to 9999, content that is not a list of nodes with a string `kind`, a scoring rubric that `checkScoringRubric` refuses, a part that names an item the submission lacks, or an item twice |

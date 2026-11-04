@@ -75,8 +75,8 @@ describe("the Schematron rules of the ASI schema", () => {
   it("are the explicit rule sets that the validator reports under their identifiers", () => {
     const reported = new Set([
       ...NESTING_RULE_SETS.map(([, ruleSet]) => ruleSet),
-      ...ATTRIBUTE_RULES.map(({ code }) => code),
-      ...MATCH_LIMITS.map(([code]) => code),
+      ...ATTRIBUTE_RULES.map(({ rule }) => rule),
+      ...MATCH_LIMITS.map(([rule]) => rule),
       "RULE_SET_ARIA_ROLES_1",
       "RULE_SET_GENERAL_1",
       "RULE_SET_INTERACTION_20B",
@@ -106,7 +106,7 @@ describe("the Schematron rules of the ASI schema", () => {
             continue;
           const issues = ruleSetsOn(visitOf(nested, visitOf(container)));
           expect(
-            issues.map(({ code }) => code),
+            issues.map(({ rule }) => rule),
             `${container} contains ${nested}`,
           ).toEqual([id]);
           pairs++;
@@ -148,13 +148,13 @@ describe("the Schematron rules of the ASI schema", () => {
 describe("the fixtures of the rule sets", () => {
   it("are valid against the schema, which does not state the rules that they break", async () => {
     const fixtures = [
-      ...ATTRIBUTE_RULES.map(({ broken: [declarations, body], code }) => ({
-        path: `${code}.xml`,
+      ...ATTRIBUTE_RULES.map(({ broken: [declarations, body], rule }) => ({
+        path: `${rule}.xml`,
         content: itemXml({ declarations, body }),
       })),
-      ...MATCH_LIMITS.map(([code, build]) => {
+      ...MATCH_LIMITS.map(([rule, build]) => {
         const [declarations, body] = build('match-max="1" match-min="2"');
-        return { path: `${code}.xml`, content: itemXml({ declarations, body }) };
+        return { path: `${rule}.xml`, content: itemXml({ declarations, body }) };
       }),
     ];
     const issues = await validateXmlFiles(schemas, fixtures);

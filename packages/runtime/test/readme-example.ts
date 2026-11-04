@@ -94,7 +94,7 @@ const answered = apply(started.state, {
 const moved = apply(answered.state, { type: "move", to: "next", at: 2_000 });
 console.log(moved.events.map(({ type }) => type).join(" "));
 const refused = engine.apply(moved.state, { type: "move", to: "previous", at: 2_500 });
-console.log(refused.ok ? "accepted" : refused.refusal.code);
+console.log(refused.ok ? "accepted" : refused.refusal.reason);
 
 const second = apply(moved.state, {
   type: "set-responses",

@@ -8,7 +8,7 @@ import { XML_NAMESPACE, XMLNS_NAMESPACE, type XmlAttribute, type XmlElement, XSI
 
 /** What an {@link ElementReader} needs to know about the documents it reads. */
 export interface ReaderRules {
-  /** The module that reads, such as `results`: the codes of its issues are `assesskit/<module>/<name>`. */
+  /** The module that reads, such as `results`: the rules of its issues are `assesskit/<module>/<name>`. */
   readonly module: string;
   /** The namespaces of the elements the schema defines, the schema's own first; elements in other namespaces are extensions. */
   readonly namespaces: readonly string[];
@@ -137,13 +137,13 @@ export class ElementReader {
   /**
    * Builds the `ReadError` for a problem at this element. Throw the result.
    *
-   * @param code - The issue code of the problem, such as `missing-attribute`; the module of the rules goes before it.
+   * @param rule - The rule that the element breaks, such as `missing-attribute`; the module of the rules goes before it.
    * @param message - A full sentence that says what is wrong and what is expected.
    * @param options - The `cause`: the error that this one reports.
    * @returns The error, with the position of the element.
    */
-  fail(code: string, message: string, options: ErrorOptions = {}): ReadError {
-    return createReadError(`assesskit/${this.rules.module}/${code}`, message, {
+  fail(rule: string, message: string, options: ErrorOptions = {}): ReadError {
+    return createReadError(`assesskit/${this.rules.module}/${rule}`, message, {
       location: locateElement(this.element, this.rules.path, { trail: this.trail }),
       ...options,
     });
@@ -153,18 +153,18 @@ export class ElementReader {
    * Runs a conversion that signals a bad value with a `DataError`, such as a function of `values`, and turns that error into a
    * `ReadError` at this element.
    *
-   * @param code - The issue code of the problem, such as `invalid-value`.
+   * @param rule - The rule that a bad value breaks, such as `invalid-value`.
    * @param run - The conversion.
    * @param lead - Text that opens the message of the `ReadError` before the message of the `DataError`.
    * @defaultValue `""`
    * @returns What `run` returns.
    * @throws `ReadError` when `run` throws a `DataError`; any other error passes through.
    */
-  attempt<T>(code: string, run: () => T, lead = ""): T {
+  attempt<T>(rule: string, run: () => T, lead = ""): T {
     try {
       return run();
     } catch (error) {
-      if (error instanceof DataError) throw this.fail(code, `${lead}${error.message}`, { cause: error });
+      if (error instanceof DataError) throw this.fail(rule, `${lead}${error.message}`, { cause: error });
       throw error;
     }
   }
@@ -182,8 +182,8 @@ export class ElementReader {
     return found;
   }
 
-  private convert<T>(parse: (text: string) => T, text: string, code: string, what: string): T {
-    return this.attempt(code, () => parse(text), `${what} is invalid. `);
+  private convert<T>(parse: (text: string) => T, text: string, rule: string, what: string): T {
+    return this.attempt(rule, () => parse(text), `${what} is invalid. `);
   }
 
   /**

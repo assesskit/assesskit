@@ -53,7 +53,7 @@ describe("usage data of the 1EdTech examples", () => {
   it("refuses the usage data of the packages, which are in the namespace of QTI 2.2", () => {
     for (const name of ["FEMALE", "MALE", "TOTAL"]) {
       expect(issueOf(() => readUsageData(read(`packaging/usageData/USAGE-${name}-TEST-106391.xml`)))).toMatchObject({
-        code: "assesskit/usage/not-usage-data",
+        rule: "assesskit/usage/not-usage-data",
         message: expect.stringContaining("{http://www.imsglobal.org/xsd/imsqti_usagedata_v2p2}usageData"),
       });
     }

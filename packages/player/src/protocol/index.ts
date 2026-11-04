@@ -18,7 +18,7 @@ export {
   type LtiFrame,
 } from "./lti-frame.js";
 export { isOfficialResult, type OfficialResult } from "./official.js";
-export { checkRefusal, REFUSAL_CODES } from "./refusal.js";
+export { checkRefusal, REFUSAL_REASONS } from "./refusal.js";
 export type { DispatchResult, SessionClient } from "./session-client.js";
 export {
   checkSubmission,

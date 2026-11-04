@@ -482,8 +482,8 @@ describe("the vocabularies of the interactions", () => {
 });
 
 describe("checking bindings", () => {
-  const issueCodes = (body: string, declarations: string): string[] =>
-    validateBindings(itemOf(body, declarations)).map(({ code }) => code);
+  const issueRules = (body: string, declarations: string): string[] =>
+    validateBindings(itemOf(body, declarations)).map(({ rule }) => rule);
   const Choice = `<qti-choice-interaction response-identifier="R">${choice("A")}</qti-choice-interaction>`;
 
   it.each(INTERACTIONS)(
@@ -499,7 +499,7 @@ describe("checking bindings", () => {
     expect(validateBindings(itemOf(Choice, declare("single", "string")))).toEqual([
       {
         severity: "error",
-        code: "assesskit/interactions/binding",
+        rule: "assesskit/interactions/binding",
         message:
           'The interaction qti-choice-interaction is bound to "R", a variable with the type single string, but it accepts single identifier or multiple identifier here.',
         location: { element: "qti-choice-interaction" },
@@ -509,28 +509,28 @@ describe("checking bindings", () => {
 
   it("reports a cardinality that the interaction does not accept: order needs ordered, inline choice needs single", () => {
     const order = `<qti-order-interaction response-identifier="R">${choice("A")}</qti-order-interaction>`;
-    expect(issueCodes(order, declare("multiple", "identifier"))).toEqual(["assesskit/interactions/binding"]);
-    expect(issueCodes(order, declare("ordered", "identifier"))).toEqual([]);
+    expect(issueRules(order, declare("multiple", "identifier"))).toEqual(["assesskit/interactions/binding"]);
+    expect(issueRules(order, declare("ordered", "identifier"))).toEqual([]);
     const inline = `<p><qti-inline-choice-interaction response-identifier="R"><qti-inline-choice identifier="A">a</qti-inline-choice></qti-inline-choice-interaction></p>`;
-    expect(issueCodes(inline, declare("multiple", "identifier"))).toEqual(["assesskit/interactions/binding"]);
+    expect(issueRules(inline, declare("multiple", "identifier"))).toEqual(["assesskit/interactions/binding"]);
   });
 
   it("reports a single value where max-choices allows more than one", () => {
     const three = `<qti-choice-interaction response-identifier="R" max-choices="3">${choice("A")}</qti-choice-interaction>`;
-    expect(issueCodes(three, declare("single", "identifier"))).toEqual(["assesskit/interactions/binding"]);
-    expect(issueCodes(three, declare("multiple", "identifier"))).toEqual([]);
+    expect(issueRules(three, declare("single", "identifier"))).toEqual(["assesskit/interactions/binding"]);
+    expect(issueRules(three, declare("multiple", "identifier"))).toEqual([]);
   });
 
   it("reports a response variable that the item does not declare", () => {
     const [issue] = validateBindings(itemOf(Choice, ""));
-    expect(issue).toMatchObject({ code: "assesskit/interactions/response-undeclared" });
+    expect(issue).toMatchObject({ rule: "assesskit/interactions/response-undeclared" });
     expect(issue?.message).toBe(
       'The interaction qti-choice-interaction is bound to the response variable "R", which the item does not declare. Declare it with a qti-response-declaration.',
     );
   });
 
   it("reports a response variable that two interactions bind", () => {
-    expect(issueCodes(`${Choice}${Choice}`, declare("single", "identifier"))).toEqual([
+    expect(issueRules(`${Choice}${Choice}`, declare("single", "identifier"))).toEqual([
       "assesskit/interactions/response-bound-twice",
     ]);
   });
@@ -539,16 +539,16 @@ describe("checking bindings", () => {
     const entry = (extra: string): string =>
       `<p><qti-text-entry-interaction response-identifier="R" string-identifier="S"${extra}/></p>`;
     const numeric = declare("single", "float");
-    expect(issueCodes(entry(""), numeric + declare("single", "string", "S"))).toEqual([]);
-    expect(issueCodes(entry(""), numeric)).toEqual(["assesskit/interactions/string-identifier"]);
-    expect(issueCodes(entry(""), numeric + declare("single", "integer", "S"))).toEqual([
+    expect(issueRules(entry(""), numeric + declare("single", "string", "S"))).toEqual([]);
+    expect(issueRules(entry(""), numeric)).toEqual(["assesskit/interactions/string-identifier"]);
+    expect(issueRules(entry(""), numeric + declare("single", "integer", "S"))).toEqual([
       "assesskit/interactions/string-identifier",
     ]);
-    expect(issueCodes(entry(""), numeric + declare("multiple", "string", "S"))).toEqual([
+    expect(issueRules(entry(""), numeric + declare("multiple", "string", "S"))).toEqual([
       "assesskit/interactions/string-identifier",
     ]);
     expect(
-      issueCodes(`${entry("")}${Choice.replace('"R"', '"S"')}`, numeric + declare("single", "string", "S")),
+      issueRules(`${entry("")}${Choice.replace('"R"', '"S"')}`, numeric + declare("single", "string", "S")),
     ).toEqual(["assesskit/interactions/response-bound-twice", "assesskit/interactions/binding"]);
   });
 
@@ -557,8 +557,8 @@ describe("checking bindings", () => {
     const portable =
       '<qti-portable-custom-interaction response-identifier="R" custom-interaction-type-identifier="urn:fdc:x:pci" module="m"><qti-interaction-markup/></qti-portable-custom-interaction>';
     for (const body of [custom, portable]) {
-      expect(issueCodes(body, declare("record", "string"))).toEqual([]);
-      expect(issueCodes(body, declare("multiple", "file"))).toEqual([]);
+      expect(issueRules(body, declare("record", "string"))).toEqual([]);
+      expect(issueRules(body, declare("multiple", "file"))).toEqual([]);
     }
   });
 

@@ -11,7 +11,7 @@ import { checkMaxFindings, type ValidateOptions } from "./options.js";
  * in both activate sets is on from the start and also an option, which the profile cannot mean. A color theme is in the best
  * practices guide and not in the PNP schema, so a document with one does not pass the schema (spec gaps, G49).
  *
- * | Code                                  | Severity | Reported when                                  |
+ * | Rule                                  | Severity | Reported when                                  |
  * | ------------------------------------- | -------- | ---------------------------------------------- |
  * | `assesskit/validate/pnp-prohibited`   | error    | a prohibited support is in an activate set     |
  * | `assesskit/validate/pnp-prohibited`   | warning  | a prohibited support is also assigned          |

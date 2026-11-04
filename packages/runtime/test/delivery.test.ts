@@ -63,7 +63,7 @@ import {
   presentItem,
   type Random,
   type Refusal,
-  type RefusalCode,
+  type RefusalReason,
   type ResolvedItem,
   type Resolvers,
   type RuleContext,
@@ -329,7 +329,7 @@ const KEY: ItemKey = { ref: "q", instance: 1 };
 
 /** The session and events of an accepted step. */
 function accepted(step: ItemStep): { readonly session: ItemSession; readonly events: readonly DeliveryEvent[] } {
-  return step.ok ? step : fail(`The step was refused: ${step.refusal.code}: ${step.refusal.message}`);
+  return step.ok ? step : fail(`The step was refused: ${step.refusal.reason}: ${step.refusal.message}`);
 }
 
 /** The refusal of a step that is refused. */
@@ -450,7 +450,7 @@ interface Played {
 /** Starts a session with the seed 1 at the time 0, unless the options say otherwise. */
 function begun(engine: Engine, options: Partial<StartOptions> = {}): Played {
   const step = engine.start({ seed: 1, at: 0, ...options });
-  return step.ok ? step : fail(`The start was refused: ${step.refusal.code}.`);
+  return step.ok ? step : fail(`The start was refused: ${step.refusal.reason}.`);
 }
 
 /** Applies actions in order, each of which must be accepted; returns the last state and the events of every step. */
@@ -460,7 +460,7 @@ function played(engine: Engine, state: DeliveryState, ...actions: Action[]): Pla
   for (const action of actions) {
     const step = engine.apply(current, action);
     if (!step.ok)
-      fail(`The action ${action.type} at ${action.at} was refused: ${step.refusal.code}: ${step.refusal.message}`);
+      fail(`The action ${action.type} at ${action.at} was refused: ${step.refusal.reason}: ${step.refusal.message}`);
     current = step.state;
     events.push(...step.events);
   }
@@ -834,10 +834,10 @@ describe("applying actions", () => {
     ]);
     expect(sessionOf(left.state, "a").status).toBe("closed");
     expect(testOutcome(left.state, "TOTAL")).toEqual(float(1));
-    expect(refusalOf(engine, left.state, moveTo("previous", 30)).code).toBe("linear-backward");
-    expect(refusalOf(engine, left.state, moveTo(key("a"), 30)).code).toBe("linear-backward");
+    expect(refusalOf(engine, left.state, moveTo("previous", 30)).reason).toBe("linear-backward");
+    expect(refusalOf(engine, left.state, moveTo(key("a"), 30)).reason).toBe("linear-backward");
     expect(refusalOf(engine, state, moveTo(key("c"), 30))).toEqual({
-      code: "not-current",
+      reason: "not-current",
       message: "In a linear test part the candidate moves to the next item only.",
     });
     const atC = played(engine, left.state, moveTo(key("c"), 30));
@@ -852,7 +852,7 @@ describe("applying actions", () => {
     ]);
     expect([ended.state.status, ended.state.current]).toEqual(["ended", undefined]);
     expect(refusalOf(engine, ended.state, moveTo("next", 50))).toEqual({
-      code: "ended",
+      reason: "ended",
       message: "The test has ended.",
     });
   });
@@ -871,9 +871,9 @@ describe("applying actions", () => {
     expect(described(back.events).slice(0, 2)).toEqual(["moved a@30", "presented a@30"]);
     expect(testOutcome(back.state, "TOTAL")).toEqual(float(1));
     expect(played(engine, back.state, moveTo(key("a"), 50)).events).toEqual([]);
-    expect(refusalOf(engine, back.state, moveTo("previous", 50)).code).toBe("unknown-item");
-    expect(refusalOf(engine, back.state, moveTo(key("x"), 50)).code).toBe("unknown-item");
-    expect(refusalOf(engine, back.state, answer("b", "A", 50)).code).toBe("not-current");
+    expect(refusalOf(engine, back.state, moveTo("previous", 50)).reason).toBe("unknown-item");
+    expect(refusalOf(engine, back.state, moveTo(key("x"), 50)).reason).toBe("unknown-item");
+    expect(refusalOf(engine, back.state, answer("b", "A", 50)).reason).toBe("not-current");
   });
 
   it("applies pre-conditions and branch rules as the candidate moves, after outcome processing", () => {
@@ -901,7 +901,7 @@ describe("applying actions", () => {
       { type: "end-attempt", item: key("a"), interaction: "HINT", at: 1 } as const,
     ]) {
       expect(refusalOf(engine, state, action)).toEqual({
-        code: "wrong-submission-mode",
+        reason: "wrong-submission-mode",
         message: "The test part submits its items together at its end, so an item is not submitted alone.",
       });
     }
@@ -949,7 +949,7 @@ describe("applying actions", () => {
       "cat-requested A submit-results cat:A:1:2@3",
     ]);
     const atB = played(engine, staged.state, moveTo(key("b"), 1));
-    expect(refusalOf(engine, atB.state, on("submit", "b", 2)).code).toBe("wrong-submission-mode");
+    expect(refusalOf(engine, atB.state, on("submit", "b", 2)).reason).toBe("wrong-submission-mode");
   });
 
   it("runs outcome processing after each submission in an individual part, from the outcomes' defaults", () => {
@@ -1095,15 +1095,15 @@ describe("applying actions", () => {
     expect(step).toEqual({
       ok: false,
       refusal: {
-        code: "not-current",
+        reason: "not-current",
         message: "The action names an item that is not the one presented.",
       },
     });
     expect(refusalOf(engine, state, answer("x", "A", 1))).toEqual({
-      code: "unknown-item",
+      reason: "unknown-item",
       message: 'The test has no item instance "x" 1.',
     });
-    expect(refusalOf(engine, state, { type: "comment", item: key("a"), text: "Hm.", at: 1 }).code).toBe(
+    expect(refusalOf(engine, state, { type: "comment", item: key("a"), text: "Hm.", at: 1 }).reason).toBe(
       "comment-not-allowed",
     );
     expect(serializeState(state)).toBe(before);
@@ -1113,7 +1113,7 @@ describe("applying actions", () => {
     const engine = engineOf(nonlinearAb);
     const { state } = played(engine, begun(engine).state, answer("a", "B", 5));
     expect(refusalOf(engine, state, answer("a", "C", 4))).toEqual({
-      code: "clock-regression",
+      reason: "clock-regression",
       message: "The action at 4 is earlier than the latest step of the session at 5.",
     });
     expect(played(engine, state, answer("a", "C", 5)).state.at).toBe(5);
@@ -1130,7 +1130,7 @@ describe("applying actions", () => {
     const { state } = played(engine, begun(engine).state, answer("a", "B", 5_000));
     // Any action at or after the deadline applies it first, so the answer at 12 s finds a closed.
     expect(refusalOf(engine, state, answer("a", "C", 12_000))).toEqual({
-      code: "time-over",
+      reason: "time-over",
       message: 'The item instance "a" 1 was closed when a maximum time passed.',
     });
     const out = played(engine, state, { type: "time", at: 12_000 });
@@ -1143,7 +1143,7 @@ describe("applying actions", () => {
       "presented b@10000",
     ]);
     expect([testOutcome(out.state, "TOTAL"), out.state.at, out.state.current]).toEqual([float(1), 12_000, key("b")]);
-    expect(refusalOf(engine, out.state, answer("a", "C", 13_000)).code).toBe("time-over");
+    expect(refusalOf(engine, out.state, answer("a", "C", 13_000)).reason).toBe("time-over");
     // The deadline applies at its time exactly.
     expect(described(played(engine, state, { type: "time", at: 10_000 }).events)[0]).toBe("time-out a@10000");
     expect(played(engine, state, { type: "time", at: 9_999 }).events).toEqual([]);
@@ -1164,7 +1164,7 @@ describe("applying actions", () => {
       "moved c@10000",
       "presented c@10000",
     ]);
-    expect(refusalOf(sectionOut, section1.state, answer("b", "B", 11_000)).code).toBe("time-over");
+    expect(refusalOf(sectionOut, section1.state, answer("b", "B", 11_000)).reason).toBe("time-over");
     const partOut = timedEngine(
       testPart("P", section("S", refs("a", "b")), "linear", "individual", limits('max-time="10"')),
     );
@@ -1179,12 +1179,12 @@ describe("applying actions", () => {
     const testOut = timedEngine(testPart("P", section("S", refs("a", "b")), "linear"), limits('max-time="10"'));
     const late = refusalOf(testOut, begun(testOut).state, answer("a", "B", 11_000));
     expect(late).toEqual({
-      code: "time-over",
+      reason: "time-over",
       message: "The test ended when a maximum time passed.",
     });
     const ended = played(testOut, begun(testOut).state, { type: "time", at: 11_000 });
     expect(described(ended.events)[0]).toBe("time-out T@10000");
-    expect(refusalOf(testOut, ended.state, answer("a", "B", 12_000)).code).toBe("ended");
+    expect(refusalOf(testOut, ended.state, answer("a", "B", 12_000)).reason).toBe("ended");
   });
 
   it("leaves a scope open after a maximum time that allows late submission, and marks later submissions", () => {
@@ -1219,7 +1219,7 @@ describe("applying actions", () => {
     );
     const { state } = begun(engine);
     expect(refusalOf(engine, state, moveTo("next", 3_000))).toEqual({
-      code: "min-time-not-reached",
+      reason: "min-time-not-reached",
       message: 'The item "a" has a minimum time of 5 s, of which 3 s are spent.',
     });
     const atB = played(engine, state, moveTo("next", 5_000));
@@ -1249,7 +1249,7 @@ describe("applying actions", () => {
       { type: "suspend", at: 3_000 } as const,
     ]) {
       expect(refusalOf(engine, paused.state, action)).toEqual({
-        code: "suspended",
+        reason: "suspended",
         message: "The candidate session is suspended; it goes on when it is resumed.",
       });
     }
@@ -1288,7 +1288,7 @@ describe("applying actions", () => {
     ]);
     expect(moved.state.items[1]?.supports).toEqual(["line-reader", "calculator-on-screen"]);
     expect(refusalOf(engine, state, toggle("spell-checker-on-screen", true, 1))).toEqual({
-      code: "support-not-available",
+      reason: "support-not-available",
       message: "The support spell-checker-on-screen is prohibited, so the candidate cannot turn it on or off.",
     });
     expect(refusalOf(engine, state, toggle("line-reader", false, 1)).message).toBe(
@@ -1322,10 +1322,10 @@ describe("applying actions", () => {
       restrictionTypes: ["skip-math-equations"],
     });
     expect(refusalOf(engine, state, adjust({ ...spoken, restrictionTypes: [] }, 1))).toEqual({
-      code: "setting-not-adjustable",
+      reason: "setting-not-adjustable",
       message: `The candidate can change ${ADJUSTABLE_SETTINGS.spoken.join(", ")} of spoken, and not restrictionTypes.`,
     });
-    expect(refusalOf(engine, state, adjust({ ...spoken, readingType: "screen-reader" }, 1)).code).toBe(
+    expect(refusalOf(engine, state, adjust({ ...spoken, readingType: "screen-reader" }, 1)).reason).toBe(
       "setting-not-adjustable",
     );
     expect(refusalOf(engine, state, adjust({ name: "line-reader", replaceAccessModes: [] }, 1)).message).toBe(
@@ -1363,7 +1363,7 @@ describe("applying actions", () => {
       settings: zoomed(3),
     });
     const wider = { name: "magnification", replaceAccessModes: ["visual"], allContent: { zoomAmount: 3 } } as const;
-    expect(refusalOf(engine, on.state, { type: "support-settings", settings: wider, at: 2 }).code).toBe(
+    expect(refusalOf(engine, on.state, { type: "support-settings", settings: wider, at: 2 }).reason).toBe(
       "setting-not-adjustable",
     );
   });
@@ -1619,22 +1619,22 @@ describe("marking an item for review", () => {
   it("refuses an item instance that was not presented, and one the test does not have", () => {
     const { state } = begun(engine);
     expect(refusalOf(engine, state, mark("b", true, 1))).toEqual({
-      code: "unknown-item",
+      reason: "unknown-item",
       message: 'The candidate was not presented the item instance "b" 1.',
     });
-    expect(refusalOf(engine, state, mark("a", true, 1, 2)).code).toBe("unknown-item");
-    expect(refusalOf(engine, state, mark("zzz", true, 1)).code).toBe("unknown-item");
+    expect(refusalOf(engine, state, mark("a", true, 1, 2)).reason).toBe("unknown-item");
+    expect(refusalOf(engine, state, mark("zzz", true, 1)).reason).toBe("unknown-item");
   });
 
   it("refuses after the end and while suspended, as it does every action, and accepts again when the session resumes", () => {
     const { state } = begun(engine);
     const suspended = played(engine, state, { type: "suspend", at: 1 });
-    expect(refusalOf(engine, suspended.state, mark("a", true, 2)).code).toBe("suspended");
+    expect(refusalOf(engine, suspended.state, mark("a", true, 2)).reason).toBe("suspended");
     const resumed = played(engine, suspended.state, { type: "resume", at: 2 }, mark("a", true, 3));
     expect(marksOf(engine.view(resumed.state, 4))).toEqual(["a"]);
     const ended = played(engine, state, { type: "end-test", at: 1 });
-    expect(refusalOf(engine, ended.state, mark("a", true, 2)).code).toBe("ended");
-    expect(refusalOf(engine, resumed.state, mark("a", true, 1)).code).toBe("clock-regression");
+    expect(refusalOf(engine, ended.state, mark("a", true, 2)).reason).toBe("ended");
+    expect(refusalOf(engine, resumed.state, mark("a", true, 1)).reason).toBe("clock-regression");
   });
 
   it("is listed once an item was presented, in a linear part too, and by no view of a suspended or ended session", () => {
@@ -1747,7 +1747,7 @@ describe("the events of an attempt", () => {
     ];
     for (const action of actions) {
       const step = engine.apply(state, action);
-      if (!step.ok) return fail(`The action ${action.type} was refused: ${step.refusal.code}.`);
+      if (!step.ok) return fail(`The action ${action.type} was refused: ${step.refusal.reason}.`);
       state = step.state;
       for (const event of processed(step.events)) {
         const result = engine.results(state).itemResults.find(({ identifier }) => identifier === "a");
@@ -1869,7 +1869,7 @@ describe("a ladder of hints", () => {
   it("closes an adaptive item when response processing completes it, and then allows the solution", () => {
     const engine = engineWith(counterItem({ adaptive: true }), unlimited);
     const asking = played(engine, begun(engine).state, hint(1_000), tryAgain(1_500), hint(2_000), tryAgain(2_500));
-    expect(refusalOf(engine, asking.state, solution(3_000)).code).toBe("solution-not-allowed");
+    expect(refusalOf(engine, asking.state, solution(3_000)).reason).toBe("solution-not-allowed");
     const done = played(engine, asking.state, answer("a", "B", 3_000), on("submit", "a", 4_000));
     expect(sessionOf(done.state, "a").status).toBe("closed");
     expect(outcome(sessionOf(done.state, "a"), "completionStatus")).toEqual(identifier("completed"));
@@ -1886,7 +1886,7 @@ describe("a ladder of hints", () => {
     expect(sessionOf(state, "a").status).toBe("interacting");
     expect(sessionOf(state, "a").countedAttempts).toBe(5);
     expect(refusalOf(engine, state, solution(9_000))).toEqual({
-      code: "solution-not-allowed",
+      reason: "solution-not-allowed",
       message: "The item shows its solution only after its session closed.",
     });
   });
@@ -1937,8 +1937,8 @@ describe("a review after the end", () => {
   it("refuses review and solution as ended unless the engine allows them, and its ended view has no map and no actions", () => {
     for (const options of [{}, { reviewAfterEnd: false }]) {
       const { engine, state } = ended(two(control('show-solution="true"')), options);
-      expect(refusalOf(engine, state, review("a", 7_000))).toEqual({ code: "ended", message: "The test has ended." });
-      expect(refusalOf(engine, state, solution("a", 7_000)).code).toBe("ended");
+      expect(refusalOf(engine, state, review("a", 7_000))).toEqual({ reason: "ended", message: "The test has ended." });
+      expect(refusalOf(engine, state, solution("a", 7_000)).reason).toBe("ended");
       const view = engine.view(state, 7_000);
       expect(view).toEqual({
         status: "ended",
@@ -2029,8 +2029,8 @@ describe("a review after the end", () => {
       ["d", "closed", true, false],
     ]);
     expect(summary.actions).toEqual(["review", "solution"]);
-    expect(refusalOf(engine, state, review("a", 6_000)).code).toBe("review-not-allowed");
-    expect(refusalOf(engine, state, solution("b", 6_000)).code).toBe("solution-not-allowed");
+    expect(refusalOf(engine, state, review("a", 6_000)).reason).toBe("review-not-allowed");
+    expect(refusalOf(engine, state, solution("b", 6_000)).reason).toBe("solution-not-allowed");
     const viewing = played(engine, state, review("d", 7_000), solution("c", 8_000)).state;
     const view = engine.view(viewing, 9_000);
     expect(view.part?.identifier).toBe("Q");
@@ -2049,10 +2049,10 @@ describe("a review after the end", () => {
       engine.view(early, 2_000).navigation.flatMap((entry) => (entry.kind === "item" ? [entry.key.ref] : [])),
     ).toEqual(["a"]);
     expect(refusalOf(engine, early, review("b", 3_000))).toEqual({
-      code: "not-current",
+      reason: "not-current",
       message: 'The item instance "b" 1 was not presented, so it cannot be reviewed.',
     });
-    expect(refusalOf(engine, early, review("zzz", 3_000)).code).toBe("unknown-item");
+    expect(refusalOf(engine, early, review("zzz", 3_000)).reason).toBe("unknown-item");
   });
 
   it("refuses every other action as ended, and a review earlier than the latest step", () => {
@@ -2068,9 +2068,9 @@ describe("a review after the end", () => {
       { type: "time", at: 8_000 },
       endTest(8_000),
     ] as const) {
-      expect(refusalOf(engine, reviewing, action).code, action.type).toBe("ended");
+      expect(refusalOf(engine, reviewing, action).reason, action.type).toBe("ended");
     }
-    expect(refusalOf(engine, reviewing, review("b", 5_999)).code).toBe("clock-regression");
+    expect(refusalOf(engine, reviewing, review("b", 5_999)).reason).toBe("clock-regression");
     expect(engine.deadlines(reviewing)).toEqual([]);
   });
 
@@ -2519,7 +2519,7 @@ describe("the view of a state", () => {
     // Item b keeps its solution from the candidate.
     const other = played(engine, reviewed.state, moveTo(key("b"), 5), on("submit", "b", 6));
     expect(engine.view(other.state, 6).actions).not.toContain("solution");
-    expect(refusalOf(engine, other.state, { type: "solution", item: key("b"), at: 7 }).code).toBe(
+    expect(refusalOf(engine, other.state, { type: "solution", item: key("b"), at: 7 }).reason).toBe(
       "solution-not-allowed",
     );
   });
@@ -2855,11 +2855,11 @@ describe("item actions", () => {
       ["response-processed", undefined],
     ]);
     expect(refused(act(step.session, context, respond("RESPONSE", identifier("B"))))).toMatchObject({
-      code: "item-closed",
+      reason: "item-closed",
     });
-    expect(refused(act(step.session, context, SUBMIT)).code).toBe("item-closed");
-    expect(refused(act(step.session, context, HINT)).code).toBe("item-closed");
-    expect(refused(act(step.session, context, NEXT)).code).toBe("attempts-exhausted");
+    expect(refused(act(step.session, context, SUBMIT)).reason).toBe("item-closed");
+    expect(refused(act(step.session, context, HINT)).reason).toBe("item-closed");
+    expect(refused(act(step.session, context, NEXT)).reason).toBe("attempts-exhausted");
   });
 
   it("resets the outcomes of a non-adaptive item before each response processing and keeps the last", () => {
@@ -2902,7 +2902,7 @@ describe("item actions", () => {
       identifier("completed"),
     ]);
     expect(attempts(right)).toEqual(integer(3));
-    expect(refused(act(right, context, NEXT)).code).toBe("attempts-exhausted");
+    expect(refused(act(right, context, NEXT)).reason).toBe("attempts-exhausted");
   });
 
   it("starts the next attempt with next-attempt, or with the next action on the item, and once only", () => {
@@ -2947,18 +2947,18 @@ describe("item actions", () => {
     const context = contextOf(counterItem());
     expect(
       refused(act(presented(context), context, { type: "end-attempt", item: KEY, interaction: "RESPONSE" })),
-    ).toMatchObject({ code: "invalid-response" });
+    ).toMatchObject({ reason: "invalid-response" });
   });
 
   it("refuses a submission of only NULL or default responses, and a skip, when skipping is not allowed", () => {
     const context = contextOf(counterItem({ defaults: DefaultA }), { allowSkipping: false });
     const session = presented(context);
     expect(refused(act(session, context, SUBMIT))).toMatchObject({
-      code: "skipping-not-allowed",
+      reason: "skipping-not-allowed",
     });
     const defaulted = acts(session, context, respond("RESPONSE", identifier("A")));
-    expect(refused(act(defaulted, context, SUBMIT)).code).toBe("skipping-not-allowed");
-    expect(refused(act(defaulted, context, SKIP)).code).toBe("skipping-not-allowed");
+    expect(refused(act(defaulted, context, SUBMIT)).reason).toBe("skipping-not-allowed");
+    expect(refused(act(defaulted, context, SKIP)).reason).toBe("skipping-not-allowed");
     expect(acts(defaulted, context, respond("RESPONSE", identifier("C")), SUBMIT).status).toBe("closed");
     expect(acts(session, context, HINT).status).toBe("closed");
   });
@@ -2990,7 +2990,7 @@ describe("item actions", () => {
     const context = contextOf(item, { validateResponses: true });
     const session = presented(context);
     expect(refused(act(session, context, SUBMIT))).toMatchObject({
-      code: "invalid-response",
+      reason: "invalid-response",
       message: 'The responses "RESPONSE" are not valid, and the item session control validates responses.',
     });
     expect(acts(session, context, respond("RESPONSE", identifier("A")), SUBMIT).status).toBe("closed");
@@ -3005,16 +3005,16 @@ describe("item actions", () => {
     const comment = (text: string): ItemAction => ({ type: "comment", item: KEY, text });
     const open = contextOf(item, { maxAttempts: 0 });
     expect(refused(act(presented(open), open, review))).toMatchObject({
-      code: "review-not-allowed",
+      reason: "review-not-allowed",
     });
     expect(refused(act(presented(open), open, solution))).toMatchObject({
-      code: "solution-not-allowed",
+      reason: "solution-not-allowed",
     });
-    expect(refused(act(presented(open), open, comment("Hard."))).code).toBe("comment-not-allowed");
+    expect(refused(act(presented(open), open, comment("Hard."))).reason).toBe("comment-not-allowed");
     const strict = contextOf(item, { allowReview: false });
     const shut = acts(presented(strict), strict, SUBMIT);
-    expect(refused(act(shut, strict, review)).code).toBe("review-not-allowed");
-    expect(refused(act(shut, strict, solution)).code).toBe("solution-not-allowed");
+    expect(refused(act(shut, strict, review)).reason).toBe("review-not-allowed");
+    expect(refused(act(shut, strict, solution)).reason).toBe("solution-not-allowed");
     const open2 = contextOf(item, { showSolution: true, allowComment: true });
     const commented = acts(presented(open2), open2, comment("Hard."), SUBMIT, comment("Fair, after all."));
     expect(commented.comment).toBe("Fair, after all.");
@@ -3027,16 +3027,16 @@ describe("item actions", () => {
   it("refuses actions on an item not presented or suspended, of another instance, or earlier than the latest change", () => {
     const context = contextOf(counterItem());
     const started = accepted(startItemSession(KEY, 0, context)).session;
-    expect(refused(act(started, context, SUBMIT))).toMatchObject({ code: "not-current" });
+    expect(refused(act(started, context, SUBMIT))).toMatchObject({ reason: "not-current" });
     const session = presented(context, 10);
     const suspended = accepted(suspendItem(session, 20)).session;
-    expect(refused(act(suspended, context, SUBMIT)).code).toBe("suspended");
+    expect(refused(act(suspended, context, SUBMIT)).reason).toBe("suspended");
     expect(refused(applyItemAction(session, { ...SUBMIT, item: { ref: "q", instance: 2 }, at: 30 }, context))).toEqual({
-      code: "unknown-item",
+      reason: "unknown-item",
       message: 'The action names the item instance "q" 2, not the instance "q" 1 of the session.',
     });
     expect(refused(act(session, context, SUBMIT, 9))).toEqual({
-      code: "clock-regression",
+      reason: "clock-regression",
       message: "The step at 9 is earlier than the latest change of the item session at 10.",
     });
   });
@@ -3058,17 +3058,17 @@ describe("item actions", () => {
       ["UNDECLARED", integer(1)],
     ] as const) {
       expect(refused(act(session, context, respond(name, value)))).toMatchObject({
-        code: "invalid-response",
+        reason: "invalid-response",
         message: `The item has no response variable "${name}" that the candidate sets.`,
       });
     }
     expect(refused(act(session, context, respond("N", float(1.5))))).toEqual({
-      code: "invalid-response",
+      reason: "invalid-response",
       message: "The response variable N is a single integer, found a single float.",
     });
     const huge = json<Value>('{"cardinality": "single", "baseType": "integer", "value": 9007199254740993}');
     expect(refused(act(session, context, respond("N", huge)))).toMatchObject({
-      code: "value-out-of-range",
+      reason: "value-out-of-range",
     });
     expect(acts(session, context, respond("X", integer(2))).drafts.get("X")).toEqual(float(2));
   });
@@ -3091,7 +3091,7 @@ describe("item actions", () => {
     const session = acts(presented(context), context, states("1"), states("2"));
     expect(session.pciStates).toEqual(new Map([["R", '{"points":2}']]));
     expect(refused(act(session, context, states("3", "TEXT")))).toMatchObject({
-      code: "invalid-response",
+      reason: "invalid-response",
     });
     expect(acts(session, context, respond("TEXT", buildSingle("string", "x"))).pciStates).toEqual(session.pciStates);
   });
@@ -3410,7 +3410,7 @@ describe("presenting an item", () => {
     expect(accepted(presentItem(session, 10, context))).toEqual({ ok: true, session, events: [] });
     const closed = acts(session, context, SUBMIT);
     expect(accepted(presentItem(closed, 10, context)).session).toBe(closed);
-    expect(refused(presentItem(session, -1, context)).code).toBe("clock-regression");
+    expect(refused(presentItem(session, -1, context)).reason).toBe("clock-regression");
   });
 
   it("refuses arguments of other types", () => {
@@ -3446,7 +3446,7 @@ describe("suspending an item", () => {
     const context = contextOf(counterItem());
     const started = accepted(startItemSession(KEY, 0, context)).session;
     expect(accepted(suspendItem(started, 1)).session).toBe(started);
-    expect(refused(suspendItem(presented(context, 5), 4)).code).toBe("clock-regression");
+    expect(refused(suspendItem(presented(context, 5), 4)).reason).toBe("clock-regression");
     expect(() => suspendItem(started, json("null"))).toThrow(DataError);
     expect(() => suspendItem(json("1"), 0)).toThrow(DataError);
   });
@@ -5074,7 +5074,7 @@ describe("time stamps", () => {
     expect(stamp(state, submit, 3_000)).toEqual({ ...submit, at: 5_000 });
     expect(stamp(state, submit, 7_000)).toEqual({ ...submit, at: 7_000 });
     expect(engine.apply(state, stamp(state, submit, 3_000)).ok).toBe(true);
-    expect(refusalOf(engine, state, { ...submit, at: 3_000 }).code).toBe("clock-regression");
+    expect(refusalOf(engine, state, { ...submit, at: 3_000 }).reason).toBe("clock-regression");
   });
 
   it("replaces a time the action carries, and refuses what is not an action of the engine", () => {
@@ -6229,7 +6229,7 @@ describe("properties", () => {
             if (session.status === "interacting") spent += move.gap;
             at += move.gap;
             if (!next.ok) {
-              expect(next.refusal.code).not.toBe("clock-regression");
+              expect(next.refusal.reason).not.toBe("clock-regression");
               continue;
             }
             const after = next.session;
@@ -6457,7 +6457,7 @@ describe("properties", () => {
           // The reducer never changes the state it is given, and a refusal gives no state.
           expect(serializeState(before)).toBe(written);
           if (!step.ok) {
-            expect(step.refusal.code).not.toBe("clock-regression");
+            expect(step.refusal.reason).not.toBe("clock-regression");
             return;
           }
           const after = step.state;
@@ -6570,7 +6570,7 @@ describe("properties", () => {
     );
   });
   /** The types of the refusals that the state decides, which an action the view lists never meets. */
-  const Structural: readonly RefusalCode[] = [
+  const Structural: readonly RefusalReason[] = [
     "ended",
     "suspended",
     "item-closed",
@@ -6672,7 +6672,7 @@ describe("properties", () => {
           for (const type of CANDIDATE_ACTION_TYPES) {
             const step = engine.apply(before, stamp(before, sampleOf(type, item), action.at));
             if (view.actions.includes(type)) {
-              if (!step.ok) expect(Structural, `${type} is listed`).not.toContain(step.refusal.code);
+              if (!step.ok) expect(Structural, `${type} is listed`).not.toContain(step.refusal.reason);
             } else if (!(NoChange[type]?.(view) ?? false)) {
               expect(step.ok, `${type} is accepted though the view leaves it out`).toBe(false);
             }

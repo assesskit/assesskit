@@ -188,7 +188,7 @@ G52.
 
 `validateCatalog` returns `Issue`s:
 
-| Code                                        | Reported when                                                    |
+| Rule                                        | Reported when                                                    |
 | ------------------------------------------- | ---------------------------------------------------------------- |
 | `assesskit/content/duplicate-card`          | two cards of the catalog have the same `support`                 |
 | `assesskit/content/empty-card`              | a card or a card entry has no HTML content and no file reference |

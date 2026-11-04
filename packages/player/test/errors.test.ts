@@ -33,7 +33,7 @@ describe("ServiceError", () => {
 
 describe("the classes are distinct", () => {
   it("lets a host tell the failures apart by class", () => {
-    const errors = [new AccessError("b", "r"), new ServiceError("d", 500, "")];
+    const errors = [new AccessError("b", "not-bound"), new ServiceError("d", 500, "")];
     expect(errors.map((error) => error.constructor.name)).toEqual(["AccessError", "ServiceError"]);
   });
 });

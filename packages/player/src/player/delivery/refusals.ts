@@ -1,13 +1,13 @@
-import type { RefusalCode } from "@assesskit/runtime/delivery";
+import type { RefusalReason } from "@assesskit/runtime/delivery";
 import type { Messages } from "../../messages/index.js";
 
 /**
- * The message for every refusal code of the runtime's engine.
+ * The message for every refusal reason of the runtime's engine.
  *
  * @remarks
- * It is a record over the whole type, so that a code that the runtime adds fails the type check until its message exists.
+ * It is a record over the whole type, so that a reason that the runtime adds fails the type check until its message exists.
  */
-export const REFUSAL_MESSAGES: Readonly<Record<RefusalCode, keyof Messages>> = {
+export const REFUSAL_MESSAGES: Readonly<Record<RefusalReason, keyof Messages>> = {
   "attempts-exhausted": "refusalAttemptsExhausted",
   "awaiting-cat": "refusalAwaitingCat",
   "clock-regression": "refusalClockRegression",

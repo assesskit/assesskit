@@ -52,10 +52,10 @@ export interface ScoringRubric {
   readonly criteria: readonly RubricCriterion[];
 }
 
-/** What is wrong with a scoring rubric, and the code under which `validate` reports it. */
+/** What is wrong with a scoring rubric, and the rule under which `validate` reports it. */
 export interface RubricIssue {
   /** The rule that is broken: the form of the block or of a value, the shape that the kind requires, or an identity used twice. */
-  readonly code: "malformed" | "shape" | "duplicate";
+  readonly rule: "malformed" | "shape" | "duplicate";
   /** Where the rule is broken, such as `criteria[1].levels`; empty for the rubric as a whole. */
   readonly path: string;
   /** What is wrong, as a clause that follows the path. */
@@ -104,8 +104,8 @@ function ascends(scores: readonly number[]): boolean {
 function levelIssues(kind: RubricKind, criterion: RubricCriterion, at: string): RubricIssue[] {
   const issues: RubricIssue[] = [];
   const { levels } = criterion;
-  const add = (code: RubricIssue["code"], path: string, message: string): void => {
-    issues.push({ code, path, message });
+  const add = (rule: RubricIssue["rule"], path: string, message: string): void => {
+    issues.push({ rule, path, message });
   };
   const scores = new Set<number>();
   for (const [index, { score }] of levels.entries()) {
@@ -149,33 +149,33 @@ export function rubricIssues(rubric: ScoringRubric): RubricIssue[] {
   const issues: RubricIssue[] = [];
   if (!isIdentifier(rubric.outcomeIdentifier)) {
     const message = `the outcome identifier must be an identifier, found ${describe(rubric.outcomeIdentifier)}`;
-    issues.push({ code: "malformed", path: "outcomeIdentifier", message });
+    issues.push({ rule: "malformed", path: "outcomeIdentifier", message });
   }
   if (rubric.criteria.length === 0) {
     issues.push({
-      code: "malformed",
+      rule: "malformed",
       path: "criteria",
       message: "a scoring rubric has one or more criteria, found none",
     });
   }
   if (rubric.kind === "holistic" && rubric.criteria.length > 1) {
     const message = `a holistic rubric has one criterion, found ${rubric.criteria.length}`;
-    issues.push({ code: "shape", path: "criteria", message });
+    issues.push({ rule: "shape", path: "criteria", message });
   }
   const identifiers = new Set<string>();
   for (const [index, criterion] of rubric.criteria.entries()) {
     const at = `criteria[${index}]`;
     if (!isIdentifier(criterion.identifier)) {
       const message = `the criterion identifier must be an identifier, found ${describe(criterion.identifier)}`;
-      issues.push({ code: "malformed", path: `${at}.identifier`, message });
+      issues.push({ rule: "malformed", path: `${at}.identifier`, message });
     } else if (identifiers.has(criterion.identifier)) {
       const message = `the criterion identifier ${criterion.identifier} occurs twice, so a rating cannot name one`;
-      issues.push({ code: "duplicate", path: `${at}.identifier`, message });
+      issues.push({ rule: "duplicate", path: `${at}.identifier`, message });
     }
     identifiers.add(criterion.identifier);
     if (rubric.kind === "holistic" && criterion.weight !== DEFAULT_WEIGHT) {
       const message = `the weight of the criterion of a holistic rubric is ${DEFAULT_WEIGHT}, found ${criterion.weight}, because the score is the score of the chosen level`;
-      issues.push({ code: "shape", path: `${at}.weight`, message });
+      issues.push({ rule: "shape", path: `${at}.weight`, message });
     }
     for (const issue of levelIssues(rubric.kind, criterion, at)) issues.push(issue);
   }

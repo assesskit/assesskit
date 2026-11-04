@@ -11,7 +11,7 @@ import {
   REFUSAL_MESSAGES,
   spokenText,
 } from "../src/player/delivery/internal.js";
-import { REFUSAL_CODES } from "../src/protocol/index.js";
+import { REFUSAL_REASONS } from "../src/protocol/index.js";
 import { examDefinition, examFiles, packageOf } from "./exam-fixture.js";
 
 const START = 1_700_000_000_000;
@@ -199,9 +199,9 @@ describe("duration", () => {
 
 describe("REFUSAL_MESSAGES", () => {
   it("has a message for every refusal code, in every catalog, and none is the message of another", () => {
-    expect(Object.keys(REFUSAL_MESSAGES).sort()).toEqual([...REFUSAL_CODES].sort());
+    expect(Object.keys(REFUSAL_MESSAGES).sort()).toEqual([...REFUSAL_REASONS].sort());
     for (const catalog of [EN_MESSAGES, ID_MESSAGES]) {
-      const texts = REFUSAL_CODES.map((code) => catalog[REFUSAL_MESSAGES[code]]);
+      const texts = REFUSAL_REASONS.map((code) => catalog[REFUSAL_MESSAGES[code]]);
       for (const text of texts) expect(text.trim()).not.toBe("");
       expect(new Set(texts).size).toBe(texts.length);
     }

@@ -3,5 +3,5 @@
  *
  * @module @assesskit/player
  */
-export { AccessError, ServiceError } from "./errors.js";
+export { AccessError, type AccessErrorReason, ServiceError } from "./errors.js";
 export { EN_MESSAGES, type Messages, selectMessages } from "./messages/index.js";

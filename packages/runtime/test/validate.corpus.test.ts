@@ -15,26 +15,26 @@ import {
 import { readPackageFile } from "../src/node/index.js";
 import { EXAMPLES, exampleItems } from "./corpus-items.js";
 
-/** Counts the issues by severity and code: `error assesskit/validate/duplicate-id 2`, sorted. */
+/** Counts the issues by severity and rule: `error assesskit/validate/duplicate-id 2`, sorted. */
 function tally(issues: readonly Issue[]): string[] {
   const counts = new Map<string, number>();
-  for (const { severity, code } of issues)
-    counts.set(`${severity} ${code}`, (counts.get(`${severity} ${code}`) ?? 0) + 1);
+  for (const { severity, rule } of issues)
+    counts.set(`${severity} ${rule}`, (counts.get(`${severity} ${rule}`) ?? 0) + 1);
   return [...counts].sort(([a], [b]) => (a < b ? -1 : 1)).map(([key, count]) => `${key} ${count}`);
 }
 
-/** The paths of the documents with an error of each code. */
+/** The paths of the documents with an error of each rule. */
 function errorFiles(
   found: readonly { readonly path: string; readonly issues: readonly Issue[] }[],
 ): Record<string, string[]> {
   const files = new Map<string, Set<string>>();
   for (const { path, issues } of found) {
-    for (const { severity, code } of issues) {
-      if (severity === "error") files.set(code, (files.get(code) ?? new Set()).add(path));
+    for (const { severity, rule } of issues) {
+      if (severity === "error") files.set(rule, (files.get(rule) ?? new Set()).add(path));
     }
   }
   return Object.fromEntries(
-    [...files].sort(([a], [b]) => (a < b ? -1 : 1)).map(([code, paths]) => [code, [...paths].sort()]),
+    [...files].sort(([a], [b]) => (a < b ? -1 : 1)).map(([rule, paths]) => [rule, [...paths].sort()]),
   );
 }
 
@@ -89,7 +89,7 @@ describe("the items of the 1EdTech examples", () => {
     expect(files.every((path) => path.startsWith("items/shared-vocabulary/"))).toBe(true);
     const messages = found
       .flatMap(({ issues }) => issues)
-      .filter(({ code }) => code === "assesskit/validate/extension-attribute");
+      .filter(({ rule }) => rule === "assesskit/validate/extension-attribute");
     expect(
       new Set(messages.map(({ message }) => /attribute (\S+) of the (\S+) /.exec(message)?.slice(1).join(" "))),
     ).toEqual(new Set(["alt object"]));
@@ -208,7 +208,7 @@ describe("the results reports of the 1EdTech examples", () => {
   it("have item results without a sequenceIndex in the conformance example, and none in the report", () => {
     const issues = validateResults(report("conformance-use-case-1.xml"));
     expect(issues.length).toBeGreaterThan(0);
-    expect(new Set(issues.map(({ code }) => code))).toEqual(new Set(["assesskit/validate/sequence-index"]));
+    expect(new Set(issues.map(({ rule }) => rule))).toEqual(new Set(["assesskit/validate/sequence-index"]));
     expect(validateResults(report("report.xml"))).toEqual([]);
   });
 });

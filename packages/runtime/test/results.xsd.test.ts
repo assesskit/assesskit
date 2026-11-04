@@ -210,7 +210,7 @@ describe("writeResults", () => {
   it("has a schema that rejects a result without a context, so the checks above can fail", async () => {
     const text = writeResults({ context: { sessionIdentifiers: [] }, itemResults: [] }).replace("<context/>", "");
     expect(await issuesOf(text)).toMatchObject([
-      { code: "assesskit/node/xsd-invalid", message: expect.stringContaining("context") },
+      { rule: "assesskit/node/xsd-invalid", message: expect.stringContaining("context") },
     ]);
   });
 });

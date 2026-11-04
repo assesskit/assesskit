@@ -92,7 +92,7 @@ createPackageResolvers(pkg).items("items/capital.xml", "test.xml").deliverable.k
 be `manifest` in `http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1`; the namespace of IMS Content Packaging 1.1 that some
 samples use is a `ReadError` ([spec gaps](spec-gaps.md): namespaces of the samples). The reader follows the CP schema for the structure and rejects what the model cannot hold:
 
-| Rule                                                                                                                                                                                                           | Code                                                    |
+| Requirement                                                                                                                                                                                                    | Rule                                                    |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
 | The root is a `manifest` of the content package namespace.                                                                                                                                                     | `assesskit/package/not-a-manifest`                      |
 | `metadata/schema` is one of `MANIFEST_SCHEMAS`, and `schemaversion` is `3.0.0`.                                                                                                                                | `assesskit/package/invalid-text`                        |
@@ -188,10 +188,10 @@ asynchronous. The reader stays, with the inflater of `fflate`.
 | Symbolic links                        | An entry made on Unix or OS X (host 3 or 19) whose mode is a symbolic link rejects the archive.                                                                          | `SecurityError`, `limit` `"symlink"`        |
 | Encrypted entries                     | General purpose bit 0, 6 or 13 rejects the archive.                                                                                                                      | `SecurityError`, `limit` `"encrypted"`      |
 | Too many entries                      | The reader counts the entries of the central directory against `maxEntries` as it reads them, and a count above it in the end record fails before the directory is read. | `SecurityError`, `limit` `"maxEntries"`     |
-| A count that hides entries            | The size of the central directory ends the reading, not the count of the end record. The count must equal the entries found, modulo 65,536 in a classic record.          | `ReadError`, code `assesskit/package/zip`   |
+| A count that hides entries            | The size of the central directory ends the reading, not the count of the end record. The count must equal the entries found, modulo 65,536 in a classic record.          | `ReadError`, rule `assesskit/package/zip`   |
 | Large entries and archives, zip bombs | Declared sizes in the central directory are checked against `maxEntryBytes`, `maxTotalBytes` and `maxRatio`; an entry of at most 102,400 bytes is exempt from the ratio. | `SecurityError`, `limit` the limit's name   |
 | Headers that lie                      | While an entry inflates, the output is counted in 8 KiB steps of input and stops at the size the header declares.                                                        | `SecurityError`, `limit` `"declaredBytes"`  |
-| Corrupt or mismatched data            | Each entry's local header must name the file the central directory names; the size and CRC-32 must match; truncation is detected.                                        | `ReadError`, code `assesskit/package/zip`   |
+| Corrupt or mismatched data            | Each entry's local header must name the file the central directory names; the size and CRC-32 must match; truncation is detected.                                        | `ReadError`, rule `assesskit/package/zip`   |
 
 `file(path)` returns a copy of the bytes. `ZipLimits`:
 

@@ -141,7 +141,7 @@ describe("writeUsageData", () => {
       statistics: [{ kind: "ordinary", name: "AIS", ...base, value: { value: 1 } }],
     }).replace('<targetObject identifier="Item_VB123456"/>', "");
     expect(await issuesOf(text)).toMatchObject([
-      { code: "assesskit/node/xsd-invalid", message: expect.stringContaining("targetObject") },
+      { rule: "assesskit/node/xsd-invalid", message: expect.stringContaining("targetObject") },
     ]);
   });
 });

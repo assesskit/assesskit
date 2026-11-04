@@ -149,7 +149,7 @@ describe("the host side of a local session", () => {
 
     const step = await client.host.apply(supply(7, "nope"));
     expect(step.events).toEqual([]);
-    expect(step.refusal?.code).toBe("unknown-request");
+    expect(step.refusal?.reason).toBe("unknown-request");
     expect(store.saved.get("practice-1")).toHaveLength(saves ?? 0);
     expect(steps).toEqual([]);
     expect(views).toHaveLength(1);
@@ -170,7 +170,7 @@ describe("the host side of a local session", () => {
   it("refuses a time action after the test ended", async () => {
     const { client } = await essaySession();
     await client.dispatch({ type: "end-test" });
-    expect((await client.host.apply({ type: "time" })).refusal?.code).toBe("ended");
+    expect((await client.host.apply({ type: "time" })).refusal?.reason).toBe("ended");
     client.close();
   });
 
@@ -582,7 +582,7 @@ describe("maxIdleMs of a local session", () => {
   it("counts a gap above it as suspended, so that the time limit that would have passed has not run", async () => {
     const without = await timedSession();
     without.clock.advance(3 * Day);
-    expect((await without.client.dispatch(answer("A"))).refusal?.code).toBe("time-over");
+    expect((await without.client.dispatch(answer("A"))).refusal?.reason).toBe("time-over");
     without.client.close();
 
     const { client, clock } = await timedSession({ maxIdleMs: Hour });
@@ -714,7 +714,7 @@ describe("maxIdleMs of a local session", () => {
     clock.advance(3 * Day);
     const saves = store.saved.get("practice-1")?.length;
     const refused = await client.dispatch({ type: "submit", item: { ref: "q2", instance: 1 } });
-    expect(refused.refusal?.code).toBe("not-current");
+    expect(refused.refusal?.reason).toBe("not-current");
     expect(store.saved.get("practice-1")).toHaveLength(saves ?? 0);
     const steps: string[][] = [];
     client.host.subscribeSteps((events) => steps.push(typesOf(events)));

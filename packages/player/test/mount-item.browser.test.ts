@@ -201,7 +201,7 @@ describe("mountItem", () => {
       wrap: (client) =>
         withDispatch(client, async () => ({
           view: client.view,
-          refusal: { code: "time-over", message: "The time is over." },
+          refusal: { reason: "time-over", message: "The time is over." },
         })),
     });
     await shown(s);

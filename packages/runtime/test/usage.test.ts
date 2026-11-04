@@ -273,7 +273,7 @@ describe("errors", () => {
       issueOf(() => readUsageData('<usageData xmlns="http://www.imsglobal.org/xsd/imsqti_usagedata_v2p2"/>')),
     ).toEqual({
       severity: "error",
-      code: "assesskit/usage/not-usage-data",
+      rule: "assesskit/usage/not-usage-data",
       message: `The root element must be usageData in the namespace ${USAGE_NAMESPACE}, found {http://www.imsglobal.org/xsd/imsqti_usagedata_v2p2}usageData.`,
       location: { line: 1, column: 1, element: "usageData" },
     });
@@ -292,7 +292,7 @@ describe("errors", () => {
         readUsageData(document('<ordinaryStatistic name="a" context="c"><value>1</value></ordinaryStatistic>')),
       ),
     ).toMatchObject({
-      code: "assesskit/usage/missing-element",
+      rule: "assesskit/usage/missing-element",
       message: "The element ordinaryStatistic needs a targetObject.",
     });
     expect(() =>
@@ -333,7 +333,7 @@ describe("errors", () => {
       'The value of an ordinary statistic without a baseType is a float. The text "high" is not a float: expected a decimal number with an optional exponent, INF, -INF or NaN.',
     );
     expect(issueOf(() => statisticOf(ordinary("", `${TARGET}<value baseType="integer">1.5</value>`)))).toMatchObject({
-      code: "assesskit/usage/invalid-value",
+      rule: "assesskit/usage/invalid-value",
     });
   });
 

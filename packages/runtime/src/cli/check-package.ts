@@ -3,7 +3,7 @@ import { readPackageFile, type SchemaSet, validateXmlFiles } from "../node/index
 import type { QtiPackage } from "../package/index.js";
 import { validatePackage } from "../validate/index.js";
 
-/** The code of the issue for a document whose root is in a namespace that no pinned schema describes. */
+/** The rule of the issue for a document whose root is in a namespace that no pinned schema describes. */
 const NO_SCHEMA = "assesskit/node/no-schema";
 
 /** Returns the schema issues of a file of a package: a package may hold XML that is not QTI, such as an LTI link. */
@@ -17,7 +17,7 @@ async function schemaIssues(pkg: QtiPackage, path: string, schemas: SchemaSet): 
   }
   if (content === undefined) return [];
   const issues = await validateXmlFiles(schemas, [{ path, content }]);
-  return issues.filter(({ code }) => code !== NO_SCHEMA);
+  return issues.filter(({ rule }) => rule !== NO_SCHEMA);
 }
 
 /**
