@@ -21,7 +21,7 @@ flowchart LR
     proctoring["proctoring: AssessmentControl, start"]
   end
   subgraph kit["interopkit"]
-    platform["tool-integration/platform<br/>ltiPlatformFrame, handlePlatformRequest,<br/>readStartAssessment"]
+    platform["tool-integration/platform<br/>prepareToolFrame, handlePlatformRequest,<br/>readStartAssessment"]
     tool["tool-integration/tool<br/>createServiceClient, publishScore"]
     analytics["learning-analytics<br/>buildEvent, sendCaliper"]
   end
@@ -57,12 +57,12 @@ example only, linked from `../interopkit` beside this repository until it is on 
 
 ## The steps
 
-| Step | Port of the player                    | What this example does                                                                                                                                                                                         |
-| ---- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | `LtiLogin`                            | The host's route calls `toolLaunch` and `ltiPlatformFrame` with `checkSession` as the `check` of the login; `handlePlatformRequest` gets `checkBrowser` as `checkLaunch`, built for the request of the browser |
-| 2    | `createToolScoreIntake`               | `handlePlatformRequest` gets `createGradebook` as `services.gradebook`, which gives each score to `intake.onScore`; the settle job gives each step of the session to `intake.settle`                           |
-| 3    | `forward.log` and `buildSessionScore` | `forward: { log: outboxLog(outbox) }`; the event job sends the Caliper events and the publish job sends the grade                                                                                              |
-| 4    | `SessionHost.proctor`                 | With a proctoring tool, the host's route calls `Proctoring.start`, and `handlePlatformRequest` gets `Proctoring.control` as `services.control`                                                                 |
+| Step | Port of the player                    | What this example does                                                                                                                                                                                                               |
+| ---- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1    | `LtiLogin`                            | The host's route calls `toolLaunch` and `prepareToolFrame` with `checkSession` as the `check` of the login; `handlePlatformRequest` gets `checkBrowser` as `checkLaunch`, which reads whose session the browser's request belongs to |
+| 2    | `createToolScoreIntake`               | `handlePlatformRequest` gets `createGradebook` as `services.gradebook`, which gives each score to `intake.onScore`; the settle job gives each step of the session to `intake.settle`                                                 |
+| 3    | `forward.log` and `buildSessionScore` | `forward: { log: outboxLog(outbox) }`; the event job sends the Caliper events and the publish job sends the grade                                                                                                                    |
+| 4    | `SessionHost.proctor`                 | With a proctoring tool, the host's route calls `Proctoring.start`, and `handlePlatformRequest` gets `Proctoring.control` as `services.control`                                                                                       |
 
 The log only appends. Nothing in a step reaches the network, so an outage of the learning platform or of the Caliper endpoint
 never delays a candidate and never reads as a failure of the CAT engine. A host's queue runs the three jobs after a step, for the

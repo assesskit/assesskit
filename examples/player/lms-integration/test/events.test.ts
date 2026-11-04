@@ -46,6 +46,9 @@ const eventOf = (type: DeliveryEventType, at = AT, change: Partial<DeliveryEvent
   ...change,
 });
 
+/** The first millisecond after the year 9999, the latest year that the form of a Caliper time can write. */
+const FIRST_MS_OF_YEAR_10000 = 253_402_300_800_000;
+
 /** Returns the name of the error that a call throws: the runtime and interopkit each have a `DataError`. */
 function thrownBy(call: () => unknown): string | undefined {
   try {
@@ -176,7 +179,7 @@ describe("caliperEvents", () => {
       () => caliperEvents([{ type: "presented", at: AT }], LATER),
       () => caliperEvents([{ type: "section-entered", at: AT }], LATER),
       () => caliperEvents([eventOf("presented", Number.NaN)], LATER),
-      () => caliperEvents([eventOf("presented", -1)], LATER),
+      () => caliperEvents([eventOf("presented", FIRST_MS_OF_YEAR_10000)], LATER),
       () => caliperEvents(JSON.parse("null"), LATER),
       () => caliperEvents([JSON.parse("5")], LATER),
     ];

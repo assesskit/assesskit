@@ -7,7 +7,8 @@ import {
 } from "@assesskit/runtime/checks";
 import type { DeliveryEvent, DeliveryEventType, ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import { type Assessment, type AssessmentItem, type CaliperEvent, caliperTime } from "@interopkit/learning-analytics";
+import { formatDateTime } from "@interopkit/core/checks";
+import type { Assessment, AssessmentItem, CaliperEvent } from "@interopkit/learning-analytics";
 import { assemble, type EventParts } from "./build.ts";
 import type { CaliperContext } from "./context.ts";
 import { assessmentOf, itemAttempt, itemOf, person, sectionOf, testAttempt } from "./entities.ts";
@@ -23,7 +24,7 @@ type Rule = (event: DeliveryEvent, context: CaliperContext) => EventParts;
 
 /** Reads the time of an event of the runtime as Caliper writes it. */
 function timeOf(event: DeliveryEvent): string {
-  return caliperTime(event.at, `The time of the event ${event.type}`);
+  return formatDateTime(event.at);
 }
 
 /** Reads the item instance that an event names. */

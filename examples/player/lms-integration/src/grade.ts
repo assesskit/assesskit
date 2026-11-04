@@ -1,5 +1,6 @@
 import type { ItemKey } from "@assesskit/runtime/delivery";
-import { type CaliperEvent, caliperTime, mintUrn, type Score } from "@interopkit/learning-analytics";
+import { formatDateTime } from "@interopkit/core/checks";
+import { type CaliperEvent, mintUrn, type Score } from "@interopkit/learning-analytics";
 import { assemble } from "./build.ts";
 import type { CaliperContext } from "./context.ts";
 import { itemAttempt, testAttempt } from "./entities.ts";
@@ -40,7 +41,7 @@ export interface CaliperGrade {
  */
 export function caliperGrade(grade: CaliperGrade, context: CaliperContext): CaliperEvent {
   const { index, at, item, scoreGiven, maxScore, scorer, scoredBy } = grade;
-  const time = caliperTime(at, "The time of the Caliper grade");
+  const time = formatDateTime(at);
   const object = item === undefined ? testAttempt(context, {}) : itemAttempt(context, item, {});
   const generated: Score = {
     id: mintUrn(["score", context.session, context.step, index]),

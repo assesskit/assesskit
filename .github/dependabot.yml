@@ -8,6 +8,10 @@ updates:
     groups:
       dev-tools:
         dependency-type: development
+    ignore:
+      # Node.js types follow the oldest supported Node.js major, so examples cannot use newer APIs.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

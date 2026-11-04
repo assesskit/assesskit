@@ -1,10 +1,10 @@
 import type { CatPort, ItemStage } from "@assesskit/runtime/cat";
 import { DataError } from "@assesskit/runtime/errors";
 import {
+  createMultistageTest,
   type MultistageModule,
   type MultistageTest,
   type MultistageTestState,
-  multistageTest,
 } from "@measurekit/psychometrics/cat";
 import type { TestItem } from "@measurekit/psychometrics/irt";
 import * as v from "valibot";
@@ -77,11 +77,11 @@ function multistageTestOf(
       };
     }),
   );
-  return multistageTest({ stages, routing: "theta" });
+  return createMultistageTest({ stages, routing: "theta" });
 }
 
 /**
- * Returns a CAT engine for calibrated multistage panels, in process, over measurekit's `multistageTest` with routing by the
+ * Returns a CAT engine for calibrated multistage panels, in process, over measurekit's `createMultistageTest` with routing by the
  * estimate of theta. Like {@link measurekitCatPort}, it keeps no session: the measurekit state travels in the `sessionState`, and
  * sections are stored under the SHA-256 of their section data. The settings file is JSON `{ stages: [{ modules: [{ id,
  * items }] }] }`, the usage data gives the parameters of the items, and the host gives the cut points. A stage of the

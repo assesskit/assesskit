@@ -4,7 +4,7 @@ import { createRandom } from "@measurekit/psychometrics";
 import {
   type AdaptiveTest,
   type AdaptiveTestState,
-  adaptiveTest,
+  createAdaptiveTest,
   type PoolItem,
   testLength,
 } from "@measurekit/psychometrics/cat";
@@ -61,7 +61,7 @@ function stageOf(next: string | null): ItemStage {
 /** Builds the adaptive test of a section: it ends after the section's length (the CAT service leaves the settings to the engine). */
 function adaptiveTestOf(section: StoredAdaptiveSection, pool: readonly PoolItem[]): AdaptiveTest {
   const { length, contentTargets, enemies } = section;
-  return adaptiveTest({
+  return createAdaptiveTest({
     pool,
     stopping: testLength(length),
     ...(contentTargets.length === 0 ? {} : { contentTargets: Object.fromEntries(contentTargets) }),
@@ -70,7 +70,7 @@ function adaptiveTestOf(section: StoredAdaptiveSection, pool: readonly PoolItem[
 }
 
 /**
- * Returns a CAT engine for item-level adaptive sections, in process, over measurekit's `adaptiveTest`. The port keeps no
+ * Returns a CAT engine for item-level adaptive sections, in process, over measurekit's `createAdaptiveTest`. The port keeps no
  * session: the measurekit state of the candidate and the session seed travel in the `sessionState`, and only
  * sections are stored, so that any process of the host answers any request.
  *

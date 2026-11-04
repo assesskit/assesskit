@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: the names of LTI messages and of OAuth 2.0 responses are snake_case.
 
-import { type Fetch, signerFromCryptoKey } from "@interopkit/core";
+import { createCryptoKeySigner, type Fetch } from "@interopkit/core";
 import type { HttpRequest } from "@interopkit/core/http";
 import type { LoginRecord, LtiStore, PlatformRegistration } from "@interopkit/tool-integration/tool";
 import { expect } from "vitest";
@@ -325,7 +325,7 @@ export function registrationOf(tool: KeyPair, overrides: Partial<PlatformRegistr
     jwksUrl: JWKS_URL,
     accessTokenUrl: ACCESS_TOKEN_URL,
     redirectUri: REDIRECT_URI,
-    signer: signerFromCryptoKey(tool.privateKey, { algorithm: "RS256", keyId: tool.kid }),
+    signer: createCryptoKeySigner(tool.privateKey, { algorithm: "RS256", keyId: tool.kid }),
     ...overrides,
   };
 }

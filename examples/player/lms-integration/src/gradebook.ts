@@ -30,13 +30,13 @@ export interface GradebookOptions {
  * instance of it, and a score that the tool posts goes to the intake.
  *
  * @remarks
- * Only the line item and its scores exist here, so the methods for the container, for changing a line item and for the results
- * answer that they have nothing: `undefined` and `false` are the 404 of a tool that is not the caller's. A score is kept only
- * when the item is a link of the caller's tool, and the session is bound to the user that the score names, so that a tool cannot
- * score a candidate whom it was not launched for. The platform answers 204 whether the intake kept the score or an earlier one
- * kept a later score, so `keepScore` need not tell which.
+ * Only the line item and its scores exist here, so the store has no method for the container, for changing a line item or for
+ * the results, and the platform does not offer them: their routes answer 404, and their scopes are neither listed nor granted. A
+ * score is kept only when the item is a link of the caller's tool, and the session is bound to the user that the score names, so
+ * that a tool cannot score a candidate whom it was not launched for. The platform answers 204 whether the intake kept the score
+ * or an earlier one kept a later score, so `keepScore` need not tell which.
  */
-export function createGradebook(options: GradebookOptions): GradebookStore {
+export function createGradebook(options: GradebookOptions): Required<Pick<GradebookStore, "lineItem" | "keepScore">> {
   const { host, intake, linkOf } = options;
   /** Finds the item instance and the link of a line item, when the caller's tool is the one that holds it. */
   const find = async (caller: ServiceCaller, session: string, lineItemId: string, call?: CallOptions) => {
@@ -45,15 +45,10 @@ export function createGradebook(options: GradebookOptions): GradebookStore {
     return item === undefined || link?.clientId !== caller.clientId ? undefined : { item, link };
   };
   return {
-    lineItems: async () => undefined,
     lineItem: async (caller, session, lineItemId, call) => {
       const found = await find(caller, session, lineItemId, call);
       return found && { id: lineItemId, label: found.link.label, scoreMaximum: found.link.scoreMaximum };
     },
-    createLineItem: async () => undefined,
-    updateLineItem: async () => undefined,
-    deleteLineItem: async () => false,
-    results: async () => undefined,
     keepScore: async (caller, session, lineItemId, score, call) => {
       const found = await find(caller, session, lineItemId, call);
       if (found === undefined) return undefined;

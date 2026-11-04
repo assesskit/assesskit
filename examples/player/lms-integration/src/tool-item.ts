@@ -4,6 +4,7 @@ import type { SessionHost, ToolScore } from "@assesskit/player/server";
 import type { ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { type LtiLink, resolveLaunchUrl } from "@assesskit/runtime/package";
+import type { HttpRequest } from "@interopkit/core/http";
 import type {
   MessageInput,
   PlatformLoginOptions,
@@ -68,7 +69,7 @@ export function toolLaunch(caller: Caller, item: ItemKey, link: LtiLink, tool: L
 }
 
 /**
- * The `check` of `ltiPlatformFrame` for the request of one browser: the message is for the browser's user, and a message that
+ * The `check` of `prepareToolFrame` for the request of one browser: the message is for the browser's user, and a message that
  * names a session, the launch of an item, names one that is bound to that user.
  *
  * @remarks
@@ -92,13 +93,17 @@ export function checkSession(host: Pick<SessionHost, "check">, principal: string
 }
 
 /**
- * The `checkLaunch` of `handlePlatformRequest` for the request of one browser: the tool's authentication request is the
- * candidate's own. The check runs before the message is taken, so that a refusal does not spend the launch.
+ * The `checkLaunch` of `handlePlatformRequest`: the tool's authentication request is the candidate's own. The launch carries
+ * the browser's request, whose cookies say whose session it is, so one set of options serves every browser. The check runs
+ * before the message is taken, so that a refusal does not spend the launch.
  *
- * @param principal - The user of the browser's session, whom the host authenticated for this request.
+ * @param principalOf - Returns the user of the session that a browser's request belongs to, whom the host authenticated, or
+ * `undefined` when the request belongs to none.
  */
-export function checkBrowser(principal: string): NonNullable<PlatformRequestOptions["checkLaunch"]> {
-  return async (launch) => launch.principal === principal;
+export function checkBrowser(
+  principalOf: (request: HttpRequest) => string | undefined | Promise<string | undefined>,
+): NonNullable<PlatformRequestOptions["checkLaunch"]> {
+  return async ({ principal, request }) => principal !== undefined && principal === (await principalOf(request));
 }
 
 /** Turns the score that the tool posted into the score that delivery needs: only a fully graded score is final. */

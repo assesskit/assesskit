@@ -1,6 +1,7 @@
 import { AccessError } from "@assesskit/player";
 import { DataError } from "@assesskit/runtime/errors";
 import { readLtiLink } from "@assesskit/runtime/package";
+import type { HttpRequest } from "@interopkit/core/http";
 import type { MessageInput, ReceivedScore } from "@interopkit/tool-integration/platform";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
@@ -15,6 +16,7 @@ import {
 } from "../src/index.ts";
 import { examFiles } from "./exam.ts";
 import { DRAWING } from "./fake-tool.ts";
+import { request } from "./fixture.ts";
 import { CANDIDATE, DRAW } from "./rig.ts";
 
 const AT = "2023-11-14T22:13:20.000Z";
@@ -147,12 +149,26 @@ describe("checkSession", () => {
 });
 
 describe("checkBrowser", () => {
-  it("accepts the launch of the browser's own user, and refuses any other user and an anonymous launch", async () => {
-    const check = checkBrowser("candidate-1");
-    const launch = { clientId: DRAWING.clientId, deploymentId: DRAWING.deploymentId };
-    expect(await check({ ...launch, principal: "candidate-1" })).toBe(true);
-    expect(await check({ ...launch, principal: "candidate-2" })).toBe(false);
-    expect(await check(launch)).toBe(false);
+  const launch = { clientId: DRAWING.clientId, deploymentId: DRAWING.deploymentId };
+  const sessionOf = (request: HttpRequest) => /(?:^|;\s*)session=([^;]*)/u.exec(request.headers.cookie ?? "")?.[1];
+  const from = (user?: string) =>
+    request({
+      url: "https://player.platform.example/authorize",
+      headers: user === undefined ? {} : { cookie: `session=${user}` },
+    });
+
+  it("accepts the launch of the user whose session the request belongs to, and refuses any other user and an anonymous launch", async () => {
+    const check = checkBrowser(sessionOf);
+    expect(await check({ ...launch, principal: "candidate-1", request: from("candidate-1") })).toBe(true);
+    expect(await check({ ...launch, principal: "candidate-2", request: from("candidate-1") })).toBe(false);
+    expect(await check({ ...launch, request: from("candidate-1") })).toBe(false);
+  });
+
+  it("refuses a request that belongs to no session, an anonymous launch included, and waits for a session store", async () => {
+    expect(await checkBrowser(sessionOf)({ ...launch, principal: "candidate-1", request: from() })).toBe(false);
+    expect(await checkBrowser(sessionOf)({ ...launch, request: from() })).toBe(false);
+    const stored = checkBrowser(async () => "candidate-1");
+    expect(await stored({ ...launch, principal: "candidate-1", request: from() })).toBe(true);
   });
 });
 

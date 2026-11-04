@@ -50,7 +50,7 @@ sequenceDiagram
   participant J as Host job
   P->>H: ltiLogin(item, { signal })
   H->>H: read the link, resolveLaunchUrl(link)
-  H->>K: ltiPlatformFrame(MessageInput), check with SessionHost.check
+  H->>K: prepareToolFrame(MessageInput), check with SessionHost.check
   K-->>H: the frame
   H-->>P: LtiFrame
   P->>T: frames open, login, launch

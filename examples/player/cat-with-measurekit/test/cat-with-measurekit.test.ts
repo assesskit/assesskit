@@ -18,8 +18,8 @@ import type { AssessmentResult, ResultVariable } from "@assesskit/runtime/result
 import { buildSingle, type Value } from "@assesskit/runtime/values";
 import { createRandom, DataError as MeasurekitDataError } from "@measurekit/psychometrics";
 import {
-  adaptiveTest,
-  multistageTest,
+  createAdaptiveTest,
+  createMultistageTest,
   type PoolItem,
   simulateAdaptiveTest,
   type TestState,
@@ -95,7 +95,7 @@ const alternating = (_item: string, position: number): number => (position % 2 =
 
 /** The items that measurekit administers for the same bank and answers, with the seeds of the steps as the port documents them. */
 function measurekitItems(length: number, answers: (item: string, position: number) => number, seed = 12345): string[] {
-  const test = adaptiveTest({ pool: measurekitPool, stopping: testLength(length) });
+  const test = createAdaptiveTest({ pool: measurekitPool, stopping: testLength(length) });
   let state = test.start(createRandom(seed * 2 ** 21));
   while (state.next !== null) {
     state = test.answer(
@@ -595,7 +595,7 @@ describe("measurekitCatPort", () => {
         id: item.id,
         model: twoParameterLogistic,
         parameters: { a: item.a ?? 1, b: item.b, c: 0, d: 1 },
-        contentArea: index % 2 === 0 ? "algebra" : "geometry",
+        contentAreas: [index % 2 === 0 ? "algebra" : "geometry"],
         ...(index === 2 ? { exposure: 0.5 } : {}),
       }),
     );
@@ -605,7 +605,7 @@ describe("measurekitCatPort", () => {
       sectionDataOf({ length: 5, contentTargets: { algebra: 0.5, geometry: 0.5 } }, BANK),
     );
     const run = await drive(port, section, alternating);
-    const test = adaptiveTest({
+    const test = createAdaptiveTest({
       pool,
       stopping: testLength(5),
       contentTargets: { algebra: 0.5, geometry: 0.5 },
@@ -783,7 +783,7 @@ function measurekitModules(scale = 1, answers: (item: string) => number): string
       const item = PANEL_BANK.find((candidate) => candidate.id === id) ?? { id, b: 0 };
       return { id, model: twoParameterLogistic, parameters: { a: (item.a ?? 1) * scale, b: item.b, c: 0, d: 1 } };
     });
-  const test = multistageTest({
+  const test = createMultistageTest({
     stages: [
       [{ id: "routing", items: items(["r1", "r2", "r3", "r4"]), cuts: [-0.4, 0.4] }],
       [
@@ -1263,7 +1263,7 @@ describe("properties", () => {
             }),
           );
           const simulated = simulateAdaptiveTest(
-            adaptiveTest({ pool, stopping: testLength(length) }),
+            createAdaptiveTest({ pool, stopping: testLength(length) }),
             [theta],
             createRandom(seed),
           ).persons[0]?.state;

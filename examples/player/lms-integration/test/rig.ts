@@ -9,21 +9,21 @@ import {
 import { type CandidateAction, type ItemKey, writeCandidateAction } from "@assesskit/runtime/delivery";
 import { type LtiLink, readLtiLink } from "@assesskit/runtime/package";
 import { buildSingle } from "@assesskit/runtime/values";
-import { type Fetch, signerFromCryptoKey } from "@interopkit/core";
+import { createCryptoKeySigner, type Fetch } from "@interopkit/core";
 import type { HttpRequest, HttpResponse } from "@interopkit/core/http";
 import { createJwksCache, type LtiMessage, SCOPES } from "@interopkit/tool-integration";
 import {
   buildPlatformEndpoints,
   handlePlatformRequest,
   type LaunchStore,
-  ltiPlatformFrame,
   type MessageInput,
   type PlatformConfig,
   type PlatformLoginOptions,
   type PlatformRequestOptions,
+  prepareToolFrame,
   type ToolMessageOptions,
 } from "@interopkit/tool-integration/platform";
-import { ltiLaunch, ltiLogin, type PlatformRegistration } from "@interopkit/tool-integration/tool";
+import { handleLaunch, handleLogin, type PlatformRegistration } from "@interopkit/tool-integration/tool";
 import {
   checkBrowser,
   checkSession,
@@ -73,6 +73,9 @@ const ESSAY: ItemKey = { ref: "essay", instance: 1 };
 export const DRAW: ItemKey = { ref: "draw", instance: 1 };
 export const CANDIDATE: Caller = { session: "exam-1", principal: SUBJECT };
 const SECOND = 1000;
+/** Returns the user of the session that the cookie `session` of a request names, or `undefined` when it names none. */
+const sessionOf = (httpRequest: HttpRequest): string | undefined =>
+  /(?:^|;\s*)session=([^;]*)/u.exec(httpRequest.headers.cookie ?? "")?.[1];
 /** The IRIs of the parties of the events, which are the host's to name. */
 export const PARTIES = {
   actor: "urn:uuid:0b9c4c4e-0d3c-4f8e-9a53-6d1b6f0d9a11",
@@ -96,7 +99,7 @@ const config: PlatformConfig = {
   frameOrigin: "https://player.platform.example",
   reservedOrigins: ["https://assets.platform.example"],
   keys: {
-    signer: signerFromCryptoKey(platformKeys.privateKey, { algorithm: "RS256", keyId: platformKeys.kid }),
+    signer: createCryptoKeySigner(platformKeys.privateKey, { algorithm: "RS256", keyId: platformKeys.kid }),
     publicKeys: [platformKeys.publicJwk],
   },
   hintKey,
@@ -195,20 +198,23 @@ export async function rig(files: Readonly<Record<string, string>> = examFiles({ 
     check: checkSession(host, principal),
     launches,
   });
-  /** The options of the handler for the request of the browser whose user is `principal`. */
-  const requests = (principal: string): PlatformRequestOptions => ({
+  /** The options of the handler, which serve every browser: the request says whose session it belongs to. */
+  const requests: PlatformRequestOptions = {
     config,
     clock,
     client: tools,
     launches,
     once,
     jwks,
-    checkLaunch: checkBrowser(principal),
+    checkLaunch: checkBrowser(sessionOf),
     services: { gradebook, control: proctoring.control },
-  });
-  /** Answers a request to the platform's origin, as the host's route does for the browser of `principal`. */
+  };
+  /** Answers a request to the platform's origin, as the host's route does for the browser of `principal`, whose cookie names its session. */
   const handle = (httpRequest: HttpRequest, principal = CANDIDATE.principal): Promise<HttpResponse> =>
-    handlePlatformRequest(httpRequest, requests(principal));
+    handlePlatformRequest(
+      { ...httpRequest, headers: { ...httpRequest.headers, cookie: `session=${principal}` } },
+      requests,
+    );
   const link: LtiLink = readLtiLink(pkg.file("lti/draw.xml") ?? new Uint8Array());
 
   // The learning platform that launched the exam, and the launch.
@@ -223,9 +229,9 @@ export async function rig(files: Readonly<Record<string, string>> = examFiles({ 
     jwks: createJwksCache({ fetch: lmsPlatform.fetch }),
     fetch: lms.fetch,
   };
-  const started = await ltiLogin(lmsPlatform.initiation(), toolOptions);
+  const started = await handleLogin(lmsPlatform.initiation(), toolOptions);
   const auth = await lmsPlatform.authenticate(started.headers.location ?? "", { claims: { sub: SUBJECT } });
-  const launched = await ltiLaunch(auth.post({ cookie: cookieOf(started.headers["set-cookie"]) }), toolOptions);
+  const launched = await handleLaunch(auth.post({ cookie: cookieOf(started.headers["set-cookie"]) }), toolOptions);
   if (!("messageType" in launched)) throw new Error("The launch is a page.");
   const launch: LtiMessage = launched;
 
@@ -318,7 +324,7 @@ export async function takeThrough(
   },
 ): Promise<Launched> {
   const { tool, keys, scope, browser = CANDIDATE.principal, messageType } = options;
-  const frame = await ltiPlatformFrame(message, ctx.loginFor(browser));
+  const frame = await prepareToolFrame(message, ctx.loginFor(browser));
   const initiation = readInitiation(frame.url, tool);
   const parameters = authenticationParameters(initiation, tool);
   const page = await ctx.handle(authenticationRequest(endpoints.authorization, parameters), browser);

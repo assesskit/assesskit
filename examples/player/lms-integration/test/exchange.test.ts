@@ -4,7 +4,7 @@ import { AccessError } from "@assesskit/player";
 import type { ViewEnvelope } from "@assesskit/player/protocol";
 import { readView } from "@assesskit/runtime/delivery";
 import { buildSingle } from "@assesskit/runtime/values";
-import { ltiPlatformFrame } from "@interopkit/tool-integration/platform";
+import { prepareToolFrame } from "@interopkit/tool-integration/platform";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runSettleJob, toolLaunch } from "../src/index.ts";
 import { examFiles } from "./exam.ts";
@@ -50,7 +50,7 @@ describe("an exam with an essay and a link to a tool", () => {
   it("refuses the authentication request of another user's browser, and leaves the launch for the candidate's own", async () => {
     const ctx = await rig();
     await ctx.host.start(CANDIDATE, { seed: 7 });
-    const frame = await ltiPlatformFrame(toolLaunch(CANDIDATE, DRAW, ctx.link, DRAWING), ctx.loginFor());
+    const frame = await prepareToolFrame(toolLaunch(CANDIDATE, DRAW, ctx.link, DRAWING), ctx.loginFor());
     const parameters = authenticationParameters(readInitiation(frame.url));
     const authenticate = (browser: string) =>
       ctx.handle(request({ url: `${endpoints.authorization}?${parameters}` }), browser);
@@ -64,9 +64,9 @@ describe("an exam with an essay and a link to a tool", () => {
     const ctx = await rig();
     await ctx.host.start(CANDIDATE, { seed: 7 });
     const message = toolLaunch({ ...CANDIDATE, session: "exam-2" }, DRAW, ctx.link, DRAWING);
-    await expect(ltiPlatformFrame(message, ctx.loginFor())).rejects.toBeInstanceOf(AccessError);
+    await expect(prepareToolFrame(message, ctx.loginFor())).rejects.toBeInstanceOf(AccessError);
     const other = toolLaunch({ ...CANDIDATE, principal: "someone-else" }, DRAW, ctx.link, DRAWING);
-    await expect(ltiPlatformFrame(other, ctx.loginFor())).rejects.toBeInstanceOf(AccessError);
+    await expect(prepareToolFrame(other, ctx.loginFor())).rejects.toBeInstanceOf(AccessError);
   });
 
   it("keeps interim progress, and supplies a final score to the requests that the item makes when the candidate leaves it", async () => {

@@ -152,7 +152,7 @@ describe("families", () => {
 
   it("reports an import of interopkit outside the examples, in the runtime and the player alike", () => {
     const files = repository({
-      "packages/runtime/src/x.ts": 'import { ltiLogin } from "@interopkit/tool-integration/tool";\n',
+      "packages/runtime/src/x.ts": 'import { handleLogin } from "@interopkit/tool-integration/tool";\n',
       "packages/player/src/x.ts": 'export * from "@interopkit/learning-analytics";\n',
       "packages/player/test/x.test.ts": 'const k = await import("@interopkit/core");\n',
       "examples/player/lms-integration/src/index.ts": 'import { buildEvent } from "@interopkit/learning-analytics";\n',

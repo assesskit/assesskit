@@ -48,15 +48,9 @@ describe("the line item of a launch", () => {
     expect(await ctx.gradebook.lineItem(TOOL, CANDIDATE.session, "not an item")).toBeUndefined();
   });
 
-  it("leaves the container, the changes of a line item and the results to the host that wants them", async () => {
+  it("has no method for the container, the changes of a line item or the results, so the platform does not offer them", async () => {
     const ctx = await rig();
-    const query = { limit: 10 };
-    const input = { label: "A", scoreMaximum: 1 };
-    expect(await ctx.gradebook.lineItems(TOOL, CANDIDATE.session, query)).toBeUndefined();
-    expect(await ctx.gradebook.createLineItem(TOOL, CANDIDATE.session, input)).toBeUndefined();
-    expect(await ctx.gradebook.updateLineItem(TOOL, CANDIDATE.session, itemId(DRAW), input)).toBeUndefined();
-    expect(await ctx.gradebook.deleteLineItem(TOOL, CANDIDATE.session, itemId(DRAW))).toBe(false);
-    expect(await ctx.gradebook.results(TOOL, CANDIDATE.session, itemId(DRAW), query)).toBeUndefined();
+    expect(Object.keys(ctx.gradebook).sort()).toEqual(["keepScore", "lineItem"]);
   });
 });
 
