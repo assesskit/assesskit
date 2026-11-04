@@ -724,6 +724,43 @@
       }
     },
     {
+      "includes": ["packages/runtime/src/item-formats/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../checks-internal.js",
+                      "!../random.js",
+                      "!../xml/**",
+                      "!../values/**",
+                      "!../asi/**",
+                      "!../processing/**",
+                      "!../content/**",
+                      "!../operators/**"
+                    ],
+                    "message": "item-formats/ builds on xml/, values/, asi/, processing/, content/ and operators/ only."
+                  },
+                  {
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["packages/runtime/src/package/**"],
       "linter": {
         "rules": {

@@ -50,6 +50,13 @@ The points below are the runtime's; the sections that start with "The player" ho
   `Map`. `decodePciValue` checks everything a module returns before it becomes a value, and refuses a file that is not
   `{ data, mime, name }` and a duration with years or months; the bytes of a file go to a callback of the host and never
   into a value. A package path from a configuration file is still untrusted: the host serves only paths of the package.
+- **Other platforms' item formats.** `readGift` takes a file from anywhere. It parses the HTML of each text with parse5, as a
+  browser does, and keeps only QTI's elements and their attributes of a valid value, and `data-*` attributes: `script`,
+  `style`, `iframe`, forms and other documents are left out with what they hold, and an attribute such as `onclick` or `style`
+  is left out. It refuses a text of more tags than `maxTextTags` before it parses it, since the parser of HTML mends tags that
+  close out of order in time that grows with the square of an element's children. `writeGift` runs each item's response
+  processing on the responses that tell its credits apart, under the limits of processing, and calls only the custom
+  operators that its caller registers.
 - **Printed variables.** A `format` runs on the runtime's own arithmetic, over the exact value of the number, and a width or
   precision above 1,100 is ignored, so that a document cannot make the formatter allocate gigabytes.
 - **XML.** `parseXml` rejects every DOCTYPE with a `SecurityError`, so no entity is declared, expanded or read (XXE and
@@ -397,6 +404,17 @@ takes `responses`, 64 responses of an item by default, up to 256 with its option
 counts the entries of a key before it reads it. `compareMathSteps` takes at most `maxSteps` lines, 200 by
 default, and refuses more with a `SecurityError`.
 
+Item formats (`ItemFormatLimits`; option `limits` of `readGift` and `writeGift`):
+
+| Limit          | Default    | Unit     | Largest example | Applies to                                                                                       |
+| -------------- | ---------- | -------- | --------------- | ------------------------------------------------------------------------------------------------ |
+| `maxBytes`     | 10,485,760 | bytes    | none            | One file, as UTF-8.                                                                              |
+| `maxQuestions` | 10,000     | entries  | none            | The questions and changes of category of a file.                                                 |
+| `maxAnswers`   | 100        | answers  | none            | The answers of a question; the choices of an interaction, or pairs of a set, that a writer runs. |
+| `maxNodes`     | 100,000    | elements | none            | The elements of the items of a file, and the tags of a text before it is parsed.                 |
+| `maxTextTags`  | 4,096      | tags     | none            | The tags of one text, before it is parsed.                                                       |
+| `maxDepth`     | 64         | levels   | none            | The nesting of HTML elements in a text; capped at 256.                                           |
+
 These numbers are fixed and cannot be replaced:
 
 | Number    | Applies to                                                                                                                                                             |
@@ -447,6 +465,9 @@ and no reader peaks above 200.
 | `hotspot-matching`      | 1,000 areas and 1,000 points, each point in every area                                  |               24 |
 | `compareMathSteps`      | 200 lines of 2,000 characters                                                           |               32 |
 | `compileScoring`        | 64 orders of 1,000 choices scored per position, a condition for each choice             |               56 |
+| `readGift`              | 813 questions of 100 answers, or 4,000 of two: the most elements of the items           |        48 and 72 |
+| `readGift`              | 47 essays of 4,096 tags of HTML each, to the limit of elements                          |               48 |
+| `readGift`              | 8,000 questions of two answers, stopped at the limit of elements                        |               48 |
 
 The bytes of a file and the central directory are outside the heap, so the test bounds the resident memory that these readings
 raise at 256 MiB, and they raise 110 to 220: inflating a deflated entry holds the pieces and the joined bytes at once. The
@@ -482,6 +503,7 @@ The packages that the runtime and the player load at run time are pinned to exac
 | `xmlchars`     | 2.2.0   | MIT     | `xml`: the character and name tables of XML 1.0 (a dependency of `saxes`, also used by the writer).                                                                                                                                                |
 | `fflate`       | 0.8.3   | MIT     | `package`: inflates the entries of ZIP archives in steps of 8 KiB, so that the output can be counted, and deflates the entries that `writePackage` writes. The runtime reads the central directory itself.                                         |
 | `libxml2-wasm` | 0.7.2   | MIT     | `node`: libxml2 2.15.1 compiled to WebAssembly, which compiles and runs the XSD schemas.                                                                                                                                                           |
+| `parse5`       | 8.0.1   | MIT     | `item-formats`: the HTML parser of the WHATWG standard, which reads the HTML of a question of another platform as a browser does; its one dependency, `entities` 8.1.0 (BSD-2-Clause), decodes character references.                               |
 | `valibot`      | 1.5.0   | MIT     | The runtime and the player: the schemas that read untrusted JSON (actions, views, state, envelopes, answers of services, options). One function in `checks.ts` turns the first issue into a `DataError` that names its path. It has no dependency. |
 | `jose`         | 6.2.12  | MIT     | The player `server`: signs and opens the tokens of the asset gate (HMAC with SHA-256, a compact JWS whose `typ` names the use).                                                                                                                    |
 | `mathlive`     | 0.111.1 | MIT     | `@assesskit/custom-interactions`, bundled into the module of math entry, which runs in the sandboxed frame of a portable custom interaction. Its fonts, KaTeX's, are under the SIL OFL 1.1 and carry their license.                                |

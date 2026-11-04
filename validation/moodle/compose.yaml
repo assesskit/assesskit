@@ -1,0 +1,34 @@
+# Moodle 5.3 and its database for validation/moodle.py. Every value that changes between runs comes from the script through the
+# environment.
+services:
+  db:
+    image: mariadb:11.8@sha256:c4124d1afa875e47f2892edf26b482fa54f796e2f342d3717a04ca091a22a9bd
+    cpus: 2
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --innodb-flush-log-at-trx-commit=2
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MOODLE_DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: moodle
+      MARIADB_USER: moodle
+      MARIADB_PASSWORD: ${MOODLE_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+
+  web:
+    image: moodlehq/moodle-php-apache:8.4-bookworm@sha256:3e910075c08dc73c8e18732f5e80c8fb9a60ae72eaf52b1ee198bb510e4fd9d6
+    cpus: 2
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MOODLE_DB_PASSWORD: ${MOODLE_DB_PASSWORD}
+    volumes:
+      - ${MOODLE_SOURCE}:/var/www/html:ro
+      - ./questions.php:/opt/questions.php:ro
+      - ${MOODLE_RUN}:/opt/run
+      - moodledata:/var/www/moodledata
+
+volumes:
+  moodledata:

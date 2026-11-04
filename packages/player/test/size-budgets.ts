@@ -20,9 +20,11 @@ export interface EntryBudget {
  */
 export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   "@assesskit/runtime": {
-    gzip: 208_000,
+    gzip: 318_500,
     holds: [
+      "entities",
       "fflate",
+      "parse5",
       "runtime/asi",
       "runtime/cat",
       "runtime/checks",
@@ -31,6 +33,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
       "runtime/delivery",
       "runtime/errors",
       "runtime/interactions",
+      "runtime/item-formats",
       "runtime/keys",
       "runtime/metadata",
       "runtime/operators",
@@ -198,6 +201,25 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
       "runtime/checks",
       "runtime/checks-internal",
       "runtime/errors",
+      "runtime/xml",
+      "saxes",
+      "valibot",
+      "xmlchars",
+    ],
+  },
+  "@assesskit/runtime/item-formats": {
+    gzip: 145_500,
+    holds: [
+      "entities",
+      "parse5",
+      "runtime/asi",
+      "runtime/checks",
+      "runtime/checks-internal",
+      "runtime/content",
+      "runtime/errors",
+      "runtime/processing",
+      "runtime/random",
+      "runtime/values",
       "runtime/xml",
       "saxes",
       "valibot",

@@ -1,0 +1,2636 @@
+{
+ "moodle": {
+  "version": "5.3.0",
+  "commit": "42622298fe06f9626d988d60b2bf589bd8f850e8"
+ },
+ "cases": [
+  {
+   "name": "gift-written",
+   "format": "gift",
+   "file": "$CATEGORY: $course$/top/Written\n\n// [id:choice-partial] [tag:written]\n::Choice with partial credit::[html]<p>Which number is prime?</p>{\n\t=7#<p>Seven has no divisor but 1 and itself.</p>\n\t~%50%9\n\t~8\n\t~%-25%1#<p>One is not prime.</p>\n\t####<p>Primes have exactly two divisors.</p>\n}\n\n// [id:choice-multiple] [tag:written]\n::Choice of several answers::[html]Which are even?{\n\t~%50%2\n\t~%50%4\n\t~%-100%5\n\t~7\n}\n\n// [id:choice-all-or-nothing] [tag:written]\n::All or nothing::[html]<p>Which are colors?</p>{\n\t~%50%Red\n\t~%-100%Table\n\t~%50%Blue\n}\n\n// [id:true-false] [tag:written]\n::True or false::[html]<p>The Moon is a planet.</p>{FALSE}\n\n// [id:inline-choice] [tag:written]\n::Inline choice::[html]<p>Water boils at {\n\t~90\n\t=100\n\t~110\n} degrees at sea level.</p>\n\n// [id:text-mapping] [tag:written]\n::Text with a mapping::[html]<p>The capital of Indonesia is {\n\t=Jakarta\n\t=%50%Batavia\n} today.</p>\n\n// [id:number-exact] [tag:written]\n::Exact number::[html]<p>Six times seven is </p>{#\n\t=42:0\n}\n\n// [id:escapes] [tag:written]\n::Marks \\{\\=\\~\\#\\:\\\\\\} and markup::[html]<p>Let <em>x</em> \\= \\{1, 2\\}\\: is \\~x \\#1? Path C\\:\\\\temp</p>{\n\t=<strong>a \\= b</strong>\n\t~c \\~ d -&gt; e\n\t~\\{f\\} \\#g\n}\n\n// [id:essay] [tag:written]\n::Essay::[html]<p>Describe the water cycle.</p>{}\n\n// [id:description] [tag:written]\n::Description::[html]<p>Read the next questions with care.</p>\n\n// [id:text-operator] [tag:written]\n::Text by the operator::[html]<p>The capital of France is {\n\t=Paris\n}.</p>\n\n// [id:number-tolerance] [tag:written]\n::Number with a tolerance::[html]<p>Gravity in m/s²\\: {#\n\t=9.81:0.05\n} near the ground.</p>\n\n// [id:match-pairs] [tag:written]\n::Matching pairs::[html]<p>Match each country with its capital.</p>{\n\t=Indonesia -> Jakarta\n\t=Japan -> Tokyo\n\t=France -> Paris\n\t= -> Rome\n}\n\n",
+   "responses": {
+    "Choice with partial credit": [
+     null,
+     {
+      "choice": 0
+     },
+     {
+      "choice": 1
+     },
+     {
+      "choice": 2
+     },
+     {
+      "choice": 3
+     }
+    ],
+    "Choice of several answers": [
+     {
+      "choices": [
+       0
+      ]
+     },
+     {
+      "choices": [
+       0,
+       1
+      ]
+     },
+     {
+      "choices": [
+       0,
+       2
+      ]
+     },
+     {
+      "choices": [
+       0,
+       1,
+       2
+      ]
+     },
+     {
+      "choices": [
+       3
+      ]
+     },
+     null
+    ],
+    "All or nothing": [
+     {
+      "choices": [
+       0,
+       2
+      ]
+     },
+     {
+      "choices": [
+       0
+      ]
+     },
+     {
+      "choices": [
+       0,
+       1,
+       2
+      ]
+     },
+     {
+      "choices": [
+       1
+      ]
+     }
+    ],
+    "True or false": [
+     {
+      "value": true
+     },
+     {
+      "value": false
+     },
+     null
+    ],
+    "Inline choice": [
+     {
+      "choice": 0
+     },
+     {
+      "choice": 1
+     },
+     {
+      "choice": 2
+     }
+    ],
+    "Text with a mapping": [
+     {
+      "text": "Jakarta"
+     },
+     {
+      "text": "jakarta"
+     },
+     {
+      "text": "Batavia"
+     },
+     {
+      "text": "Bandung"
+     },
+     null
+    ],
+    "Exact number": [
+     {
+      "text": "42"
+     },
+     {
+      "text": "41"
+     }
+    ],
+    "Marks {=~#:\\} and markup": [
+     {
+      "choice": 0
+     },
+     {
+      "choice": 1
+     },
+     {
+      "choice": 2
+     }
+    ],
+    "Text by the operator": [
+     {
+      "text": "Paris"
+     },
+     {
+      "text": "paris"
+     },
+     {
+      "text": "Lyon"
+     }
+    ],
+    "Number with a tolerance": [
+     {
+      "text": "9.81"
+     },
+     {
+      "text": "9.85"
+     },
+     {
+      "text": "9.9"
+     },
+     {
+      "text": "9"
+     }
+    ],
+    "Matching pairs": [
+     {
+      "pairs": [
+       [
+        0,
+        "Jakarta"
+       ],
+       [
+        1,
+        "Tokyo"
+       ],
+       [
+        2,
+        "Paris"
+       ]
+      ]
+     },
+     {
+      "pairs": [
+       [
+        0,
+        "Jakarta"
+       ],
+       [
+        1,
+        "Paris"
+       ],
+       [
+        2,
+        "Rome"
+       ]
+      ]
+     },
+     {
+      "pairs": [
+       [
+        0,
+        "Rome"
+       ]
+      ]
+     }
+    ]
+   },
+   "moodle": {
+    "name": "gift-written",
+    "failure": null,
+    "log": "",
+    "questions": [
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "Choice with partial credit",
+       "questiontext": {
+        "text": "<p>Which number is prime?</p>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "<p>Primes have exactly two divisors.</p>",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "choice-partial",
+       "category": "Written",
+       "tags": [
+        "written"
+       ],
+       "answers": [
+        {
+         "answer": "7",
+         "fraction": 1,
+         "feedback": "<p>Seven has no divisor but 1 and itself.</p>"
+        },
+        {
+         "answer": "9",
+         "fraction": 0.5,
+         "feedback": ""
+        },
+        {
+         "answer": "8",
+         "fraction": 0,
+         "feedback": ""
+        },
+        {
+         "answer": "1",
+         "fraction": -0.25,
+         "feedback": "<p>One is not prime.</p>"
+        }
+       ],
+       "single": 1,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       null,
+       1,
+       0.5,
+       0,
+       -0.25
+      ],
+      "gift": "// question: 1  name: Choice with partial credit\n// [id:choice-partial] [tag:written]\n::Choice with partial credit::[html]<p>Which number is prime?</p>{\n\t=7#<p>Seven has no divisor but 1 and itself.</p>\n\t~%50%9\n\t~8\n\t~%-25%1#<p>One is not prime.</p>\n\t####<p>Primes have exactly two divisors.</p>\n}\n\n",
+      "xml": "<!-- question: 1  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>Choice with partial credit</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<p>Which number is prime?</p>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text><![CDATA[<p>Primes have exactly two divisors.</p>]]></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>choice-partial</idnumber>\n    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"html\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"html\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"html\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"100\" format=\"html\">\n      <text>7</text>\n      <feedback format=\"html\">\n        <text><![CDATA[<p>Seven has no divisor but 1 and itself.</p>]]></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"50\" format=\"html\">\n      <text>9</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"html\">\n      <text>8</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"-25\" format=\"html\">\n      <text>1</text>\n      <feedback format=\"html\">\n        <text><![CDATA[<p>One is not prime.</p>]]></text>\n      </feedback>\n    </answer>\n    <tags>\n      <tag><text>written</text>\n</tag>\n    </tags>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "Choice of several answers",
+       "questiontext": {
+        "text": "Which are even?",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "choice-multiple",
+       "category": "Written",
+       "tags": [
+        "written"
+       ],
+       "answers": [
+        {
+         "answer": "2",
+         "fraction": 0.5,
+         "feedback": ""
+        },
+        {
+         "answer": "4",
+         "fraction": 0.5,
+         "feedback": ""
+        },
+        {
+         "answer": "5",
+         "fraction": -1,
+         "feedback": ""
+        },
+        {
+         "answer": "7",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 0,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       0.5,
+       1,
+       0,
+       0,
+       0,
+       null
+      ],
+      "gift": "// question: 2  name: Choice of several answers\n// [id:choice-multiple] [tag:written]\n::Choice of several answers::[html]Which are even?{\n\t~%50%2\n\t~%50%4\n\t~%-100%5\n\t~7\n}\n\n",
+      "xml": "<!-- question: 2  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>Choice of several answers</text>\n    </name>\n    <questiontext format=\"html\">\n      <text>Which are even?</text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>choice-multiple</idnumber>\n    <single>false</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"html\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"html\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"html\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"50\" format=\"html\">\n      <text>2</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"50\" format=\"html\">\n      <text>4</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"-100\" format=\"html\">\n      <text>5</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"html\">\n      <text>7</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <tags>\n      <tag><text>written</text>\n</tag>\n    </tags>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "All or nothing",
+       "questiontext": {
+        "text": "<p>Which are colors?</p>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "choice-all-or-nothing",
+       "category": "Written",
+       "tags": [
+        "written"
+       ],
+       "answers": [
+        {
+         "answer": "Red",
+         "fraction": 0.5,
+         "feedback": ""
+        },
+        {
+         "answer": "Table",
+         "fraction": -1,
+         "feedback": ""
+        },
+        {
+         "answer": "Blue",
+         "fraction": 0.5,
+         "feedback": ""
+        }
+       ],
+       "single": 0,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       1,
+       0.5,
+       0,
+       0
+      ],
+      "gift": "// question: 3  name: All or nothing\n// [id:choice-all-or-nothing] [tag:written]\n::All or nothing::[html]<p>Which are colors?</p>{\n\t~%50%Red\n\t~%-100%Table\n\t~%50%Blue\n}\n\n",
+      "xml": "<!-- question: 3  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>All or nothing</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<p>Which are colors?</p>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>choice-all-or-nothing</idnumber>\n    <single>false</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"html\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"html\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"html\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"50\" format=\"html\">\n      <text>Red</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"-100\" format=\"html\">\n      <text>Table</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"50\" format=\"html\">\n      <text>Blue</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <tags>\n      <tag><text>written</text>\n</tag>\n    </tags>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "truefalse",
+       "name": "True or false",
+       "questiontext": {
+        "text": "<p>The Moon is a planet.</p>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 1,
+       "idnumber": "true-false",
+       "category": "Written",
+       "tags": [
+        "written"
+       ],
+       "answers": [
+        {
+         "answer": "True",
+         "fraction": 0,
+         "feedback": ""
+        },
+        {
+         "answer": "False",
+         "fraction": 1,
+         "feedback": ""
+        }
+       ],
+       "correct": false
+      },
+      "grades": [
+       0,
+       1,
+       null
+      ],
+      "gift": "// question: 4  name: True or false\n// [id:true-false] [tag:written]\n::True or false::[html]<p>The Moon is a planet.</p>{FALSE}\n\n",
+      "xml": "<!-- question: 4  -->\n  <question type=\"truefalse\">\n    <name>\n      <text>True or false</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<p>The Moon is a planet.</p>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>1</penalty>\n    <hidden>0</hidden>\n    <idnumber>true-false</idnumber>\n    <answer fraction=\"0\" format=\"moodle_auto_format\">\n      <text>true</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>false</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <tags>\n      <tag><text>written</text>\n</tag>\n    </tags>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "Inline choice",
+       "questiontext": {
+        "text": "<p>Water boils at _____ degrees at sea level.</p>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "inline-choice",
+       "category": "Written",
+       "tags": [
+        "written"
+       ],
+       "answers": [
+        {
+         "answer": "90",
+         "fraction": 0,
+         "feedback": ""
+        },
+        {
+         "answer": "100",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "110",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 1,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       0,
+       1,
+       0
+      ],
+      "gift": "// question: 5  name: Inline choice\n// [id:inline-choice] [tag:written]\n::Inline choice::[html]<p>Water boils at _____ degrees at sea level.</p>{\n\t~90\n\t=100\n\t~110\n}\n\n",
+      "xml": "<!-- question: 5  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>Inline choice</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<p>Water boils at _____ degrees at sea level.</p>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>inline-choice</idnumber>\n    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"html\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"html\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"html\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"0\" format=\"html\">\n      <text>90</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"100\" format=\"html\">\n      <text>100</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"html\">\n      <text>110</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <tags>\n      <tag><text>written</text>\n</tag>\n    </tags>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "shortanswer",
+       "name": "Text with a mapping",
+       "questiontext": {
+        "text": "<p>The capital of Indonesia is _____ today.</p>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "text-mapping",
+       "category": "Written",
+       "tags": [
+        "written"
+       ],
+       "answers": [
+        {
+         "answer": "Jakarta",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "Batavia",
+         "fraction": 0.5,
+         "feedback": ""
+        }
+       ],
+       "usecase": 0
+      },
+      "grades": [
+       1,
+       1,
+       0.5,
+       0,
+       null
+      ],
+      "gift": "// question: 6  name: Text with a mapping\n// [id:text-mapping] [tag:written]\n::Text with a mapping::[html]<p>The capital of Indonesia is _____ today.</p>{\n\t=%100%Jakarta#\n\t=%50%Batavia#\n}\n\n",
+      "xml": "<!-- question: 6  -->\n  <question type=\"shortanswer\">\n    <name>\n      <text>Text with a mapping</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<p>The capital of Indonesia is _____ today.</p>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>text-mapping</idnumber>\n    <usecase>0</usecase>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>Jakarta</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"50\" format=\"moodle_auto_format\">\n      <text>Batavia</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <tags>\n      <tag><text>written</text>\n</tag>\n    </tags>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "numerical",
+       "name": "Exact number",
+       "questiontext": {
+        "text": "<p>Six times seven is </p>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "number-exact",
+       "category": "Written",
+       "tags": [
+        "written"
+       ],
+       "answers": [
+        {
+         "answer": "42",
+         "fraction": 1,
+         "feedback": "",
+         "tolerance": 0
+        }
+       ]
+      },
+      "grades": [
+       1,
+       0
+      ],
+      "gift": "// question: 7  name: Exact number\n// [id:number-exact] [tag:written]\n::Exact number::[html]<p>Six times seven is </p>{#\n\t=%100%42:0#\n}\n\n",
+      "xml": "<!-- question: 7  -->\n  <question type=\"numerical\">\n    <name>\n      <text>Exact number</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<p>Six times seven is </p>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>number-exact</idnumber>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>42</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n      <tolerance>0</tolerance>\n    </answer>\n    <unitgradingtype>0</unitgradingtype>\n    <unitpenalty>1.0000000</unitpenalty>\n    <showunits>3</showunits>\n    <unitsleft>0</unitsleft>\n    <tags>\n      <tag><text>written</text>\n</tag>\n    </tags>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "Marks {=~#:\\} and markup",
+       "questiontext": {
+        "text": "<p>Let <em>x</em> = {1, 2}: is ~x #1? Path C:\\temp</p>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "escapes",
+       "category": "Written",
+       "tags": [
+        "written"
+       ],
+       "answers": [
+        {
+         "answer": "<strong>a = b</strong>",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "c ~ d -&gt; e",
+         "fraction": 0,
+         "feedback": ""
+        },
+        {
+         "answer": "{f} #g",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 1,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       1,
+       0,
+       0
+      ],
+      "gift": "// question: 8  name: Marks {=~#:\\} and markup\n// [id:escapes] [tag:written]\n::Marks \\{\\=\\~\\#\\:\\\\\\} and markup::[html]<p>Let <em>x</em> \\= \\{1, 2\\}\\: is \\~x \\#1? Path C\\:\\\\temp</p>{\n\t=<strong>a \\= b</strong>\n\t~c \\~ d -&gt; e\n\t~\\{f\\} \\#g\n}\n\n",
+      "xml": "<!-- question: 8  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>Marks {=~#:\\} and markup</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<p>Let <em>x</em> = {1, 2}: is ~x #1? Path C:\\temp</p>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>escapes</idnumber>\n    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"html\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"html\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"html\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"100\" format=\"html\">\n      <text><![CDATA[<strong>a = b</strong>]]></text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"html\">\n      <text><![CDATA[c ~ d -&gt; e]]></text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"html\">\n      <text>{f} #g</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <tags>\n      <tag><text>written</text>\n</tag>\n    </tags>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "essay",
+       "name": "Essay",
+       "questiontext": {
+        "text": "<p>Describe the water cycle.</p>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "essay",
+       "category": "Written",
+       "tags": [
+        "written"
+       ],
+       "responseformat": "editor",
+       "responsefieldlines": 15,
+       "responserequired": 1,
+       "attachments": 0,
+       "graderinfo": "",
+       "responsetemplate": ""
+      },
+      "grades": [],
+      "gift": "// question: 9  name: Essay\n// [id:essay] [tag:written]\n::Essay::[html]<p>Describe the water cycle.</p>{}\n\n",
+      "xml": "<!-- question: 9  -->\n  <question type=\"essay\">\n    <name>\n      <text>Essay</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<p>Describe the water cycle.</p>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>essay</idnumber>\n    <responseformat>editor</responseformat>\n    <responserequired>1</responserequired>\n    <responsefieldlines>15</responsefieldlines>\n    <minwordlimit></minwordlimit>\n    <maxwordlimit></maxwordlimit>\n    <attachments>0</attachments>\n    <attachmentsrequired>0</attachmentsrequired>\n    <maxbytes>0</maxbytes>\n    <filetypeslist></filetypeslist>\n    <graderinfo format=\"html\">\n      <text></text>\n    </graderinfo>\n    <responsetemplate format=\"html\">\n      <text></text>\n    </responsetemplate>\n    <tags>\n      <tag><text>written</text>\n</tag>\n    </tags>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "description",
+       "name": "Description",
+       "questiontext": {
+        "text": "<p>Read the next questions with care.</p>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 0,
+       "penalty": 0.3333333,
+       "idnumber": "description",
+       "category": "Written",
+       "tags": [
+        "written"
+       ]
+      },
+      "grades": [],
+      "gift": "// question: 10  name: Description\n// [id:description] [tag:written]\n::Description::[html]<p>Read the next questions with care.</p>\n",
+      "xml": "<!-- question: 10  -->\n  <question type=\"description\">\n    <name>\n      <text>Description</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<p>Read the next questions with care.</p>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>0</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>description</idnumber>\n    <tags>\n      <tag><text>written</text>\n</tag>\n    </tags>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "shortanswer",
+       "name": "Text by the operator",
+       "questiontext": {
+        "text": "<p>The capital of France is _____.</p>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "text-operator",
+       "category": "Written",
+       "tags": [
+        "written"
+       ],
+       "answers": [
+        {
+         "answer": "Paris",
+         "fraction": 1,
+         "feedback": ""
+        }
+       ],
+       "usecase": 0
+      },
+      "grades": [
+       1,
+       1,
+       0
+      ],
+      "gift": "// question: 11  name: Text by the operator\n// [id:text-operator] [tag:written]\n::Text by the operator::[html]<p>The capital of France is _____.</p>{\n\t=%100%Paris#\n}\n\n",
+      "xml": "<!-- question: 11  -->\n  <question type=\"shortanswer\">\n    <name>\n      <text>Text by the operator</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<p>The capital of France is _____.</p>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>text-operator</idnumber>\n    <usecase>0</usecase>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>Paris</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <tags>\n      <tag><text>written</text>\n</tag>\n    </tags>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "numerical",
+       "name": "Number with a tolerance",
+       "questiontext": {
+        "text": "<p>Gravity in m/s²: _____ near the ground.</p>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "number-tolerance",
+       "category": "Written",
+       "tags": [
+        "written"
+       ],
+       "answers": [
+        {
+         "answer": "9.81",
+         "fraction": 1,
+         "feedback": "",
+         "tolerance": 0.05
+        }
+       ]
+      },
+      "grades": [
+       1,
+       1,
+       0,
+       0
+      ],
+      "gift": "// question: 12  name: Number with a tolerance\n// [id:number-tolerance] [tag:written]\n::Number with a tolerance::[html]<p>Gravity in m/s²\\: _____ near the ground.</p>{#\n\t=%100%9.81:0.05#\n}\n\n",
+      "xml": "<!-- question: 12  -->\n  <question type=\"numerical\">\n    <name>\n      <text>Number with a tolerance</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<p>Gravity in m/s²: _____ near the ground.</p>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>number-tolerance</idnumber>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>9.81</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n      <tolerance>0.05</tolerance>\n    </answer>\n    <unitgradingtype>0</unitgradingtype>\n    <unitpenalty>1.0000000</unitpenalty>\n    <showunits>3</showunits>\n    <unitsleft>0</unitsleft>\n    <tags>\n      <tag><text>written</text>\n</tag>\n    </tags>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "match",
+       "name": "Matching pairs",
+       "questiontext": {
+        "text": "<p>Match each country with its capital.</p>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "match-pairs",
+       "category": "Written",
+       "tags": [
+        "written"
+       ],
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": "",
+       "subquestions": [
+        {
+         "questiontext": "Indonesia",
+         "answertext": "Jakarta"
+        },
+        {
+         "questiontext": "Japan",
+         "answertext": "Tokyo"
+        },
+        {
+         "questiontext": "France",
+         "answertext": "Paris"
+        },
+        {
+         "questiontext": "",
+         "answertext": "Rome"
+        }
+       ]
+      },
+      "grades": [
+       1,
+       0.3333333333333333,
+       0
+      ],
+      "gift": "// question: 13  name: Matching pairs\n// [id:match-pairs] [tag:written]\n::Matching pairs::[html]<p>Match each country with its capital.</p>{\n\t=Indonesia -> Jakarta\n\t=Japan -> Tokyo\n\t=France -> Paris\n\t= -> Rome\n}\n\n",
+      "xml": "<!-- question: 13  -->\n  <question type=\"matching\">\n    <name>\n      <text>Matching pairs</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<p>Match each country with its capital.</p>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>match-pairs</idnumber>\n    <shuffleanswers>true</shuffleanswers>\n    <correctfeedback format=\"html\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"html\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"html\">\n      <text></text>\n    </incorrectfeedback>\n    <subquestion format=\"html\">\n      <text>Indonesia</text>\n      <answer>\n        <text>Jakarta</text>\n      </answer>\n    </subquestion>\n    <subquestion format=\"html\">\n      <text>Japan</text>\n      <answer>\n        <text>Tokyo</text>\n      </answer>\n    </subquestion>\n    <subquestion format=\"html\">\n      <text>France</text>\n      <answer>\n        <text>Paris</text>\n      </answer>\n    </subquestion>\n    <subquestion format=\"html\">\n      <text></text>\n      <answer>\n        <text>Rome</text>\n      </answer>\n    </subquestion>\n    <tags>\n      <tag><text>written</text>\n</tag>\n    </tags>\n  </question>\n"
+     }
+    ]
+   }
+  },
+  {
+   "name": "gift-edges",
+   "format": "gift",
+   "file": "// A comment that is not a question.\n// [id:edge-escapes] [tag:alpha] [tag:be\\]ta]\n::Escapes\\: all::Braces \\{1\\}, \\= equals, \\~ tilde, \\# hash, \\\\ backslash and\\na line break.{=right\\#1 ~wrong\\=2}\n\n::Weights::Pick the parts.{~%50%half ~%33.33333%third ~%-50%penalty ~%100%full ~none}\n\n::Missing::The {=cat ~dog ~cow} sat on the mat.\n\n::Missing short::Two plus two is {=four =%50%for} today.\n\n::Number not a number::Any number will do.{#abc}\n\n::Number range::Pick a number from 1 to 5.{#1..5#In range.}\n\n::Number answers::About ten.{#=10:1#Close. =%50%10:3 ~#Far.}\n\n::False::Penguins fly.{FALSE#They do not.#Right.####Penguins swim.}\n\n::Plain::[plain]<b>not bold</b> and 2 < 3 {=yes ~no}\n\n::Markdown::[markdown]**bold** text {=a ~b}\n\n::Html::[html]<p>Para <em>one</em></p><script>alert(1)</script><font color=\"red\">red</font>{=x ~y}\n\n::Pairs::Match the letters.{=a -> 1 =b -> 2 =c -> 3 = -> 4}\n\n::Wildcards::Name a fruit.{=*apple* =%50%ban\\*na}\n\n::Broken::Text {=a ~b\n\n::Bad pair::Match.{=a -> 1 =b}\n\n::Off grid::Credit not in the list.{=%35%a =b}\n\n$CATEGORY: $course$/top/Edge cases\n\n::Essay::Write a paragraph.{####A model answer.}\n\n::Description::Just a description.\n\n::Zero line::First part\n0\nof question?{=x ~y}\n",
+   "responses": {
+    "Escapes: all": [
+     {
+      "choice": 0
+     },
+     {
+      "choice": 1
+     }
+    ],
+    "Weights": [
+     {
+      "choices": [
+       0
+      ]
+     },
+     {
+      "choices": [
+       0,
+       1
+      ]
+     },
+     {
+      "choices": [
+       0,
+       2
+      ]
+     },
+     {
+      "choices": [
+       2
+      ]
+     },
+     {
+      "choices": [
+       3,
+       0
+      ]
+     },
+     {
+      "choices": [
+       4
+      ]
+     }
+    ],
+    "Missing": [
+     {
+      "choice": 0
+     },
+     {
+      "choice": 1
+     }
+    ],
+    "Missing short": [
+     {
+      "text": "four"
+     },
+     {
+      "text": "FOUR"
+     },
+     {
+      "text": "for"
+     },
+     {
+      "text": " four "
+     },
+     {
+      "text": "five"
+     }
+    ],
+    "Number not a number": [
+     {
+      "text": "1"
+     },
+     {
+      "text": "-3.5"
+     }
+    ],
+    "Number range": [
+     {
+      "text": "1"
+     },
+     {
+      "text": "3"
+     },
+     {
+      "text": "5"
+     },
+     {
+      "text": "5.1"
+     },
+     {
+      "text": "0.9"
+     }
+    ],
+    "Number answers": [
+     {
+      "text": "10"
+     },
+     {
+      "text": "11"
+     },
+     {
+      "text": "12"
+     },
+     {
+      "text": "13"
+     },
+     {
+      "text": "14"
+     }
+    ],
+    "False": [
+     {
+      "value": true
+     },
+     {
+      "value": false
+     }
+    ],
+    "Plain": [
+     {
+      "choice": 0
+     },
+     {
+      "choice": 1
+     }
+    ],
+    "Markdown": [
+     {
+      "choice": 0
+     },
+     {
+      "choice": 1
+     }
+    ],
+    "Html": [
+     {
+      "choice": 0
+     },
+     {
+      "choice": 1
+     }
+    ],
+    "Pairs": [
+     {
+      "pairs": [
+       [
+        0,
+        "1"
+       ],
+       [
+        1,
+        "2"
+       ],
+       [
+        2,
+        "3"
+       ]
+      ]
+     },
+     {
+      "pairs": [
+       [
+        0,
+        "1"
+       ],
+       [
+        1,
+        "4"
+       ]
+      ]
+     }
+    ],
+    "Wildcards": [
+     {
+      "text": "pineapple"
+     },
+     {
+      "text": "Apple pie"
+     },
+     {
+      "text": "ban*na"
+     },
+     {
+      "text": "banana"
+     }
+    ],
+    "Off grid": [
+     {
+      "text": "a"
+     },
+     {
+      "text": "b"
+     }
+    ],
+    "of question?": [
+     {
+      "choice": 0
+     },
+     {
+      "choice": 1
+     }
+    ]
+   },
+   "moodle": {
+    "name": "gift-edges",
+    "failure": null,
+    "log": "Error importing question Text {=a ~b\nCould not find {...} around answers\n\nError importing question b\nMatching question answers are improperly formatted\n!! Grades (0.35) do not match grade options - question 'Off grid' skipped. !!",
+    "questions": [
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "Escapes: all",
+       "questiontext": {
+        "text": "Braces {1}, = equals, ~ tilde, # hash, \\ backslash and\na line break.",
+        "format": "moodle_auto_format"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "moodle_auto_format"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "edge-escapes",
+       "category": "Case 2",
+       "tags": [
+        "alpha",
+        "be]ta"
+       ],
+       "answers": [
+        {
+         "answer": "right#1",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "wrong=2",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 1,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       1,
+       0
+      ],
+      "gift": "// question: 14  name: Escapes: all\n// [id:edge-escapes] [tag:alpha] [tag:be\\]ta]\n::Escapes\\: all::Braces \\{1\\}, \\= equals, \\~ tilde, \\# hash, \\\\ backslash and\\na line break.{\n\t=right\\#1\n\t~wrong\\=2\n}\n\n",
+      "xml": "<!-- question: 14  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>Escapes: all</text>\n    </name>\n    <questiontext format=\"moodle_auto_format\">\n      <text>Braces {1}, = equals, ~ tilde, # hash, \\ backslash and\na line break.</text>\n    </questiontext>\n    <generalfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>edge-escapes</idnumber>\n    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>right#1</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"moodle_auto_format\">\n      <text>wrong=2</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n    </answer>\n    <tags>\n      <tag><text>alpha</text>\n</tag>\n      <tag><text>be]ta</text>\n</tag>\n    </tags>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "Weights",
+       "questiontext": {
+        "text": "Pick the parts.",
+        "format": "moodle_auto_format"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "moodle_auto_format"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "",
+       "category": "Case 2",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "half",
+         "fraction": 0.5,
+         "feedback": ""
+        },
+        {
+         "answer": "third",
+         "fraction": 0.3333333,
+         "feedback": ""
+        },
+        {
+         "answer": "penalty",
+         "fraction": -0.5,
+         "feedback": ""
+        },
+        {
+         "answer": "full",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "none",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 0,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       0.5,
+       0.8333333,
+       0,
+       0,
+       1,
+       0
+      ],
+      "gift": "// question: 15  name: Weights\n::Weights::Pick the parts.{\n\t~%50%half\n\t~%33.33333%third\n\t~%-50%penalty\n\t~%100%full\n\t~none\n}\n\n",
+      "xml": "<!-- question: 15  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>Weights</text>\n    </name>\n    <questiontext format=\"moodle_auto_format\">\n      <text>Pick the parts.</text>\n    </questiontext>\n    <generalfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber></idnumber>\n    <single>false</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"50\" format=\"moodle_auto_format\">\n      <text>half</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"33.33333\" format=\"moodle_auto_format\">\n      <text>third</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"-50\" format=\"moodle_auto_format\">\n      <text>penalty</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>full</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"moodle_auto_format\">\n      <text>none</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "Missing",
+       "questiontext": {
+        "text": "The _____ sat on the mat.",
+        "format": "moodle_auto_format"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "moodle_auto_format"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "",
+       "category": "Case 2",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "cat",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "dog",
+         "fraction": 0,
+         "feedback": ""
+        },
+        {
+         "answer": "cow",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 1,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       1,
+       0
+      ],
+      "gift": "// question: 16  name: Missing\n::Missing::The _____ sat on the mat.{\n\t=cat\n\t~dog\n\t~cow\n}\n\n",
+      "xml": "<!-- question: 16  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>Missing</text>\n    </name>\n    <questiontext format=\"moodle_auto_format\">\n      <text>The _____ sat on the mat.</text>\n    </questiontext>\n    <generalfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber></idnumber>\n    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>cat</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"moodle_auto_format\">\n      <text>dog</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"moodle_auto_format\">\n      <text>cow</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "shortanswer",
+       "name": "Missing short",
+       "questiontext": {
+        "text": "Two plus two is _____ today.",
+        "format": "moodle_auto_format"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "moodle_auto_format"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "",
+       "category": "Case 2",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "four",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "for",
+         "fraction": 0.5,
+         "feedback": ""
+        }
+       ],
+       "usecase": 0
+      },
+      "grades": [
+       1,
+       1,
+       0.5,
+       1,
+       0
+      ],
+      "gift": "// question: 17  name: Missing short\n::Missing short::Two plus two is _____ today.{\n\t=%100%four#\n\t=%50%for#\n}\n\n",
+      "xml": "<!-- question: 17  -->\n  <question type=\"shortanswer\">\n    <name>\n      <text>Missing short</text>\n    </name>\n    <questiontext format=\"moodle_auto_format\">\n      <text>Two plus two is _____ today.</text>\n    </questiontext>\n    <generalfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber></idnumber>\n    <usecase>0</usecase>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>four</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"50\" format=\"moodle_auto_format\">\n      <text>for</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "numerical",
+       "name": "Number not a number",
+       "questiontext": {
+        "text": "Any number will do.",
+        "format": "moodle_auto_format"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "moodle_auto_format"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "",
+       "category": "Case 2",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "*",
+         "fraction": 1,
+         "feedback": "",
+         "tolerance": 0
+        }
+       ]
+      },
+      "grades": [
+       1,
+       1
+      ],
+      "gift": "// question: 18  name: Number not a number\n::Number not a number::Any number will do.{#\n\t~#\n}\n\n",
+      "xml": "<!-- question: 18  -->\n  <question type=\"numerical\">\n    <name>\n      <text>Number not a number</text>\n    </name>\n    <questiontext format=\"moodle_auto_format\">\n      <text>Any number will do.</text>\n    </questiontext>\n    <generalfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber></idnumber>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>*</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n      <tolerance>0</tolerance>\n    </answer>\n    <unitgradingtype>0</unitgradingtype>\n    <unitpenalty>1.0000000</unitpenalty>\n    <showunits>3</showunits>\n    <unitsleft>0</unitsleft>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "numerical",
+       "name": "Number range",
+       "questiontext": {
+        "text": "Pick a number from 1 to 5.",
+        "format": "moodle_auto_format"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "moodle_auto_format"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "",
+       "category": "Case 2",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "3",
+         "fraction": 1,
+         "feedback": "In range.",
+         "tolerance": 2
+        }
+       ]
+      },
+      "grades": [
+       1,
+       1,
+       1,
+       0,
+       0
+      ],
+      "gift": "// question: 19  name: Number range\n::Number range::Pick a number from 1 to 5.{#\n\t=%100%3:2#In range.\n}\n\n",
+      "xml": "<!-- question: 19  -->\n  <question type=\"numerical\">\n    <name>\n      <text>Number range</text>\n    </name>\n    <questiontext format=\"moodle_auto_format\">\n      <text>Pick a number from 1 to 5.</text>\n    </questiontext>\n    <generalfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber></idnumber>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>3</text>\n      <feedback format=\"moodle_auto_format\">\n        <text>In range.</text>\n      </feedback>\n      <tolerance>2</tolerance>\n    </answer>\n    <unitgradingtype>0</unitgradingtype>\n    <unitpenalty>1.0000000</unitpenalty>\n    <showunits>3</showunits>\n    <unitsleft>0</unitsleft>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "numerical",
+       "name": "Number answers",
+       "questiontext": {
+        "text": "About ten.",
+        "format": "moodle_auto_format"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "moodle_auto_format"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "",
+       "category": "Case 2",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "10",
+         "fraction": 1,
+         "feedback": "Close.",
+         "tolerance": 1
+        },
+        {
+         "answer": "10",
+         "fraction": 0.5,
+         "feedback": "",
+         "tolerance": 3
+        },
+        {
+         "answer": "*",
+         "fraction": 0,
+         "feedback": "Far."
+        }
+       ]
+      },
+      "grades": [
+       1,
+       1,
+       0.5,
+       0.5,
+       0
+      ],
+      "gift": "// question: 20  name: Number answers\n::Number answers::About ten.{#\n\t=%100%10:1#Close.\n\t=%50%10:3#\n\t~#Far.\n}\n\n",
+      "xml": "<!-- question: 20  -->\n  <question type=\"numerical\">\n    <name>\n      <text>Number answers</text>\n    </name>\n    <questiontext format=\"moodle_auto_format\">\n      <text>About ten.</text>\n    </questiontext>\n    <generalfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber></idnumber>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>10</text>\n      <feedback format=\"moodle_auto_format\">\n        <text>Close.</text>\n      </feedback>\n      <tolerance>1</tolerance>\n    </answer>\n    <answer fraction=\"50\" format=\"moodle_auto_format\">\n      <text>10</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n      <tolerance>3</tolerance>\n    </answer>\n    <answer fraction=\"0\" format=\"moodle_auto_format\">\n      <text>*</text>\n      <feedback format=\"moodle_auto_format\">\n        <text>Far.</text>\n      </feedback>\n      <tolerance></tolerance>\n    </answer>\n    <unitgradingtype>0</unitgradingtype>\n    <unitpenalty>1.0000000</unitpenalty>\n    <showunits>3</showunits>\n    <unitsleft>0</unitsleft>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "truefalse",
+       "name": "False",
+       "questiontext": {
+        "text": "Penguins fly.",
+        "format": "moodle_auto_format"
+       },
+       "generalfeedback": {
+        "text": "Penguins swim.",
+        "format": "moodle_auto_format"
+       },
+       "defaultmark": 1,
+       "penalty": 1,
+       "idnumber": "",
+       "category": "Case 2",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "True",
+         "fraction": 0,
+         "feedback": "They do not."
+        },
+        {
+         "answer": "False",
+         "fraction": 1,
+         "feedback": "Right."
+        }
+       ],
+       "correct": false
+      },
+      "grades": [
+       0,
+       1
+      ],
+      "gift": "// question: 21  name: False\n::False::Penguins fly.{FALSE#They do not.#Right.####Penguins swim.}\n\n",
+      "xml": "<!-- question: 21  -->\n  <question type=\"truefalse\">\n    <name>\n      <text>False</text>\n    </name>\n    <questiontext format=\"moodle_auto_format\">\n      <text>Penguins fly.</text>\n    </questiontext>\n    <generalfeedback format=\"moodle_auto_format\">\n      <text>Penguins swim.</text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>1</penalty>\n    <hidden>0</hidden>\n    <idnumber></idnumber>\n    <answer fraction=\"0\" format=\"moodle_auto_format\">\n      <text>true</text>\n      <feedback format=\"moodle_auto_format\">\n        <text>They do not.</text>\n      </feedback>\n    </answer>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>false</text>\n      <feedback format=\"moodle_auto_format\">\n        <text>Right.</text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "Plain",
+       "questiontext": {
+        "text": "<b>not bold</b> and 2 < 3",
+        "format": "plain_text"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "plain_text"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "",
+       "category": "Case 2",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "yes",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "no",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 1,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       1,
+       0
+      ],
+      "gift": "// question: 22  name: Plain\n::Plain::[plain]<b>not bold</b> and 2 < 3{\n\t=yes\n\t~no\n}\n\n",
+      "xml": "<!-- question: 22  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>Plain</text>\n    </name>\n    <questiontext format=\"plain_text\">\n      <text><![CDATA[<b>not bold</b> and 2 < 3]]></text>\n    </questiontext>\n    <generalfeedback format=\"plain_text\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber></idnumber>\n    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"plain_text\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"plain_text\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"plain_text\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"100\" format=\"plain_text\">\n      <text>yes</text>\n      <feedback format=\"plain_text\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"plain_text\">\n      <text>no</text>\n      <feedback format=\"plain_text\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "Markdown",
+       "questiontext": {
+        "text": "**bold** text",
+        "format": "markdown"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "markdown"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "",
+       "category": "Case 2",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "a",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "b",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 1,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       1,
+       0
+      ],
+      "gift": "// question: 23  name: Markdown\n::Markdown::[markdown]**bold** text{\n\t=a\n\t~b\n}\n\n",
+      "xml": "<!-- question: 23  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>Markdown</text>\n    </name>\n    <questiontext format=\"markdown\">\n      <text>**bold** text</text>\n    </questiontext>\n    <generalfeedback format=\"markdown\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber></idnumber>\n    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"markdown\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"markdown\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"markdown\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"100\" format=\"markdown\">\n      <text>a</text>\n      <feedback format=\"markdown\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"markdown\">\n      <text>b</text>\n      <feedback format=\"markdown\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "Html",
+       "questiontext": {
+        "text": "<p>Para <em>one</em></p><script>alert(1)</script><font color=\"red\">red</font>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "",
+       "category": "Case 2",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "x",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "y",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 1,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       1,
+       0
+      ],
+      "gift": "// question: 24  name: Html\n::Html::[html]<p>Para <em>one</em></p><script>alert(1)</script><font color\\=\"red\">red</font>{\n\t=x\n\t~y\n}\n\n",
+      "xml": "<!-- question: 24  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>Html</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<p>Para <em>one</em></p><script>alert(1)</script><font color=\"red\">red</font>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber></idnumber>\n    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"html\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"html\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"html\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"100\" format=\"html\">\n      <text>x</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"html\">\n      <text>y</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "match",
+       "name": "Pairs",
+       "questiontext": {
+        "text": "Match the letters.",
+        "format": "moodle_auto_format"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "moodle_auto_format"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "",
+       "category": "Case 2",
+       "tags": [],
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": "",
+       "subquestions": [
+        {
+         "questiontext": "a",
+         "answertext": "1"
+        },
+        {
+         "questiontext": "b",
+         "answertext": "2"
+        },
+        {
+         "questiontext": "c",
+         "answertext": "3"
+        },
+        {
+         "questiontext": "",
+         "answertext": "4"
+        }
+       ]
+      },
+      "grades": [
+       1,
+       0.3333333333333333
+      ],
+      "gift": "// question: 25  name: Pairs\n::Pairs::Match the letters.{\n\t=a -> 1\n\t=b -> 2\n\t=c -> 3\n\t= -> 4\n}\n\n",
+      "xml": "<!-- question: 25  -->\n  <question type=\"matching\">\n    <name>\n      <text>Pairs</text>\n    </name>\n    <questiontext format=\"moodle_auto_format\">\n      <text>Match the letters.</text>\n    </questiontext>\n    <generalfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber></idnumber>\n    <shuffleanswers>true</shuffleanswers>\n    <correctfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </incorrectfeedback>\n    <subquestion format=\"moodle_auto_format\">\n      <text>a</text>\n      <answer>\n        <text>1</text>\n      </answer>\n    </subquestion>\n    <subquestion format=\"moodle_auto_format\">\n      <text>b</text>\n      <answer>\n        <text>2</text>\n      </answer>\n    </subquestion>\n    <subquestion format=\"moodle_auto_format\">\n      <text>c</text>\n      <answer>\n        <text>3</text>\n      </answer>\n    </subquestion>\n    <subquestion format=\"moodle_auto_format\">\n      <text></text>\n      <answer>\n        <text>4</text>\n      </answer>\n    </subquestion>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "shortanswer",
+       "name": "Wildcards",
+       "questiontext": {
+        "text": "Name a fruit.",
+        "format": "moodle_auto_format"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "moodle_auto_format"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "",
+       "category": "Case 2",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "*apple*",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "ban\\*na",
+         "fraction": 0.5,
+         "feedback": ""
+        }
+       ],
+       "usecase": 0
+      },
+      "grades": [
+       1,
+       1,
+       0.5,
+       0
+      ],
+      "gift": "// question: 26  name: Wildcards\n::Wildcards::Name a fruit.{\n\t=%100%*apple*#\n\t=%50%ban\\\\*na#\n}\n\n",
+      "xml": "<!-- question: 26  -->\n  <question type=\"shortanswer\">\n    <name>\n      <text>Wildcards</text>\n    </name>\n    <questiontext format=\"moodle_auto_format\">\n      <text>Name a fruit.</text>\n    </questiontext>\n    <generalfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber></idnumber>\n    <usecase>0</usecase>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>*apple*</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"50\" format=\"moodle_auto_format\">\n      <text>ban\\*na</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "essay",
+       "name": "Essay",
+       "questiontext": {
+        "text": "Write a paragraph.",
+        "format": "moodle_auto_format"
+       },
+       "generalfeedback": {
+        "text": "A model answer.",
+        "format": "moodle_auto_format"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "",
+       "category": "Edge cases",
+       "tags": [],
+       "responseformat": "editor",
+       "responsefieldlines": 15,
+       "responserequired": 1,
+       "attachments": 0,
+       "graderinfo": "",
+       "responsetemplate": ""
+      },
+      "grades": [],
+      "gift": "// question: 27  name: Essay\n::Essay::Write a paragraph.{####A model answer.}\n\n",
+      "xml": "<!-- question: 27  -->\n  <question type=\"essay\">\n    <name>\n      <text>Essay</text>\n    </name>\n    <questiontext format=\"moodle_auto_format\">\n      <text>Write a paragraph.</text>\n    </questiontext>\n    <generalfeedback format=\"moodle_auto_format\">\n      <text>A model answer.</text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber></idnumber>\n    <responseformat>editor</responseformat>\n    <responserequired>1</responserequired>\n    <responsefieldlines>15</responsefieldlines>\n    <minwordlimit></minwordlimit>\n    <maxwordlimit></maxwordlimit>\n    <attachments>0</attachments>\n    <attachmentsrequired>0</attachmentsrequired>\n    <maxbytes>0</maxbytes>\n    <filetypeslist></filetypeslist>\n    <graderinfo format=\"html\">\n      <text></text>\n    </graderinfo>\n    <responsetemplate format=\"html\">\n      <text></text>\n    </responsetemplate>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "description",
+       "name": "Description",
+       "questiontext": {
+        "text": "Just a description.",
+        "format": "moodle_auto_format"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "moodle_auto_format"
+       },
+       "defaultmark": 0,
+       "penalty": 0.3333333,
+       "idnumber": "",
+       "category": "Edge cases",
+       "tags": []
+      },
+      "grades": [],
+      "gift": "// question: 28  name: Description\n::Description::Just a description.\n",
+      "xml": "<!-- question: 28  -->\n  <question type=\"description\">\n    <name>\n      <text>Description</text>\n    </name>\n    <questiontext format=\"moodle_auto_format\">\n      <text>Just a description.</text>\n    </questiontext>\n    <generalfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>0</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber></idnumber>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "description",
+       "name": "Zero line",
+       "questiontext": {
+        "text": "First part",
+        "format": "moodle_auto_format"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "moodle_auto_format"
+       },
+       "defaultmark": 0,
+       "penalty": 0.3333333,
+       "idnumber": "",
+       "category": "Edge cases",
+       "tags": []
+      },
+      "grades": [],
+      "gift": "// question: 29  name: Zero line\n::Zero line::First part\n",
+      "xml": "<!-- question: 29  -->\n  <question type=\"description\">\n    <name>\n      <text>Zero line</text>\n    </name>\n    <questiontext format=\"moodle_auto_format\">\n      <text>First part</text>\n    </questiontext>\n    <generalfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>0</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber></idnumber>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "of question?",
+       "questiontext": {
+        "text": "of question?",
+        "format": "moodle_auto_format"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "moodle_auto_format"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "",
+       "category": "Edge cases",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "x",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "y",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 1,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       1,
+       0
+      ],
+      "gift": "// question: 30  name: of question?\n::of question?::of question?{\n\t=x\n\t~y\n}\n\n",
+      "xml": "<!-- question: 30  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>of question?</text>\n    </name>\n    <questiontext format=\"moodle_auto_format\">\n      <text>of question?</text>\n    </questiontext>\n    <generalfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber></idnumber>\n    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"moodle_auto_format\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>x</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"moodle_auto_format\">\n      <text>y</text>\n      <feedback format=\"moodle_auto_format\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     }
+    ]
+   }
+  },
+  {
+   "name": "gift-rewritten",
+   "format": "gift",
+   "file": "// [id:edge-escapes] [tag:alpha] [tag:be\\]ta]\n::Escapes\\: all::[html]<div>Braces \\{1\\}, \\= equals, \\~ tilde, \\# hash, \\\\ backslash and<br>\\na line break.</div>{\n\t=right\\#1\n\t~wrong\\=2\n}\n\n// [id:item-2]\n::Weights::[html]<div>Pick the parts.</div>{\n\t~%50%half\n\t~%33.33333%third\n\t~%-50%penalty\n\t~%100%full\n\t~none\n}\n\n// [id:item-3]\n::Missing::[html]<div>The {\n\t=cat\n\t~dog\n\t~cow\n} sat on the mat.</div>\n\n// [id:item-4]\n::Missing short::[html]<div>Two plus two is {\n\t=four\n\t=%50%for\n} today.</div>\n\n// [id:item-6]\n::Number range::[html]<div>Pick a number from 1 to 5.</div>{#\n\t=3:2#In range.\n}\n\n// [id:item-7]\n::Number answers::[html]<div>About ten.</div>{#\n\t=10:1#Close.\n\t=%50%10:3\n\t~#Far.\n}\n\n// [id:item-8]\n::False::[html]<div>Penguins fly.</div>{FALSE#They do not.#Right.####Penguins swim.}\n\n// [id:item-9]\n::Plain::[html]<div>&lt;b&gt;not bold&lt;/b&gt; and 2 &lt; 3</div>{\n\t=yes\n\t~no\n}\n\n// [id:item-10]\n::Markdown::[html]<div>**bold** text</div>{\n\t=a\n\t~b\n}\n\n// [id:item-11]\n::Html::[html]<p>Para <em>one</em></p><div>red</div>{\n\t=x\n\t~y\n}\n\n// [id:item-12]\n::Pairs::[html]<div>Match the letters.</div>{\n\t=a -> 1\n\t=b -> 2\n\t=c -> 3\n\t= -> 4\n}\n\n// [id:item-13]\n::Wildcards::[html]<div>Name a fruit.</div>{\n\t=*apple*\n\t=%50%ban\\\\*na\n}\n\n// [id:item-16]\n::Off grid::[html]<div>Credit not in the list.</div>{\n\t=b\n\t=%33.33333%a\n}\n\n$CATEGORY: $course$/top/Edge cases\n\n// [id:item-17]\n::Essay::[html]<div>Write a paragraph.</div>{####A model answer.}\n\n// [id:item-18]\n::Description::[html]<div>Just a description.</div>\n\n// [id:item-19]\n::Zero line::[html]<div>First part</div>\n\n// [id:item-20]\n::of question?::[html]<div>of question?</div>{\n\t=x\n\t~y\n}\n\n",
+   "responses": {
+    "Escapes: all": [
+     {
+      "choice": 0
+     },
+     {
+      "choice": 1
+     }
+    ],
+    "Weights": [
+     {
+      "choices": [
+       0
+      ]
+     },
+     {
+      "choices": [
+       0,
+       1
+      ]
+     },
+     {
+      "choices": [
+       0,
+       2
+      ]
+     },
+     {
+      "choices": [
+       2
+      ]
+     },
+     {
+      "choices": [
+       3,
+       0
+      ]
+     },
+     {
+      "choices": [
+       4
+      ]
+     }
+    ],
+    "Missing": [
+     {
+      "choice": 0
+     },
+     {
+      "choice": 1
+     }
+    ],
+    "Missing short": [
+     {
+      "text": "four"
+     },
+     {
+      "text": "FOUR"
+     },
+     {
+      "text": "for"
+     },
+     {
+      "text": " four "
+     },
+     {
+      "text": "five"
+     }
+    ],
+    "Number not a number": [
+     {
+      "text": "1"
+     },
+     {
+      "text": "-3.5"
+     }
+    ],
+    "Number range": [
+     {
+      "text": "1"
+     },
+     {
+      "text": "3"
+     },
+     {
+      "text": "5"
+     },
+     {
+      "text": "5.1"
+     },
+     {
+      "text": "0.9"
+     }
+    ],
+    "Number answers": [
+     {
+      "text": "10"
+     },
+     {
+      "text": "11"
+     },
+     {
+      "text": "12"
+     },
+     {
+      "text": "13"
+     },
+     {
+      "text": "14"
+     }
+    ],
+    "False": [
+     {
+      "value": true
+     },
+     {
+      "value": false
+     }
+    ],
+    "Plain": [
+     {
+      "choice": 0
+     },
+     {
+      "choice": 1
+     }
+    ],
+    "Markdown": [
+     {
+      "choice": 0
+     },
+     {
+      "choice": 1
+     }
+    ],
+    "Html": [
+     {
+      "choice": 0
+     },
+     {
+      "choice": 1
+     }
+    ],
+    "Pairs": [
+     {
+      "pairs": [
+       [
+        0,
+        "1"
+       ],
+       [
+        1,
+        "2"
+       ],
+       [
+        2,
+        "3"
+       ]
+      ]
+     },
+     {
+      "pairs": [
+       [
+        0,
+        "1"
+       ],
+       [
+        1,
+        "4"
+       ]
+      ]
+     }
+    ],
+    "Wildcards": [
+     {
+      "text": "pineapple"
+     },
+     {
+      "text": "Apple pie"
+     },
+     {
+      "text": "ban*na"
+     },
+     {
+      "text": "banana"
+     }
+    ],
+    "Off grid": [
+     {
+      "text": "a"
+     },
+     {
+      "text": "b"
+     }
+    ],
+    "of question?": [
+     {
+      "choice": 0
+     },
+     {
+      "choice": 1
+     }
+    ]
+   },
+   "moodle": {
+    "name": "gift-rewritten",
+    "failure": null,
+    "log": "",
+    "questions": [
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "Escapes: all",
+       "questiontext": {
+        "text": "<div>Braces {1}, = equals, ~ tilde, # hash, \\ backslash and<br>\na line break.</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "edge-escapes",
+       "category": "Case 3",
+       "tags": [
+        "alpha",
+        "be]ta"
+       ],
+       "answers": [
+        {
+         "answer": "right#1",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "wrong=2",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 1,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       1,
+       0
+      ],
+      "gift": "// question: 31  name: Escapes: all\n// [id:edge-escapes] [tag:alpha] [tag:be\\]ta]\n::Escapes\\: all::[html]<div>Braces \\{1\\}, \\= equals, \\~ tilde, \\# hash, \\\\ backslash and<br>\\na line break.</div>{\n\t=right\\#1\n\t~wrong\\=2\n}\n\n",
+      "xml": "<!-- question: 31  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>Escapes: all</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<div>Braces {1}, = equals, ~ tilde, # hash, \\ backslash and<br>\na line break.</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>edge-escapes</idnumber>\n    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"html\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"html\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"html\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"100\" format=\"html\">\n      <text>right#1</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"html\">\n      <text>wrong=2</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <tags>\n      <tag><text>alpha</text>\n</tag>\n      <tag><text>be]ta</text>\n</tag>\n    </tags>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "Weights",
+       "questiontext": {
+        "text": "<div>Pick the parts.</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "item-2",
+       "category": "Case 3",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "half",
+         "fraction": 0.5,
+         "feedback": ""
+        },
+        {
+         "answer": "third",
+         "fraction": 0.3333333,
+         "feedback": ""
+        },
+        {
+         "answer": "penalty",
+         "fraction": -0.5,
+         "feedback": ""
+        },
+        {
+         "answer": "full",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "none",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 0,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       0.5,
+       0.8333333,
+       0,
+       0,
+       1,
+       0
+      ],
+      "gift": "// question: 32  name: Weights\n// [id:item-2]\n::Weights::[html]<div>Pick the parts.</div>{\n\t~%50%half\n\t~%33.33333%third\n\t~%-50%penalty\n\t~%100%full\n\t~none\n}\n\n",
+      "xml": "<!-- question: 32  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>Weights</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<div>Pick the parts.</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>item-2</idnumber>\n    <single>false</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"html\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"html\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"html\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"50\" format=\"html\">\n      <text>half</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"33.33333\" format=\"html\">\n      <text>third</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"-50\" format=\"html\">\n      <text>penalty</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"100\" format=\"html\">\n      <text>full</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"html\">\n      <text>none</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "Missing",
+       "questiontext": {
+        "text": "<div>The _____ sat on the mat.</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "item-3",
+       "category": "Case 3",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "cat",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "dog",
+         "fraction": 0,
+         "feedback": ""
+        },
+        {
+         "answer": "cow",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 1,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       1,
+       0
+      ],
+      "gift": "// question: 33  name: Missing\n// [id:item-3]\n::Missing::[html]<div>The _____ sat on the mat.</div>{\n\t=cat\n\t~dog\n\t~cow\n}\n\n",
+      "xml": "<!-- question: 33  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>Missing</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<div>The _____ sat on the mat.</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>item-3</idnumber>\n    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"html\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"html\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"html\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"100\" format=\"html\">\n      <text>cat</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"html\">\n      <text>dog</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"html\">\n      <text>cow</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "shortanswer",
+       "name": "Missing short",
+       "questiontext": {
+        "text": "<div>Two plus two is _____ today.</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "item-4",
+       "category": "Case 3",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "four",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "for",
+         "fraction": 0.5,
+         "feedback": ""
+        }
+       ],
+       "usecase": 0
+      },
+      "grades": [
+       1,
+       1,
+       0.5,
+       1,
+       0
+      ],
+      "gift": "// question: 34  name: Missing short\n// [id:item-4]\n::Missing short::[html]<div>Two plus two is _____ today.</div>{\n\t=%100%four#\n\t=%50%for#\n}\n\n",
+      "xml": "<!-- question: 34  -->\n  <question type=\"shortanswer\">\n    <name>\n      <text>Missing short</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<div>Two plus two is _____ today.</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>item-4</idnumber>\n    <usecase>0</usecase>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>four</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"50\" format=\"moodle_auto_format\">\n      <text>for</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "numerical",
+       "name": "Number range",
+       "questiontext": {
+        "text": "<div>Pick a number from 1 to 5.</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "item-6",
+       "category": "Case 3",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "3",
+         "fraction": 1,
+         "feedback": "In range.",
+         "tolerance": 2
+        }
+       ]
+      },
+      "grades": [
+       1,
+       1,
+       1,
+       0,
+       0
+      ],
+      "gift": "// question: 35  name: Number range\n// [id:item-6]\n::Number range::[html]<div>Pick a number from 1 to 5.</div>{#\n\t=%100%3:2#In range.\n}\n\n",
+      "xml": "<!-- question: 35  -->\n  <question type=\"numerical\">\n    <name>\n      <text>Number range</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<div>Pick a number from 1 to 5.</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>item-6</idnumber>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>3</text>\n      <feedback format=\"html\">\n        <text>In range.</text>\n      </feedback>\n      <tolerance>2</tolerance>\n    </answer>\n    <unitgradingtype>0</unitgradingtype>\n    <unitpenalty>1.0000000</unitpenalty>\n    <showunits>3</showunits>\n    <unitsleft>0</unitsleft>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "numerical",
+       "name": "Number answers",
+       "questiontext": {
+        "text": "<div>About ten.</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "item-7",
+       "category": "Case 3",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "10",
+         "fraction": 1,
+         "feedback": "Close.",
+         "tolerance": 1
+        },
+        {
+         "answer": "10",
+         "fraction": 0.5,
+         "feedback": "",
+         "tolerance": 3
+        },
+        {
+         "answer": "*",
+         "fraction": 0,
+         "feedback": "Far."
+        }
+       ]
+      },
+      "grades": [
+       1,
+       1,
+       0.5,
+       0.5,
+       0
+      ],
+      "gift": "// question: 36  name: Number answers\n// [id:item-7]\n::Number answers::[html]<div>About ten.</div>{#\n\t=%100%10:1#Close.\n\t=%50%10:3#\n\t~#Far.\n}\n\n",
+      "xml": "<!-- question: 36  -->\n  <question type=\"numerical\">\n    <name>\n      <text>Number answers</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<div>About ten.</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>item-7</idnumber>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>10</text>\n      <feedback format=\"html\">\n        <text>Close.</text>\n      </feedback>\n      <tolerance>1</tolerance>\n    </answer>\n    <answer fraction=\"50\" format=\"moodle_auto_format\">\n      <text>10</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n      <tolerance>3</tolerance>\n    </answer>\n    <answer fraction=\"0\" format=\"moodle_auto_format\">\n      <text>*</text>\n      <feedback format=\"html\">\n        <text>Far.</text>\n      </feedback>\n      <tolerance></tolerance>\n    </answer>\n    <unitgradingtype>0</unitgradingtype>\n    <unitpenalty>1.0000000</unitpenalty>\n    <showunits>3</showunits>\n    <unitsleft>0</unitsleft>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "truefalse",
+       "name": "False",
+       "questiontext": {
+        "text": "<div>Penguins fly.</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "Penguins swim.",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 1,
+       "idnumber": "item-8",
+       "category": "Case 3",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "True",
+         "fraction": 0,
+         "feedback": "They do not."
+        },
+        {
+         "answer": "False",
+         "fraction": 1,
+         "feedback": "Right."
+        }
+       ],
+       "correct": false
+      },
+      "grades": [
+       0,
+       1
+      ],
+      "gift": "// question: 37  name: False\n// [id:item-8]\n::False::[html]<div>Penguins fly.</div>{FALSE#They do not.#Right.####Penguins swim.}\n\n",
+      "xml": "<!-- question: 37  -->\n  <question type=\"truefalse\">\n    <name>\n      <text>False</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<div>Penguins fly.</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text>Penguins swim.</text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>1</penalty>\n    <hidden>0</hidden>\n    <idnumber>item-8</idnumber>\n    <answer fraction=\"0\" format=\"moodle_auto_format\">\n      <text>true</text>\n      <feedback format=\"html\">\n        <text>They do not.</text>\n      </feedback>\n    </answer>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>false</text>\n      <feedback format=\"html\">\n        <text>Right.</text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "Plain",
+       "questiontext": {
+        "text": "<div>&lt;b&gt;not bold&lt;/b&gt; and 2 &lt; 3</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "item-9",
+       "category": "Case 3",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "yes",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "no",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 1,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       1,
+       0
+      ],
+      "gift": "// question: 38  name: Plain\n// [id:item-9]\n::Plain::[html]<div>&lt;b&gt;not bold&lt;/b&gt; and 2 &lt; 3</div>{\n\t=yes\n\t~no\n}\n\n",
+      "xml": "<!-- question: 38  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>Plain</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<div>&lt;b&gt;not bold&lt;/b&gt; and 2 &lt; 3</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>item-9</idnumber>\n    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"html\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"html\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"html\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"100\" format=\"html\">\n      <text>yes</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"html\">\n      <text>no</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "Markdown",
+       "questiontext": {
+        "text": "<div>**bold** text</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "item-10",
+       "category": "Case 3",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "a",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "b",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 1,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       1,
+       0
+      ],
+      "gift": "// question: 39  name: Markdown\n// [id:item-10]\n::Markdown::[html]<div>**bold** text</div>{\n\t=a\n\t~b\n}\n\n",
+      "xml": "<!-- question: 39  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>Markdown</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<div>**bold** text</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>item-10</idnumber>\n    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"html\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"html\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"html\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"100\" format=\"html\">\n      <text>a</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"html\">\n      <text>b</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "Html",
+       "questiontext": {
+        "text": "<p>Para <em>one</em></p><div>red</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "item-11",
+       "category": "Case 3",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "x",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "y",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 1,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       1,
+       0
+      ],
+      "gift": "// question: 40  name: Html\n// [id:item-11]\n::Html::[html]<p>Para <em>one</em></p><div>red</div>{\n\t=x\n\t~y\n}\n\n",
+      "xml": "<!-- question: 40  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>Html</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<p>Para <em>one</em></p><div>red</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>item-11</idnumber>\n    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"html\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"html\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"html\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"100\" format=\"html\">\n      <text>x</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"html\">\n      <text>y</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "match",
+       "name": "Pairs",
+       "questiontext": {
+        "text": "<div>Match the letters.</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "item-12",
+       "category": "Case 3",
+       "tags": [],
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": "",
+       "subquestions": [
+        {
+         "questiontext": "a",
+         "answertext": "1"
+        },
+        {
+         "questiontext": "b",
+         "answertext": "2"
+        },
+        {
+         "questiontext": "c",
+         "answertext": "3"
+        },
+        {
+         "questiontext": "",
+         "answertext": "4"
+        }
+       ]
+      },
+      "grades": [
+       1,
+       0.3333333333333333
+      ],
+      "gift": "// question: 41  name: Pairs\n// [id:item-12]\n::Pairs::[html]<div>Match the letters.</div>{\n\t=a -> 1\n\t=b -> 2\n\t=c -> 3\n\t= -> 4\n}\n\n",
+      "xml": "<!-- question: 41  -->\n  <question type=\"matching\">\n    <name>\n      <text>Pairs</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<div>Match the letters.</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>item-12</idnumber>\n    <shuffleanswers>true</shuffleanswers>\n    <correctfeedback format=\"html\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"html\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"html\">\n      <text></text>\n    </incorrectfeedback>\n    <subquestion format=\"html\">\n      <text>a</text>\n      <answer>\n        <text>1</text>\n      </answer>\n    </subquestion>\n    <subquestion format=\"html\">\n      <text>b</text>\n      <answer>\n        <text>2</text>\n      </answer>\n    </subquestion>\n    <subquestion format=\"html\">\n      <text>c</text>\n      <answer>\n        <text>3</text>\n      </answer>\n    </subquestion>\n    <subquestion format=\"html\">\n      <text></text>\n      <answer>\n        <text>4</text>\n      </answer>\n    </subquestion>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "shortanswer",
+       "name": "Wildcards",
+       "questiontext": {
+        "text": "<div>Name a fruit.</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "item-13",
+       "category": "Case 3",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "*apple*",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "ban\\*na",
+         "fraction": 0.5,
+         "feedback": ""
+        }
+       ],
+       "usecase": 0
+      },
+      "grades": [
+       1,
+       1,
+       0.5,
+       0
+      ],
+      "gift": "// question: 42  name: Wildcards\n// [id:item-13]\n::Wildcards::[html]<div>Name a fruit.</div>{\n\t=%100%*apple*#\n\t=%50%ban\\\\*na#\n}\n\n",
+      "xml": "<!-- question: 42  -->\n  <question type=\"shortanswer\">\n    <name>\n      <text>Wildcards</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<div>Name a fruit.</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>item-13</idnumber>\n    <usecase>0</usecase>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>*apple*</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"50\" format=\"moodle_auto_format\">\n      <text>ban\\*na</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "shortanswer",
+       "name": "Off grid",
+       "questiontext": {
+        "text": "<div>Credit not in the list.</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "item-16",
+       "category": "Case 3",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "b",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "a",
+         "fraction": 0.3333333,
+         "feedback": ""
+        }
+       ],
+       "usecase": 0
+      },
+      "grades": [
+       0.3333333,
+       1
+      ],
+      "gift": "// question: 43  name: Off grid\n// [id:item-16]\n::Off grid::[html]<div>Credit not in the list.</div>{\n\t=%100%b#\n\t=%33.33333%a#\n}\n\n",
+      "xml": "<!-- question: 43  -->\n  <question type=\"shortanswer\">\n    <name>\n      <text>Off grid</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<div>Credit not in the list.</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>item-16</idnumber>\n    <usecase>0</usecase>\n    <answer fraction=\"100\" format=\"moodle_auto_format\">\n      <text>b</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"33.33333\" format=\"moodle_auto_format\">\n      <text>a</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "essay",
+       "name": "Essay",
+       "questiontext": {
+        "text": "<div>Write a paragraph.</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "A model answer.",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "item-17",
+       "category": "Edge cases",
+       "tags": [],
+       "responseformat": "editor",
+       "responsefieldlines": 15,
+       "responserequired": 1,
+       "attachments": 0,
+       "graderinfo": "",
+       "responsetemplate": ""
+      },
+      "grades": [],
+      "gift": "// question: 44  name: Essay\n// [id:item-17]\n::Essay::[html]<div>Write a paragraph.</div>{####A model answer.}\n\n",
+      "xml": "<!-- question: 44  -->\n  <question type=\"essay\">\n    <name>\n      <text>Essay</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<div>Write a paragraph.</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text>A model answer.</text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>item-17</idnumber>\n    <responseformat>editor</responseformat>\n    <responserequired>1</responserequired>\n    <responsefieldlines>15</responsefieldlines>\n    <minwordlimit></minwordlimit>\n    <maxwordlimit></maxwordlimit>\n    <attachments>0</attachments>\n    <attachmentsrequired>0</attachmentsrequired>\n    <maxbytes>0</maxbytes>\n    <filetypeslist></filetypeslist>\n    <graderinfo format=\"html\">\n      <text></text>\n    </graderinfo>\n    <responsetemplate format=\"html\">\n      <text></text>\n    </responsetemplate>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "description",
+       "name": "Description",
+       "questiontext": {
+        "text": "<div>Just a description.</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 0,
+       "penalty": 0.3333333,
+       "idnumber": "item-18",
+       "category": "Edge cases",
+       "tags": []
+      },
+      "grades": [],
+      "gift": "// question: 45  name: Description\n// [id:item-18]\n::Description::[html]<div>Just a description.</div>\n",
+      "xml": "<!-- question: 45  -->\n  <question type=\"description\">\n    <name>\n      <text>Description</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<div>Just a description.</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>0</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>item-18</idnumber>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "description",
+       "name": "Zero line",
+       "questiontext": {
+        "text": "<div>First part</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 0,
+       "penalty": 0.3333333,
+       "idnumber": "item-19",
+       "category": "Edge cases",
+       "tags": []
+      },
+      "grades": [],
+      "gift": "// question: 46  name: Zero line\n// [id:item-19]\n::Zero line::[html]<div>First part</div>\n",
+      "xml": "<!-- question: 46  -->\n  <question type=\"description\">\n    <name>\n      <text>Zero line</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<div>First part</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>0</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>item-19</idnumber>\n  </question>\n"
+     },
+     {
+      "read": {
+       "qtype": "multichoice",
+       "name": "of question?",
+       "questiontext": {
+        "text": "<div>of question?</div>",
+        "format": "html"
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": "html"
+       },
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "idnumber": "item-20",
+       "category": "Edge cases",
+       "tags": [],
+       "answers": [
+        {
+         "answer": "x",
+         "fraction": 1,
+         "feedback": ""
+        },
+        {
+         "answer": "y",
+         "fraction": 0,
+         "feedback": ""
+        }
+       ],
+       "single": 1,
+       "shuffleanswers": 1,
+       "correctfeedback": "",
+       "partiallycorrectfeedback": "",
+       "incorrectfeedback": ""
+      },
+      "grades": [
+       1,
+       0
+      ],
+      "gift": "// question: 47  name: of question?\n// [id:item-20]\n::of question?::[html]<div>of question?</div>{\n\t=x\n\t~y\n}\n\n",
+      "xml": "<!-- question: 47  -->\n  <question type=\"multichoice\">\n    <name>\n      <text>of question?</text>\n    </name>\n    <questiontext format=\"html\">\n      <text><![CDATA[<div>of question?</div>]]></text>\n    </questiontext>\n    <generalfeedback format=\"html\">\n      <text></text>\n    </generalfeedback>\n    <defaultgrade>1</defaultgrade>\n    <penalty>0.3333333</penalty>\n    <hidden>0</hidden>\n    <idnumber>item-20</idnumber>\n    <single>true</single>\n    <shuffleanswers>true</shuffleanswers>\n    <answernumbering>abc</answernumbering>\n    <showstandardinstruction>0</showstandardinstruction>\n    <correctfeedback format=\"html\">\n      <text></text>\n    </correctfeedback>\n    <partiallycorrectfeedback format=\"html\">\n      <text></text>\n    </partiallycorrectfeedback>\n    <incorrectfeedback format=\"html\">\n      <text></text>\n    </incorrectfeedback>\n    <answer fraction=\"100\" format=\"html\">\n      <text>x</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n    <answer fraction=\"0\" format=\"html\">\n      <text>y</text>\n      <feedback format=\"html\">\n        <text></text>\n      </feedback>\n    </answer>\n  </question>\n"
+     }
+    ]
+   }
+  },
+  {
+   "name": "gift-weight-error",
+   "format": "gift",
+   "file": "::Fine::A question before.{=a ~b}\n\n::Double minus::Weight.{=a ~%--50%b}\n",
+   "responses": {
+    "Fine": [
+     {
+      "choice": 0
+     }
+    ]
+   },
+   "moodle": {
+    "name": "gift-weight-error",
+    "failure": "TypeError: Unsupported operand types: string / int",
+    "log": "",
+    "questions": []
+   }
+  },
+  {
+   "name": "gift-one-answer",
+   "format": "gift",
+   "file": "::Fine::A question before.{=a ~b}\n\n::One answer::Only one.{~only}\n",
+   "responses": {
+    "Fine": [
+     {
+      "choice": 0
+     }
+    ]
+   },
+   "moodle": {
+    "name": "gift-one-answer",
+    "failure": "TypeError: htmlspecialchars(): Argument #1 ($string) must be of type string, array given",
+    "log": "Error importing question",
+    "questions": []
+   }
+  },
+  {
+   "name": "gift-number-error",
+   "format": "gift",
+   "file": "::Fine::A question before.{=a ~b}\n\n::Bad tolerance::Number.{#5:x}\n",
+   "responses": {
+    "Fine": [
+     {
+      "choice": 0
+     }
+    ]
+   },
+   "moodle": {
+    "name": "gift-number-error",
+    "failure": "TypeError: htmlspecialchars(): Argument #1 ($string) must be of type string, array given",
+    "log": "Error importing question",
+    "questions": []
+   }
+  },
+  {
+   "name": "gift-no-number",
+   "format": "gift",
+   "file": "::Fine::A question before.{=a ~b}\n\n::No number::Number.{#}\n",
+   "responses": {
+    "Fine": [
+     {
+      "choice": 0
+     }
+    ]
+   },
+   "moodle": {
+    "name": "gift-no-number",
+    "failure": "TypeError: htmlspecialchars(): Argument #1 ($string) must be of type string, array given",
+    "log": "Error importing question",
+    "questions": []
+   }
+  }
+ ]
+}

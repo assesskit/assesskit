@@ -196,6 +196,30 @@ const READINGS: readonly {
     outcome: "64129 rules",
   },
   {
+    title: "reads a GIFT file of questions of the most answers, whose items hold the most elements",
+    name: "giftAnswers",
+    heapMiB: 144,
+    outcome: "813 items",
+  },
+  {
+    title: "reads a GIFT file of questions of two answers, whose items hold the most elements",
+    name: "giftQuestions",
+    heapMiB: 96,
+    outcome: "4000 items",
+  },
+  {
+    title: "stops a GIFT file of twice the questions that the limit of elements holds at the limit",
+    name: "giftOverNodes",
+    heapMiB: 96,
+    outcome: "SecurityError maxNodes",
+  },
+  {
+    title: "reads a GIFT file of essays whose HTML holds the most tags of a text, to the limit of elements",
+    name: "giftTags",
+    heapMiB: 96,
+    outcome: "47 items",
+  },
+  {
     title: "checks the most lines of worked steps, each of the most characters",
     name: "mathSteps",
     heapMiB: 64,

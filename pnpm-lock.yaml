@@ -381,6 +381,9 @@ importers:
       libxml2-wasm:
         specifier: 0.7.2
         version: 0.7.2
+      parse5:
+        specifier: 8.0.1
+        version: 8.0.1
       saxes:
         specifier: 6.0.0
         version: 6.0.0

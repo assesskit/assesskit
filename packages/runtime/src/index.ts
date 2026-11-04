@@ -20,6 +20,7 @@ export {
   SecurityError,
 } from "./errors.js";
 export * from "./interactions/index.js";
+export * from "./item-formats/index.js";
 export * from "./keys/index.js";
 export * from "./metadata/index.js";
 export * from "./operators/index.js";

@@ -11,6 +11,7 @@ import {
   compileXsdRegex,
   createRandom,
   createScoringOperators,
+  DEFAULT_ITEM_FORMAT_LIMITS,
   DEFAULT_KEY_LIMITS,
   DEFAULT_OPERATOR_LIMITS,
   DEFAULT_RESULTS_JSON_LIMITS,
@@ -22,6 +23,7 @@ import {
   RESULTS_NAMESPACE,
   readAsi,
   readCandidateAction,
+  readGift,
   readManifest,
   readModuleResolution,
   readPackage,
@@ -92,6 +94,21 @@ function repeated(opening: string, unit: string, count: number, closing: string)
   bytes.write(closing, open + each * count);
   return bytes;
 }
+
+/** The elements of the item of a GIFT question of the most answers, and of two answers, and of an essay besides its text. */
+const GIFT_ANSWER_ELEMENTS = 23 + DEFAULT_ITEM_FORMAT_LIMITS.maxAnswers;
+const GIFT_SHORT_ELEMENTS = 25;
+const GIFT_ESSAY_ELEMENTS = 12;
+
+/** The questions of each kind whose items hold the most elements that the limit allows. */
+const GIFT_ANSWER_QUESTIONS = Math.floor(DEFAULT_ITEM_FORMAT_LIMITS.maxNodes / GIFT_ANSWER_ELEMENTS);
+const GIFT_SHORT_QUESTIONS = Math.floor(DEFAULT_ITEM_FORMAT_LIMITS.maxNodes / GIFT_SHORT_ELEMENTS);
+/** Essays of the most tags, each `<b>` and `</b>` a tag, the reader refusing a text whose tags would pass the limit. */
+const GIFT_TAG_QUESTIONS =
+  Math.floor(
+    (DEFAULT_ITEM_FORMAT_LIMITS.maxNodes - DEFAULT_ITEM_FORMAT_LIMITS.maxTextTags) /
+      (DEFAULT_ITEM_FORMAT_LIMITS.maxTextTags / 2 + GIFT_ESSAY_ELEMENTS),
+  ) + 1;
 
 /** The nodes that a document keeps for the elements around its units, out of the nodes it may have. */
 const WRAPPER_NODES = 16;
@@ -707,6 +724,33 @@ export const READINGS = {
       })),
     read: (responses: readonly ScoredResponse[]) =>
       `${compileScoring(responses).responseProcessing.rules.length} rules`,
+  },
+  /** A GIFT file of questions of the most answers, whose items hold the most elements, the limit. */
+  giftAnswers: {
+    input: () =>
+      repeated("", `q{=a${" ~a".repeat(DEFAULT_ITEM_FORMAT_LIMITS.maxAnswers - 1)}}\n\n`, GIFT_ANSWER_QUESTIONS, ""),
+    read: (gift: Uint8Array) => `${readGift(gift).items.length} items`,
+  },
+  /** A GIFT file of questions of two answers, whose items hold the most elements, the limit. */
+  giftQuestions: {
+    input: () => repeated("", "q{=a ~a}\n\n", GIFT_SHORT_QUESTIONS, ""),
+    read: (gift: Uint8Array) => `${readGift(gift).items.length} items`,
+  },
+  /** A GIFT file of twice the questions of two answers that the limit of elements holds, which stops at the limit. */
+  giftOverNodes: {
+    input: () => repeated("", "q{=a ~a}\n\n", 2 * GIFT_SHORT_QUESTIONS, ""),
+    read: (gift: Uint8Array) => refusal(() => readGift(gift)),
+  },
+  /** A GIFT file of essays whose HTML holds the most tags of a text, as many as the limit of elements holds. */
+  giftTags: {
+    input: () =>
+      repeated(
+        "",
+        `[html]${"<b>x</b>".repeat(DEFAULT_ITEM_FORMAT_LIMITS.maxTextTags / 2)}{}\n\n`,
+        GIFT_TAG_QUESTIONS,
+        "",
+      ),
+    read: (gift: Uint8Array) => `${readGift(gift).items.length} items`,
   },
   mathSteps: {
     input: () =>

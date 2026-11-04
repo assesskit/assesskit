@@ -21,6 +21,8 @@ const OPERATORS = "packages/runtime/src/operators";
 const OPERATORS_TEST = "packages/runtime/test/operators.test.ts";
 const SCORING = "packages/runtime/src/scoring";
 const SCORING_TEST = "packages/runtime/test/scoring.test.ts";
+const FORMATS = "packages/runtime/src/item-formats";
+const FORMATS_TEST = "packages/runtime/test/item-formats.test.ts";
 
 /** The limits and the security checks of the runtime, which SECURITY.md lists, each with the test that guards it. */
 export const RUNTIME_RULES: readonly Rule[] = [
@@ -478,5 +480,68 @@ export const RUNTIME_RULES: readonly Rule[] = [
     find: "responses: 256,",
     replace: "responses: Number.MAX_SAFE_INTEGER,",
     test: SCORING_TEST,
+  },
+  {
+    rule: "A reader refuses a file of text longer than the limit maxBytes in UTF-8.",
+    file: `${FORMATS}/import-items.ts`,
+    find: "if (bytes > maxBytes) throw tooLong(bytes);",
+    replace: "",
+    test: FORMATS_TEST,
+  },
+  {
+    rule: "A reader refuses a file of bytes longer than the limit maxBytes, before it decodes them.",
+    file: `${FORMATS}/import-items.ts`,
+    find: "if (input.length > maxBytes) throw tooLong(input.length);",
+    replace: "",
+    test: FORMATS_TEST,
+  },
+  {
+    rule: "The GIFT reader refuses a file of more questions than the limit maxQuestions.",
+    file: `${FORMATS}/gift-parse.ts`,
+    find: "if (entries.length >= limits.maxQuestions) {",
+    replace: "if (entries.length < 0) {",
+    test: FORMATS_TEST,
+  },
+  {
+    rule: "The GIFT reader refuses a question of more answers than the limit maxAnswers.",
+    file: `${FORMATS}/gift-answers.ts`,
+    find: "if (parts.length > limits.maxAnswers) {",
+    replace: "if (parts.length < 0) {",
+    test: FORMATS_TEST,
+  },
+  {
+    rule: "A reader refuses a file whose items would hold more elements than the limit maxNodes.",
+    file: `${FORMATS}/html-content.ts`,
+    find: "if (state.elements + count > maxNodes) {",
+    replace: "if (count < 0) {",
+    test: FORMATS_TEST,
+  },
+  {
+    rule: "A reader refuses a text of more tags than the limit maxTextTags, before the parser of HTML reads it.",
+    file: `${FORMATS}/html-content.ts`,
+    find: "if (count > maxTextTags) {",
+    replace: "if (count < 0) {",
+    test: FORMATS_TEST,
+  },
+  {
+    rule: "A reader refuses HTML that nests deeper than the limit maxDepth, which it converts recursively.",
+    file: `${FORMATS}/html-content.ts`,
+    find: "if (depth > maxDepth) {",
+    replace: "if (depth < 0) {",
+    test: FORMATS_TEST,
+  },
+  {
+    rule: "A reader leaves out code and other documents in a question's HTML, with what they hold.",
+    file: `${FORMATS}/html-content.ts`,
+    find: "DROPPED_WITH_CONTENT.has(node.tagName)",
+    replace: 'node.tagName === ""',
+    test: FORMATS_TEST,
+  },
+  {
+    rule: "A reader keeps only the attributes that QTI gives an element, and its data attributes.",
+    file: `${FORMATS}/html-content.ts`,
+    find: "    state.attributes.add(name);\n    return undefined;\n  }\n  try {",
+    replace: '    return { namespace: "", name, value };\n  }\n  try {',
+    test: FORMATS_TEST,
   },
 ];

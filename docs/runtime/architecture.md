@@ -23,6 +23,7 @@ flowchart TD
     node --> validate["validate"]
     delivery["delivery"] --> validate
     scoring["scoring"] --> l5
+    formats["item-formats"] --> l4
     validate --> l5["cat, package, operators"]
     l5 --> l4["metadata, processing, interactions, pci, content"]
     l4 --> l3["asi, results, usage, pnp"]
@@ -54,6 +55,7 @@ checks that only the runtime uses and imports `errors.ts` and `checks.ts`, and `
 | 5     | `operators/`                                                | `values/`, `asi/`, `processing/`, `keys/`                                                                                  |
 | 6     | `validate/`                                                 | every module of layers 2 to 5                                                                                              |
 | 6     | `scoring/`                                                  | `values/`, `asi/`, `processing/`, `keys/`, `operators/`                                                                    |
+| 6     | `item-formats/`                                             | `xml/`, `values/`, `asi/`, `processing/`, `content/`; parse5                                                               |
 | 7     | `delivery/`                                                 | `values/`, `asi/`, `results/`, `pnp/`, `processing/`, `interactions/`, `pci/`, `content/`, `cat/`, `package/`, `validate/` |
 | 8     | `node/`                                                     | `xml/`, `package/`, `validate/`, `node:*`                                                                                  |
 | 9     | `cli/`                                                      | `xml/`, `asi/`, `results/`, `usage/`, `pnp/`, `package/`, `validate/`, `node/`, `node:*`                                   |
