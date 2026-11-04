@@ -1,5 +1,6 @@
 import type { ItemSessionControl } from "../asi/index.js";
-import { checkBoolean, checkNonNegativeInteger, checkOptions, checkRecord, describe } from "../checks.js";
+import { checkBoolean, checkNonNegativeInteger, checkRecord, describe } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import { type ItemRefNode, listAncestors, type StructureNode } from "./structure.js";
 

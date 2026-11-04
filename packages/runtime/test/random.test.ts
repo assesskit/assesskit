@@ -101,6 +101,18 @@ describe("restoreRandom", () => {
       "A random state must be four integers from 0 to 4294967295, not all 0, found an array.",
     );
   });
+
+  it("rejects a state with a hole, which would restore another generator than the one asked for", () => {
+    // JSON has no hole: `delete` makes the one that `[1, , 2, 3]` has, and `Uint32Array.from` would read it as 0.
+    const sparse = JSON.parse("[1, 0, 2, 3]");
+    delete sparse[1];
+    expect(() => restoreRandom(sparse)).toThrow(
+      "A random state must be an array of four integers, found an array with a hole at index 1.",
+    );
+    const unset = JSON.parse("[1, 0, 0, 0]");
+    unset.length = 5;
+    expect(() => restoreRandom(unset)).toThrow(DataError);
+  });
 });
 
 /** A source that returns the numbers given, in order. */

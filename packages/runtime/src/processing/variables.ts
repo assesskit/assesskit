@@ -1,5 +1,6 @@
 import type { AssessmentItem, OutcomeDeclaration, ValueElement } from "../asi/index.js";
-import { checkOptions, checkRecord, describe } from "../checks.js";
+import { checkRecord, describe } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import { normalizeValue, type Value } from "../values/index.js";
 import { describeType, fitValue, type VariableType } from "./assign.js";

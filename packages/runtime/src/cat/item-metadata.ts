@@ -1,4 +1,5 @@
-import { checkArray, checkBytes, checkOptions, checkRecord, checkString } from "../checks.js";
+import { checkArray, checkRecord, checkString } from "../checks.js";
+import { checkBytes, checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import {
   checkQtiMetadata,

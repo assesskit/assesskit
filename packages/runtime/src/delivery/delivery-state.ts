@@ -1,4 +1,5 @@
-import { checkArray, checkChoice, checkFinite, checkRecord, checkString, describe } from "../checks.js";
+import { checkArray, checkChoice, checkRecord, checkString, describe } from "../checks.js";
+import { checkFinite } from "../checks-internal.js";
 import type { PnpHazardTerm } from "../content/index.js";
 import { DataError } from "../errors.js";
 import type { SupportName, SupportSetting, SupportState, TestingTime } from "../pnp/index.js";

@@ -35,13 +35,20 @@ export function checkRecord(value: unknown, message: string): asserts value is R
 }
 
 /**
- * Checks that a value is an array, such as a list of issues.
+ * Checks that a value is an array without holes, such as a list of issues.
+ *
+ * @remarks
+ * A hole, an index below the length that holds no element, as `new Array(3)` and `[1, , 2]` have, is no value of the array
+ * that JSON gives, and `forEach`, `map` and `every` skip it unseen: it is refused.
  *
  * @param message - Says what the value should be, such as `The issues must be an array`.
- * @throws `DataError` when it is not.
+ * @throws `DataError` when it is not an array, or has a hole.
  */
 export function checkArray(value: unknown, message: string): asserts value is readonly unknown[] {
   if (!Array.isArray(value)) throw new DataError(`${message}, found ${describe(value)}.`);
+  for (let index = 0; index < value.length; index++) {
+    if (!(index in value)) throw new DataError(`${message}, found an array with a hole at index ${index}.`);
+  }
 }
 
 /**
@@ -79,15 +86,6 @@ export function checkProperties(
 }
 
 /**
- * Checks a function's options: an object, as a caller from JavaScript may pass `null` or another value.
- *
- * @throws `DataError` when they are not.
- */
-export function checkOptions(options: unknown): void {
-  checkRecord(options, "The options must be an object");
-}
-
-/**
  * Checks that a value is a function, such as a resolver.
  *
  * @param message - Says what the value should be, such as `The option resolve must be a function of an href and a base`.
@@ -117,16 +115,6 @@ export function checkNonEmptyString(value: unknown, label: string): asserts valu
   if (typeof value !== "string" || value === "") {
     throw new DataError(`${label} must be a non-empty string, found ${describe(value)}.`);
   }
-}
-
-/**
- * Checks that a value is bytes, such as the content of a file.
- *
- * @param label - Names the value in the error message, such as `The file settings`.
- * @throws `DataError` when it is not a `Uint8Array`.
- */
-export function checkBytes(value: unknown, label: string): asserts value is Uint8Array {
-  if (!(value instanceof Uint8Array)) throw new DataError(`${label} must be a Uint8Array, found ${describe(value)}.`);
 }
 
 /**
@@ -190,30 +178,6 @@ export function checkChoice<T extends string>(
 }
 
 /**
- * Checks that a value is a finite number.
- *
- * @param label - Names the value in the error message, such as `The option tolerance`.
- * @throws `DataError` when it is not.
- */
-export function checkFinite(value: unknown, label: string): asserts value is number {
-  if (!(typeof value === "number" && Number.isFinite(value))) {
-    throw new DataError(`${label} must be a finite number, found ${describe(value)}.`);
-  }
-}
-
-/**
- * Checks that a value is a finite number of at least 0.
- *
- * @param label - Names the value in the error message, such as `The option minTime`.
- * @throws `DataError` when it is not.
- */
-export function checkNonNegative(value: unknown, label: string): asserts value is number {
-  if (!(typeof value === "number" && Number.isFinite(value) && value >= 0)) {
-    throw new DataError(`${label} must be a non-negative number, found ${describe(value)}.`);
-  }
-}
-
-/**
  * Checks that a value is a safe integer of at least 0, such as a count.
  *
  * @param label - Names the value in the error message, such as `The option maxAttempts`.
@@ -246,17 +210,6 @@ export function checkPositive(value: unknown, label: string): asserts value is n
 export function checkPositiveInteger(value: unknown, label: string): asserts value is number {
   if (!(typeof value === "number" && Number.isSafeInteger(value) && value >= 1)) {
     throw new DataError(`${label} must be a positive integer, found ${describe(value)}.`);
-  }
-}
-
-/**
- * Checks a seed.
- *
- * @throws `DataError` when it is not a safe integer.
- */
-export function checkSeed(seed: unknown): asserts seed is number {
-  if (!(typeof seed === "number" && Number.isSafeInteger(seed))) {
-    throw new DataError(`A seed must be a safe integer, found ${describe(seed)}.`);
   }
 }
 
@@ -469,9 +422,6 @@ export function mapSchema<TOutput>(value: Schema<TOutput>): Schema<Map<string, T
 
 /** A finite number. */
 export const finiteSchema = v.pipe(v.number(), v.finite());
-
-/** A finite number of at least 0. */
-export const nonNegativeSchema = v.pipe(v.number(), v.finite(), v.minValue(0));
 
 /** A safe integer of at least 0, such as a count. */
 export const nonNegativeIntegerSchema = v.pipe(v.number(), v.safeInteger(), v.minValue(0));

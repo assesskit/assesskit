@@ -1,13 +1,13 @@
 /**
- * A point of the base type `point`: the horizontal and vertical position, as integers.
+ * A point of the base type `point`: the horizontal position `x` and then the vertical position `y`, as integers.
  *
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding, base types}
  */
 export type Point = readonly [x: number, y: number];
 
 /**
- * A pair of the base types `pair` and `directedPair`: two identifiers. A directed pair is source and destination; a pair
- * has no order when two are compared.
+ * A pair of the base types `pair` and `directedPair`: two identifiers, the `first` and then the `second`. A directed pair is
+ * source and destination; a pair has no order when two are compared.
  */
 export type Pair = readonly [first: string, second: string];
 

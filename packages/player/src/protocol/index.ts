@@ -30,4 +30,4 @@ export {
   type SubmissionVariable,
 } from "./submission.js";
 export { checkViewEnvelope, type ViewEnvelope } from "./view-envelope.js";
-export { checkViewRequest, isViewRequest, type ViewRequest } from "./view-request.js";
+export type { ViewRequest } from "./view-request.js";

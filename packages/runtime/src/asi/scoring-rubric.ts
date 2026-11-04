@@ -1,12 +1,6 @@
 import * as v from "valibot";
-import {
-  describe,
-  nonEmptyStringSchema,
-  nonNegativeSchema,
-  parseWith,
-  positiveSchema,
-  strictRecord,
-} from "../checks.js";
+import { describe, nonEmptyStringSchema, parseWith, positiveSchema, strictRecord } from "../checks.js";
+import { nonNegativeSchema } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import { isIdentifier } from "../values/index.js";
 

@@ -39,9 +39,7 @@ import {
   checkActionEnvelope,
   checkCaller,
   checkViewEnvelope,
-  checkViewRequest,
   type HostStep,
-  isViewRequest,
   type ViewEnvelope,
 } from "../protocol/index.js";
 import {
@@ -51,7 +49,9 @@ import {
   checkClock,
   checkHostAction,
   checkHostApplyOptions,
+  checkViewRequest,
   createCatLoops,
+  isViewRequest,
   markOfficial,
   readClock,
   stepAfterIdle,

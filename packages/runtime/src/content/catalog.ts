@@ -1,14 +1,7 @@
 import type { AssessmentItem, BodyNode, Catalog, FileHref, HtmlContent } from "../asi/index.js";
 import { withDescendants } from "../asi/internal.js";
-import {
-  checkArray,
-  checkOptional,
-  checkOptions,
-  checkPositiveInteger,
-  checkRecord,
-  checkString,
-  describe,
-} from "../checks.js";
+import { checkArray, checkOptional, checkPositiveInteger, checkRecord, checkString, describe } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import type { Issue } from "../errors.js";
 import type { Braille, SupportName } from "../pnp/index.js";
 

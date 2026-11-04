@@ -34,16 +34,16 @@ Use these words with these meanings in code, comments and docs.
 
 ## Layout
 
-| Path                                             | Holds                                                                                                                                                                            |
-| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/runtime/src/<module>/`                 | One folder per module: `index.ts`, `internal.ts` where other modules or the tests need more, a file per concept                                                                  |
-| `packages/runtime/src/{errors,checks,random}.ts` | The errors, the checks of one value, the random number generator; the subpaths `errors` and `checks` serve the player                                                            |
-| `packages/runtime/test/`                         | `<module>.test.ts` for each source folder; `fixtures/` (oracle output, stored states); `differential/` (the harness against Longsight `qti3-core` and Amp-up `qti3-item-player`) |
-| `packages/player/src/`                           | `errors.ts`, `checks.ts`, `messages/`, `protocol/`, `player/`, `client/`, `server/`, `scoring/`, `cat/`, `cat-rest/`                                                             |
-| `packages/player/{player.css,scripts/,test/}`    | The stylesheet of a content root; `build-static.ts` (the PCI frame and the recording worklet); `<folder>.test.ts`, `fixtures/` (servers and commands of the browser tests)       |
-| `examples/<package>/<name>/`                     | A runnable example, a package of its own; its `test/` runs it                                                                                                                    |
-| `docs/<package>/`                                | The guides of a package, one per module, with architecture, evidence and supported; TypeDoc publishes them                                                                       |
-| `compat/`, `scripts/`, `validation/`, `biome/`   | The browser baseline; downloads, generators and CI checks (`check-*.ts`, `rules/`); fixture scripts (Python); GritQL lint rules                                                  |
+| Path                                                             | Holds                                                                                                                                                                            |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/runtime/src/<module>/`                                 | One folder per module: `index.ts`, `internal.ts` where other modules or the tests need more, a file per concept                                                                  |
+| `packages/runtime/src/{errors,checks,checks-internal,random}.ts` | The errors, the checks of one value, the checks that only the runtime uses, the random number generator; the subpaths `errors` and `checks` serve the player                     |
+| `packages/runtime/test/`                                         | `<module>.test.ts` for each source folder; `fixtures/` (oracle output, stored states); `differential/` (the harness against Longsight `qti3-core` and Amp-up `qti3-item-player`) |
+| `packages/player/src/`                                           | `errors.ts`, `checks.ts`, `messages/`, `protocol/`, `player/`, `client/`, `server/`, `scoring/`, `cat/`, `cat-rest/`                                                             |
+| `packages/player/{player.css,scripts/,test/}`                    | The stylesheet of a content root; `build-static.ts` (the PCI frame and the recording worklet); `<folder>.test.ts`, `fixtures/` (servers and commands of the browser tests)       |
+| `examples/<package>/<name>/`                                     | A runnable example, a package of its own; its `test/` runs it                                                                                                                    |
+| `docs/<package>/`                                                | The guides of a package, one per module, with architecture, evidence and supported; TypeDoc publishes them                                                                       |
+| `compat/`, `scripts/`, `validation/`, `biome/`                   | The browser baseline; downloads, generators and CI checks (`check-*.ts`, `rules/`); fixture scripts (Python); GritQL lint rules                                                  |
 
 [Layers](docs/runtime/architecture.md#layers) and [player layers](docs/player/architecture.md#layers) are rows of tables that
 Biome enforces, folder by folder.
@@ -239,7 +239,7 @@ untested in the others.
 - A player folder: its row in the table of [architecture.md](docs/player/architecture.md#layers), its Biome overrides and its entry in
   `lint.test.ts`, a subpath in `package.json` `exports` with its budget in `test/size-budgets.ts` and in `typedoc.json` when the host
   imports it, a test file and a guide in `docs/`.
-- A check shared by modules: of a value of a JavaScript type in `checks.ts`; of a value that a module defines, in the `internal.ts` of
+- A check shared by modules: of a value of a JavaScript type in `checks.ts` when the player uses it, else in `checks-internal.ts`; of a value that a module defines, in the `internal.ts` of
   that module.
 - A place where the specifications contradict themselves or are silent: as CONTRIBUTING says, and a mention in the guide of the module.
 - Something the runtime defines because QTI does not: [conventions.md](docs/runtime/conventions.md), built from QTI's own elements

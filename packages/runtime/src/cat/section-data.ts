@@ -1,5 +1,6 @@
 import type { AdaptiveSelection } from "../asi/index.js";
-import { checkBytes, checkRecord, describe } from "../checks.js";
+import { checkRecord, describe } from "../checks.js";
+import { checkBytes } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import { encodeBase64 } from "../values/index.js";
 import type { SectionData } from "./model.js";

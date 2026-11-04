@@ -1,4 +1,4 @@
-import { checkOptions } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { type Issue, type IssueLocation, ReadError } from "../errors.js";
 import type { XmlElement } from "./tree.js";
 

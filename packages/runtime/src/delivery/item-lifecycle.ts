@@ -1,4 +1,5 @@
-import { checkOptions, checkString, describe } from "../checks.js";
+import { checkString, describe } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { AssesskitError, DataError } from "../errors.js";
 import { describeInteractions } from "../interactions/index.js";
 import { drawOrders, startingResponse } from "../interactions/internal.js";

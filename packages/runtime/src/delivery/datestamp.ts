@@ -1,4 +1,5 @@
-import { checkFinite, describe } from "../checks.js";
+import { describe } from "../checks.js";
+import { checkFinite } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 
 /** The time `0001-01-01T00:00:00.000Z` in epoch milliseconds, the first that a datestamp with a four-digit year can show. */

@@ -30,7 +30,7 @@ export {
 export type { PackageFiles } from "./package-files.js";
 export { resolveReference } from "./paths.js";
 export { readManifest } from "./read-manifest.js";
-export { resolveResourcePath } from "./resolve-resource-path.js";
+export { type ResolveResourcePathOptions, resolveResourcePath } from "./resolve-resource-path.js";
 export {
   createPackageResolvers,
   type DeliverableItem,

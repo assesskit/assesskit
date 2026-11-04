@@ -1,4 +1,5 @@
-import { checkFunction, checkOptions, checkRecord, checkString, describe, isRecord } from "../checks.js";
+import { checkFunction, checkRecord, checkString, describe, isRecord } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { DataError, type IssueLocation, type ReadError, SecurityError } from "../errors.js";
 import { resolveXmlLimits, type XmlLimits } from "./limits.js";
 import { findAttribute } from "./query.js";

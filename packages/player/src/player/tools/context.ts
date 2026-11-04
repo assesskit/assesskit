@@ -26,12 +26,41 @@ export interface ToolOptions {
 }
 
 /**
- * The tools that the host provides, by name.
+ * Builds a tool of the host in `host` and returns the function that takes it down again, which runs when the tool closes.
+ *
+ * @param host - The panel of the tool.
+ * @param options - What the tool needs to know besides the panel.
+ */
+export type ToolSlot = (host: HTMLElement, options: ToolOptions) => () => void;
+
+/**
+ * The tools that the host provides, by name; a tool without a function says that it is not available.
  *
  * @remarks
- * A function builds the tool in `host` and returns the function that takes it down again.
+ * The names are those of {@link SlotTool}.
  */
-export type ToolSlots = Partial<Record<SlotTool, (host: HTMLElement, options: ToolOptions) => () => void>>;
+export interface ToolSlots {
+  /** The scientific calculator, in place of the built-in one. */
+  readonly "scientific-calculator"?: ToolSlot;
+  /** The graphing calculator, which the player does not build in. */
+  readonly "graphing-calculator"?: ToolSlot;
+  /** A dictionary. */
+  readonly dictionary?: ToolSlot;
+  /** A thesaurus. */
+  readonly thesaurus?: ToolSlot;
+  /** A checker of homophones. */
+  readonly "homophone-checker"?: ToolSlot;
+  /** A place to take notes. */
+  readonly "note-taking"?: ToolSlot;
+  /** A visual organizer. */
+  readonly "visual-organizer"?: ToolSlot;
+  /** An outliner. */
+  readonly outliner?: ToolSlot;
+  /** A way to talk with a peer. */
+  readonly "peer-interaction"?: ToolSlot;
+  /** A spell checker. */
+  readonly "spell-checker"?: ToolSlot;
+}
 
 /** What the tools remember of the content shown, which outlasts a tool that is turned off. */
 export interface ToolMemory {

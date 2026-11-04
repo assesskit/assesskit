@@ -1,4 +1,5 @@
-import { checkArray, checkFinite, checkOptions, checkRecord, checkSeed, checkString, describe } from "../checks.js";
+import { checkArray, checkRecord, checkString, describe } from "../checks.js";
+import { checkFinite, checkOptions, checkSeed } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import {
   isSupportName,

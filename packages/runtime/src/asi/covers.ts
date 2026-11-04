@@ -1,4 +1,5 @@
-import { checkArray, checkOptions, checkRecord, checkString, describe } from "../checks.js";
+import { checkArray, checkRecord, checkString, describe } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import { isIdentifier } from "../values/index.js";
 import { xmlTokens } from "../values/internal.js";

@@ -5,7 +5,7 @@
  * @module @assesskit/runtime/asi
  */
 export * from "./body.js";
-export type { RubricBlockOptions, RubricContent } from "./convention-markup.js";
+export type { RubricBlockOptions, RubricContent, RubricNotes } from "./convention-markup.js";
 export {
   buildScoreCoversBlock,
   readScoreCovers,

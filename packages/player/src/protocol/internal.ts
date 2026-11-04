@@ -11,3 +11,4 @@ export { stepAfterIdle } from "./idle.js";
 export { markOfficial } from "./official.js";
 export { SCORERS } from "./scorers.js";
 export { checkDeclaration } from "./scoring-declaration.js";
+export { checkViewRequest, isViewRequest } from "./view-request.js";

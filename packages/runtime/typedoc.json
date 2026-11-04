@@ -25,7 +25,6 @@
     "NUMERIC_EXPRESSION",
     "OUTCOME_RULES",
     "RESPONSE_RULES",
-    "SlotMember",
     "TEMPLATE_RULES",
     "Types"
   ]

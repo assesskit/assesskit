@@ -1,12 +1,5 @@
-import {
-  checkArray,
-  checkFunction,
-  checkOptions,
-  checkPositiveInteger,
-  checkRecord,
-  checkString,
-  describe,
-} from "../checks.js";
+import { checkArray, checkFunction, checkPositiveInteger, checkRecord, checkString, describe } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { DataError, SecurityError } from "../errors.js";
 import { type Random, shuffle } from "../random.js";
 import type { ItemKey } from "./item-key.js";

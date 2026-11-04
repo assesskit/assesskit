@@ -11,12 +11,12 @@ import {
   checkBoolean,
   checkFunction,
   checkNonEmptyString,
-  checkOptions,
   checkPositiveInteger,
   checkRecord,
   checkString,
   describe,
 } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { type DrdHazardTerm, HAZARD_TERMS } from "../content/index.js";
 import { DataError, type Issue } from "../errors.js";
 import type { DeliverableItem, LtiLink, ResolvedItem, Resolvers } from "../package/index.js";

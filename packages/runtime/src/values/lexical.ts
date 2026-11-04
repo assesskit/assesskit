@@ -72,7 +72,7 @@ function twoTokens(tokens: readonly string[], text: string, baseType: BaseType):
  * | `pair`, `directedPair` | two identifiers, `a b` |
  * | `file` | the reference alone; its content type is `application/octet-stream` |
  *
- * The empty string is NULL; this function returns it as a string, and {@link single} turns it into `null`.
+ * The empty string is NULL; this function returns it as a string, and {@link buildSingle} turns it into `null`.
  *
  * @param text - The text of the value.
  * @param baseType - The base type.
@@ -152,7 +152,7 @@ export function formatDouble(value: number): string {
  * @remarks
  * A `file` is written as its reference alone, so its content type and name are not part of the text.
  *
- * @param value - A value of the base type, as {@link single} takes it.
+ * @param value - A value of the base type, as {@link buildSingle} takes it.
  * @param baseType - The base type.
  * @returns The text.
  * @throws `DataError` when `baseType` is not a base type or `value` is not a value of it.

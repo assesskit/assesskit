@@ -1,13 +1,6 @@
 import * as v from "valibot";
-import {
-  checkString,
-  mapSchema,
-  nonEmptyStringSchema,
-  nonNegativeSchema,
-  parseWith,
-  recordSchema,
-  type Schema,
-} from "../checks.js";
+import { checkString, mapSchema, nonEmptyStringSchema, parseWith, recordSchema, type Schema } from "../checks.js";
+import { nonNegativeSchema } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 
 /**

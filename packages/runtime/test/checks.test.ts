@@ -4,18 +4,13 @@ import {
   checkAbortSignal,
   checkArray,
   checkBoolean,
-  checkBytes,
   checkChoice,
-  checkFinite,
   checkFunction,
   checkNonEmptyString,
-  checkNonNegative,
   checkNonNegativeInteger,
-  checkOptions,
   checkPositiveInteger,
   checkProperties,
   checkRecord,
-  checkSeed,
   checkString,
   definedSchema,
   describeIssue,
@@ -28,7 +23,6 @@ import {
   methodsSchema,
   nonEmptyStringSchema,
   nonNegativeIntegerSchema,
-  nonNegativeSchema,
   parseWith,
   positiveIntegerSchema,
   positiveSchema,
@@ -77,12 +71,16 @@ describe("checkArray", () => {
       "The issues must be an array, found an object.",
     );
   });
-});
 
-describe("checkOptions", () => {
-  it("accepts an object and rejects null", () => {
-    expect(() => checkOptions({})).not.toThrow();
-    expect(() => checkOptions(JSON.parse("null"))).toThrow("The options must be an object, found null.");
+  it("refuses an array with a hole, which forEach, map and every skip unseen", () => {
+    const sparse: unknown[] = [1];
+    sparse.length = 3;
+    expect(() => checkArray(sparse, "The items must be an array")).toThrow(
+      "The items must be an array, found an array with a hole at index 1.",
+    );
+    // biome-ignore lint/suspicious/noSparseArray: the hole is what the check refuses.
+    expect(() => checkArray([1, , 3], "The items must be an array")).toThrow("found an array with a hole at index 1.");
+    expect(() => checkArray([undefined, null], "The items must be an array")).not.toThrow();
   });
 });
 
@@ -140,16 +138,6 @@ describe("checkString", () => {
   it("accepts a string and rejects other values", () => {
     expect(() => checkString("", "The href")).not.toThrow();
     expect(() => checkString(JSON.parse("1"), "The href")).toThrow("The href must be a string, found 1.");
-  });
-});
-
-describe("checkBytes", () => {
-  it("accepts a Uint8Array and rejects other values", () => {
-    expect(() => checkBytes(new Uint8Array(), "The file settings")).not.toThrow();
-    expect(() => checkBytes(JSON.parse("[1]"), "The file settings")).toThrow(
-      "The file settings must be a Uint8Array, found an array.",
-    );
-    expect(() => checkBytes("text", "The file settings")).toThrow(DataError);
   });
 });
 
@@ -221,24 +209,6 @@ describe("checkChoice", () => {
   });
 });
 
-describe("checkFinite", () => {
-  it("accepts finite numbers and rejects NaN, infinities and other types", () => {
-    expect(() => checkFinite(-1.5, "The tolerance")).not.toThrow();
-    for (const value of [Number.NaN, Number.POSITIVE_INFINITY, "1", null]) {
-      expect(() => checkFinite(value, "The tolerance")).toThrow(DataError);
-    }
-    expect(() => checkFinite(Number.NaN, "The tolerance")).toThrow("The tolerance must be a finite number, found NaN.");
-  });
-});
-
-describe("checkNonNegative", () => {
-  it("accepts 0 and above", () => {
-    expect(() => checkNonNegative(0, "The minimum")).not.toThrow();
-    expect(() => checkNonNegative(-1, "The minimum")).toThrow("The minimum must be a non-negative number, found -1.");
-    expect(() => checkNonNegative(Number.POSITIVE_INFINITY, "The minimum")).toThrow(DataError);
-  });
-});
-
 describe("checkNonNegativeInteger", () => {
   it("accepts safe integers from 0", () => {
     expect(() => checkNonNegativeInteger(0, "The count")).not.toThrow();
@@ -259,15 +229,6 @@ describe("checkPositiveInteger", () => {
     expect(() => checkPositiveInteger(0, "The option maxBytes")).toThrow(
       "The option maxBytes must be a positive integer, found 0.",
     );
-  });
-});
-
-describe("checkSeed", () => {
-  it("accepts safe integers of either sign", () => {
-    expect(() => checkSeed(0)).not.toThrow();
-    expect(() => checkSeed(-7)).not.toThrow();
-    expect(() => checkSeed(1.5)).toThrow("A seed must be a safe integer, found 1.5.");
-    expect(() => checkSeed(JSON.parse('"5"'))).toThrow('A seed must be a safe integer, found "5".');
   });
 });
 
@@ -459,7 +420,6 @@ describe("mapSchema", () => {
 describe("the schemas of numbers and strings", () => {
   it("accept what the check functions accept", () => {
     expect(parseWith(finiteSchema, -1.5, "N")).toBe(-1.5);
-    expect(parseWith(nonNegativeSchema, 0, "N")).toBe(0);
     expect(parseWith(nonNegativeIntegerSchema, 7, "N")).toBe(7);
     expect(parseWith(positiveIntegerSchema, 1, "N")).toBe(1);
     expect(parseWith(nonEmptyStringSchema, "x", "N")).toBe("x");
@@ -469,7 +429,6 @@ describe("the schemas of numbers and strings", () => {
     for (const bad of [Number.NaN, Number.POSITIVE_INFINITY, "1", null]) {
       expect(() => parseWith(finiteSchema, bad, "N")).toThrow(DataError);
     }
-    expect(() => parseWith(nonNegativeSchema, -0.5, "N")).toThrow(DataError);
     expect(() => parseWith(nonNegativeIntegerSchema, 2 ** 53, "N")).toThrow(DataError);
     expect(() => parseWith(positiveIntegerSchema, 0, "N")).toThrow(DataError);
     expect(() => parseWith(nonEmptyStringSchema, "", "N")).toThrow(DataError);

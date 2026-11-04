@@ -15,7 +15,7 @@ const INT_RANGE = [-(2 ** 31), 2 ** 31 - 1] as const;
  * @throws `DataError` when `text` is not a string or an item is not an identifier.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, IdentifierList}
  */
-export function parseIdentifierList(text: string): string[] {
+export function parseIdentifierList(text: string): readonly string[] {
   checkString(text, "The text");
   return xmlTokens(text).map((token) => {
     if (!isIdentifier(token))
@@ -55,7 +55,7 @@ function checkInt(value: number, source: string): number {
  * @throws `DataError` when `text` is not a string or an item is not an integer from -2147483648 to 2147483647.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, IntegerList}
  */
-export function parseIntegerList(text: string): number[] {
+export function parseIntegerList(text: string): readonly number[] {
   checkString(text, "The text");
   return xmlTokens(text).map((token) => checkInt(parseInteger(token), token));
 }

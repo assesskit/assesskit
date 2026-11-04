@@ -16,6 +16,9 @@ export type ListEntry = ElementModel<"LI", "li">;
  */
 export type RubricContent = TestRubricBlock["contentBody"]["children"][number];
 
+/** Content for the scorers: the notes of a rubric block. */
+export type RubricNotes = readonly RubricContent[];
+
 /** The options of {@link buildScoreCoversBlock} and {@link buildScoringRubricBlock}. */
 export interface RubricBlockOptions {
   /**
@@ -23,7 +26,7 @@ export interface RubricBlockOptions {
    *
    * @defaultValue `[]`
    */
-  readonly notes?: readonly RubricContent[];
+  readonly notes?: RubricNotes;
 }
 
 /** Returns the value of an attribute without a namespace among the extensions of an element, or `undefined` when it has none. */

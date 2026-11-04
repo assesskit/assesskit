@@ -1,4 +1,5 @@
-import { checkFinite, checkNonNegative, checkOptions, checkRecord, describe } from "../checks.js";
+import { checkRecord, describe } from "../checks.js";
+import { checkFinite, checkNonNegative, checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import { type PersonalNeedsProfile, resolveSupports, type TestingTime } from "../pnp/index.js";
 import { findTestPart, listAncestors, type StructureNode } from "./structure.js";

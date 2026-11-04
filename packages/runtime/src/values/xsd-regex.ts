@@ -1,4 +1,5 @@
-import { checkOptions, checkPositiveInteger, checkRecord, checkString } from "../checks.js";
+import { checkPositiveInteger, checkRecord, checkString } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import { buildMatcher, type XsdPattern } from "./xsd-regex-matcher.js";
 import { countStates } from "./xsd-regex-nfa.js";

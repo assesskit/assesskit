@@ -5,11 +5,11 @@ import {
   checkRecord,
   describe,
   nonNegativeIntegerSchema,
-  nonNegativeSchema,
   parseWith,
   type Schema,
   transformWith,
 } from "../checks.js";
+import { nonNegativeSchema } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import type { InteractionDescriptor } from "../interactions/index.js";
 import { checkDescriptor } from "../interactions/internal.js";

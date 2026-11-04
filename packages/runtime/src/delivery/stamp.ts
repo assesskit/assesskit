@@ -1,4 +1,5 @@
-import { checkFinite, checkRecord } from "../checks.js";
+import { checkRecord } from "../checks.js";
+import { checkFinite } from "../checks-internal.js";
 import { type Action, type CandidateAction, checkAction, type HostAction } from "./action.js";
 import { checkState, type DeliveryState } from "./delivery-state.js";
 

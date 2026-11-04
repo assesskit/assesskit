@@ -1,4 +1,5 @@
-import { checkFunction, checkOptions, checkRecord, checkString, describe } from "../checks.js";
+import { checkFunction, checkRecord, checkString, describe } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import { type ParseXmlOptions, parseXml, serializeXml, XMLNS_NAMESPACE, type XmlElement } from "../xml/index.js";
 import { DOCUMENT_ELEMENTS } from "./element-table.js";

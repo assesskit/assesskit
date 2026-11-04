@@ -1,4 +1,5 @@
-import { checkOptions, checkString } from "../checks.js";
+import { checkString } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import { buildRecord, buildSingle, type RecordValue, type SingleValue } from "../values/index.js";
 

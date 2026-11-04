@@ -26,32 +26,34 @@ flowchart TD
     l5 --> l4["metadata, processing, interactions, pci, content"]
     l4 --> l3["asi, results, usage, pnp"]
     l3 --> l2["xml, values"]
-    l2 --> l1["errors, checks, random"]
+    l2 --> l1["errors, checks, checks-internal, random"]
   end
   pb -->|"subpaths"| delivery
   ps -->|"subpaths"| delivery
 ```
 
 A module imports only from lower layers, and imports never form cycles (lint). Every module may import `errors.ts`,
-`checks.ts` and `random.ts`; `checks.ts` imports `errors.ts` and valibot only, and `random.ts` imports `errors.ts` and `checks.ts`.
+`checks.ts`, `checks-internal.ts` and `random.ts`; `checks.ts` imports `errors.ts` and valibot only, `checks-internal.ts` holds the
+checks that only the runtime uses and imports `errors.ts` and `checks.ts`, and `random.ts` imports `errors.ts`, `checks.ts` and
+`checks-internal.ts`.
 `delivery` is the top library layer, and no runtime module imports it. `packages/runtime` never imports `@assesskit/player`, and
 `@assesskit/player` imports the runtime only through its published subpaths, never by relative path.
 
-| Layer | Modules                                | Imports                                                                                                                    |
-| ----- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| 1     | `errors.ts`, `checks.ts`, `random.ts`  | as above                                                                                                                   |
-| 2     | `xml/`, `values/`                      | none                                                                                                                       |
-| 3     | `asi/`, `results/`, `usage/`           | `xml/`, `values/`                                                                                                          |
-| 3     | `pnp/`                                 | `xml/`                                                                                                                     |
-| 4     | `metadata/`                            | `xml/`, `asi/`                                                                                                             |
-| 4     | `processing/`, `interactions/`, `pci/` | `values/`, `asi/`                                                                                                          |
-| 4     | `content/`                             | `values/`, `asi/`, `pnp/`                                                                                                  |
-| 5     | `cat/`                                 | `values/`, `asi/`, `results/`, `metadata/`                                                                                 |
-| 5     | `package/`                             | `xml/`, `asi/`, `metadata/`, `usage/`                                                                                      |
-| 6     | `validate/`                            | every module of layers 2 to 5                                                                                              |
-| 7     | `delivery/`                            | `values/`, `asi/`, `results/`, `pnp/`, `processing/`, `interactions/`, `pci/`, `content/`, `cat/`, `package/`, `validate/` |
-| 8     | `node/`                                | `xml/`, `package/`, `validate/`, `node:*`                                                                                  |
-| 9     | `cli/`                                 | `xml/`, `asi/`, `results/`, `usage/`, `pnp/`, `package/`, `validate/`, `node/`, `node:*`                                   |
+| Layer | Modules                                                     | Imports                                                                                                                    |
+| ----- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `errors.ts`, `checks.ts`, `checks-internal.ts`, `random.ts` | as above                                                                                                                   |
+| 2     | `xml/`, `values/`                                           | none                                                                                                                       |
+| 3     | `asi/`, `results/`, `usage/`                                | `xml/`, `values/`                                                                                                          |
+| 3     | `pnp/`                                                      | `xml/`                                                                                                                     |
+| 4     | `metadata/`                                                 | `xml/`, `asi/`                                                                                                             |
+| 4     | `processing/`, `interactions/`, `pci/`                      | `values/`, `asi/`                                                                                                          |
+| 4     | `content/`                                                  | `values/`, `asi/`, `pnp/`                                                                                                  |
+| 5     | `cat/`                                                      | `values/`, `asi/`, `results/`, `metadata/`                                                                                 |
+| 5     | `package/`                                                  | `xml/`, `asi/`, `metadata/`, `usage/`                                                                                      |
+| 6     | `validate/`                                                 | every module of layers 2 to 5                                                                                              |
+| 7     | `delivery/`                                                 | `values/`, `asi/`, `results/`, `pnp/`, `processing/`, `interactions/`, `pci/`, `content/`, `cat/`, `package/`, `validate/` |
+| 8     | `node/`                                                     | `xml/`, `package/`, `validate/`, `node:*`                                                                                  |
+| 9     | `cli/`                                                      | `xml/`, `asi/`, `results/`, `usage/`, `pnp/`, `package/`, `validate/`, `node/`, `node:*`                                   |
 
 ## Principles
 

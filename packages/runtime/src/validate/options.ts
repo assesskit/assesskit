@@ -1,5 +1,6 @@
 import type { ResponseProcessing } from "../asi/index.js";
-import { checkFunction, checkOptions, checkPositiveInteger, checkString, describe } from "../checks.js";
+import { checkFunction, checkPositiveInteger, checkString, describe } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import type { CustomOperator } from "../processing/index.js";
 import { DEFAULT_MAX_FINDINGS } from "./findings.js";

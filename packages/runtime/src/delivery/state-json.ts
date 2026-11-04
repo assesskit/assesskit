@@ -1,13 +1,6 @@
 import * as v from "valibot";
-import {
-  checkString,
-  finiteSchema,
-  nonNegativeSchema,
-  parseWith,
-  positiveIntegerSchema,
-  type Schema,
-  transformWith,
-} from "../checks.js";
+import { checkString, finiteSchema, parseWith, positiveIntegerSchema, type Schema, transformWith } from "../checks.js";
+import { nonNegativeSchema } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import { PNP_HAZARDS, type TestingTime } from "../pnp/index.js";
 import { restoreRandom } from "../random.js";

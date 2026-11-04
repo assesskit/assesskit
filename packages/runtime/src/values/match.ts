@@ -39,8 +39,8 @@ function matchRecords(a: RecordValue, b: RecordValue): boolean {
  * the same number of times in any order, an `ordered` one only in the same order, and a `record` one with the same
  * fields. Strings and identifiers compare case-sensitively, a `pair` ignores the order of its identifiers and a
  * `directedPair` does not, a `float` or `duration` compares as `SameValueZero`, and a `file` by its reference, content
- * type and name. The function does not check its arguments deeply, so build them with {@link single},
- * {@link container} and {@link record}.
+ * type and name. The function does not check its arguments deeply, so build them with {@link buildSingle},
+ * {@link buildContainer} and {@link buildRecord}.
  *
  * @param a - The first value.
  * @param b - The second value.

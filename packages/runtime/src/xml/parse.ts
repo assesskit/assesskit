@@ -1,5 +1,6 @@
 import { type EventNameToHandler, SaxesParser } from "saxes";
-import { checkOptions, checkString, describe } from "../checks.js";
+import { checkString, describe } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { AssesskitError, DataError, type ReadError, SecurityError } from "../errors.js";
 import { decodeXml } from "./encoding.js";
 import { resolveXmlLimits, type XmlLimits } from "./limits.js";

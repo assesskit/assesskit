@@ -1,7 +1,6 @@
 import * as v from "valibot";
 import {
   checkChoice,
-  checkOptions,
   checkPositiveInteger,
   checkRecord,
   describe,
@@ -9,6 +8,7 @@ import {
   parseWith,
   type Schema,
 } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { DataError, SecurityError } from "../errors.js";
 import type { CandidateAction } from "./action.js";
 import { CANDIDATE_ACTION_TYPES, checkResponseMaps } from "./candidate-actions.js";

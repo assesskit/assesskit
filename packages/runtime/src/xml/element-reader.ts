@@ -1,4 +1,5 @@
-import { checkArray, checkChoice, checkOptions, checkRecord, checkString, describe } from "../checks.js";
+import { checkArray, checkChoice, checkRecord, checkString, describe } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { DataError, type ReadError } from "../errors.js";
 import { isXmlLanguage } from "./language.js";
 import { type ParseXmlOptions, parseXml } from "./parse.js";

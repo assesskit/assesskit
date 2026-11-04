@@ -1,5 +1,6 @@
 import { type AsiDocument, readAsi } from "../asi/index.js";
-import { checkArray, checkFunction, checkOptions, checkRecord, checkString, describe } from "../checks.js";
+import { checkArray, checkFunction, checkRecord, checkString, describe } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { AssesskitError, DataError, SecurityError } from "../errors.js";
 import { createReadError, parseXml, resolveIncludes, type XmlElement, type XmlLimits } from "../xml/index.js";
 import type { Manifest } from "./manifest.js";

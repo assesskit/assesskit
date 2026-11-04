@@ -1,5 +1,6 @@
 import type { AssessmentItem } from "../asi/index.js";
-import { checkBoolean, checkChoice, checkFinite, checkNonNegativeInteger, checkRecord, describe } from "../checks.js";
+import { checkBoolean, checkChoice, checkNonNegativeInteger, checkRecord, describe } from "../checks.js";
+import { checkFinite } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import type { ItemVariables, ProcessingContext } from "../processing/index.js";
 import { checkContext, checkItem, checkVariables } from "../processing/internal.js";

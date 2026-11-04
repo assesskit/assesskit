@@ -90,14 +90,14 @@ materials, and a tray with the panel of each open tool. The tools that lie over 
 appends to `stage`. It adopts its stylesheet into the document or shadow root of `host` and of `stage`, and gives it back
 on `destroy`.
 
-| Option      | Type                                                       | Meaning                                                                                                                                     |
-| ----------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `messages`  | `Messages`                                                 | The text of the interface, from `selectMessages`.                                                                                           |
-| `language`  | `string`                                                   | The language of the interface, a BCP 47 tag, which the tools of the host get.                                                               |
-| `stage`     | `HTMLElement`                                              | The element that holds the rendered item, in a document or a shadow root. Its `position` must not be `static`.                              |
-| `assets`    | `(path: string) => string`                                 | Turns the path of a file in the package into the URL to load it from.                                                                       |
-| `slots`     | `Partial<Record<SlotTool, (host, options) => () => void>>` | The tools that the host provides, by name. A function builds the tool in `host` and returns the function that takes it down. Default: `{}`. |
-| `onSupport` | `(name: SupportName, active: boolean) => void`             | Called when the candidate turns a tool of the profile that is an option on or off: the host sends the `support` action.                     |
+| Option      | Type                                           | Meaning                                                                                                                                     |
+| ----------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `messages`  | `Messages`                                     | The text of the interface, from `selectMessages`.                                                                                           |
+| `language`  | `string`                                       | The language of the interface, a BCP 47 tag, which the tools of the host get.                                                               |
+| `stage`     | `HTMLElement`                                  | The element that holds the rendered item, in a document or a shadow root. Its `position` must not be `static`.                              |
+| `assets`    | `(path: string) => string`                     | Turns the path of a file in the package into the URL to load it from.                                                                       |
+| `slots`     | `ToolSlots`                                    | The tools that the host provides, by name. A function builds the tool in `host` and returns the function that takes it down. Default: `{}`. |
+| `onSupport` | `(name: SupportName, active: boolean) => void` | Called when the candidate turns a tool of the profile that is an option on or off: the host sends the `support` action.                     |
 
 `tools.update(input)` shows the tools for an item and a candidate. Call it with every new view. A tool that stays in force
 stays open, where the candidate put it; the others go, and the focus goes to the button of a tool that took it down.

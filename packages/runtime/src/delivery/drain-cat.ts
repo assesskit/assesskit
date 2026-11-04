@@ -1,13 +1,6 @@
 import type { CatResponse, CatSessionPort } from "../cat/index.js";
-import {
-  checkAbortSignal,
-  checkChoice,
-  checkFunction,
-  checkOptional,
-  checkOptions,
-  checkRecord,
-  raceAbort,
-} from "../checks.js";
+import { checkAbortSignal, checkChoice, checkFunction, checkOptional, checkRecord, raceAbort } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import type { DeliveryState } from "./delivery-state.js";
 import { checkState } from "./delivery-state.js";

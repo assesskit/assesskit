@@ -1,4 +1,5 @@
-import { checkArray, checkOptions, checkRecord, checkString } from "../checks.js";
+import { checkArray, checkRecord, checkString } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { XML_NAMESPACE, type XmlAttribute, type XmlElement, type XmlNode, XSI_NAMESPACE } from "./tree.js";
 
 /** The prefixes that an attribute name may carry, with their namespaces: no other prefix is declared by `buildElement`. */

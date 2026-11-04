@@ -1,4 +1,5 @@
-import { checkArray, checkSeed, describe } from "./checks.js";
+import { checkArray, describe } from "./checks.js";
+import { checkSeed } from "./checks-internal.js";
 import { DataError } from "./errors.js";
 
 /**
@@ -10,8 +11,13 @@ export interface Random {
   uniform(): number;
 }
 
-/** The four 32-bit words of the generator state, each an integer from 0 to 4294967295. */
-export type RandomState = readonly [number, number, number, number];
+/**
+ * The four 32-bit words of the generator state, in order, each an integer from 0 to 4294967295 and not all 0.
+ *
+ * @remarks
+ * `restoreRandom` takes it back and continues the sequence from it.
+ */
+export type RandomState = readonly [first: number, second: number, third: number, fourth: number];
 
 /** A seeded random number generator whose state can be saved and restored. */
 export interface SeededRandom extends Random {

@@ -13,7 +13,12 @@ export interface EndAttemptDetail {
   readonly responseIdentifier: string;
 }
 
-/** The event that an end attempt element dispatches, and that bubbles to the content root, when the candidate ends the attempt. */
+/**
+ * The event that an end attempt element dispatches, and that bubbles to the content root, when the candidate ends the attempt.
+ *
+ * @remarks
+ * Its `detail` is an {@link EndAttemptDetail}.
+ */
 export type EndAttemptEvent = CustomEvent<EndAttemptDetail>;
 
 declare global {

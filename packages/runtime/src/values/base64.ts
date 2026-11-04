@@ -1,4 +1,5 @@
-import { checkBytes, checkString } from "../checks.js";
+import { checkString } from "../checks.js";
+import { checkBytes } from "../checks-internal.js";
 
 /** The digits of base 64, in order. */
 const BASE64_DIGITS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";

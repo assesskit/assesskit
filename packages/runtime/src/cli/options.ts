@@ -1,4 +1,5 @@
-import { checkFunction, checkOptions, checkString } from "../checks.js";
+import { checkFunction, checkString } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { SCHEMA_FILES } from "../node/index.js";
 import { defaultSchemaDirectory } from "./schema-directory.js";
 

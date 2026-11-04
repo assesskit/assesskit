@@ -1,4 +1,5 @@
-import { checkOptions, checkRecord, checkString } from "../checks.js";
+import { checkRecord, checkString } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import type { Manifest, Resource } from "./manifest.js";
 import type { QtiPackage } from "./package.js";
 import { resolveReference } from "./paths.js";

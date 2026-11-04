@@ -180,7 +180,7 @@
       }
     },
     {
-      "includes": ["packages/runtime/src/random.ts"],
+      "includes": ["packages/runtime/src/checks-internal.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -190,7 +190,31 @@
                 "patterns": [
                   {
                     "group": ["./*", "./*/**", "!./errors.js", "!./checks.js"],
-                    "message": "random.ts depends only on errors.ts and checks.ts."
+                    "message": "checks-internal.ts depends only on errors.ts and checks.ts."
+                  },
+                  {
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/runtime/src/random.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["./*", "./*/**", "!./errors.js", "!./checks.js", "!./checks-internal.js"],
+                    "message": "random.ts depends only on errors.ts, checks.ts and checks-internal.ts."
                   },
                   {
                     "group": ["@assesskit/player", "@assesskit/player/**"],
@@ -213,8 +237,15 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["../*", "../*/**", "!../errors.js", "!../checks.js", "!../random.js"],
-                    "message": "xml/ depends only on errors.ts, checks.ts and random.ts."
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../checks-internal.js",
+                      "!../random.js"
+                    ],
+                    "message": "xml/ depends only on errors.ts, checks.ts, checks-internal.ts and random.ts."
                   },
                   {
                     "group": ["@assesskit/player", "@assesskit/player/**"],
@@ -237,8 +268,15 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["../*", "../*/**", "!../errors.js", "!../checks.js", "!../random.js"],
-                    "message": "values/ depends only on errors.ts, checks.ts and random.ts."
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../checks-internal.js",
+                      "!../random.js"
+                    ],
+                    "message": "values/ depends only on errors.ts, checks.ts, checks-internal.ts and random.ts."
                   },
                   {
                     "group": ["@assesskit/player", "@assesskit/player/**"],
@@ -266,6 +304,7 @@
                       "../*/**",
                       "!../errors.js",
                       "!../checks.js",
+                      "!../checks-internal.js",
                       "!../random.js",
                       "!../xml/**",
                       "!../values/**"
@@ -298,6 +337,7 @@
                       "../*/**",
                       "!../errors.js",
                       "!../checks.js",
+                      "!../checks-internal.js",
                       "!../random.js",
                       "!../xml/**",
                       "!../values/**"
@@ -330,6 +370,7 @@
                       "../*/**",
                       "!../errors.js",
                       "!../checks.js",
+                      "!../checks-internal.js",
                       "!../random.js",
                       "!../xml/**",
                       "!../values/**"
@@ -357,7 +398,15 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["../*", "../*/**", "!../errors.js", "!../checks.js", "!../random.js", "!../xml/**"],
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../checks-internal.js",
+                      "!../random.js",
+                      "!../xml/**"
+                    ],
                     "message": "pnp/ builds on xml/ only."
                   },
                   {
@@ -386,6 +435,7 @@
                       "../*/**",
                       "!../errors.js",
                       "!../checks.js",
+                      "!../checks-internal.js",
                       "!../random.js",
                       "!../xml/**",
                       "!../asi/**"
@@ -418,6 +468,7 @@
                       "../*/**",
                       "!../errors.js",
                       "!../checks.js",
+                      "!../checks-internal.js",
                       "!../random.js",
                       "!../values/**",
                       "!../asi/**"
@@ -450,6 +501,7 @@
                       "../*/**",
                       "!../errors.js",
                       "!../checks.js",
+                      "!../checks-internal.js",
                       "!../random.js",
                       "!../values/**",
                       "!../asi/**"
@@ -482,6 +534,7 @@
                       "../*/**",
                       "!../errors.js",
                       "!../checks.js",
+                      "!../checks-internal.js",
                       "!../random.js",
                       "!../values/**",
                       "!../asi/**"
@@ -514,6 +567,7 @@
                       "../*/**",
                       "!../errors.js",
                       "!../checks.js",
+                      "!../checks-internal.js",
                       "!../random.js",
                       "!../values/**",
                       "!../asi/**",
@@ -547,6 +601,7 @@
                       "../*/**",
                       "!../errors.js",
                       "!../checks.js",
+                      "!../checks-internal.js",
                       "!../random.js",
                       "!../values/**",
                       "!../asi/**",
@@ -581,6 +636,7 @@
                       "../*/**",
                       "!../errors.js",
                       "!../checks.js",
+                      "!../checks-internal.js",
                       "!../random.js",
                       "!../xml/**",
                       "!../asi/**",
@@ -615,6 +671,7 @@
                       "../*/**",
                       "!../errors.js",
                       "!../checks.js",
+                      "!../checks-internal.js",
                       "!../random.js",
                       "!../xml/**",
                       "!../values/**",
@@ -658,6 +715,7 @@
                       "../*/**",
                       "!../errors.js",
                       "!../checks.js",
+                      "!../checks-internal.js",
                       "!../random.js",
                       "!../values/**",
                       "!../asi/**",
@@ -699,6 +757,7 @@
                       "../*/**",
                       "!../errors.js",
                       "!../checks.js",
+                      "!../checks-internal.js",
                       "!../random.js",
                       "!../xml/**",
                       "!../package/**",
@@ -732,6 +791,7 @@
                       "../*/**",
                       "!../errors.js",
                       "!../checks.js",
+                      "!../checks-internal.js",
                       "!../random.js",
                       "!../xml/**",
                       "!../asi/**",

@@ -5,7 +5,14 @@ import type { Random } from "../random.js";
 import type { Value } from "../values/index.js";
 import { DEFAULT_PROCESSING_LIMITS, type ProcessingLimits } from "./limits.js";
 
-/** A `qti-custom-operator` of the model. */
+/**
+ * A `qti-custom-operator` of the model.
+ *
+ * @remarks
+ * Its properties follow the rule of {@link ElementModel}: `class` and `definition` are its attributes, `operands` the
+ * expressions it works on, and `extensions` and `extensionElements` the attributes and elements of other namespaces that it
+ * carries.
+ */
 export type CustomOperatorExpression = ElementModel<"CustomOperator", "qti-custom-operator">;
 
 /**

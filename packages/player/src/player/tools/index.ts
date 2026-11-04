@@ -1,4 +1,4 @@
-export type { ToolFile, ToolOptions, ToolSlots } from "./context.js";
+export type { ToolFile, ToolOptions, ToolSlot, ToolSlots } from "./context.js";
 export {
   SLOT_TOOLS,
   type SlotTool,

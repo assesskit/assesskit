@@ -20,7 +20,12 @@ export interface ResponseDetail {
   readonly value: Value | null;
 }
 
-/** The event that an interaction element dispatches, and that bubbles to the content root, when a response changes. */
+/**
+ * The event that an interaction element dispatches, and that bubbles to the content root, when a response changes.
+ *
+ * @remarks
+ * Its `detail` is a {@link ResponseDetail}.
+ */
 export type ResponseEvent = CustomEvent<ResponseDetail>;
 
 declare global {

@@ -33,7 +33,12 @@ export interface BodyRenderer {
 /** Builds the element of an interaction, in place of the placeholder that the renderer draws for one without a renderer. */
 export type InteractionRenderer = (interaction: Interaction, renderer: BodyRenderer) => Element;
 
-/** The renderers of interactions by their `kind`, such as `choice-interaction`. */
+/**
+ * The renderers of interactions by their `kind`, such as `choice-interaction`.
+ *
+ * @remarks
+ * A kind without an entry is drawn as a placeholder.
+ */
 export type InteractionRenderers = ReadonlyMap<Interaction["kind"], InteractionRenderer>;
 
 /** What the parts of the renderer share: the {@link BodyRenderer} and the settings of one rendering. */

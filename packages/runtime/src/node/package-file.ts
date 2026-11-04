@@ -1,6 +1,7 @@
 import { readFileSync, type Stats, statSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
-import { checkOptions, checkString } from "../checks.js";
+import { checkString } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
 import { DataError, SecurityError } from "../errors.js";
 import {
   type Manifest,

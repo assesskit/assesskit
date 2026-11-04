@@ -8,6 +8,7 @@ import { EN_MESSAGES, type Messages } from "../src/messages/index.js";
 import {
   mountTools,
   type ToolOptions,
+  type ToolSlot,
   type ToolSlots,
   type ToolSupportName,
   type Tools,
@@ -1845,14 +1846,12 @@ describe("the tools of the host", () => {
   it("builds each on-screen tool of the profile in its panel with the function of the host, and takes it down when it goes", async () => {
     const built: { name: string; language: string }[] = [];
     const unmounted: string[] = [];
-    const slots: ToolSlots = {};
-    for (const [, tool] of SlotNames) {
-      slots[tool] = (host, options) => {
-        built.push(options);
-        host.textContent = `The ${options.name} of the host`;
-        return () => unmounted.push(options.name);
-      };
-    }
+    const make: ToolSlot = (host, options) => {
+      built.push(options);
+      host.textContent = `The ${options.name} of the host`;
+      return () => unmounted.push(options.name);
+    };
+    const slots: ToolSlots = Object.fromEntries(SlotNames.map(([, tool]) => [tool, make]));
     const scene = createScene({ slots });
     const input = (active: boolean): ToolsInput =>
       profile(...SlotNames.map(([name]) => support(name, { state: "option", active })));
