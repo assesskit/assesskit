@@ -371,6 +371,20 @@ export const RUNTIME_RULES: readonly Rule[] = [
     test: DELIVERY_TEST,
   },
   {
+    rule: "A call of an operator has its properties and no other, so that a misspelled followThrough is not ignored.",
+    file: `${OPERATORS}/build-operator-call.ts`,
+    find: "const callSchema = strictRecord({",
+    replace: "const callSchema = v.looseObject({",
+    test: OPERATORS_TEST,
+  },
+  {
+    rule: "A follow-through of a call of an operator has its properties and no other.",
+    file: `${OPERATORS}/build-operator-call.ts`,
+    find: "const followThroughSchema = strictRecord({",
+    replace: "const followThroughSchema = v.looseObject({",
+    test: OPERATORS_TEST,
+  },
+  {
     rule: "An action of a client larger than maxActionSize is refused.",
     file: ACTION,
     find: 'checkJsonInput(json, "The action", maxActionSize, "maxActionSize");',

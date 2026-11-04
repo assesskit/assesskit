@@ -1,4 +1,5 @@
-import { describe, isRecord } from "../checks.js";
+import * as v from "valibot";
+import { describe, parseWith, strictRecord } from "../checks.js";
 import { DataError } from "../errors.js";
 import type { ExpressionKey, FollowThrough, KeyedAreasKey, NumberKey, TextKey } from "../keys/index.js";
 import type { CustomOperatorExpression } from "../processing/index.js";
@@ -77,14 +78,19 @@ export interface ReadableCall {
 /** One call of an operator: which operator, the key it scores by, and for an expression or a number, its follow-through. */
 export type OperatorCall = ExpressionCall | NumberCall | TextCall | HotspotCall | ReadableCall;
 
-/** The name of the operator of a call, checked. */
-function operatorOf(call: Readonly<Record<string, unknown>>): OperatorName {
-  const name = call.operator;
-  const found = OPERATOR_NAMES.find((candidate) => candidate === name);
-  if (found === undefined)
-    throw new DataError(`The option operator must be one of ${OPERATOR_NAMES.join(", ")}, found ${describe(name)}.`);
-  return found;
-}
+/** The properties of a call and no other; its operator's schema reads the key and the expression of its follow-through. */
+const callSchema = strictRecord({
+  operator: v.picklist(OPERATOR_NAMES),
+  key: v.optional(v.unknown()),
+  followThrough: v.optional(v.unknown()),
+});
+
+/** The properties of a follow-through and no other. */
+const followThroughSchema = strictRecord({
+  from: v.optional(v.unknown()),
+  expression: v.optional(v.unknown()),
+  variable: v.optional(v.unknown()),
+});
 
 /** Checks an identifier of a response, which a `qti-variable` names. */
 function checkResponseIdentifier(identifier: unknown, label: string): string {
@@ -94,22 +100,24 @@ function checkResponseIdentifier(identifier: unknown, label: string): string {
 }
 
 /** The options of a call with every default resolved, and the identifier of its earlier response, if any. */
-function resolveCall(name: OperatorName, call: Readonly<Record<string, unknown>>): { options: unknown; from?: string } {
-  const key = resolveKeyDefaults(call.key);
-  const { followThrough } = call;
+function resolveCall(
+  name: OperatorName,
+  { key: given, followThrough }: { readonly key: unknown; readonly followThrough?: unknown },
+): { options: unknown; from?: string } {
+  const key = resolveKeyDefaults(given);
   if (name !== "expression-equivalent" && name !== "number-equivalent") {
     if (followThrough !== undefined)
       throw new DataError("The option followThrough is for expression-equivalent and number-equivalent alone.");
     return { options: { key } };
   }
   if (followThrough === undefined || followThrough === null) return { options: { key, followThrough: null } };
-  if (!isRecord(followThrough))
-    throw new DataError(
-      `The option followThrough must be an object of from, expression and variable, found ${describe(followThrough)}.`,
-    );
-  const from = checkResponseIdentifier(followThrough.from, "The option followThrough.from");
-  const variable = followThrough.variable === undefined ? "r" : followThrough.variable;
-  return { options: { key, followThrough: { expression: followThrough.expression, variable } }, from };
+  const {
+    from: origin,
+    expression,
+    variable = "r",
+  } = parseWith(followThroughSchema, followThrough, "The option followThrough");
+  const from = checkResponseIdentifier(origin, "The option followThrough.from");
+  return { options: { key, followThrough: { expression, variable } }, from };
 }
 
 /**
@@ -181,19 +189,17 @@ export function readAreasKey(key: unknown): AreasKeyData {
  * @param call - The operator and its key.
  * @param response - The identifier of the response the operator scores.
  * @returns The expression, for an item's response processing; a writer gives its attribute the prefix `operator`.
- * @throws `DataError` for a key the operator refuses, read by the schema and the checks that the operator runs, a response or
- *   a `followThrough.from` that is not an identifier, or a follow-through on another operator or from the response itself.
+ * @throws `DataError` for a call or a follow-through with a property that it does not have, a key the operator refuses, read
+ *   by the schema and the checks that the operator runs, a response or a `followThrough.from` that is not an identifier, or a
+ *   follow-through on another operator or from the response itself.
  * @throws `SecurityError` past the limits of a key, or past the default limits of the operators.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-custom-operator}
  * @see {@link https://www.rfc-editor.org/rfc/rfc8785 | RFC 8785, JSON Canonicalization Scheme}
  */
 export function buildOperatorCall(call: OperatorCall, response: string): CustomOperatorExpression {
-  const given: unknown = call;
-  if (!isRecord(given))
-    throw new DataError(`The call must be an object of operator and key, found ${describe(given)}.`);
-  const name = operatorOf(given);
+  const { operator: name, key, followThrough } = parseWith(callSchema, call, "The call");
   const identifier = checkResponseIdentifier(response, "The response");
-  const { options, from } = resolveCall(name, given);
+  const { options, from } = resolveCall(name, { key, followThrough });
   if (from === identifier)
     throw new DataError("The option followThrough.from names an earlier response, never the response itself.");
   const checked = checkOptions(name, options);

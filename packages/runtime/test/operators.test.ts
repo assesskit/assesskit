@@ -232,9 +232,30 @@ describe("buildOperatorCall", () => {
       ),
     ).toThrow("followThrough is for expression-equivalent and number-equivalent alone");
     expect(() => buildOperatorCall(json('{"operator":"mystery","key":{}}'), "R")).toThrow(
-      "The option operator must be one of",
+      "The call is invalid at operator: expected",
     );
-    expect(() => buildOperatorCall(json("null"), "R")).toThrow("The call must be an object");
+    expect(() => buildOperatorCall(json("null"), "R")).toThrow("The call is invalid: expected an object, found null.");
+    expect(() => buildOperatorCall(json("[]"), "R")).toThrow(
+      "The call is invalid: expected an object, found an array.",
+    );
+    const text = '{"operator":"text-equivalent","key":{"kind":"text","answers":[{"texts":["a"]}]}';
+    expect(() => buildOperatorCall(json(`${text},"followThru":{}}`), "R")).toThrow(
+      'The call is invalid: unexpected property "followThru".',
+    );
+    const number = '{"operator":"number-equivalent","key":{"kind":"number","value":1}';
+    expect(() => buildOperatorCall(json(`${number},"followThrough":[]}`), "R")).toThrow(
+      "The option followThrough is invalid: expected an object, found an array.",
+    );
+    expect(() =>
+      buildOperatorCall(json(`${number},"followThrough":{"from":"A","expression":"r","bogus":1}}`), "R"),
+    ).toThrow('The option followThrough is invalid: unexpected property "bogus".');
+    for (const name of ["__proto__", "prototype", "constructor"]) {
+      const problem = `holds a property "${name}", a name that reaches the prototype.`;
+      expect(() => buildOperatorCall(json(`${text},"${name}":1}`), "R")).toThrow(`The call is invalid: ${problem}`);
+      expect(() =>
+        buildOperatorCall(json(`${number},"followThrough":{"from":"A","expression":"r","${name}":1}}`), "R"),
+      ).toThrow(`The option followThrough is invalid: ${problem}`);
+    }
     expect(() => call({ operator: "number-equivalent", key: json('{"kind":"number","value":"1"}') })).toThrow(
       "The call of number-equivalent is invalid at key.value",
     );
