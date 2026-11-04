@@ -38,7 +38,7 @@ const responses = [
 ];
 compileScoring(responses).responseDeclarations.map(({ identifier, baseType }) => `${identifier} ${baseType}`);
 // => ["CAPITAL string", "LARGEST identifier"]
-DEFAULT_KEY_LIMITS; // => { responses: 64, entries: 1000, patternLength: 1000 }
+DEFAULT_KEY_LIMITS; // => { responses: 256, entries: 1000, patternLength: 1000 }
 ```
 
 ## Kinds
@@ -67,12 +67,12 @@ response earns the credit when it matches the key or that value.
 
 | What                                                                                                                       | Bound                              | Default | When exceeded                                |
 | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ------: | -------------------------------------------- |
-| Responses of an item                                                                                                       | `responses`                        |      64 | `SecurityError` with `limit` `responses`     |
+| Responses of an item                                                                                                       | `responses`                        |     256 | `SecurityError` with `limit` `responses`     |
 | Entries of a key: keys, options, pairs, choices, areas and coordinates in fours, answers, texts and patterns, units, tiers | `entries`                          |   1,000 | `SecurityError` with `limit` `entries`       |
 | Characters of a pattern                                                                                                    | `patternLength`, UTF-16 code units |   1,000 | `SecurityError` with `limit` `patternLength` |
 
-An operator reads its key within the defaults, so that every scorer of an item reads the same items; `compileScoring` takes up to
-256 responses and lower limits of any kind ([scoring](scoring.md#limits)).
+An operator reads its key within these limits, so that every scorer of an item reads the same items, and `compileScoring` holds
+an item to them ([scoring](scoring.md#limits)).
 
 ## Errors
 

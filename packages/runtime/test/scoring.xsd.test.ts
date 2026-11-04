@@ -100,11 +100,11 @@ interface SchemesFixture {
 describe("compileScoring", () => {
   it("writes items that the QTI 3.0 schema accepts, with every kind of key and every option", async () => {
     const items = [
-      itemXml(EVERY_KEY, { limits: { responses: 64 } }),
-      itemXml(EVERY_KEY, { feedback: false, allParts: true, floor: -1 }),
+      itemXml(EVERY_KEY),
+      itemXml(EVERY_KEY, { allParts: true, floor: -1 }),
       itemXml(EVERY_KEY, { portable: true }),
       itemXml([EVERY_KEY[4] as ScoredResponse]),
-      itemXml([EVERY_KEY[16] as ScoredResponse], { portable: true, feedback: false }),
+      itemXml([EVERY_KEY[16] as ScoredResponse], { portable: true }),
     ];
     expect(
       await validateXmlFiles(

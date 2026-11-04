@@ -2,7 +2,7 @@ import * as v from "valibot";
 import { finiteSchema, isRecord, mapSchema, positiveIntegerSchema, recordSchema, strictRecord } from "../checks.js";
 import { nonNegativeSchema } from "../checks-internal.js";
 import { SecurityError } from "../errors.js";
-import { DEFAULT_KEY_LIMITS, type KeyLimits } from "../keys/index.js";
+import { DEFAULT_KEY_LIMITS } from "../keys/index.js";
 
 // The schemas of the keys that the operators score, with every field present: a key that an item carries has its defaults
 // resolved, so that a later change of a default never changes a published score.
@@ -123,7 +123,8 @@ export type AreasKeyData = v.InferOutput<typeof areasKeySchema>;
 const COORDINATES_PER_ENTRY = 4;
 
 /** Throws when a count passes the limit `entries`. */
-function checkEntries(count: number, what: string, path: string, { entries }: KeyLimits): void {
+function checkEntries(count: number, what: string, path: string): void {
+  const { entries } = DEFAULT_KEY_LIMITS;
   if (count > entries)
     throw new SecurityError(
       `The key at ${path} holds ${count} ${what}, over the limit entries of ${entries}.`,
@@ -136,48 +137,44 @@ function checkEntries(count: number, what: string, path: string, { entries }: Ke
  * Checks a key against the limits of a key: the entries of each list, the texts and patterns of every answer together, the
  * coordinates of every area together, four times the entries, and the characters of each pattern.
  *
- * @param limits - The limits; an operator reads its key within the defaults, and `compileScoring` may take lower ones.
  * @throws `SecurityError` naming the limit.
  */
 export function checkKeyLimits(
   key: ExpressionKeyData | NumberKeyData | TextKeyData | AreasKeyData,
   path: string,
-  limits: KeyLimits = DEFAULT_KEY_LIMITS,
 ): void {
   switch (key.kind) {
     case "expression":
-      checkEntries(key.variables.size, "variables", path, limits);
+      checkEntries(key.variables.size, "variables", path);
       return;
     case "number":
       checkEntries(
         key.units.size + key.credit.length + (key.intervals?.length ?? 0),
         "units, tiers and intervals",
         path,
-        limits,
       );
-      checkEntries(key.components?.length ?? 0, "components", path, limits);
+      checkEntries(key.components?.length ?? 0, "components", path);
       return;
     case "text":
-      checkTextLimits(key, path, limits);
+      checkTextLimits(key, path);
       return;
     case "areas":
-      checkEntries(key.areas.length, "areas", path, limits);
+      checkEntries(key.areas.length, "areas", path);
       checkEntries(
         key.areas.reduce((total, area) => total + area.coords.length, 0) / COORDINATES_PER_ENTRY,
         "coordinates in fours",
         path,
-        limits,
       );
       return;
   }
 }
 
-function checkTextLimits(key: TextKeyData, path: string, limits: KeyLimits): void {
-  checkEntries(key.answers.length, "answers", path, limits);
+function checkTextLimits(key: TextKeyData, path: string): void {
+  checkEntries(key.answers.length, "answers", path);
   const entries = key.answers.reduce((total, answer) => total + answer.texts.length + answer.patterns.length, 0);
-  checkEntries(entries, "texts and patterns", path, limits);
-  checkEntries(key.credit.length + (key.length?.effects.length ?? 0), "tiers and effects", path, limits);
-  const { patternLength } = limits;
+  checkEntries(entries, "texts and patterns", path);
+  checkEntries(key.credit.length + (key.length?.effects.length ?? 0), "tiers and effects", path);
+  const { patternLength } = DEFAULT_KEY_LIMITS;
   for (const answer of key.answers) {
     for (const pattern of answer.patterns) {
       if (pattern.length > patternLength)

@@ -553,17 +553,17 @@ describe("compileScoring", () => {
     );
   });
 
-  it("leaves out FEEDBACK without feedback, and writes the operators' outcomes for a host with portable", () => {
+  it("writes the operators' outcomes for a host with portable", () => {
     const responses: ScoredResponse[] = [
       { identifier: "R1", key: { kind: "choice", keys: ["A"] } },
       { identifier: "R2", key: { kind: "text", answers: [{ texts: ["x"] }] } },
     ];
-    const quiet = compileScoring(responses, { feedback: false });
-    expect(quiet.outcomeDeclarations.map(({ identifier }) => identifier)).toStrictEqual([
+    expect(compileScoring(responses).outcomeDeclarations.map(({ identifier }) => identifier)).toStrictEqual([
       "SCORE",
       "MAXSCORE",
       "SCORE_R1",
       "SCORE_R2",
+      "FEEDBACK",
     ]);
     const portable = compileScoring(responses, { portable: true });
     expect(portable.operators).toStrictEqual([]);
@@ -576,42 +576,39 @@ describe("compileScoring", () => {
     const outcomes = outcomesOf(portable, { R1: one("identifier", "A"), R2: null });
     expect(numberOf(outcomes.get("SCORE_R1"))).toBe(1);
     expect(feedbackOf(outcomes)).toStrictEqual(["R1-correct", "R2-blank"]);
-    const alone = compileScoring([responses[1] as ScoredResponse], { portable: true, feedback: false });
-    expect(alone.responseProcessing.rules).toStrictEqual([]);
+    const alone = compileScoring([responses[1] as ScoredResponse], { portable: true });
+    expect(alone.responseProcessing.rules).toHaveLength(1);
     expect(alone.outcomeDeclarations[0]).toMatchObject({ identifier: "SCORE", externalScored: "externalMachine" });
   });
 
-  it("takes the limits of keys up to their caps", () => {
-    const order = Array.from({ length: 1_001 }, (_, at) => `C${at}`);
+  it("refuses a key or an item past the limits of keys", () => {
+    const order = Array.from({ length: DEFAULT_KEY_LIMITS.entries + 1 }, (_, at) => `C${at}`);
     expect(() => compileScoring([respond({ kind: "order", order })])).toThrow(SecurityError);
-    expect(() =>
-      compileScoring([respond({ kind: "order", order: order.slice(0, 11) })], { limits: { entries: 10 } }),
-    ).toThrow("over the limit entries of 10");
-    expect(() => compileScoring([respond({ kind: "order", order })], { limits: { entries: 1_001 } })).toThrow(
-      "at most 1000",
-    );
-    const many65 = Array.from(
-      { length: 65 },
-      (_, at): ScoredResponse => ({ identifier: `R${at}`, key: { kind: "choice", keys: ["A"] } }),
-    );
+    expect(() => compileScoring([respond({ kind: "order", order: order.slice(1) })])).not.toThrow();
+    const many = (count: number) =>
+      Array.from(
+        { length: count },
+        (_, at): ScoredResponse => ({ identifier: `R${at}`, key: { kind: "choice", keys: ["A"] } }),
+      );
+    expect(DEFAULT_KEY_LIMITS.responses).toBe(256);
+    expect(compileScoring(many(256)).outcomeDeclarations).toHaveLength(259);
     const error = (() => {
       try {
-        compileScoring(many65);
+        compileScoring(many(257));
       } catch (caught) {
         return caught;
       }
     })();
     expect(error).toBeInstanceOf(SecurityError);
-    expect(error).toMatchObject({ limit: "responses", maximum: DEFAULT_KEY_LIMITS.responses });
-    expect(compileScoring(many65, { limits: { responses: 65 } }).outcomeDeclarations).toHaveLength(68);
-    expect(() => compileScoring(many65, { limits: { responses: 257 } })).toThrow("at most 256");
+    expect(error).toMatchObject({ limit: "responses", maximum: 256 });
     const text = respond({ kind: "text", answers: Array.from({ length: 1_001 }, (_, at) => ({ texts: [`t${at}`] })) });
     expect(() => compileScoring([text])).toThrow(SecurityError);
-    const pattern = respond({ kind: "text", answers: [{ texts: [], patterns: ["[a-z]{1,9}"] }] });
-    expect(() => compileScoring([pattern], { limits: { patternLength: 5 } })).toThrow(
-      "over the limit patternLength of 5",
+    const pattern = (length: number) =>
+      respond({ kind: "text", answers: [{ texts: [], patterns: ["a".repeat(length)] }] });
+    expect(() => compileScoring([pattern(DEFAULT_KEY_LIMITS.patternLength + 1)])).toThrow(
+      "over the limit patternLength of 1000",
     );
-    expect(compileScoring([pattern], { limits: { patternLength: 10 } }).operators).toHaveLength(1);
+    expect(compileScoring([pattern(DEFAULT_KEY_LIMITS.patternLength)]).operators).toHaveLength(1);
   });
 
   it("refuses identifiers that are taken, reserved or too long beside others", () => {
@@ -764,7 +761,12 @@ describe("compileScoring", () => {
       'unexpected property "other"',
     );
     expect(() => compileScoring([json(JSON.stringify(choice))], json('{"floor":"0"}'))).toThrow("floor");
-    expect(() => compileScoring([json(JSON.stringify(choice))], json('{"limits":{"entries":0}}'))).toThrow("entries");
+    expect(() => compileScoring([json(JSON.stringify(choice))], json('{"limits":{"entries":10}}'))).toThrow(
+      'unexpected property "limits"',
+    );
+    expect(() => compileScoring([json(JSON.stringify(choice))], json('{"feedback":false}'))).toThrow(
+      'unexpected property "feedback"',
+    );
   });
 });
 

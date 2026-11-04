@@ -1,13 +1,11 @@
 import type { Expression, NumericExpression, ResponseDeclaration } from "../asi/index.js";
 import { DataError } from "../errors.js";
-import type { AreasKey, ExpressionKey, FollowThrough, KeyLimits, NumberKey, TextKey } from "../keys/index.js";
+import type { AreasKey, ExpressionKey, FollowThrough, NumberKey, TextKey } from "../keys/index.js";
 import { buildOperatorCall, OPERATOR_DEFINITIONS } from "../operators/index.js";
 import {
-  checkKeyLimits,
   type NumberKeyData,
   type PreparedText,
   readAreasKey,
-  readExpressionKey,
   readNumberKey,
   readTextKey,
 } from "../operators/internal.js";
@@ -473,14 +471,8 @@ function numberValues(read: NumberKeyData): string[] {
  *
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-equal}
  */
-export function numberScheme(
-  response: string,
-  key: NumberKey,
-  followThrough: FollowThrough | undefined,
-  limits: KeyLimits,
-): Scheme {
+export function numberScheme(response: string, key: NumberKey, followThrough: FollowThrough | undefined): Scheme {
   const read = readNumberKey(key, followThrough);
-  checkKeyLimits(read, "key", limits);
   if (isPlainNumber(read, followThrough)) return plainNumberScheme(response, read);
   return {
     declaration: declare(response, read.components === null ? "single" : "ordered", "string", numberValues(read)),
@@ -509,9 +501,8 @@ function bestTexts(prepared: PreparedText): string[] {
 }
 
 /** `text`: `text-equivalent`, whose share is of the points of the `count` answers of most points. */
-export function textScheme(response: string, key: TextKey, limits: KeyLimits): Scheme {
+export function textScheme(response: string, key: TextKey): Scheme {
   const prepared = readTextKey(key);
-  checkKeyLimits(prepared.key, "key", limits);
   const several = prepared.key.scheme === "forms" && prepared.key.count > 1;
   return {
     declaration: declare(response, several ? "multiple" : "single", "string", bestTexts(prepared)),
@@ -531,9 +522,7 @@ export function expressionScheme(
   response: string,
   key: ExpressionKey,
   followThrough: FollowThrough | undefined,
-  limits: KeyLimits,
 ): Scheme {
-  checkKeyLimits(readExpressionKey(key, followThrough), "key", limits);
   const call = buildOperatorCall(
     { operator: "expression-equivalent", key, ...(followThrough && { followThrough }) },
     response,
@@ -548,9 +537,8 @@ export function expressionScheme(
 }
 
 /** `areas` with `keyed`: `hotspot-matching`, whose share is of `select` areas, a point each. */
-export function keyedAreasScheme(response: string, key: AreasKey, limits: KeyLimits): Scheme {
+export function keyedAreasScheme(response: string, key: AreasKey): Scheme {
   const read = readAreasKey(key);
-  checkKeyLimits(read, "key", limits);
   return {
     declaration: declare(response, read.select === 1 ? "single" : "multiple", "point", []),
     interactions: { maxChoices: read.select },

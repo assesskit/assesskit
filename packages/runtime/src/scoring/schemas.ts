@@ -10,23 +10,11 @@ import {
   strictRecord,
 } from "../checks.js";
 import { nonNegativeSchema } from "../checks-internal.js";
-import { DEFAULT_KEY_LIMITS } from "../keys/index.js";
 import { areaSchema } from "../operators/internal.js";
 import { isIdentifier } from "../values/index.js";
 
 // The schemas of what compileScoring reads: the options, a scored response, and the keys that QTI's own expressions score.
 // The keys that an operator scores are read by the operator's own schema, through buildOperatorCall.
-
-/**
- * The highest limits that `compileScoring` takes: 256 responses, at which compiling the worst item of the default entries
- * ends in a heap of 224 MiB, within the 256 of STANDARDS; the entries and the characters of a pattern stay at their defaults,
- * which an operator reads its key within whatever these say.
- */
-const KEY_LIMIT_CAPS = Object.freeze({
-  responses: 256,
-  entries: DEFAULT_KEY_LIMITS.entries,
-  patternLength: DEFAULT_KEY_LIMITS.patternLength,
-});
 
 const identifierSchema = v.pipe(
   v.string(),
@@ -43,24 +31,11 @@ const identifiersSchema = v.pipe(
   v.check((list) => new Set(list).size === list.length, "expected each identifier once"),
 );
 
-function cappedSchema(cap: number) {
-  return v.optional(v.pipe(positiveIntegerSchema, v.maxValue(cap)));
-}
-
 export const compileScoringOptionsSchema = v.optional(
   strictRecord({
-    feedback: v.optional(v.boolean(), true),
     portable: v.optional(v.boolean(), false),
     floor: v.optional(finiteSchema),
     allParts: v.optional(v.boolean(), false),
-    limits: v.optional(
-      strictRecord({
-        responses: cappedSchema(KEY_LIMIT_CAPS.responses),
-        entries: cappedSchema(KEY_LIMIT_CAPS.entries),
-        patternLength: cappedSchema(KEY_LIMIT_CAPS.patternLength),
-      }),
-      {},
-    ),
   }),
   {},
 );

@@ -336,7 +336,7 @@ Every limit is a positive integer that a caller can replace per call, field by f
 a limit left out keeps its default. Input over a limit is a `SecurityError` whose `limit` is the limit's name, except a
 regular expression, which is a `DataError` from `compileXsdRegex` and a `ProcessingError` in processing. Each default is a safety factor over the largest value among the
 1EdTech QTI 3.0 examples, where the examples have one, and the factor is as large as the memory allows: the limits are set so that the worst
-input within all of them peaks at 200 MiB of heap or less in every reader, under a budget of 256 MiB ([Peak memory](#peak-memory)).
+input within all of them peaks at 224 MiB of heap or less in every reader, under a budget of 256 MiB ([Peak memory](#peak-memory)).
 
 XML (`XmlLimits`; option `limits` of `parseXml`, `resolveIncludes`, `readAsi`, `readManifest` and the other readers, and
 `xmlLimits` of `readPackage`, `openPackage` and `readPackageFile`):
@@ -405,12 +405,11 @@ a limit throws.
 | `maxSolutions`       | 16      | values                  | none            | The values of a solution set once `\pm` is expanded; capped at 64.                                            |
 | `maxEditBand`        | 64      | edits                   | none            | The widest edit distance that a credit tier of a text key measures; capped at 256.                            |
 
-Keys (`DEFAULT_KEY_LIMITS` of `keys`, fixed for the operators): `entries`, 1,000 entries of one key (keys, options, pairs,
-choices, answers, their texts and patterns together, units, tiers, intervals, components, areas, and the coordinates of the
-areas in fours), and `patternLength`, 1,000 characters of one pattern; a key past either is a `SecurityError`. `compileScoring`
-takes `responses`, 64 responses of an item by default, up to 256 with its option `limits`, and lower values of the others; it
-counts the entries of a key before it reads it. `compareMathSteps` takes at most `maxSteps` lines, 200 by
-default, and refuses more with a `SecurityError`.
+Keys (`DEFAULT_KEY_LIMITS` of `keys`, fixed for the operators and `compileScoring`): `entries`, 1,000 entries of one key
+(keys, options, pairs, choices, answers, their texts and patterns together, units, tiers, intervals, components, areas, and
+the coordinates of the areas in fours), and `patternLength`, 1,000 characters of one pattern; a key past either is a
+`SecurityError`. `compileScoring` takes `responses`, 256 responses of an item; it counts the entries of a key before it reads
+it. `compareMathSteps` takes at most `maxSteps` lines, 200 by default, and refuses more with a `SecurityError`.
 
 Item formats (`ItemFormatLimits`; option `limits` of `readGift` and `writeGift`):
 
@@ -442,7 +441,7 @@ in which it ended on Node.js 22, 24 and 26, so a regression fails it and the loa
 scripts/peak-memory.ts` finds the least heap. The inputs are made in memory outside the heap. Memory follows the nodes and the
 attributes that a reader builds, not the bytes: 300,000 paragraphs of 4 bytes take 104 MiB to read as an item, and 300,000
 paragraphs of 31 bytes with three attributes each take 200, so `maxNodes` and `maxBytes` are set together. The budget is 256 MiB,
-and no reader peaks above 200.
+and no reader peaks above 224.
 
 | Reader                  | Worst input within the limits                                                           | Least heap (MiB) |
 | ----------------------- | --------------------------------------------------------------------------------------- | ---------------: |
@@ -472,7 +471,7 @@ and no reader peaks above 200.
 | `text-equivalent`       | 1,000 answers whose patterns every word matches, and a response of 1,000 words          |               24 |
 | `hotspot-matching`      | 1,000 areas and 1,000 points, each point in every area                                  |               24 |
 | `compareMathSteps`      | 200 lines of 2,000 characters                                                           |               32 |
-| `compileScoring`        | 64 orders of 1,000 choices scored per position, a condition for each choice             |               56 |
+| `compileScoring`        | 256 orders of 1,000 choices scored per position, a condition for each choice            |              224 |
 | `readGift`              | 813 questions of 100 answers, or 4,000 of two: the most elements of the items           |        48 and 72 |
 | `readGift`              | 47 essays of 4,096 tags of HTML each, to the limit of elements                          |               48 |
 | `readGift`              | 8,000 questions of two answers, stopped at the limit of elements                        |               48 |
@@ -497,7 +496,7 @@ Without `maxSettingListLength`, the settings list needs 240 MiB. A host with mor
 | `maxStates`                     | About 0.6 MiB for every 1,000 states.                                                                                        |
 | `maxResultSize`                 | About 17 MiB for every million of size.                                                                                      |
 | `maxBodyBytes`, `maxTokens`     | The memory of a parse follows the tokens: 32 MiB of empty objects took 850 MiB without the count.                            |
-| `responses` of `compileScoring` | About 0.7 MiB for each response of 1,000 choices scored per position; at the cap of 256 the item ends in 224 MiB.            |
+| `responses` of `compileScoring` | About 0.7 MiB for each response of 1,000 choices scored per position; the 256 responses of the default end in 224 MiB.       |
 
 An archive or a container at the limits is bounded by its size: an entry is inflated in steps of 8 KiB of input and
 never beyond the size its header declares.

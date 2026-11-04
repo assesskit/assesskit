@@ -19,7 +19,7 @@ import { DEFAULT_OPERATOR_LIMITS } from "./limits.js";
 import { prepareNumber } from "./number-equivalent.js";
 import { parseOptions } from "./options.js";
 import { prepareReadable } from "./readable.js";
-import type { AreasKeyData, ExpressionKeyData, NumberKeyData } from "./schemas.js";
+import type { AreasKeyData, NumberKeyData } from "./schemas.js";
 import { resolveKeyDefaults } from "./schemas.js";
 import { type PreparedText, prepareText } from "./text-equivalent.js";
 
@@ -150,14 +150,6 @@ function checkOptions(name: OperatorName, options: unknown): unknown {
     case "readable":
       return prepareReadable(parseOptions(name, options, ""), limits, "");
   }
-}
-
-/** Reads the key of a call of `expression-equivalent` as `buildOperatorCall` reads it, every default resolved and checked. */
-export function readExpressionKey(key: unknown, followThrough: unknown): ExpressionKeyData {
-  const { options } = resolveCall("expression-equivalent", { key, followThrough });
-  const read = parseOptions("expression-equivalent", options, "");
-  prepareExpression(read, DEFAULT_OPERATOR_LIMITS, "");
-  return read.key;
 }
 
 /** Reads the key of a call of `number-equivalent` as `buildOperatorCall` reads it, every default resolved and checked. */

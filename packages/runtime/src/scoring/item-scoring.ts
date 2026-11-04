@@ -1,15 +1,7 @@
 import type { OutcomeDeclaration, ResponseDeclaration, ResponseProcessing } from "../asi/index.js";
-import type { KeyLimits } from "../keys/index.js";
 
 /** The options of `compileScoring`. */
 export interface CompileScoringOptions {
-  /**
-   * Whether the outcome `FEEDBACK` holds `<identifier>-correct`, `-partial`, `-incorrect` or `-blank` for each response,
-   * for the item's feedback to show.
-   *
-   * @defaultValue `true`
-   */
-  readonly feedback?: boolean;
   /**
    * Whether each outcome that an operator would score is externally scored by a machine (`externalMachine`), so that an
    * engine without the operators delivers the item and a host supplies the score.
@@ -29,13 +21,6 @@ export interface CompileScoringOptions {
    * @defaultValue `false`
    */
   readonly allParts?: boolean;
-  /**
-   * The limits of the keys: `responses` up to 256, and `entries` and `patternLength` up to their defaults, within which an
-   * operator reads its key.
-   *
-   * @defaultValue `DEFAULT_KEY_LIMITS`
-   */
-  readonly limits?: Partial<KeyLimits>;
 }
 
 /** The `match-max` of the choices of a match or an association that the key needs; 0 is unlimited, as QTI reads it. */
@@ -84,7 +69,7 @@ export interface InteractionAttributes {
 export interface ItemScoring {
   /** A declaration for each response, with its correct response and its mapping where the key has them. */
   readonly responseDeclarations: readonly ResponseDeclaration[];
-  /** `SCORE`, `MAXSCORE`, `SCORE_<identifier>` with several responses, and `FEEDBACK` with `feedback`. */
+  /** `SCORE`, `MAXSCORE`, `SCORE_<identifier>` with several responses, and `FEEDBACK`. */
   readonly outcomeDeclarations: readonly OutcomeDeclaration[];
   /** The rules that score the responses. */
   readonly responseProcessing: ResponseProcessing;

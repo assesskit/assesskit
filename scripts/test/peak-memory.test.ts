@@ -192,8 +192,8 @@ const READINGS: readonly {
   {
     title: "compiles the keys of the most responses, each an order of the most choices scored per position",
     name: "compileKeys",
-    heapMiB: 112,
-    outcome: "64129 rules",
+    heapMiB: 448,
+    outcome: "256513 rules",
   },
   {
     title: "reads a GIFT file of questions of the most answers, whose items hold the most elements",

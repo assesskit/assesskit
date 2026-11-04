@@ -588,15 +588,8 @@ export const RUNTIME_RULES: readonly Rule[] = [
     test: SCORING_TEST,
   },
   {
-    rule: "A text key that an operator scores holds at most the lower limits that compileScoring takes.",
-    file: `${SCORING}/schemes.ts`,
-    find: 'checkKeyLimits(prepared.key, "key", limits);',
-    replace: "",
-    test: SCORING_TEST,
-  },
-  {
-    rule: "compileScoring takes at most 256 responses, the cap at which its worst item stays within 256 MiB.",
-    file: `${SCORING}/schemas.ts`,
+    rule: "compileScoring takes at most 256 responses, the count at which its worst item stays within 256 MiB.",
+    file: "packages/runtime/src/keys/limits.ts",
     find: "responses: 256,",
     replace: "responses: Number.MAX_SAFE_INTEGER,",
     test: SCORING_TEST,

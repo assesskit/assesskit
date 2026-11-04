@@ -35,12 +35,12 @@ export const BUDGETS = {
   operatorText: 3,
   /** Checking 60 lines of worked steps. */
   mathSteps: 5,
-  // The compiler's budgets are five times the fastest sample of a laptop (0.04 and 52.7 ms), rounded up to one significant
+  // The compiler's budgets are five times the fastest sample of a laptop (0.04 and 139 ms), rounded up to one significant
   // digit, until the CI runner's samples replace them.
   /** Compiling the keys of an item of four responses. */
   compileItem: 0.2,
-  /** Compiling 64 orders of 1,000 choices, scored per position: the default limits of keys. */
-  compileLimits: 300,
+  /** Compiling 256 orders of 1,000 choices, scored per position: the limits of keys. */
+  compileLimits: 700,
   // The budgets of the item formats are five times the fastest sample of a laptop (0.32, 0.56, 87.8, 0.26 and 0.69 ms),
   // rounded up to one significant digit, until the CI runner's samples replace them.
   /** Reading the edge cases of GIFT, 18 items and two questions that Moodle refuses. */

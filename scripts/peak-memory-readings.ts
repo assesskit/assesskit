@@ -720,7 +720,7 @@ export const READINGS = {
   },
   /** `compareMathSteps` on 200 lines, its default `maxSteps`, of `maxInputLength` characters each. */
   /**
-   * `compileScoring` on as many responses as the default limits allow, each an order of as many choices as a key holds,
+   * `compileScoring` on as many responses as the limits of keys allow, each an order of as many choices as a key holds,
    * scored per position: the scheme that writes the most rules for an entry, a condition for each choice.
    */
   compileKeys: {

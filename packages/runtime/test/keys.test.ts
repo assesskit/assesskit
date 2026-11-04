@@ -5,7 +5,7 @@ import { DEFAULT_KEY_LIMITS } from "../src/keys/index.js";
 
 describe("DEFAULT_KEY_LIMITS", () => {
   it("holds the limits of a key, frozen", () => {
-    expect(DEFAULT_KEY_LIMITS).toStrictEqual({ responses: 64, entries: 1_000, patternLength: 1_000 });
+    expect(DEFAULT_KEY_LIMITS).toStrictEqual({ responses: 256, entries: 1_000, patternLength: 1_000 });
     expect(Object.isFrozen(DEFAULT_KEY_LIMITS)).toBe(true);
   });
 });

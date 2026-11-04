@@ -1,13 +1,7 @@
 import type { OutcomeDeclaration, ResponseDeclaration } from "../asi/index.js";
 import { checkArray, describe, parseWith } from "../checks.js";
 import { DataError, SecurityError } from "../errors.js";
-import {
-  DEFAULT_KEY_LIMITS,
-  type ExpressionKey,
-  type KeyLimits,
-  type NumberKey,
-  type ScoredResponse,
-} from "../keys/index.js";
+import { DEFAULT_KEY_LIMITS, type ExpressionKey, type NumberKey, type ScoredResponse } from "../keys/index.js";
 import { BUILT_IN_CONTEXTS, BUILT_IN_OUTCOMES, BUILT_IN_RESPONSES } from "../processing/index.js";
 import type { CompileScoringOptions, InteractionAttributes, ItemScoring } from "./item-scoring.js";
 import {
@@ -85,8 +79,8 @@ interface Part {
 }
 
 /** Throws when a count passes a limit. */
-function checkLimit(count: number, what: string, limit: "responses" | "entries", limits: KeyLimits): void {
-  const maximum = limits[limit];
+function checkLimit(count: number, what: string, limit: "responses" | "entries"): void {
+  const maximum = DEFAULT_KEY_LIMITS[limit];
   if (count > maximum)
     throw new SecurityError(`${what} ${count}, over the limit ${limit} of ${maximum}.`, limit, maximum);
 }
@@ -118,7 +112,7 @@ function entriesOf(key: Readonly<Record<string, unknown>>): number {
 }
 
 /** Compiles the key of a response by its kind, reading it with the schema of the kind. */
-function compileKey(response: ScoredResponseData, original: ScoredResponse, label: string, limits: KeyLimits): Scheme {
+function compileKey(response: ScoredResponseData, original: ScoredResponse, label: string): Scheme {
   const { identifier: id, key } = response;
   const followThrough = original.followThrough;
   if (followThrough !== undefined && key.kind !== "number" && key.kind !== "expression")
@@ -136,14 +130,14 @@ function compileKey(response: ScoredResponseData, original: ScoredResponse, labe
       return orderScheme(id, parseWith(orderKeySchema, key, `The key of ${label}`));
     case "areas":
       return key.scheme === "keyed"
-        ? keyedAreasScheme(id, original.key as Extract<ScoredResponse["key"], { kind: "areas" }>, limits)
+        ? keyedAreasScheme(id, original.key as Extract<ScoredResponse["key"], { kind: "areas" }>)
         : mappedAreasScheme(id, parseWith(mappedAreasKeySchema, key, `The key of ${label}`));
     case "text":
-      return textScheme(id, original.key as Extract<ScoredResponse["key"], { kind: "text" }>, limits);
+      return textScheme(id, original.key as Extract<ScoredResponse["key"], { kind: "text" }>);
     case "number":
-      return numberScheme(id, original.key as NumberKey, followThrough, limits);
+      return numberScheme(id, original.key as NumberKey, followThrough);
     case "expression":
-      return expressionScheme(id, original.key as ExpressionKey, followThrough, limits);
+      return expressionScheme(id, original.key as ExpressionKey, followThrough);
   }
 }
 
@@ -270,7 +264,7 @@ function totalRules(parts: readonly Part[], options: CompileOptionsData, maximum
  * item earns its maximum only when every response earns its own, and `floor` bounds `SCORE` from below.
  *
  * @param responses - The scored responses of the item, in order; a follow-through names an earlier one.
- * @param options - Feedback, the portable form, the floor, all parts and the limits.
+ * @param options - The portable form, the floor and all parts.
  * @returns The declarations, the response processing, the attributes each interaction needs, and the operators called.
  * @throws `DataError` for a key that its scheme or its operator refuses, a response identifier that is not a QTI identifier,
  *   is taken twice or names an outcome or a built-in variable, a follow-through on another kind or from a response that is
@@ -281,9 +275,8 @@ function totalRules(parts: readonly Part[], options: CompileOptionsData, maximum
  */
 export function compileScoring(responses: readonly ScoredResponse[], options?: CompileScoringOptions): ItemScoring {
   const read = parseWith(compileScoringOptionsSchema, options, "The options of compileScoring");
-  const limits: KeyLimits = { ...DEFAULT_KEY_LIMITS, ...read.limits };
   checkArray(responses, `The responses must be an array of scored responses, found ${describe(responses)}.`);
-  checkLimit(responses.length, "compileScoring was given responses:", "responses", limits);
+  checkLimit(responses.length, "compileScoring was given responses:", "responses");
   if (responses.length === 0) throw new DataError("compileScoring scores at least one response.");
   const several = responses.length > 1;
   const taken = new Set<string>();
@@ -293,11 +286,11 @@ export function compileScoring(responses: readonly ScoredResponse[], options?: C
     const response = parseWith(scoredResponseSchema, original, label);
     const named = `The response ${response.identifier} at responses[${at}]`;
     checkIdentifier(response.identifier, named, taken, several);
-    checkLimit(entriesOf(response.key), `${named} has a key of entries:`, "entries", limits);
+    checkLimit(entriesOf(response.key), `${named} has a key of entries:`, "entries");
     checkFollowThrough(original, named, earlier);
     let scheme: Scheme;
     try {
-      scheme = compileKey(response, original, named, limits);
+      scheme = compileKey(response, original, named);
     } catch (error) {
       throw withResponse(error, named);
     }
@@ -334,20 +327,11 @@ export function compileScoring(responses: readonly ScoredResponse[], options?: C
       defaultValue: { kind: "default-value", values: [{ kind: "value", value: String(maximum) }] },
     },
     ...(several ? parts.map((part) => pointsOutcome(part.outcome, part.maximum, part.minimum, part.external)) : []),
-    ...(read.feedback
-      ? [
-          {
-            kind: "outcome-declaration",
-            identifier: FEEDBACK,
-            cardinality: "multiple",
-            baseType: "identifier",
-          } as const,
-        ]
-      : []),
+    { kind: "outcome-declaration", identifier: FEEDBACK, cardinality: "multiple", baseType: "identifier" },
   ];
   const rules: Rules = [
     ...parts.flatMap(scoreRules),
-    ...(read.feedback ? parts.flatMap(feedbackRules) : []),
+    ...parts.flatMap(feedbackRules),
     ...(externalTotal ? [] : totalRules(parts, read, maximum)),
   ];
   const operators = new Set(

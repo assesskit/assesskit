@@ -23,7 +23,7 @@ flowchart LR
 | ------------------------------------- | --------------------------------------------------------------------------------------- |
 | `compileScoring(responses, options?)` | The scoring of an item: its declarations, outcomes, response processing and attributes. |
 | `ItemScoring`                         | What `compileScoring` returns, as models of the runtime's ASI model.                    |
-| `CompileScoringOptions`               | Feedback, the portable form, the floor, all parts and the limits.                       |
+| `CompileScoringOptions`               | The portable form, the floor and all parts.                                             |
 | `InteractionAttributes`, `MatchMax`   | The attributes that the interaction of each response needs for its key.                 |
 
 ## Quick start
@@ -130,7 +130,7 @@ marked.interactions.get("Q2"); // => { maxChoices: 4 }
 
 ## Feedback
 
-With `feedback`, on by default, the outcome `FEEDBACK` of cardinality `multiple` holds one value for each response, which the
+The outcome `FEEDBACK` of cardinality `multiple` holds one value for each response, which the
 item's feedback shows by `qti-feedback-inline`, `qti-feedback-block` or `qti-modal-feedback`:
 
 | Value                    | When                                   |
@@ -177,27 +177,25 @@ body sets them:
 
 ## Options
 
-| Option     | Does                                                                         | Default              |
-| ---------- | ---------------------------------------------------------------------------- | -------------------- |
-| `feedback` | Declares `FEEDBACK` and sets its values                                      | `true`               |
-| `portable` | Leaves each score that an operator would give to the host, externally scored | `false`              |
-| `floor`    | The least score of the item, at most its maximum                             | none                 |
-| `allParts` | The item earns its maximum only when every response earns its own, else 0    | `false`              |
-| `limits`   | `responses` up to 256; `entries` and `patternLength` up to their defaults    | `DEFAULT_KEY_LIMITS` |
+| Option     | Does                                                                         | Default |
+| ---------- | ---------------------------------------------------------------------------- | ------- |
+| `portable` | Leaves each score that an operator would give to the host, externally scored | `false` |
+| `floor`    | The least score of the item, at most its maximum                             | none    |
+| `allParts` | The item earns its maximum only when every response earns its own, else 0    | `false` |
 
 ## Limits
 
-| What                                        | Bound           | Default |   Cap | When exceeded                                |
-| ------------------------------------------- | --------------- | ------: | ----: | -------------------------------------------- |
-| Responses of an item                        | `responses`     |      64 |   256 | `SecurityError` with `limit` `responses`     |
-| Entries of a key, counted before it is read | `entries`       |   1,000 | 1,000 | `SecurityError` with `limit` `entries`       |
-| Characters of a pattern                     | `patternLength` |   1,000 | 1,000 | `SecurityError` with `limit` `patternLength` |
+| What                                        | Bound           | Limit | When exceeded                                |
+| ------------------------------------------- | --------------- | ----: | -------------------------------------------- |
+| Responses of an item                        | `responses`     |   256 | `SecurityError` with `limit` `responses`     |
+| Entries of a key, counted before it is read | `entries`       | 1,000 | `SecurityError` with `limit` `entries`       |
+| Characters of a pattern                     | `patternLength` | 1,000 | `SecurityError` with `limit` `patternLength` |
 
-Compiling is linear in the entries. The worst item of the default limits, 64 orders of 1,000 choices scored per position, a
-condition for each choice, compiles in 53 ms on a laptop and ends in a heap of 56 MiB on Node.js 22, 24 and 26; at the cap of
-256 responses it holds 180 MiB and ends in 224 MiB. Its XML holds about 14 nodes for each choice: such an item has more nodes
-than the 300,000 that `DEFAULT_XML_LIMITS` lets a reader take, and a host that compiles keys this large reads its items with
-raised XML limits ([xml](xml.md#limits)). An item of a few responses compiles in 0.04 ms.
+The limits are `DEFAULT_KEY_LIMITS` of [keys](keys.md), which an operator reads its key within as well. Compiling is linear in
+the entries. The worst item within them, 256 orders of 1,000 choices scored per position, a condition for each choice, compiles
+in 139 ms on a laptop and ends in a heap of 224 MiB on Node.js 22, 24 and 26. Its XML holds about 14 nodes for each choice: such
+an item has more nodes than the 300,000 that `DEFAULT_XML_LIMITS` lets a reader take, and a host that compiles keys this large
+reads its items with raised XML limits ([xml](xml.md#limits)). An item of a few responses compiles in 0.04 ms.
 
 ## Errors
 
