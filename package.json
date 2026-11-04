@@ -10,7 +10,7 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json",
     "test": "vitest run --project '!*-corpus*' --project '!*-xsd' --project '!*-browser*' --project '!*-bench'",
-    "test:coverage": "vitest run --coverage --project runtime --project player --project examples --project scripts",
+    "test:coverage": "vitest run --coverage --project '!*-corpus*' --project '!*-xsd' --project '!*-browser*' --project '!*-bench'",
     "bench": "pnpm -r bench",
     "test:browser": "vitest run --project '*-browser*'",
     "test:coverage:browser": "COVERAGE_RUN=browser BROWSERS=chromium vitest run --coverage --project player-browser",

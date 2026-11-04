@@ -80,10 +80,30 @@ Biome enforces, folder by folder.
 
 - A gate that reads `dist/` builds it first, so a fresh clone passes every gate.
 - Run the gates that the change touches before finishing; [CONTRIBUTING.md](CONTRIBUTING.md#before-opening-a-pull-request) says which.
-- The `xsd`, `corpus` and `bench` jobs of CI run when the runtime, its guides, its examples, the harness or `ci.yml` changed since
-  the last green run of main. A newer push to the same ref cancels the run in progress; a cancelled run is not a failure.
-- `rules` is not a job of `ci.yml`: `rules.yml` runs it each week and on `workflow_dispatch`. A builder runs the rules of its package
-  before a merge (`pnpm check:rules packages/<package>`), and the release gate needs a green `rules` run on the commit being released.
+- The `changes` job of `ci.yml` compares the commit with the last green run of main and gives each job to the packages it reads.
+  A package's change reaches the members that use it (the player, the examples and compat use the runtime); the guides in
+  `docs/<package>/` reach the jobs that run their samples, not the members that use the package, except that the player's
+  tests hold the runtime's delivery guide to the wire format; the lock file, the root configuration, `ci.yml` and the scripts
+  that the tests share reach every job, and Markdown, changesets and the configuration of the linters reach `check` alone. The
+  tests of `scripts/` read the sources of the mutation rules, the changesets and the manifests, so every run of `test` holds
+  them. A newer push to the same ref cancels the run in progress; a cancelled run is not a failure. Every job has a
+  `timeout-minutes` of about three times its last green time, so a hung job stops.
+- `rules` is not a job of `ci.yml`: `rules.yml` runs it each Monday, on `workflow_dispatch` and from `release.yml`, which publishes
+  only when it passes, so that per-push CI stays short as Actions minutes are limited. A builder runs the rules of its package
+  before a merge (`pnpm check:rules packages/<package>`).
+
+| Job                   | Runs when the change reaches                                     | Minutes |
+| --------------------- | ---------------------------------------------------------------- | ------: |
+| `check`               | every push                                                       |      12 |
+| `test` (Node 22, 24)  | any package, example, compat or script                           |      20 |
+| `bench`               | the runtime                                                      |      10 |
+| `player-bench`        | the player                                                       |      10 |
+| `browsers`            | the player or its guides                                         |      45 |
+| `engines`             | the player or compat                                             |      15 |
+| `corpus`              | the runtime, its guides or an example of it                      |      10 |
+| `xsd`                 | the runtime, its guides, the player or an example of the runtime |      12 |
+| `rules` (`rules.yml`) | each Monday, on dispatch and at a release                        |     120 |
+
 - The scripts in `compat/` and `scripts/` are TypeScript that Node runs directly, so their relative imports end in `.ts`.
 - The Firefox of Playwright does not start on some macOS versions (it did not on macOS 27): run the browser tests in the Linux
   container of [evidence.md](docs/player/evidence.md#tests-in-a-browser) there.
@@ -93,7 +113,7 @@ Biome enforces, folder by folder.
 - Changesets version and publish the packages, each on its own version. A release has one changeset per package in
   `.changeset/`; a change made before the release extends it.
 - A pull request from a `changeset-release/` branch runs `pnpm changeset version`; after it merges, the maintainer runs the
-  Release workflow by hand, which builds and publishes the versions not yet on npm.
+  Release workflow by hand, which runs `rules.yml` and, when it passes, builds and publishes the versions not yet on npm.
 
 ## Boundary between the runtime and the player
 

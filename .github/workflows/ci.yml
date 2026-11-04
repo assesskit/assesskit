@@ -15,32 +15,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Whether the change touches the runtime, its guides, its examples, its harness or this workflow, since the last commit of main
-  # whose run passed, or since the base of a pull request. The xsd, corpus and bench jobs run only then. A job that is skipped
-  # passes a required check. A change that cannot be compared, such as the first push of a branch or a push before any run has
-  # passed, counts as touching the runtime.
+  # What a push or a pull request changed since the last commit of main whose run passed, or since the base of a pull request,
+  # and so which jobs have something to check. A job that is skipped passes a required check. When nothing can be compared,
+  # for instance when no run has passed yet, every job runs. A job runs when a member of the workspace that it reads, or a member
+  # that uses that one, changed (the packages, the examples and compat, with their dependencies read from their package.json
+  # files, and the player build that compat reads); the lock file, the root configuration, the scripts that the tests share
+  # and this workflow reach every job; the Markdown, the changesets and the configuration of the linters reach none but check.
+  # A file that no rule names reaches every job. The guides of a package are read by the tests that run their samples, and not
+  # by the members that use the package. Outputs: test, browsers, bench, player_bench, engines, corpus and xsd say whether the
+  # job runs; projects and packages are the Vitest projects and the packages whose coverage floors the test job checks. The
+  # rules job is in rules.yml.
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
       actions: read
     outputs:
-      runtime: ${{ steps.filter.outputs.runtime }}
+      test: ${{ steps.filter.outputs.test }}
+      projects: ${{ steps.filter.outputs.projects }}
+      packages: ${{ steps.filter.outputs.packages }}
+      browsers: ${{ steps.filter.outputs.browsers }}
+      bench: ${{ steps.filter.outputs.bench }}
+      player_bench: ${{ steps.filter.outputs.player_bench }}
+      engines: ${{ steps.filter.outputs.engines }}
+      corpus: ${{ steps.filter.outputs.corpus }}
+      xsd: ${{ steps.filter.outputs.xsd }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
       - id: filter
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
           PULL_BASE: ${{ github.event.pull_request.base.sha }}
           BRANCH: ${{ github.ref_name }}
-          # The runtime, its guides (the tests of the runtime run their samples), its examples, the harness (scripts/,
-          # validation/ and the files of the root that configure it) and this workflow.
-          RUNTIME_PATHS: ^(packages/runtime/|docs/runtime/|examples/runtime/|scripts/|validation/|\.github/workflows/ci\.yml$|[^/]+\.(json|ts|ya?ml)$)
-          # The configuration of the linters, which only the check job reads.
-          LINTERS: ^(biome|cspell|knip|typedoc)\.json$
         run: |
           if [ "$EVENT" = pull_request ]; then
             BASE="$PULL_BASE"
@@ -48,15 +61,134 @@ jobs:
             BASE=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=$BRANCH&event=push&status=success&per_page=1" --jq '.workflow_runs[0].head_sha // empty') || BASE=""
           fi
           git cat-file -e "$BASE^{commit}" 2>/dev/null || BASE=""
-          changed="$RUNNER_TEMP/changed.txt"
-          if [ -n "$BASE" ] && git diff --name-only --no-renames "$BASE" HEAD > "$changed" && ! grep -Ev "$LINTERS" "$changed" | grep -Eq "$RUNTIME_PATHS"; then
-            echo "runtime=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "runtime=true" >> "$GITHUB_OUTPUT"
-          fi
+          export BASE
+          node - <<'EOF'
+          const { execFileSync } = require("node:child_process");
+          const { appendFileSync, readFileSync, readdirSync } = require("node:fs");
+
+          const git = (...args) => execFileSync("git", args, { encoding: "utf8", maxBuffer: 1 << 27 });
+
+          // The workspace: its packages, its examples (examples/<package>/<example>) and compat, each with the workspace
+          // packages it uses.
+          const folders = (parent) =>
+            readdirSync(parent, { withFileTypes: true })
+              .filter((entry) => entry.isDirectory())
+              .map((entry) => `${parent}/${entry.name}`);
+          const members = new Map();
+          const names = new Map();
+          for (const dir of [...folders("packages"), ...folders("examples").flatMap(folders), "compat"]) {
+            const manifest = JSON.parse(readFileSync(`${dir}/package.json`, "utf8"));
+            members.set(dir, manifest);
+            names.set(manifest.name, dir);
+          }
+          // What a member reads without a dependency on it: compat checks the build of the player and runs it in old browsers.
+          const READS = new Map([["compat", ["packages/player"]]]);
+          const usedBy = (dir) => {
+            const { dependencies, devDependencies, peerDependencies } = members.get(dir);
+            const declared = Object.keys({ ...dependencies, ...devDependencies, ...peerDependencies })
+              .filter((name) => names.has(name))
+              .map((name) => names.get(name));
+            return [...declared, ...(READS.get(dir) ?? [])];
+          };
+
+          // What changed. Null when there is nothing to compare with: everything is then checked.
+          let changed = null;
+          if (process.env.BASE) {
+            try {
+              changed = git("diff", "--name-only", "--no-renames", process.env.BASE, "HEAD").split("\n").filter(Boolean);
+            } catch {
+              changed = null;
+            }
+          }
+
+          // A change to these reaches no job but check.
+          const NOT_CHECKED =
+            /^(\.changeset\/|\.github\/(?!workflows\/ci\.yml$)|[^/]+\.md$|LICENSE$|biome\.json$|biome\/|cspell\.json$|knip\.json$|typedoc\.json$|lefthook\.yml$|\.editorconfig$|validation\/|examples\/[^/]+\/README\.md$|scripts\/self-host-mermaid\.ts$)/;
+          // The scripts that only check, or are checked by the tests of scripts, which run with every test job. Every other
+          // script serves the tests of the packages: the downloads, which every corpus, XSD and browser test reads.
+          const OWN_SCRIPTS = /^scripts\/(test\/|rules\/|check-[a-z]+\.ts$|unicode\.ts$)/;
+          // The files that a test of scripts reads besides the scripts: the changesets, which it holds to published packages,
+          // and the README, which it holds to the claim of conformance.
+          const SCRIPT_TESTED = /^(README\.md|\.changeset\/.+\.md)$/;
+          // The members whose tests read the guides of another package: the protocol test of the player holds the delivery guide
+          // of the runtime to the wire format.
+          const GUIDE_READERS = new Map([["packages/runtime", ["packages/player"]]]);
+          // The scripts that the tests of some members alone read: a change to one reaches them, as a change to their files does.
+          const MEMBER_SCRIPTS = new Map([
+            ["scripts/asi-table.ts", ["packages/runtime"]],
+            ["scripts/conformance.ts", ["packages/runtime"]],
+            ["scripts/conformance-features.json", ["packages/runtime"]],
+            ["scripts/linux-audio.sh", ["packages/player"]],
+            ["scripts/measurekit.lock.json", ["examples/player/cat-with-measurekit"]],
+            ["scripts/interopkit.lock.json", ["examples/player/lms-integration"]],
+          ]);
+
+          let everything = changed === null;
+          let scripts = false;
+          const touched = new Set();
+          const guides = new Set();
+          for (const file of changed ?? []) {
+            const [top, name, third] = file.split("/");
+            if (top === "packages" && members.has(`packages/${name}`)) touched.add(`packages/${name}`);
+            else if (top === "examples" && members.has(`examples/${name}/${third}`)) touched.add(`examples/${name}/${third}`);
+            else if (top === "compat") touched.add("compat");
+            else if (top === "docs" && third !== undefined && members.has(`packages/${name}`)) guides.add(`packages/${name}`);
+            else if (MEMBER_SCRIPTS.has(file)) for (const dir of MEMBER_SCRIPTS.get(file)) touched.add(dir);
+            else if (OWN_SCRIPTS.test(file) || SCRIPT_TESTED.test(file)) scripts = true;
+            else if (!NOT_CHECKED.test(file)) everything = true;
+          }
+
+          // The members that the change reaches: those it touched, and the members that use them, however far.
+          const reached = new Set(everything ? members.keys() : touched);
+          for (let grew = true; grew; ) {
+            grew = false;
+            for (const dir of members.keys()) {
+              if (!reached.has(dir) && usedBy(dir).some((used) => reached.has(used))) {
+                reached.add(dir);
+                grew = true;
+              }
+            }
+          }
+          // The packages whose code a change reaches, and those whose guides it changed besides, which the dependents do not read.
+          const code = new Set([...reached].filter((dir) => dir.startsWith("packages/")));
+          const guided = new Set([...code, ...guides]);
+          const examples = [...reached].filter((dir) => dir.startsWith("examples/"));
+          const tested = new Set(guided);
+          for (const dir of guides) for (const reader of GUIDE_READERS.get(dir) ?? []) tested.add(reader);
+
+          // The tests of scripts read the sources that the mutation rules name, the guides, the changesets and the manifests,
+          // and take seconds, so every run of the tests holds them.
+          const test = everything || scripts || reached.size > 0 || guides.size > 0;
+          const projects = new Set(test ? ["scripts"] : []);
+          for (const dir of tested) projects.add(dir.slice(9));
+          if (examples.length > 0) projects.add("examples");
+          const runtimeExamples = examples.some((dir) => dir.startsWith("examples/runtime/"));
+
+          const outputs = {
+            test,
+            projects: [...projects].join(" "),
+            packages: [...tested].map((dir) => dir.slice(9)).join(" "),
+            // The rendering tests of the player, which include the samples of its guides, in Chromium, Firefox and WebKit.
+            browsers: guided.has("packages/player"),
+            // The mount benchmark of the player and the benchmarks of the runtime read no guide.
+            player_bench: code.has("packages/player"),
+            bench: code.has("packages/runtime"),
+            // The built player in the oldest browsers of its baseline.
+            engines: code.has("packages/player") || reached.has("compat"),
+            // The tests of the runtime, which run the samples of its guides, and of its examples that read the 1EdTech examples.
+            corpus: guided.has("packages/runtime") || runtimeExamples,
+            // The tests of the runtime, of the player and of the examples of the runtime that read the official XSDs.
+            xsd: guided.has("packages/runtime") || code.has("packages/player") || runtimeExamples,
+          };
+          for (const [name, value] of Object.entries(outputs)) {
+            console.log(`${name}=${value}`);
+            if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${value}\n`);
+          }
+          EOF
 
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
         with:
@@ -85,8 +217,14 @@ jobs:
           github.actor != 'dependabot[bot]'
         run: pnpm changeset status --since=origin/main
 
+  # The tests of the Vitest projects that the change reaches, on each supported Node.js. TypeScript reads the same sources
+  # whichever Node.js runs it, so one run of it is enough. The coverage floors of the packages among the projects are checked
+  # once, on the oldest supported Node.js, by the same run that tests them.
   test:
+    needs: changes
+    if: needs.changes.outputs.test == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       matrix:
         node: [22, 24]
@@ -121,21 +259,33 @@ jobs:
           checkout measurekit "$MEASUREKIT_DEPLOY_KEY"
           checkout interopkit "$INTEROPKIT_DEPLOY_KEY"
       - run: pnpm install --frozen-lockfile
-      # TypeScript reads the same sources whichever Node.js runs it, so one run of it is enough.
       - if: matrix.node == 22
         run: pnpm typecheck
-      # The coverage floors (vitest.config.ts) are checked once, on the oldest supported Node.js.
-      - if: matrix.node == 22
-        run: pnpm test:coverage
-      - if: matrix.node != 22
-        run: pnpm test
+      # The projects that the change reaches; the floors of the packages among them (vitest.config.ts) are checked on their files alone.
+      - env:
+          PROJECTS: ${{ needs.changes.outputs.projects }}
+          PACKAGES: ${{ needs.changes.outputs.packages }}
+          NODE_MAJOR: ${{ matrix.node }}
+        run: |
+          read -ra names <<< "$PROJECTS"
+          read -ra packages <<< "$PACKAGES"
+          projects=()
+          for name in "${names[@]}"; do projects+=(--project "$name"); done
+          if [ "$NODE_MAJOR" = 22 ] && [ "${#packages[@]}" -gt 0 ]; then
+            include=()
+            for name in "${packages[@]}"; do include+=("--coverage.include=packages/$name/src/**"); done
+            pnpm test:coverage "${projects[@]}" "${include[@]}"
+          else
+            pnpm test "${projects[@]}"
+          fi
 
   # The benchmarks of the runtime on generated inputs and on the 1EdTech examples, which it times against Longsight qti3-core.
   # The job fails when the fastest sample of a benchmark is above its budget (docs/runtime/performance.md).
   bench:
     needs: changes
-    if: needs.changes.outputs.runtime == 'true'
+    if: needs.changes.outputs.bench == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -150,7 +300,10 @@ jobs:
   # The time to mount the player, with the CPU slowed 4 times in Chromium, against the budgets of test/mount-budgets.ts
   # (docs/player/size.md).
   player-bench:
+    needs: changes
+    if: needs.changes.outputs.player_bench == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -165,7 +318,10 @@ jobs:
   # The rendering tests of the player, and its tests that render the 1EdTech examples, in the current Chromium, Firefox and
   # WebKit, and its tests of the asset gate over the same examples, which run in Node.
   browsers:
+    needs: changes
+    if: needs.changes.outputs.browsers == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     # The runner has no sound card: scripts/linux-audio.sh gives the browsers an output, and a test that needs audio fails without it.
     env:
       REQUIRE_AUDIO: "1"
@@ -190,7 +346,10 @@ jobs:
   # The built code of the player in the oldest browsers of its baseline, in the container images of the Playwright
   # releases that ship them (docs/player/baseline.md).
   engines:
+    needs: changes
+    if: needs.changes.outputs.engines == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -205,8 +364,9 @@ jobs:
   # that scripts/corpus.lock.json pins. The tests of the player that read them run in the browsers job.
   corpus:
     needs: changes
-    if: needs.changes.outputs.runtime == 'true'
+    if: needs.changes.outputs.corpus == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -222,8 +382,9 @@ jobs:
   # packages/runtime/src/node/schema-files.json pins, and that read the 1EdTech examples.
   xsd:
     needs: changes
-    if: needs.changes.outputs.runtime == 'true'
+    if: needs.changes.outputs.xsd == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6

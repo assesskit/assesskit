@@ -1,24 +1,28 @@
 name: Rules
 
 # Removes each rule that scripts/rules/ lists from a copy of the code, and fails when its test still passes.
-# It is slow, so it does not run on a push: a builder runs the rules of its package before a merge, with
-# `pnpm check:rules packages/<package>`, and this workflow runs all of them each week. The release gate needs a green run on
-# the commit that is released: start one with "Run workflow" on main before a release.
+# It is slow, so it does not run on a push, as per-push CI stays short while Actions minutes are limited: a builder runs the
+# rules of its package before a merge, with `pnpm check:rules packages/<package>`, and this workflow runs all of them each
+# Monday, on "Run workflow", and from release.yml, which publishes only when they pass.
 on:
   schedule:
     - cron: "23 3 * * 1"
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
+# Called from release.yml, github.workflow is the caller's name: the suffix keeps the two groups apart.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-rules-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   rules:
     runs-on: ubuntu-latest
+    # No run has finished yet: lower this to three times the first green run.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6

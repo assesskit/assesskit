@@ -15,7 +15,7 @@ flowchart LR
   change["Your change"] --> local["Local gates<br/>lint, check:standards, typecheck, test, knip"]
   local --> hooks["Pre-commit: Biome formats<br/>Pre-push: typecheck, test, knip"]
   hooks --> pr["Pull request<br/>with a changeset"]
-  pr --> ci["CI: check, test on Node 22 and 24,<br/>browsers, engines, and xsd, corpus and bench<br/>when the runtime or the harness changed"]
+  pr --> ci["CI: check, then the jobs that read<br/>the packages the change reaches"]
   ci --> review["Review"]
   review --> merge["Merge"]
   repo -.- change
@@ -71,8 +71,8 @@ A change to semantics cites the specification section in the pull request and ad
 | `pnpm corpus`, `pnpm test:corpus`                                               | A change to what the corpus tests read (those of the player also need the browsers)                                                                                                            |
 | `pnpm schemas`, `pnpm test:xsd`                                                 | A change to what is validated against the official XSDs                                                                                                                                        |
 
-CI runs the jobs `xsd`, `corpus` and `bench` only when a change touches `packages/runtime/`, the harness (`scripts/`,
-`validation/` and the configuration files at the root) or `.github/workflows/ci.yml`; the other jobs run on every change.
+`check` runs on every change; the other jobs of CI run only when the change reaches a package that they read, as the table in
+[AGENTS.md](AGENTS.md#commands) lists. The mutation rules run each week and before a release, so that per-push CI stays short.
 
 - A change to a package goes into the pending release's changeset in `.changeset/`, or a new one made with `pnpm changeset`
   when none is pending ([AGENTS.md](AGENTS.md#releases)).

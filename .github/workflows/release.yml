@@ -10,9 +10,15 @@ permissions:
   id-token: write
 
 jobs:
-  release:
+  # The release gate's slow check: the mutation rules, which no push runs.
+  checks:
     if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/rules.yml
+
+  release:
+    needs: checks
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
