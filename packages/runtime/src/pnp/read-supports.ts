@@ -1,5 +1,5 @@
 import { checkChoice } from "../checks.js";
-import type { ElementReader } from "../xml/index.js";
+import type { ElementReader } from "../xml/internal.js";
 import { termOrExtension, toBoolean, toColorTheme, toFloat, toHexColor, toInteger, toVolume } from "./lexical.js";
 import type {
   AdditionalTestingTime,

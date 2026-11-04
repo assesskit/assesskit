@@ -10,13 +10,8 @@ import {
   readCurriculumStandardsSet,
   readResourceMetadata,
 } from "../metadata/index.js";
-import {
-  createTermConverter,
-  ElementReader,
-  type ParseXmlOptions,
-  type ReaderRules,
-  type XmlElement,
-} from "../xml/index.js";
+import type { ParseXmlOptions, XmlElement } from "../xml/index.js";
+import { createTermConverter, ElementReader, type ReaderRules } from "../xml/internal.js";
 import {
   CPX_NAMESPACE,
   MANIFEST_SCHEMA_VERSION,

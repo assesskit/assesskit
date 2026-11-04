@@ -1,5 +1,6 @@
 import type { ReadError } from "../errors.js";
-import { createReadError, locateElement, type XmlElement } from "../xml/index.js";
+import type { XmlElement } from "../xml/index.js";
+import { createReadError, locateElement } from "../xml/internal.js";
 
 /** Where the reader is: the path of the document and the names of the elements around the one it reads. */
 export interface ReadContext {

@@ -1,6 +1,7 @@
 import { checkArray, checkBoolean, checkRecord, checkString } from "../checks.js";
 import { DataError } from "../errors.js";
-import { ElementReader, type XmlElement } from "../xml/index.js";
+import type { XmlElement } from "../xml/index.js";
+import { ElementReader } from "../xml/internal.js";
 import { checkReadArguments, expectRoot, type ReadMetadataOptions, takeLeaf, takeLeaves } from "./element-reading.js";
 import { appendLeaf, branch, leaf } from "./element-writing.js";
 import { checkOpenTerm, type ExtensionTerm, openTermOf } from "./extension-term.js";

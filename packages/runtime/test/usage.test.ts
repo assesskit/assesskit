@@ -11,8 +11,8 @@ import {
   USAGE_NAMESPACE,
   type UsageData,
   writeUsageData,
-  XSI_NAMESPACE,
 } from "../src/index.js";
+import { XSI_NAMESPACE } from "../src/xml/internal.js";
 import { usageData } from "./arbitraries/usage.js";
 import { fuzzReader } from "./fuzz.js";
 import { issueOf } from "./read-failure.js";

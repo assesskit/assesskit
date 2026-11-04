@@ -1,6 +1,6 @@
 import { Inflate } from "fflate";
 import { AssesskitError, type ReadError, SecurityError } from "../errors.js";
-import { createReadError } from "../xml/index.js";
+import { createReadError } from "../xml/internal.js";
 import { crc32 } from "./crc32.js";
 import type { PackageFiles } from "./package-files.js";
 import { normalizeEntryName } from "./paths.js";

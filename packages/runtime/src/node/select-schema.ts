@@ -1,4 +1,5 @@
-import { type XmlElement, XSI_NAMESPACE } from "../xml/index.js";
+import type { XmlElement } from "../xml/index.js";
+import { XSI_NAMESPACE } from "../xml/internal.js";
 import { SCHEMA_FILES, type SchemaFile } from "./schema-files.js";
 
 /**

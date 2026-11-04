@@ -6,16 +6,11 @@ import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
   buildElement,
   collectText,
-  createReadError,
-  createTermConverter,
   DataError,
   DEFAULT_XML_LIMITS,
-  ElementReader,
   findAttribute,
   type Issue,
-  isXmlLanguage,
   listChildElements,
-  locateElement,
   parseXml,
   ReadError,
   resolveIncludes,
@@ -23,12 +18,19 @@ import {
   serializeXml,
   XINCLUDE_NAMESPACE,
   XML_NAMESPACE,
-  XMLNS_NAMESPACE,
   type XmlAttribute,
   type XmlElement,
   type XmlNode,
-  XSI_NAMESPACE,
 } from "../src/index.js";
+import {
+  createReadError,
+  createTermConverter,
+  ElementReader,
+  isXmlLanguage,
+  locateElement,
+  XMLNS_NAMESPACE,
+  XSI_NAMESPACE,
+} from "../src/xml/internal.js";
 import { mutateBytes, mutateText, mutations } from "./arbitraries/xml.js";
 import { expectOutcome, FUZZ } from "./fuzz.js";
 
@@ -1340,8 +1342,11 @@ describe("serializing", () => {
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
     const guide = readFileSync(new URL("../../../docs/runtime/xml.md", import.meta.url), "utf8");
-    const xml = await import("../src/xml/index.js");
-    expect(await runGuideSamples(guide, { "@assesskit/runtime/xml": xml })).toBeGreaterThan(0);
+    const modules = {
+      "@assesskit/runtime/xml": await import("../src/xml/index.js"),
+      "../xml/internal.js": await import("../src/xml/internal.js"),
+    };
+    expect(await runGuideSamples(guide, modules)).toBeGreaterThan(0);
   });
 });
 

@@ -1,6 +1,7 @@
 import { checkRecord } from "../checks.js";
 import { DataError } from "../errors.js";
-import { createReadError, ElementReader, locateElement, type XmlElement } from "../xml/index.js";
+import type { XmlElement } from "../xml/index.js";
+import { createReadError, ElementReader, locateElement } from "../xml/internal.js";
 import {
   type CurriculumStandardsSet,
   readCurriculumStandardsSet,

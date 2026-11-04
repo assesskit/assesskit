@@ -1,14 +1,8 @@
 import { isRecord } from "../checks.js";
 import { AssesskitError, DataError } from "../errors.js";
 import { xmlTokens } from "../values/internal.js";
-import {
-  XINCLUDE_NAMESPACE,
-  XML_NAMESPACE,
-  XMLNS_NAMESPACE,
-  type XmlAttribute,
-  type XmlElement,
-  type XmlNode,
-} from "../xml/index.js";
+import { XINCLUDE_NAMESPACE, XML_NAMESPACE, type XmlAttribute, type XmlElement, type XmlNode } from "../xml/index.js";
+import { XMLNS_NAMESPACE } from "../xml/internal.js";
 import { parseAttributeValue } from "./attribute-value.js";
 import { ASI_NAMESPACE } from "./namespace.js";
 import { asiError, type ReadContext } from "./read-error.js";

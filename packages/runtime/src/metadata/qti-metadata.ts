@@ -1,6 +1,7 @@
 import { checkArray, checkBoolean, checkChoice, checkRecord, checkString } from "../checks.js";
 import { DataError } from "../errors.js";
-import { createTermConverter, ElementReader, type ReaderRules, type XmlElement } from "../xml/index.js";
+import type { XmlElement } from "../xml/index.js";
+import { createTermConverter, ElementReader, type ReaderRules } from "../xml/internal.js";
 import { checkReadArguments, expectRoot, type ReadMetadataOptions, takeLeaf, takeLeaves } from "./element-reading.js";
 import { appendLeaf, branch, leaf } from "./element-writing.js";
 import { boundedStringOf, MAX_TOOL_STRING_LENGTH, parseBoolean, parseString } from "./lexical.js";

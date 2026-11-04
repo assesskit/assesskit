@@ -12,8 +12,8 @@ import {
   RESULTS_NAMESPACE,
   readResults,
   writeResults,
-  XSI_NAMESPACE,
 } from "../src/index.js";
+import { XSI_NAMESPACE } from "../src/xml/internal.js";
 import { assessmentResult } from "./arbitraries/results.js";
 import { withoutPositions } from "./arbitraries/xml.js";
 import { fuzzReader } from "./fuzz.js";

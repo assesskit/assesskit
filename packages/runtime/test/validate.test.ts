@@ -39,7 +39,7 @@ import {
   writeManifest,
 } from "../src/index.js";
 import { type BindContext, BindRuleSets, DocumentChecks, Findings } from "../src/validate/internal.js";
-import { createReadError } from "../src/xml/index.js";
+import { createReadError } from "../src/xml/internal.js";
 import { FUZZ } from "./fuzz.js";
 import { criterionMarkup, rubricMarkup } from "./scoring-rubrics.js";
 import {

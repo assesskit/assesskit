@@ -1,4 +1,5 @@
-import { ElementReader, type ReaderRules, type XmlElement } from "../xml/index.js";
+import type { XmlElement } from "../xml/index.js";
+import { ElementReader, type ReaderRules } from "../xml/internal.js";
 import type { PersonalNeedsProfile, PersonSourcedId, PnpRecord } from "./model.js";
 import { PNP_ALTERNATE_NAMESPACES, PNP_NAMESPACE } from "./namespace.js";
 import { SET_ELEMENTS } from "./profile-checks.js";

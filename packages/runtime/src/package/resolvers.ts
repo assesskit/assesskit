@@ -1,7 +1,7 @@
 import type { AssessmentItem, AssessmentSection, AssessmentStimulus } from "../asi/index.js";
 import { checkRecord, describe } from "../checks.js";
 import { type AccessForAllResource, DRD_HAZARDS, type DrdHazard } from "../metadata/index.js";
-import { createReadError } from "../xml/index.js";
+import { createReadError } from "../xml/internal.js";
 import { type LtiLink, readLtiLink } from "./lti-link.js";
 import type { Manifest, Resource } from "./manifest.js";
 import type { QtiPackage } from "./package.js";

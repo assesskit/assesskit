@@ -19,9 +19,9 @@ import {
   LOM_NAMESPACE,
   type QtiMetadata,
   SCORING_MODES,
-  XMLNS_NAMESPACE,
   type XmlElement,
 } from "../../src/index.js";
+import { XMLNS_NAMESPACE } from "../../src/xml/internal.js";
 
 /** Printable ASCII text without a line end or tab, which `xs:normalizedString` would change. */
 const text = fc.string({ maxLength: 20 });

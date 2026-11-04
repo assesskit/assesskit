@@ -1,6 +1,7 @@
 import fc from "fast-check";
 import { isRecord } from "../../src/checks.js";
-import { XMLNS_NAMESPACE, type XmlElement, type XmlNode } from "../../src/index.js";
+import type { XmlElement, XmlNode } from "../../src/index.js";
+import { XMLNS_NAMESPACE } from "../../src/xml/internal.js";
 import { identifier, nonEmptyText } from "./values.js";
 
 /** The namespace of the extension elements that the generators build. */

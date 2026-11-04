@@ -1,5 +1,5 @@
 import { checkRecord, checkString } from "../checks.js";
-import type { ElementReader } from "../xml/index.js";
+import type { ElementReader } from "../xml/internal.js";
 
 /** The options of the readers of the metadata of a resource. */
 export interface ReadMetadataOptions {

@@ -1,7 +1,8 @@
 import { checkFunction, checkRecord, checkString, describe } from "../checks.js";
 import { checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
-import { type ParseXmlOptions, parseXml, serializeXml, XMLNS_NAMESPACE, type XmlElement } from "../xml/index.js";
+import { type ParseXmlOptions, parseXml, serializeXml, type XmlElement } from "../xml/index.js";
+import { XMLNS_NAMESPACE } from "../xml/internal.js";
 import { DOCUMENT_ELEMENTS } from "./element-table.js";
 import { isElement } from "./guards.js";
 import type {

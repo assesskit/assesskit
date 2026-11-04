@@ -19,8 +19,8 @@ import {
   SUPPORT_NAMES,
   type SupportSetting,
   writePnp,
-  XSI_NAMESPACE,
 } from "../src/index.js";
+import { XSI_NAMESPACE } from "../src/xml/internal.js";
 import { asProfile, personalNeedsProfile, pnpRecords } from "./arbitraries/pnp.js";
 import { withoutPositions } from "./arbitraries/xml.js";
 import { fuzzReader } from "./fuzz.js";

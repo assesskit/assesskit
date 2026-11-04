@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseXml, XML_NAMESPACE, XMLNS_NAMESPACE, type XmlElement } from "../src/xml/index.js";
+import { parseXml, XML_NAMESPACE, type XmlElement } from "../src/xml/index.js";
+import { XMLNS_NAMESPACE } from "../src/xml/internal.js";
 
 const XSD_NAMESPACE = "http://www.w3.org/2001/XMLSchema";
 

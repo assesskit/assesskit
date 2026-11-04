@@ -27,7 +27,7 @@ export const XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance";
 export const XINCLUDE_NAMESPACE = "http://www.w3.org/2001/XInclude";
 
 /**
- * An attribute. Namespace declarations are attributes too: `xmlns="u"` has the namespace {@link XMLNS_NAMESPACE}, the
+ * An attribute. Namespace declarations are attributes too: `xmlns="u"` has the namespace `http://www.w3.org/2000/xmlns/`, the
  * name `xmlns` and no prefix, and `xmlns:p="u"` has the name `p` and the prefix `xmlns`.
  */
 export interface XmlAttribute {

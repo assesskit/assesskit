@@ -14,7 +14,8 @@ import {
   type SingleValue,
   type Value,
 } from "../values/index.js";
-import { buildElement, type ElementReader, type XmlElement } from "../xml/index.js";
+import { buildElement, type XmlElement } from "../xml/index.js";
+import type { ElementReader } from "../xml/internal.js";
 import { RESULTS_NAMESPACE } from "./namespace.js";
 
 /** The type of the values of a variable: a record has fields that bring their own base types. */

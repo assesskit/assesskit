@@ -15,11 +15,11 @@ import {
   buildElement,
   type ElementAttributes,
   serializeXml,
-  XMLNS_NAMESPACE,
   type XmlAttribute,
   type XmlElement,
   type XmlNode,
 } from "../xml/index.js";
+import { XMLNS_NAMESPACE } from "../xml/internal.js";
 import {
   CPX_NAMESPACE,
   MANIFEST_SCHEMA_VERSION,

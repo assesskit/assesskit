@@ -1,7 +1,7 @@
 import { closeSync, openSync, readSync } from "node:fs";
 import { AssesskitError, DataError } from "../errors.js";
 import type { ByteSource } from "../package/internal.js";
-import { createReadError } from "../xml/index.js";
+import { createReadError } from "../xml/internal.js";
 
 /** The most bytes asked of one `readSync`, which refuses a length of 2 GiB or more. */
 const READ_STEP_BYTES = 1_073_741_824;

@@ -25,14 +25,11 @@ flowchart LR
 | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `parseXml(input, options?)`                                                                    | Parses text or bytes into an `XmlElement`.                                 |
 | `serializeXml(root)`                                                                           | Writes an `XmlElement` as a UTF-8 document.                                |
-| `ElementReader`, `ReaderRules`, `createTermConverter`                                          | Reads an element into a model and reports what the model leaves unread.    |
 | `buildElement(namespace, name, options?)`, `ElementAttributes`                                 | Builds an element for a writer, and the type of its attributes.            |
-| `isXmlLanguage(value)`                                                                         | Tells whether a value can be the value of `xml:lang`.                      |
 | `resolveIncludes(root, base, resolve, options?)`                                               | Replaces each `xi:include` with the root element of the document it names. |
 | `listChildElements(element)`, `findAttribute(element, name, options?)`, `collectText(element)` | The child elements, an attribute and the text of an element.               |
-| `createReadError(rule, message, options?)`, `locateElement(element, path, options?)`           | Build the `ReadError` of one problem, and the location of an element.      |
 | `DEFAULT_XML_LIMITS`, `XmlLimits`                                                              | The limits on size, depth, attributes, nodes and include nesting.          |
-| `XML_NAMESPACE`, `XMLNS_NAMESPACE`, `XSI_NAMESPACE`, `XINCLUDE_NAMESPACE`                      | Namespace URIs the reader and writer treat specially.                      |
+| `XML_NAMESPACE`, `XINCLUDE_NAMESPACE`                                                          | Namespace URIs the reader and writer treat specially.                      |
 | `XmlElement`, `XmlAttribute`, `XmlNode`, `XmlCharacterData`, `XmlInstruction`                  | The tree.                                                                  |
 
 ## Quick start
@@ -62,7 +59,7 @@ serializeXml(resolved);
 | processing instruction       | `kind: "instruction"`, `target`, `data`                                                                 |
 
 - A name in no namespace has the namespace `""`. `prefix` is absent when the name has none.
-- Namespace declarations are attributes: `xmlns="u"` has the namespace `XMLNS_NAMESPACE`, the name `xmlns` and no prefix;
+- Namespace declarations are attributes: `xmlns="u"` has the namespace `http://www.w3.org/2000/xmlns/`, the name `xmlns` and no prefix;
   `xmlns:p="u"` has the name `p` and the prefix `xmlns`.
 - Children and attributes keep document order. Entity and character references are replaced, line ends are normalized to a
   line feed, and attribute values are normalized. Adjacent text is one node.
@@ -162,17 +159,19 @@ serializeXml(item);
   element, a repeated attribute, `--` in a comment, a processing instruction named `xml` or containing `?>`. The message names the element.
 
 `buildElement` takes the `attributes` and the `children` as options. It leaves out an attribute whose value is `undefined`, writes a string child as text and drops an empty one; a name
-with the prefix `xml:` or `xsi:` is in that namespace. `isXmlLanguage` accepts the language tags of `xs:language` and the
-empty string, which undoes an inherited language.
+with the prefix `xml:` or `xsi:` is in that namespace.
 
-## Mapping a document to a model
+## How the runtime's readers map a document
 
-`ElementReader` is what [results](results.md), [usage](usage.md) and [pnp](pnp.md) read with. It is positioned on one
+`ElementReader` is what [results](results.md), [usage](usage.md), [pnp](pnp.md) and the other readers of the runtime read with.
+It is not exported: a host that reads an extension element uses `listChildElements`, `findAttribute` and `collectText` (below),
+and the readers of the runtime take it, `ReaderRules`, `createTermConverter`, `createReadError`, `locateElement`,
+`isXmlLanguage` and the namespaces `XMLNS_NAMESPACE` and `XSI_NAMESPACE` from `xml/internal`. It is positioned on one
 element and moves forward through its children; `done()` fails when an attribute, a child or text is left, so that no
 part of a document is dropped without notice.
 
 ```ts
-import { ElementReader } from "@assesskit/runtime/xml";
+import { ElementReader } from "../xml/internal.js";
 
 const rules = { module: "demo", namespaces: ["urn:demo"] };
 const reader = ElementReader.open('<a xmlns="urn:demo" n="12"><b>5</b></a>', rules, "The demo");
@@ -200,7 +199,7 @@ reader.done(); // => undefined
 | `namespaces`        | The namespaces of the schema's elements; an element in another namespace is an extension.         |
 | `path`              | The path of the document, which the issues name. `open` takes it from its options. Default: none. |
 
-`createTermConverter(terms, options?)` makes the conversion for `text` and `attribute` that accepts one of some terms; its option `label` names the text in the message. A reader takes the
+`createTermConverter(terms, options?)` makes the conversion for `text` and `attribute` that accepts one of some terms; its option `label` names the text in the message. `isXmlLanguage(value)` tells whether a value is a language tag: those of `xs:language` and the empty string, which undoes an inherited language. `createReadError(rule, message, options?)` builds the `ReadError` of one problem and `locateElement(element, path, options?)` the location of an element. A reader takes the
 children in the order of the schema. An issue has the line and column of the element and its path, such as
 `assessmentResult/itemResult`.
 

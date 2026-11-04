@@ -1,6 +1,7 @@
 import { checkRecord, describe } from "../checks.js";
 import { DataError } from "../errors.js";
-import { ElementReader, type ParseXmlOptions, type ReaderRules, type XmlElement } from "../xml/index.js";
+import type { ParseXmlOptions, XmlElement } from "../xml/index.js";
+import { ElementReader, type ReaderRules } from "../xml/internal.js";
 
 /** The namespaces of `cartridge_basiclti_link`: the one of the schema, and the relative one that the 1EdTech examples declare. */
 const CARTRIDGE_NAMESPACES: readonly string[] = ["http://www.imsglobal.org/xsd/imslticc_v1p0", "/xsd/imslticc_v1p0"];

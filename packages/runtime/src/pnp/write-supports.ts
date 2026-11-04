@@ -1,7 +1,7 @@
 import { checkArray, checkChoice, checkRecord, checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
-import { isXmlLanguage, type XmlElement } from "../xml/index.js";
-import { elementBuilder } from "../xml/internal.js";
+import type { XmlElement } from "../xml/index.js";
+import { elementBuilder, isXmlLanguage } from "../xml/internal.js";
 import { booleanText, floatText, hexColorText, integerText, isColorTheme, termText, volumeText } from "./lexical.js";
 import { PNP_NAMESPACE } from "./namespace.js";
 import type {
