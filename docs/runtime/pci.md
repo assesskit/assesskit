@@ -76,7 +76,8 @@ called for a value without a file. A message from a module is untrusted until it
 
 ## Modules
 
-A module resolution file is JSON with `waitSeconds` and `paths`. `readModuleResolution` reads it and ignores other properties. A
+A module resolution file is JSON with `waitSeconds` and `paths`. `readModuleResolution` reads it and ignores other properties,
+but refuses one named `__proto__`, `prototype` or `constructor`; in `paths`, such a name is a module id like any other. A
 path has no `.js` extension; a path with a protocol is fetched from there, and any other is a path from the root of the package,
 whichever folder holds the item. The same holds for the configuration files and for `primary-path`.
 

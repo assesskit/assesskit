@@ -1300,6 +1300,18 @@ describe("applying actions", () => {
     );
   });
 
+  it.each(["__proto__", "prototype", "constructor"])(
+    "refuses settings of a support with a property named %s, as a host passes them to the engine",
+    (name) => {
+      const engine = engineOf(nonlinearAb);
+      const { state } = begun(engine);
+      const settings: SupportSetting = json(`{"name":"line-reader","replaceAccessModes":[],"${name}":1}`);
+      expect(() => engine.apply(state, { type: "support-settings", settings, at: 1 })).toThrow(
+        `holds a property "${name}", a name that reaches the prototype`,
+      );
+    },
+  );
+
   it("changes the settings of a support that is on, those that the candidate may change, and keeps them in the state", () => {
     const engine = engineOf(nonlinearAb);
     const pnp = pnpOf(
@@ -4704,6 +4716,17 @@ describe("the JSON of a view", () => {
     expect(() =>
       readView(change((view) => (view.supports = [{ name: "chocolate", state: "option", active: false }]))),
     ).toThrow("The view is invalid at supports[0].name: The name of a support must be the name of a support of a PNP.");
+    for (const name of ["__proto__", "prototype", "constructor"]) {
+      const settings = `{"name":"line-reader","replaceAccessModes":[],"note":{"${name}":1}}`;
+      expect(() =>
+        readView(
+          change(
+            (view) =>
+              (view.supports = [{ name: "line-reader", state: "active", active: true, settings: json(settings) }]),
+          ),
+        ),
+      ).toThrow(`The view is invalid at supports[0].settings: holds a property "${name}"`);
+    }
     expect(() =>
       readView(
         change((view) => {
@@ -4734,6 +4757,16 @@ describe("the JSON of a view", () => {
       "The view is invalid at rubric: nests deeper than 256 levels.",
     );
     expect(() => readView(json('{"__proto__":1}'))).toThrow(/^The view is invalid: /);
+    const written: Record<string, unknown> = json(JSON.stringify(writeView(view)));
+    for (const name of ["__proto__", "prototype", "constructor"]) {
+      const problem = `The view is invalid at rubric: holds a property "${name}", a name that reaches the prototype.`;
+      for (const rubric of [
+        `[{"kind":"p","${name}":1}]`,
+        `[{"kind":"p","children":[{"kind":"x","a":{"${name}":1}}]}]`,
+      ]) {
+        expect(() => readView({ ...written, rubric: json(rubric) }), rubric).toThrow(new DataError(problem));
+      }
+    }
     expect(node("fine").rubric).toHaveLength(1);
   });
 
@@ -4912,6 +4945,31 @@ describe("candidate actions", () => {
       "The action is invalid at pciStates[0][1]: expected a string, found 5.",
     );
   });
+
+  it.each(["__proto__", "prototype", "constructor"])(
+    "refuses an action with a property named %s at any depth, and keeps it as data in a string or an identifier",
+    (name) => {
+      const texts = [
+        `{"type":"submit","item":{"ref":"a","instance":1},"${name}":{}}`,
+        `{"type":"submit","item":{"ref":"a","instance":1,"${name}":{}}}`,
+        `{"type":"move","to":{"ref":"a","instance":1,"${name}":{}}}`,
+        `{"type":"support-settings","settings":{"name":"line-reader","${name}":1}}`,
+        `{"type":"support-settings","settings":{"name":"line-reader","added":[{"${name}":1}]}}`,
+        `{"type":"support-settings","settings":{"name":"magnification","replaceAccessModes":[],"allContent":{"${name}":1}}}`,
+        `{"type":"set-responses","item":{"ref":"a","instance":1},"responses":[["R",{"cardinality":"record","value":{"${name}":1}}]]}`,
+      ];
+      for (const text of texts) {
+        expect(() => readCandidateAction(json(text)), text).toThrow(
+          new DataError(`The action holds a property "${name}", a name that reaches the prototype.`),
+        );
+      }
+      const entries = `[["${name}",{"cardinality":"single","baseType":"string","value":{"base":{"string":"${name}"}}}]]`;
+      const read = readCandidateAction(
+        json(`{"type":"set-responses","item":{"ref":"a","instance":1},"responses":${entries}}`),
+      );
+      expect(read.type === "set-responses" && [...read.responses.keys()]).toEqual([name]);
+    },
+  );
 
   it("refuses an action larger than the limit maxActionSize, and a PCI state longer than maxPciStateLength", () => {
     const comment = (text: string): unknown => writeCandidateAction({ type: "comment", item, text });

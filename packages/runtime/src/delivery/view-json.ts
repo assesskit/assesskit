@@ -6,6 +6,7 @@ import {
   describe,
   nonNegativeIntegerSchema,
   parseWith,
+  plainSchema,
   type Schema,
   transformWith,
 } from "../checks.js";
@@ -30,7 +31,7 @@ import type {
 } from "./candidate-view.js";
 import { entriesSchema, valuesSchema, valuesToJson } from "./entries-json.js";
 import { checkKey, type ItemKey, itemKeySchema } from "./item-key.js";
-import { nodeSchema, nodesSchema, plainSchema } from "./json-checks.js";
+import { nodeSchema, nodesSchema } from "./json-checks.js";
 import { DELIVERY_STATUSES, ITEM_SESSION_STATUSES } from "./names.js";
 import { supportViewSchema } from "./support-json.js";
 

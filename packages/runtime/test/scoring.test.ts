@@ -720,6 +720,34 @@ describe("compileScoring", () => {
     );
   });
 
+  it.each(["__proto__", "prototype", "constructor"])(
+    "refuses a key of any kind that has a property named %s, as it refuses any other unknown property",
+    (name) => {
+      const keys = [
+        '"kind":"choice","keys":["A"]',
+        '"kind":"choice-mapping","points":{"A":1}',
+        '"kind":"choice-marking","keys":["A"],"correct":4,"wrong":-1',
+        '"kind":"pairs","pairs":[["A","B"]]',
+        '"kind":"order","order":["A","B"]',
+        '"kind":"areas","scheme":"mapped","areas":[{"shape":"circle","coords":[1,1,1],"points":1}]',
+        '"kind":"text","answers":[{"texts":["a"]}]',
+        '"kind":"number","value":1',
+        '"kind":"expression","expression":"x"',
+      ];
+      for (const key of keys) {
+        expect(() => compileScoring([json(`{"identifier":"R","key":{${key},"${name}":1}}`)]), key).toThrow(
+          `holds a property "${name}", a name that reaches the prototype`,
+        );
+      }
+    },
+  );
+
+  it.each(["__proto__", "prototype", "constructor"])("keeps %s as the identifier of an option in points", (name) => {
+    const key: Key = json(`{"kind":"choice-mapping","points":{"${name}":2}}`);
+    const answer = present(buildContainer("multiple", "identifier", [name]));
+    expect(scoreOne(respond(key), answer)).toBe(2);
+  });
+
   it("refuses input of other types", () => {
     const choice = { identifier: "R", key: { kind: "choice", keys: ["A"] } };
     expect(() => compileScoring(json("null"))).toThrow("The responses must be an array");

@@ -192,8 +192,10 @@ that the player needs and the runtime lacks is a change in the runtime, with its
   for the options of the player, which hold DOM objects and callbacks.
 - A rule that a schema cannot express is a `check` or a `rawCheck` with a message of its own, or code after the parse; code
   that throws `DataError` joins a schema with `transformWith`.
-- `strictObject` where nothing else is allowed; `mapSchema` where property names are data (valibot's `record` skips
-  `__proto__`); `recordSchema` before an object whose entries are all optional (valibot reads an array as such an object).
+- `strictRecord` where nothing else is allowed. `recordSchema` before an object schema of untrusted input: it refuses an
+  array, which valibot reads as an object whose entries are all optional, and `__proto__`, `prototype` and `constructor`, which
+  `v.object` and `v.looseObject` drop unseen. `mapSchema` where property names are data, which keeps those names as names. The
+  names are one constant in `checks.ts`.
 - A function that valibot calls to make a default is wrapped, `() => fn`.
 - No valibot grapheme action (`graphemes`, `minGraphemes`, `maxGraphemes`): they use `Intl.Segmenter`, which the browser baseline bans.
 - Options and optional fields are destructured with their defaults, so that a value set to `null` is checked and rejected, never
@@ -363,7 +365,7 @@ tests of every engine, and waits for the next change to that part.
 
 - A reader of untrusted input or a limit: the worst input within it as a reading of `scripts/peak-memory-readings.ts`, its case in
   `scripts/test/peak-memory.test.ts`, its row in the table of [SECURITY.md](SECURITY.md#default-limits) and its rule in
-  `scripts/rules/`. A reader of JSON takes its size limit from `checkJsonSize`. A reader that reads only what the engine wrote, from
+  `scripts/rules/`. A reader of JSON takes its size limit, and its refusal of the three reserved names at any depth, from `checkJsonInput`. A reader that reads only what the engine wrote, from
   the host's own store or server, has no limit of size: SECURITY.md says so in **Readers of trusted input**, and its TSDoc.
 - A construct of the specifications: its test, and a line of `supported.md` of the package when what is supported changes.
 - A test that a row of [conformance.md](docs/runtime/conformance.md) cites: that row changes with it, and `scripts/test/conformance.test.ts`

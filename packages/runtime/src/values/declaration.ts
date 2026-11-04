@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { parseWith } from "../checks.js";
+import { parseWith, recordSchema } from "../checks.js";
 import { type BaseType, baseTypeSchema } from "./base-type.js";
 import type { Cardinality } from "./cardinality.js";
 
@@ -16,10 +16,13 @@ export type Declared =
   | { readonly cardinality: "record" }
   | { readonly cardinality: "single" | "multiple" | "ordered"; readonly baseType: BaseType };
 
-const declarationSchema = v.variant("cardinality", [
-  v.object({ cardinality: v.literal("record"), baseType: v.optional(baseTypeSchema) }),
-  v.object({ cardinality: v.picklist(["single", "multiple", "ordered"]), baseType: baseTypeSchema }),
-]);
+const declarationSchema = v.pipe(
+  recordSchema,
+  v.variant("cardinality", [
+    v.object({ cardinality: v.literal("record"), baseType: v.optional(baseTypeSchema) }),
+    v.object({ cardinality: v.picklist(["single", "multiple", "ordered"]), baseType: baseTypeSchema }),
+  ]),
+);
 
 /**
  * Checks a declaration from untrusted data.

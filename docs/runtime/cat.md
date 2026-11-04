@@ -148,8 +148,9 @@ A result comes from another system, so the reader has a limit of size, `maxResul
 `limits` replaces it): each value of the parsed JSON counts 1, and each string and property name adds its length. The default,
 8,388,608, holds about 58,000 item results with an outcome variable, and the worst result of that size keeps 136 MiB of heap alive
 ([SECURITY.md](../../SECURITY.md#peak-memory)). Whoever parses the text bounds its bytes and tokens first, because the memory of
-`JSON.parse` follows the tokens; the REST handler and port of the player do.
-`readItemStage(json, noun)` reads an item stage; `noun` names it in the error message, such as `nextItems of the answer`. The
+`JSON.parse` follows the tokens; the REST handler and port of the player do. A property that the binding does not name is left
+out, but one named `__proto__`, `prototype` or `constructor`, at any depth, is a `DataError`.
+`readItemStage(json, noun)` reads an item stage, and refuses those three names as well; `noun` names it in the error message, such as `nextItems of the answer`. The
 functions make no request: the adapter that talks to the engine owns the transport.
 
 | Runtime                      | Binding                                                                                             |

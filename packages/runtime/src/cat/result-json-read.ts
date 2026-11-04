@@ -1,6 +1,7 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of the JSON fields are those of the binding.
 import * as v from "valibot";
 import {
+  checkJsonInput,
   checkPositiveInteger,
   checkRecord,
   describe,
@@ -12,7 +13,7 @@ import {
   type Schema,
   transformWith,
 } from "../checks.js";
-import { checkJsonSize, checkOptions } from "../checks-internal.js";
+import { checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import {
   type AssessmentResult,
@@ -285,7 +286,8 @@ export const DEFAULT_RESULTS_JSON_LIMITS: ResultsJsonLimits = { maxResultSize: 8
  * @param options - See {@link ReadResultsJsonOptions}.
  * @returns The assessment result.
  * @throws `DataError` when the JSON is not an assessment result of the binding, a value is not in the lexical form
- * of its base type, or an option has the wrong type.
+ * of its base type, a property at any depth is named `__proto__`, `prototype` or `constructor`, or an option has the wrong
+ * type.
  * @throws `SecurityError` when the JSON is larger than `maxResultSize`.
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, JSON binding of the assessment result}
  */
@@ -295,6 +297,6 @@ export function readResultsJson(json: unknown, options: ReadResultsJsonOptions =
   checkRecord(limits, "The option limits must be an object");
   const { maxResultSize = DEFAULT_RESULTS_JSON_LIMITS.maxResultSize } = limits;
   checkPositiveInteger(maxResultSize, "The limit maxResultSize");
-  checkJsonSize(json, maxResultSize, "The assessmentResult", "maxResultSize");
+  checkJsonInput(json, "The assessmentResult", maxResultSize, "maxResultSize");
   return parseWith(assessmentResultSchema, json, "The assessmentResult");
 }

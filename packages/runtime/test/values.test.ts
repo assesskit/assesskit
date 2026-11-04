@@ -959,6 +959,12 @@ describe("the JSON of a value", () => {
 
   it("reads a record whose fields are all NULL as NULL, and an empty record too", () => {
     expect(readJsonValue({ record: [{ name: "a", base: null }] }, { cardinality: "record" })).toBeNull();
+    for (const name of ["__proto__", "prototype", "constructor"]) {
+      const declaration: ValueDeclaration = JSON.parse(`{"cardinality":"record","${name}":1}`);
+      expect(() => readJsonValue({ record: null }, declaration)).toThrow(
+        new DataError(`The declaration is invalid: holds a property "${name}", a name that reaches the prototype.`),
+      );
+    }
     expect(readJsonValue({ record: [{ name: "a", base: { string: "" } }] }, { cardinality: "record" })).toBeNull();
     expect(readJsonValue({ record: [] }, { cardinality: "record" })).toBeNull();
   });

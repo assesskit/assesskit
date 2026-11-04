@@ -7,7 +7,7 @@ const PARSE = "packages/runtime/src/xml/parse.ts";
 const TREE = "packages/runtime/src/xml/tree-builder.ts";
 const INCLUDE = "packages/runtime/src/xml/include.ts";
 const ACTION = "packages/runtime/src/delivery/action-json.ts";
-const CHECKS_INTERNAL = "packages/runtime/src/checks-internal.ts";
+const CHECKS = "packages/runtime/src/checks.ts";
 const RESULT_JSON = "packages/runtime/src/cat/result-json-read.ts";
 const PLAN = "packages/runtime/src/delivery/plan.ts";
 const SESSION_STEP = "packages/runtime/src/delivery/step-session.ts";
@@ -17,6 +17,7 @@ const XML_TEST = "packages/runtime/test/xml.test.ts";
 const NODE_TEST = "packages/runtime/test/node.test.ts";
 const DELIVERY_TEST = "packages/runtime/test/delivery.test.ts";
 const CAT_TEST = "packages/runtime/test/cat.test.ts";
+const CHECKS_TEST = "packages/runtime/test/checks.test.ts";
 const OPERATORS = "packages/runtime/src/operators";
 const OPERATORS_TEST = "packages/runtime/test/operators.test.ts";
 const SCORING = "packages/runtime/src/scoring";
@@ -258,23 +259,107 @@ export const RUNTIME_RULES: readonly Rule[] = [
     test: "packages/runtime/test/processing.test.ts",
   },
   {
-    rule: "JSON larger than the limit that is given to checkJsonSize is refused.",
-    file: CHECKS_INTERNAL,
-    find: "if (size > limit) throw new SecurityError(",
-    replace: "if (false) throw new SecurityError(",
+    rule: "JSON larger than the limit that is given to checkJsonInput is refused.",
+    file: CHECKS,
+    find: "if (size > limit)\n    throw new SecurityError(",
+    replace: "if (false)\n    throw new SecurityError(",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "Every reader refuses the three names that reach the prototype, and not only the first.",
+    file: CHECKS,
+    find: 'const RESERVED_KEYS: readonly string[] = ["__proto__", "prototype", "constructor"];',
+    replace: 'const RESERVED_KEYS: readonly string[] = ["__proto__"];',
+    test: CHECKS_TEST,
+  },
+  {
+    rule: "A schema of an object refuses a property with a name that reaches the prototype.",
+    file: CHECKS,
+    find: "const problem = dataset.typed ? reservedKeyProblem(dataset.value) : undefined;",
+    replace: "const problem = undefined as string | undefined;",
+    test: CHECKS_TEST,
+  },
+  {
+    rule: "A map keeps a name that reaches the prototype as data, such as the identifier of an option in its points.",
+    file: CHECKS,
+    find: "    anyRecordSchema,\n    v.rawTransform(",
+    replace: "    recordSchema,\n    v.rawTransform(",
+    test: SCORING_TEST,
+  },
+  {
+    rule: "An action of a client with a name that reaches the prototype, at any depth, is refused.",
+    file: CHECKS,
+    find: "if (problem !== undefined) throw new DataError(`${label} ${problem}.`);",
+    replace: "",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "An assessment result in JSON with a name that reaches the prototype, at any depth, is refused.",
+    file: CHECKS,
+    find: "if (problem !== undefined) throw new DataError(`${label} ${problem}.`);",
+    replace: "",
+    test: CAT_TEST,
+  },
+  {
+    rule: "The content of a view or a submission with a name that reaches the prototype, at any depth, is refused.",
+    file: CHECKS,
+    find: "return reservedKeyProblem(value) ?? firstProblem(Object.values(value), depth);",
+    replace: "return firstProblem(Object.values(value), depth);",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "An item stage with a name that reaches the prototype is refused.",
+    file: "packages/runtime/src/cat/item-stage.ts",
+    find: "  recordSchema,\n  v.object({",
+    replace: "  v.unknown(),\n  v.object({",
+    test: CAT_TEST,
+  },
+  {
+    rule: "A key of an item with a name that reaches the prototype is refused, as an unknown property is.",
+    file: `${SCORING}/schemas.ts`,
+    find: "  key: v.pipe(\n    recordSchema,\n    v.looseObject({",
+    replace: "  key: v.pipe(\n    v.unknown(),\n    v.looseObject({",
+    test: SCORING_TEST,
+  },
+  {
+    rule: "A module resolution file with a name that reaches the prototype is refused.",
+    file: "packages/runtime/src/pci/module-resolution.ts",
+    find: "  recordSchema,\n  v.object({",
+    replace: "  v.unknown(),\n  v.object({",
+    test: "packages/runtime/test/pci.test.ts",
+  },
+  {
+    rule: "A declaration of a value with a name that reaches the prototype is refused.",
+    file: "packages/runtime/src/values/declaration.ts",
+    find: '  recordSchema,\n  v.variant("cardinality", [',
+    replace: '  v.unknown(),\n  v.variant("cardinality", [',
+    test: "packages/runtime/test/values.test.ts",
+  },
+  {
+    rule: "Settings of a support that a host passes, with a name that reaches the prototype, are refused.",
+    file: SUPPORT_JSON,
+    find: '  recordSchema,\n  v.variant(\n    "name",',
+    replace: '  v.unknown(),\n  v.variant(\n    "name",',
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "The settings of a support in a view hold no name that reaches the prototype, at any depth.",
+    file: SUPPORT_JSON,
+    find: "settings: v.optional(plainSchema),",
+    replace: "settings: v.optional(v.unknown()),",
     test: DELIVERY_TEST,
   },
   {
     rule: "An action of a client larger than maxActionSize is refused.",
     file: ACTION,
-    find: 'checkJsonSize(json, maxActionSize, "The action", "maxActionSize");',
+    find: 'checkJsonInput(json, "The action", maxActionSize, "maxActionSize");',
     replace: "void maxActionSize;",
     test: DELIVERY_TEST,
   },
   {
     rule: "An assessment result in JSON larger than maxResultSize is refused.",
     file: RESULT_JSON,
-    find: 'checkJsonSize(json, maxResultSize, "The assessmentResult", "maxResultSize");',
+    find: 'checkJsonInput(json, "The assessmentResult", maxResultSize, "maxResultSize");',
     replace: "void maxResultSize;",
     test: CAT_TEST,
   },
@@ -343,7 +428,7 @@ export const RUNTIME_RULES: readonly Rule[] = [
   },
   {
     rule: "JSON that a view or an action carries is no deeper than 256 levels.",
-    file: "packages/runtime/src/delivery/json-checks.ts",
+    file: CHECKS,
     find: "if (depth >= MAX_JSON_DEPTH) return `nests deeper than ${MAX_JSON_DEPTH} levels`;",
     replace: "",
     test: DELIVERY_TEST,

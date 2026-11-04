@@ -494,7 +494,8 @@ The same engine serves an exam on a server and practice on a device. Only the pl
 the view:
 
 1. `readCandidateAction(json, options?)` reads the JSON of the client into an action, and throws a `DataError` for one that is
-   malformed or an action of the host, and a `SecurityError` for one above a limit.
+   malformed, an action of the host, or holds a property named `__proto__`, `prototype` or `constructor` at any depth, and a
+   `SecurityError` for one above a limit.
 2. `stamp(state, action, now)` sets the time of the action to the clock of the server.
 3. `engine.apply(state, action)` gives the next state, or a refusal, which the server reports to the client.
 4. `writeView(engine.view(state, now))` is what the client receives.

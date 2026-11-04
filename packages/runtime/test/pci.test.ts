@@ -458,6 +458,14 @@ describe("module resolution files", () => {
     ]);
   });
 
+  it.each(["__proto__", "prototype", "constructor"])("refuses a file with a property named %s", (name) => {
+    expect(() => readModuleResolution(`{"${name}": 1, "paths": {}}`)).toThrow(
+      new DataError(
+        `The module resolution file is invalid: holds a property "${name}", a name that reaches the prototype.`,
+      ),
+    );
+  });
+
   it("reads a file of 65,536 characters and refuses a longer one before it parses it", () => {
     const filled = (length: number): string => {
       const head = '{"paths": {"a": "modules/';

@@ -7,6 +7,7 @@ import {
   checkCallOptions,
   checkChoice,
   checkFunction,
+  checkJsonInput,
   checkNonEmptyString,
   checkNonNegativeInteger,
   checkPositiveInteger,
@@ -25,6 +26,7 @@ import {
   nonEmptyStringSchema,
   nonNegativeIntegerSchema,
   parseWith,
+  plainSchema,
   positiveIntegerSchema,
   positiveSchema,
   raceAbort,
@@ -420,6 +422,62 @@ describe("positiveSchema and definedSchema", () => {
     );
     expect(() => parseWith(v.object({ action: definedSchema }), { action: undefined }, "The envelope")).toThrow(
       new DataError("The envelope is invalid at action: expected a value, found undefined."),
+    );
+  });
+});
+
+describe("the names of a property that reach the prototype", () => {
+  const reserved = ["__proto__", "prototype", "constructor"];
+
+  it.each(reserved)("refuses %s where every schema of an object begins, at the object that holds it", (name) => {
+    const input: unknown = JSON.parse(`{"inner":{"${name}":1}}`);
+    const problem = `holds a property "${name}", a name that reaches the prototype.`;
+    for (const inner of [recordSchema, looseRecord({}), strictRecord({})]) {
+      expect(() => parseWith(v.object({ inner }), input, "The thing")).toThrow(
+        new DataError(`The thing is invalid at inner: ${problem}`),
+      );
+    }
+  });
+
+  it("looks only at own properties, so that a class instance or an object with no prototype still reads", () => {
+    class Host {}
+    expect(parseWith(recordSchema, new Host(), "The host")).toBeInstanceOf(Host);
+    expect(parseWith(recordSchema, Object.create(null), "The record")).toEqual({});
+  });
+
+  it.each(reserved)("keeps %s as data in a map", (name) => {
+    const read = parseWith(mapSchema(v.number()), JSON.parse(`{"${name}":1}`), "The points");
+    expect([...read]).toEqual([[name, 1]]);
+  });
+
+  it.each(reserved)("refuses %s at any depth in JSON from outside, with or without a limit", (name) => {
+    const problem = `holds a property "${name}", a name that reaches the prototype.`;
+    for (const text of [`{"${name}":1}`, `[{"a":[{"${name}":{}}]}]`, `{"a":{"b":{"${name}":null}}}`]) {
+      expect(() => checkJsonInput(JSON.parse(text), "The input")).toThrow(new DataError(`The input ${problem}`));
+      expect(() => checkJsonInput(JSON.parse(text), "The input", 1_000, "maxSize")).toThrow(DataError);
+    }
+    expect(() => parseWith(plainSchema, JSON.parse(`[{"a":{"${name}":1}}]`), "The nodes")).toThrow(
+      new DataError(`The nodes is invalid: ${problem}`),
+    );
+  });
+
+  it("takes a name that only holds a reserved word, or a string that is one", () => {
+    const text = '{"a_constructor":"__proto__","proto":["prototype","constructor"],"__proto__x":1}';
+    expect(() => checkJsonInput(JSON.parse(text), "The input")).not.toThrow();
+    expect(() => parseWith(recordSchema, JSON.parse(text), "The input")).not.toThrow();
+    expect(() => parseWith(plainSchema, JSON.parse(text), "The input")).not.toThrow();
+  });
+
+  it("walks JSON nested far deeper than a reviver of JSON.parse could, and finds the name at the bottom", () => {
+    const depth = 200_000;
+    const nested = (inner: string): unknown => JSON.parse(`${"[".repeat(depth)}${inner}${"]".repeat(depth)}`);
+    expect(() => checkJsonInput(nested("1"), "The input")).not.toThrow();
+    expect(() => checkJsonInput(nested('{"constructor":1}'), "The input")).toThrow(DataError);
+  });
+
+  it("stops at the limit, with the error of the limit, before a name further on", () => {
+    expect(() => checkJsonInput(JSON.parse('[{"constructor":1},"long string"]'), "The input", 5, "maxSize")).toThrow(
+      expect.objectContaining({ name: "SecurityError", limit: "maxSize", maximum: 5 }),
     );
   });
 });

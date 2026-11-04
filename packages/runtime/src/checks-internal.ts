@@ -1,7 +1,7 @@
 // The checks of one value that only the runtime uses. `checks.ts` holds those that the player shares.
 import * as v from "valibot";
-import { checkRecord, describe, isRecord } from "./checks.js";
-import { DataError, SecurityError } from "./errors.js";
+import { checkRecord, describe } from "./checks.js";
+import { DataError } from "./errors.js";
 
 /**
  * Checks a function's options: an object, as a caller from JavaScript may pass `null` or another value.
@@ -44,33 +44,6 @@ export function checkNonNegative(value: unknown, label: string): asserts value i
   if (!(typeof value === "number" && Number.isFinite(value) && value >= 0)) {
     throw new DataError(`${label} must be a non-negative number, found ${describe(value)}.`);
   }
-}
-
-/**
- * Checks that parsed JSON is not larger than a limit. Each string, number, boolean, `null`, array and object counts 1, and each
- * string and property name adds its length in code units. It counts without recursion and stops once the limit is passed, so
- * that the check costs no more than the limit, whatever the input.
- *
- * @param label - Names the JSON in the error message, such as `The action`.
- * @param name - The name of the limit, which the error carries, such as `maxActionSize`.
- * @throws `SecurityError` when the JSON is larger.
- */
-export function checkJsonSize(json: unknown, limit: number, label: string, name: string): void {
-  const pending: unknown[] = [json];
-  let size = 0;
-  while (pending.length > 0 && size <= limit) {
-    const value = pending.pop();
-    size += 1;
-    if (typeof value === "string") size += value.length;
-    else if (Array.isArray(value)) for (const member of value) pending.push(member);
-    else if (isRecord(value)) {
-      for (const [property, member] of Object.entries(value)) {
-        size += property.length;
-        pending.push(member);
-      }
-    }
-  }
-  if (size > limit) throw new SecurityError(`${label} is larger than the limit ${name} of ${limit}.`, name, limit);
 }
 
 /**

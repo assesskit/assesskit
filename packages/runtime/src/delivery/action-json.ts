@@ -1,6 +1,7 @@
 import * as v from "valibot";
 import {
   checkChoice,
+  checkJsonInput,
   checkPositiveInteger,
   checkRecord,
   describe,
@@ -8,7 +9,7 @@ import {
   parseWith,
   type Schema,
 } from "../checks.js";
-import { checkJsonSize, checkOptions } from "../checks-internal.js";
+import { checkOptions } from "../checks-internal.js";
 import { DataError, SecurityError } from "../errors.js";
 import type { CandidateAction } from "./action.js";
 import { CANDIDATE_ACTION_TYPES, checkResponseMaps } from "./candidate-actions.js";
@@ -116,7 +117,7 @@ const membersOf = (value: unknown): readonly unknown[] =>
 
 /**
  * Checks every list in the settings of a `support-settings` action against the limit, nested lists included, before the
- * settings are read. It walks without recursion a value that {@link checkJsonSize} has bounded.
+ * settings are read. It walks without recursion a value that {@link checkJsonInput} has bounded.
  */
 function checkSettingLists(json: unknown, limit: number): void {
   if (!isRecord(json) || json.type !== "support-settings") return;
@@ -159,7 +160,8 @@ function checkPciStates(action: CandidateAction, limit: number): void {
  * @param json - The parsed JSON.
  * @param options - See {@link ReadCandidateActionOptions}.
  * @returns The action of the candidate, without a time.
- * @throws `DataError` when the input is not an action of the candidate, or an option has the wrong type.
+ * @throws `DataError` when the input is not an action of the candidate, a property at any depth is named `__proto__`,
+ * `prototype` or `constructor`, or an option has the wrong type.
  * @throws `SecurityError` when the action is larger than `maxActionSize`, a PCI state is longer than `maxPciStateLength`, or
  * a list in the settings of `support-settings` is longer than `maxSettingListLength`.
  */
@@ -167,7 +169,7 @@ export function readCandidateAction(json: unknown, options: ReadCandidateActionO
   checkOptions(options);
   const { limits = {} } = options;
   const { maxActionSize, maxPciStateLength, maxSettingListLength } = readLimits(limits);
-  checkJsonSize(json, maxActionSize, "The action", "maxActionSize");
+  checkJsonInput(json, "The action", maxActionSize, "maxActionSize");
   refuseHostAction(json);
   checkSettingLists(json, maxSettingListLength);
   const action = parseWith(actionSchema, json, "The action");

@@ -5,7 +5,7 @@
  * @module @assesskit/runtime/checks
  */
 import * as v from "valibot";
-import { DataError } from "./errors.js";
+import { DataError, SecurityError } from "./errors.js";
 
 /**
  * Describes a value in a message: strings quoted; arrays, functions and other objects as "an array", "a function" and
@@ -22,6 +22,60 @@ export function describe(value: unknown): string {
 /** Returns whether a value is an object that is neither `null` nor an array. */
 export function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The names of a property that a reader of untrusted input refuses, because they reach the prototype of an object: the
+ * objects and records of valibot drop them unseen, and an assignment of `__proto__` sets a prototype. A reader keeps a name
+ * as data only where property names are data, with {@link mapSchema}.
+ */
+const RESERVED_KEYS: readonly string[] = ["__proto__", "prototype", "constructor"];
+
+/** Says what is wrong with a record that has an own property of a reserved name, or returns `undefined` when it has none. */
+function reservedKeyProblem(record: Readonly<Record<string, unknown>>): string | undefined {
+  const name = RESERVED_KEYS.find((reserved) => Object.hasOwn(record, reserved));
+  return name === undefined ? undefined : `holds a property ${JSON.stringify(name)}, a name that reaches the prototype`;
+}
+
+/** Puts the values of a record of JSON on the list to walk, and returns the length of its property names. */
+function pushProperties(record: Readonly<Record<string, unknown>>, pending: unknown[]): number {
+  let length = 0;
+  for (const [property, member] of Object.entries(record)) {
+    length += property.length;
+    pending.push(member);
+  }
+  return length;
+}
+
+/**
+ * Checks JSON from outside, as `JSON.parse` returned it, before a schema reads it: no object at any depth has a property
+ * named `__proto__`, `prototype` or `constructor`, and the JSON is not larger than a limit. Each string, number, boolean,
+ * `null`, array and object counts 1, and each string and property name adds its length in code units. It walks without
+ * recursion, so nesting cannot overflow the stack, and stops once the limit is passed, so that the check costs no more than
+ * the limit, whatever the input.
+ *
+ * @param label - Begins the sentence of the error message, such as `The action`.
+ * @param limit - The largest size. Without it, the input must be bounded before it is parsed.
+ * @param limitName - The name of the limit, which the error carries, such as `maxActionSize`.
+ * @throws `DataError` when a property has one of the three names.
+ * @throws `SecurityError` when the JSON is larger than the limit.
+ */
+export function checkJsonInput(json: unknown, label: string, limit = Number.POSITIVE_INFINITY, limitName = ""): void {
+  const pending: unknown[] = [json];
+  let size = 0;
+  while (pending.length > 0 && size <= limit) {
+    const value = pending.pop();
+    size += 1;
+    if (typeof value === "string") size += value.length;
+    else if (Array.isArray(value)) for (const member of value) pending.push(member);
+    else if (isRecord(value)) {
+      const problem = reservedKeyProblem(value);
+      if (problem !== undefined) throw new DataError(`${label} ${problem}.`);
+      size += pushProperties(value, pending);
+    }
+  }
+  if (size > limit)
+    throw new SecurityError(`${label} is larger than the limit ${limitName} of ${limit}.`, limitName, limit);
 }
 
 /**
@@ -400,22 +454,32 @@ export function guardSchema<TOutput>(guard: (value: unknown) => value is TOutput
   return v.custom<TOutput>(guard, (issue) => `expected ${expected}, found ${foundOf(issue)}`);
 }
 
-/**
- * The schema of a record. In front of an object schema whose entries are all optional it refuses an array, which valibot
- * reads as an object.
- */
-export const recordSchema = guardSchema(isRecord, "an object");
+/** The schema of a record whatever its property names, which {@link mapSchema} reads as data. */
+const anyRecordSchema = guardSchema(isRecord, "an object");
 
 /**
- * The schema of an object with the given entries, that keeps the properties it does not know. Unlike the object of
- * valibot it refuses an array, whatever the entries.
+ * The schema of a record, in front of every schema of an object. It refuses an array, which valibot reads as an object whose
+ * entries are all optional, and a property named `__proto__`, `prototype` or `constructor`, which the objects of valibot
+ * would drop unseen.
+ */
+export const recordSchema = v.pipe(
+  anyRecordSchema,
+  v.rawCheck(({ dataset, addIssue }) => {
+    const problem = dataset.typed ? reservedKeyProblem(dataset.value) : undefined;
+    if (problem !== undefined) addIssue({ message: problem });
+  }),
+);
+
+/**
+ * The schema of an object with the given entries, that keeps the properties it does not know. Like {@link recordSchema} it
+ * refuses an array and a reserved name, whatever the entries.
  */
 export function looseRecord<const TEntries extends v.ObjectEntries>(entries: TEntries) {
   return v.pipe(recordSchema, v.looseObject(entries));
 }
 
 /**
- * The schema of an object with the given entries and no other property. Unlike the object of valibot it refuses an array,
+ * The schema of an object with the given entries and no other property. Like {@link recordSchema} it refuses an array,
  * whatever the entries.
  */
 export function strictRecord<const TEntries extends v.ObjectEntries>(entries: TEntries) {
@@ -423,14 +487,15 @@ export function strictRecord<const TEntries extends v.ObjectEntries>(entries: TE
 }
 
 /**
- * The schema of an object whose property names are data, such as module ids or asset prefixes: every own property is read
- * into a map, `__proto__` included, which the record of valibot would skip.
+ * The schema of an object whose property names are data, such as identifiers or module ids: every own property is read into
+ * a map, where a name such as `__proto__` is a name like any other. The record of valibot would skip it, and
+ * {@link recordSchema} refuses it, as no other reader has a use for it.
  *
  * @param value - The schema of the value of a property.
  */
 export function mapSchema<TOutput>(value: Schema<TOutput>): Schema<Map<string, TOutput>> {
   return v.pipe(
-    recordSchema,
+    anyRecordSchema,
     v.rawTransform(({ dataset, addIssue, NEVER }) => {
       const entries = new Map<string, TOutput>();
       for (const [name, member] of Object.entries(dataset.value)) {
@@ -448,6 +513,55 @@ export function mapSchema<TOutput>(value: Schema<TOutput>): Schema<Map<string, T
     }),
   );
 }
+
+/** The depth of nesting that JSON content may have: the depth the XML reader allows (`DEFAULT_XML_LIMITS.maxDepth`). */
+const MAX_JSON_DEPTH = 256;
+
+/** Whether a value is an object that `JSON.parse` makes: a prototype of `Object` or none. */
+function isPlainObject(value: unknown): value is Readonly<Record<string, unknown>> {
+  if (!isRecord(value)) return false;
+  const prototype: unknown = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function firstProblem(values: readonly unknown[], depth: number): string | undefined {
+  for (const entry of values) {
+    const problem = plainProblem(entry, depth + 1);
+    if (problem !== undefined) return problem;
+  }
+  return undefined;
+}
+
+/**
+ * Returns what keeps JSON data from surviving `JSON.stringify` and `JSON.parse` as it is, or `undefined` when it does:
+ * strings, finite numbers, booleans, arrays and plain objects without a reserved name, nested at most
+ * {@link MAX_JSON_DEPTH} levels. A property that is `undefined` is absent in JSON, so it passes; `null` does not, because the
+ * content of a view has no NULL.
+ */
+function plainProblem(value: unknown, depth = 0): string | undefined {
+  if (value === undefined || typeof value === "string" || typeof value === "boolean") return undefined;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? undefined : `holds ${String(value)}, which JSON cannot carry`;
+  }
+  if (depth >= MAX_JSON_DEPTH) return `nests deeper than ${MAX_JSON_DEPTH} levels`;
+  if (Array.isArray(value)) return firstProblem(value, depth);
+  if (isPlainObject(value)) {
+    return reservedKeyProblem(value) ?? firstProblem(Object.values(value), depth);
+  }
+  return `must hold only strings, finite numbers, booleans, arrays and objects, found ${describe(value)}`;
+}
+
+/**
+ * The schema of JSON data that survives `JSON.stringify` and `JSON.parse` as it is, such as the nodes of content, whose depth
+ * it bounds, so that it reads a value that a host built, and not only one that `JSON.parse` returned.
+ */
+export const plainSchema: Schema<unknown> = v.pipe(
+  v.unknown(),
+  v.rawCheck(({ dataset, addIssue }) => {
+    const problem = plainProblem(dataset.value);
+    if (problem !== undefined) addIssue({ message: problem });
+  }),
+);
 
 /** A finite number. */
 export const finiteSchema = v.pipe(v.number(), v.finite());

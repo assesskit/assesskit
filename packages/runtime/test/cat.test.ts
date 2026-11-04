@@ -902,6 +902,25 @@ describe("the JSON of results and stages", () => {
     expect(() => writeResultsJson(json('{"context":{},"itemResults":"x"}'))).toThrow(DataError);
   });
 
+  it.each(["__proto__", "prototype", "constructor"])(
+    "refuses an assessment result with a property named %s at any level, which the reader would leave out unseen",
+    (name) => {
+      const texts = [
+        `{"${name}":{},"context":{"sessionIdentifiers":[]}}`,
+        `{"context":{"${name}":1,"sessionIdentifiers":[]}}`,
+        `{"context":{"sessionIdentifiers":[{"sourceID":"s","identifier":"i","${name}":1}]}}`,
+        `{"context":{"sessionIdentifiers":[]},"itemResult":[{"identifier":"q","datestamp":"d","sessionStatus":"final","${name}":1}]}`,
+        `{"context":{"sessionIdentifiers":[]},"itemResult":[{"identifier":"q","datestamp":"d","sessionStatus":"final","responseVariables":[{"identifier":"R","cardinality":"single","baseType":"string","candidateResponse":{"value":[{"value":"a","${name}":1}]}}]}]}`,
+        `{"context":{"sessionIdentifiers":[]},"added":{"deep":[{"${name}":1}]}}`,
+      ];
+      for (const text of texts) {
+        expect(() => readResultsJson(json(text)), text).toThrow(
+          new DataError(`The assessmentResult holds a property "${name}", a name that reaches the prototype.`),
+        );
+      }
+    },
+  );
+
   it("refuses an assessment result larger than the limit maxResultSize, which counts values, names and strings", () => {
     expect(DEFAULT_RESULTS_JSON_LIMITS).toEqual({ maxResultSize: 8_388_608 });
     // The result is 82: the root object (1) with the names context (7) and itemResult (10); the context (1) with the name
@@ -950,6 +969,12 @@ describe("the JSON of results and stages", () => {
     });
     expect(() => readItemStage({ stageLength: -1 }, "stage")).toThrow(/^The stage is invalid at stageLength: /);
     expect(() => readItemStage(json("[]"), "stage")).toThrow(DataError);
+    expect(() => readItemStage({ added: 1 }, "stage")).not.toThrow();
+    for (const name of ["__proto__", "prototype", "constructor"]) {
+      const problem = `The stage is invalid: holds a property "${name}", a name that reaches the prototype.`;
+      expect(() => readItemStage(json(`{"${name}":1}`), "stage")).toThrow(new DataError(problem));
+      expect(() => isSessionEnd(json(`{"itemIdentifiers":["a"],"${name}":1}`))).toThrow(DataError);
+    }
   });
 
   it("reads or refuses arbitrary JSON with a DataError, and nothing else", () => {

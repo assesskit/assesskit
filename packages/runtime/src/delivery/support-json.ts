@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { describe, isRecord, parseWith, type Schema, transformWith } from "../checks.js";
+import { describe, isRecord, parseWith, plainSchema, recordSchema, type Schema, transformWith } from "../checks.js";
 import { DataError } from "../errors.js";
 import {
   type Braille,
@@ -121,6 +121,7 @@ const ADJUSTABLE_NAMES: readonly string[] = Object.keys(ADJUSTABLE_SETTINGS);
  * action cannot carry other data into the state; the engine refuses the settings of any other support.
  */
 export const supportSettingSchema: Schema<SupportSetting> = v.pipe(
+  recordSchema,
   v.variant(
     "name",
     [
@@ -159,7 +160,7 @@ export const supportViewSchema: Schema<SupportView> = v.pipe(
     name: supportNameSchema,
     state: v.picklist(SUPPORT_STATES),
     active: v.boolean(),
-    settings: v.optional(v.unknown()),
+    settings: v.optional(plainSchema),
   }),
   transformWith(({ name, state, active, settings }) => ({
     name,
