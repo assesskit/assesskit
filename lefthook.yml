@@ -11,9 +11,11 @@ pre-push:
     - ref: main
   parallel: true
   commands:
+    # Two examples link measurekit and interopkit, which CI builds at the commits of their locks; a checkout beside them holds
+    # another commit, so they are left to CI here.
     typecheck:
-      run: pnpm typecheck
+      run: pnpm -r --filter '!@assesskit/example-lms-integration' --filter '!@assesskit/example-cat-with-measurekit' typecheck && pnpm exec tsc -p tsconfig.json
     test:
-      run: pnpm test
+      run: pnpm test --project '!examples'
     knip:
       run: pnpm knip
