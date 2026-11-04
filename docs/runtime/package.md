@@ -181,19 +181,22 @@ asynchronous. The reader stays, with the inflater of `fflate`.
 
 ### Security checks
 
-| Threat                                | Control                                                                                                                                                                  | Error                                       |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
-| Zip-slip, absolute paths              | An entry name that is absolute, leaves the root with `..`, or has a backslash, a drive letter or a control character rejects the archive. A directory entry too.         | `SecurityError`, `limit` `"path"`           |
-| Two names for one file                | Two entries with the same normalized name (`a.xml` and `./a.xml`) reject the archive.                                                                                    | `SecurityError`, `limit` `"duplicate-path"` |
-| Symbolic links                        | An entry made on Unix or OS X (host 3 or 19) whose mode is a symbolic link rejects the archive.                                                                          | `SecurityError`, `limit` `"symlink"`        |
-| Encrypted entries                     | General purpose bit 0, 6 or 13 rejects the archive.                                                                                                                      | `SecurityError`, `limit` `"encrypted"`      |
-| Too many entries                      | The reader counts the entries of the central directory against `maxEntries` as it reads them, and a count above it in the end record fails before the directory is read. | `SecurityError`, `limit` `"maxEntries"`     |
-| A count that hides entries            | The size of the central directory ends the reading, not the count of the end record. The count must equal the entries found, modulo 65,536 in a classic record.          | `ReadError`, rule `assesskit/package/zip`   |
-| Large entries and archives, zip bombs | Declared sizes in the central directory are checked against `maxEntryBytes`, `maxTotalBytes` and `maxRatio`; an entry of at most 102,400 bytes is exempt from the ratio. | `SecurityError`, `limit` the limit's name   |
-| Headers that lie                      | While an entry inflates, the output is counted in 8 KiB steps of input and stops at the size the header declares.                                                        | `SecurityError`, `limit` `"declaredBytes"`  |
-| Corrupt or mismatched data            | Each entry's local header must name the file the central directory names; the size and CRC-32 must match; truncation is detected.                                        | `ReadError`, rule `assesskit/package/zip`   |
+| Threat                                | Control                                                                                                                                                                  | Error                                          |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| Zip-slip, absolute paths              | An entry name that is absolute, leaves the root with `..`, or has a backslash, a drive letter or a control character rejects the archive. A directory entry too.         | `SecurityError`, `limit` `"path"`              |
+| Two names for one file                | Two entries with the same normalized name (`a.xml` and `./a.xml`) reject the archive.                                                                                    | `SecurityError`, `limit` `"duplicate-path"`    |
+| Symbolic links                        | An entry made on Unix or OS X (host 3 or 19) whose mode is a symbolic link rejects the archive.                                                                          | `SecurityError`, `limit` `"symlink"`           |
+| Encrypted entries                     | General purpose bit 0, 6 or 13 rejects the archive.                                                                                                                      | `SecurityError`, `limit` `"encrypted"`         |
+| Too many entries                      | The reader counts the entries of the central directory against `maxEntries` as it reads them, and a count above it in the end record fails before the directory is read. | `SecurityError`, `limit` `"maxEntries"`        |
+| A count that hides entries            | The size of the central directory ends the reading, not the count of the end record. The count must equal the entries found, modulo 65,536 in a classic record.          | `ReadError`, rule `assesskit/package/zip`      |
+| A central directory too long to keep  | The directory is read whole, so its size is checked before it is read: at most 512 bytes for each entry that `maxEntries` allows, 51,200,000 bytes by default.           | `SecurityError`, `limit` `"maxDirectoryBytes"` |
+| Large entries and archives, zip bombs | Declared sizes in the central directory are checked against `maxEntryBytes`, `maxTotalBytes` and `maxRatio`; an entry of at most 102,400 bytes is exempt from the ratio. | `SecurityError`, `limit` the limit's name      |
+| Headers that lie                      | While an entry inflates, the output is counted in 8 KiB steps of input and stops at the size the header declares.                                                        | `SecurityError`, `limit` `"declaredBytes"`     |
+| Corrupt or mismatched data            | Each entry's local header must name the file the central directory names; the size and CRC-32 must match; truncation is detected.                                        | `ReadError`, rule `assesskit/package/zip`      |
 
-`file(path)` returns a copy of the bytes. `ZipLimits`:
+`file(path)` returns a copy of the bytes. An archive is read by ranges: the end of the archive and its central directory when the
+package opens, and the bytes of one entry when `file(path)` asks for it, so a source that reads by ranges, such as the ZIP file of
+`readPackageFile` ([node](node.md#package-files)), is never read whole. `ZipLimits`:
 
 | Limit           | Default       | Unit    | Applies to                                                                                 |
 | --------------- | ------------- | ------- | ------------------------------------------------------------------------------------------ |
@@ -206,7 +209,8 @@ The largest package of the 1EdTech QTI 3.0 examples has 99 entries, an entry of 
 is 27.9, on a 7.5 KB entry, and 3.6 on the entries above 102,400 bytes. The defaults are about 1,000, 13, 200 and 9 times those.
 `file` inflates a deflated entry with its pieces and the joined bytes in memory at once, so an entry of `maxEntryBytes` raises the
 resident memory of the process by up to 215 MiB, under the budget of 256 MiB ([SECURITY.md](../../SECURITY.md#peak-memory)); a host
-that packs larger files raises the limit, at two to three and a half times the file.
+that packs larger files raises the limit, at two to three and a half times the file. `maxTotalBytes` costs no memory: it bounds the
+size of the archive file and the work of a host that reads every file.
 
 ## Documents
 

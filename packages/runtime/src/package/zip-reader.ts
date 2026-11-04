@@ -37,12 +37,47 @@ const UNIX_SYMLINK = 0o120000;
 /** The compressed bytes fed to the inflater at once, so that a burst of output stays small even at the ratio 1032:1 of DEFLATE. */
 const INFLATE_CHUNK_BYTES = 8192;
 
+/**
+ * The bytes of the central directory that each entry the limit `maxEntries` allows may take: 512, room for a path of 400 bytes
+ * and the fields of the record, where the longest path of the examples is under 100. The directory is read whole, so its size
+ * bounds the memory of opening an archive whatever the archive holds.
+ */
+export const DIRECTORY_BYTES_PER_ENTRY = 512;
+/** The compressed bytes that are read from the source at once while an entry inflates. */
+const INFLATE_BLOCK_BYTES = 1_048_576;
+
 const NAME_DECODER = new TextDecoder("utf-8", { fatal: true });
+const ASCII = /^\p{ASCII}*$/u;
+
+/** Returns the bytes of a name as characters of one byte each. A name has at most 65,535 bytes. */
+const bytesAsText = (bytes: Uint8Array): string => String.fromCharCode(...bytes);
+
+/**
+ * Where the bytes of an archive are: in memory, or in a file that is read by ranges. The reader asks for the end of the archive, its
+ * central directory and the bytes of an entry when the entry is opened, so a file is never read whole.
+ */
+export interface ByteSource {
+  /** The size of the archive in bytes. */
+  readonly length: number;
+  /**
+   * Returns the bytes at an offset, which the caller reads and neither changes nor keeps.
+   *
+   * @throws `ReadError` when the archive has fewer bytes there.
+   */
+  read(offset: number, length: number): Uint8Array;
+  /**
+   * Returns the bytes at an offset as an array of their own, which the caller may change and keep.
+   *
+   * @throws `ReadError` when the archive has fewer bytes there.
+   */
+  copy(offset: number, length: number): Uint8Array;
+}
 
 /** The central directory entry of a file. */
 interface Entry {
   readonly name: string;
-  readonly rawName: Uint8Array;
+  /** The bytes of the name as characters of one byte each, which the local header must repeat; the same string as `name` when it is ASCII. */
+  readonly rawName: string;
   readonly method: number;
   readonly compressedSize: number;
   readonly size: number;
@@ -91,19 +126,28 @@ class Reader {
   }
 }
 
-/** Finds the end of central directory record: the last one whose comment ends the archive. */
-function findEnd(reader: Reader): number {
-  const { length } = reader.bytes;
-  for (
-    let offset = length - END_RECORD_BYTES;
-    offset >= Math.max(0, length - END_RECORD_BYTES - MAX_COMMENT_BYTES);
-    offset--
-  ) {
+/** Returns a reader of the bytes at an offset. */
+function window(source: ByteSource, offset: number, length: number): Reader {
+  return new Reader(source.read(offset, length));
+}
+
+/**
+ * Finds the end of central directory record: the last one whose comment ends the archive. It reads the last bytes of the archive,
+ * where a record with the longest comment starts.
+ *
+ * @returns The offset of the record in the archive.
+ */
+function findEnd(source: ByteSource): number {
+  const { length } = source;
+  const tailLength = Math.min(length, END_RECORD_BYTES + MAX_COMMENT_BYTES);
+  const tailStart = length - tailLength;
+  const tail = window(source, tailStart, tailLength);
+  for (let offset = tailLength - END_RECORD_BYTES; offset >= 0; offset--) {
     if (
-      reader.u32(offset) === END_OF_CENTRAL_DIRECTORY &&
-      offset + END_RECORD_BYTES + reader.u16(offset + 20) === length
+      tail.u32(offset) === END_OF_CENTRAL_DIRECTORY &&
+      offset + END_RECORD_BYTES + tail.u16(offset + 20) === tailLength
     ) {
-      return offset;
+      return tailStart + offset;
     }
   }
   throw corrupt("The data is not a ZIP archive: it has no end of central directory record.");
@@ -118,34 +162,45 @@ interface Directory {
   readonly offset: number;
 }
 
-function locateDirectory(reader: Reader, end: number): Directory {
-  for (const disk of [reader.u16(end + 4), reader.u16(end + 6)]) {
+function locateDirectory(source: ByteSource, end: number): Directory {
+  const record = window(source, end, END_RECORD_BYTES);
+  for (const disk of [record.u16(4), record.u16(6)]) {
     if (disk !== 0 && disk !== MARKER_16) throw corrupt("An archive in several parts is not supported.");
   }
-  const count = reader.u16(end + 10);
-  const size = reader.u32(end + 12);
-  const offset = reader.u32(end + 16);
+  const count = record.u16(10);
+  const size = record.u32(12);
+  const offset = record.u32(16);
   if (count !== MARKER_16 && size !== MARKER_32 && offset !== MARKER_32) {
     return { count, countRange: COUNT_RANGE_16, size, offset };
   }
-  const locator = end - ZIP64_LOCATOR_BYTES;
-  if (locator < 0 || reader.u32(locator) !== ZIP64_LOCATOR) {
+  const locatorAt = end - ZIP64_LOCATOR_BYTES;
+  if (locatorAt < 0) {
     throw corrupt("The archive needs ZIP64 values but has no ZIP64 end of central directory locator.");
   }
-  const record = reader.u64(locator + 8);
-  if (record + ZIP64_END_RECORD_BYTES > locator || reader.u32(record) !== ZIP64_END_OF_CENTRAL_DIRECTORY) {
+  const locator = window(source, locatorAt, ZIP64_LOCATOR_BYTES);
+  if (locator.u32(0) !== ZIP64_LOCATOR) {
+    throw corrupt("The archive needs ZIP64 values but has no ZIP64 end of central directory locator.");
+  }
+  const recordAt = locator.u64(8);
+  if (recordAt + ZIP64_END_RECORD_BYTES > locatorAt) {
     throw corrupt(
       "The ZIP64 end of central directory locator does not point to a ZIP64 end of central directory record.",
     );
   }
-  if (reader.u32(record + 16) !== 0 || reader.u32(record + 20) !== 0) {
+  const zip64 = window(source, recordAt, ZIP64_END_RECORD_BYTES);
+  if (zip64.u32(0) !== ZIP64_END_OF_CENTRAL_DIRECTORY) {
+    throw corrupt(
+      "The ZIP64 end of central directory locator does not point to a ZIP64 end of central directory record.",
+    );
+  }
+  if (zip64.u32(16) !== 0 || zip64.u32(20) !== 0) {
     throw corrupt("An archive in several parts is not supported.");
   }
   return {
-    count: reader.u64(record + 32),
+    count: zip64.u64(32),
     countRange: COUNT_RANGE_64,
-    size: reader.u64(record + 40),
-    offset: reader.u64(record + 48),
+    size: zip64.u64(40),
+    offset: zip64.u64(48),
   };
 }
 
@@ -214,13 +269,15 @@ function readEntry(
   const extraStart = nameStart + nameLength;
   const next = extraStart + extraLength + commentLength;
   if (next > end) throw corrupt("A file header of the central directory is longer than the directory.");
-  const rawName = reader.bytes.subarray(nameStart, extraStart);
+  const nameBytes = reader.bytes.subarray(nameStart, extraStart);
   let name: string;
   try {
-    name = NAME_DECODER.decode(rawName);
+    name = NAME_DECODER.decode(nameBytes);
   } catch (error) {
     throw corrupt("The archive has an entry whose name is not valid UTF-8.", { cause: error });
   }
+  // An entry keeps a string and not the bytes of the directory, and one string when the name is ASCII.
+  const rawName = ASCII.test(name) ? name : bytesAsText(nameBytes);
   const flags = reader.u16(position + 8);
   if ((flags & ENCRYPTION_FLAGS) !== 0)
     throw rule("encrypted", `The entry ${JSON.stringify(name)} is encrypted; the runtime reads no encrypted archive.`);
@@ -254,7 +311,7 @@ function readEntry(
   };
 }
 
-function checkEntry(entry: Entry, reader: Reader, limits: ZipLimits, total: number): void {
+function checkEntry(entry: Entry, length: number, limits: ZipLimits, total: number): void {
   if (entry.method !== STORED && entry.method !== DEFLATED) {
     throw corrupt(
       `The entry ${JSON.stringify(entry.name)} uses the compression method ${entry.method}; the runtime reads stored and deflated entries.`,
@@ -277,7 +334,7 @@ function checkEntry(entry: Entry, reader: Reader, limits: ZipLimits, total: numb
       `has the entry ${JSON.stringify(entry.name)}, which is more than ${limits.maxRatio} times larger uncompressed than compressed, above`,
     );
   }
-  if (entry.offset + LOCAL_HEADER_BYTES > reader.bytes.length) {
+  if (entry.offset + LOCAL_HEADER_BYTES > length) {
     throw corrupt(`The entry ${JSON.stringify(entry.name)} starts after the end of the archive.`);
   }
 }
@@ -288,24 +345,35 @@ function checkEntry(entry: Entry, reader: Reader, limits: ZipLimits, total: numb
  * The size of the directory ends the reading, as it does in Python's `zipfile` and in `unzip`, and not the count of the end
  * record: a 16-bit count wraps in an archive of more than 65,535 entries and is too small in a crafted one, and a reader
  * that trusts it sees fewer files than another extractor unpacks. The count must agree with the records found.
+ *
+ * The directory is read whole, and its size is checked against {@link DIRECTORY_BYTES_PER_ENTRY} for each entry that `maxEntries`
+ * allows before it is read, so that the memory of opening an archive follows the limit and not the archive.
  */
-function readDirectory(reader: Reader, limits: ZipLimits): Map<string, Entry> {
-  const end = findEnd(reader);
-  const directory = locateDirectory(reader, end);
+function readDirectory(source: ByteSource, limits: ZipLimits): Map<string, Entry> {
+  const end = findEnd(source);
+  const directory = locateDirectory(source, end);
   if (directory.count > limits.maxEntries)
     throw exceeded("maxEntries", limits, `has ${directory.count} entries, above`);
   if (directory.offset + directory.size > end)
     throw corrupt("The central directory of the archive extends past its end record.");
   if (directory.count * CENTRAL_HEADER_BYTES > directory.size)
     throw corrupt("The central directory is too small for the entries the archive declares.");
-  const directoryEnd = directory.offset + directory.size;
+  const maxDirectoryBytes = limits.maxEntries * DIRECTORY_BYTES_PER_ENTRY;
+  if (directory.size > maxDirectoryBytes) {
+    throw new SecurityError(
+      `The central directory of the archive has ${directory.size} bytes, above the ${maxDirectoryBytes} that the limit maxEntries of ${limits.maxEntries} allows at ${DIRECTORY_BYTES_PER_ENTRY} bytes for each entry.`,
+      "maxDirectoryBytes",
+      maxDirectoryBytes,
+    );
+  }
+  const reader = window(source, directory.offset, directory.size);
   const entries = new Map<string, Entry>();
-  let position = directory.offset;
+  let position = 0;
   let total = 0;
   let records = 0;
-  while (position < directoryEnd) {
+  while (position < directory.size) {
     if (records === limits.maxEntries) throw exceeded("maxEntries", limits, "holds more entries than");
-    const { entry, next, name } = readEntry(reader, position, directoryEnd);
+    const { entry, next, name } = readEntry(reader, position, directory.size);
     position = next;
     records++;
     if (entry === undefined) {
@@ -322,7 +390,7 @@ function readDirectory(reader: Reader, limits: ZipLimits): Map<string, Entry> {
     if (entries.has(path))
       throw rule("duplicate-path", `The archive has two entries named ${JSON.stringify(path)} after normalization.`);
     total += entry.size;
-    checkEntry(entry, reader, limits, total);
+    checkEntry(entry, source.length, limits, total);
     entries.set(path, entry);
   }
   if (records % directory.countRange !== directory.count) {
@@ -343,8 +411,11 @@ function concatenate(chunks: readonly Uint8Array[], length: number): Uint8Array 
   return bytes;
 }
 
-/** Inflates the data of an entry, counting the bytes as they come, so that a header that understates the size cannot make the output larger. */
-function inflate(data: Uint8Array, entry: Entry): Uint8Array {
+/**
+ * Inflates the data of an entry, read from the source in blocks, counting the bytes as they come, so that a header that understates
+ * the size cannot make the output larger.
+ */
+function inflate(source: ByteSource, start: number, length: number, entry: Entry): Uint8Array {
   const chunks: Uint8Array[] = [];
   let produced = 0;
   const inflater = new Inflate((chunk) => {
@@ -361,10 +432,16 @@ function inflate(data: Uint8Array, entry: Entry): Uint8Array {
   try {
     let offset = 0;
     do {
-      const next = offset + INFLATE_CHUNK_BYTES;
-      inflater.push(data.subarray(offset, next), next >= data.length);
-      offset = next;
-    } while (offset < data.length);
+      const block = source.read(start + offset, Math.min(INFLATE_BLOCK_BYTES, length - offset));
+      const last = offset + block.length >= length;
+      let at = 0;
+      do {
+        const next = at + INFLATE_CHUNK_BYTES;
+        inflater.push(block.subarray(at, next), last && next >= block.length);
+        at = next;
+      } while (at < block.length);
+      offset += block.length;
+    } while (offset < length);
   } catch (error) {
     if (error instanceof AssesskitError) throw error;
     throw corrupt(`The entry ${JSON.stringify(entry.name)} has compressed data that cannot be inflated.`, {
@@ -374,26 +451,27 @@ function inflate(data: Uint8Array, entry: Entry): Uint8Array {
   return concatenate(chunks, produced);
 }
 
-function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
-  return a.length === b.length && a.every((byte, index) => byte === b[index]);
-}
-
 /** Returns the bytes of an entry, after checking its local header against the central directory, its size and its CRC-32. */
-function extract(reader: Reader, entry: Entry): Uint8Array {
+function extract(source: ByteSource, entry: Entry): Uint8Array {
   const { offset } = entry;
-  if (reader.u32(offset) !== LOCAL_HEADER)
+  const header = window(source, offset, LOCAL_HEADER_BYTES);
+  if (header.u32(0) !== LOCAL_HEADER)
     throw corrupt(`The entry ${JSON.stringify(entry.name)} does not start with a local file header.`);
+  const nameLength = header.u16(26);
   const nameStart = offset + LOCAL_HEADER_BYTES;
-  const dataStart = nameStart + reader.u16(offset + 26) + reader.u16(offset + 28);
-  if (!sameBytes(reader.bytes.subarray(nameStart, nameStart + reader.u16(offset + 26)), entry.rawName)) {
+  const dataStart = nameStart + nameLength + header.u16(28);
+  const name = source.read(nameStart, Math.max(0, Math.min(nameLength, source.length - nameStart)));
+  if (bytesAsText(name) !== entry.rawName) {
     throw corrupt(
       `The local file header of the entry ${JSON.stringify(entry.name)} names another file than the central directory.`,
     );
   }
   const dataEnd = dataStart + entry.compressedSize;
-  if (dataEnd > reader.bytes.length) throw corrupt(`The data of the entry ${JSON.stringify(entry.name)} is cut off.`);
-  const data = reader.bytes.subarray(dataStart, dataEnd);
-  const bytes = entry.method === STORED ? data.slice() : inflate(data, entry);
+  if (dataEnd > source.length) throw corrupt(`The data of the entry ${JSON.stringify(entry.name)} is cut off.`);
+  const bytes =
+    entry.method === STORED
+      ? source.copy(dataStart, entry.compressedSize)
+      : inflate(source, dataStart, entry.compressedSize, entry);
   if (bytes.length !== entry.size)
     throw corrupt(
       `The entry ${JSON.stringify(entry.name)} has ${bytes.length} bytes, not the ${entry.size} its header declares.`,
@@ -402,27 +480,46 @@ function extract(reader: Reader, entry: Entry): Uint8Array {
   return bytes;
 }
 
+/** The source of an archive that is in memory: it returns views of the bytes, and copies where the caller keeps them. */
+export function memorySource(zip: Uint8Array): ByteSource {
+  const check = (offset: number, length: number): void => {
+    if (offset < 0 || length < 0 || offset + length > zip.length) throw corrupt("The data of the archive is cut off.");
+  };
+  return {
+    length: zip.length,
+    read: (offset, length) => {
+      check(offset, length);
+      return zip.subarray(offset, offset + length);
+    },
+    copy: (offset, length) => {
+      check(offset, length);
+      return zip.slice(offset, offset + length);
+    },
+  };
+}
+
 /**
  * Reads the central directory of a ZIP archive and returns its files, inflated one at a time when they are read.
  *
  * @remarks
- * The security checks run here: names (zip-slip), duplicate names, symbolic links, encryption, the entry count, and the
- * declared sizes and ratios against the limits; each read counts the inflated bytes again.
+ * The security checks run here: names (zip-slip), duplicate names, symbolic links, encryption, the entry count, the size of the
+ * directory, and the declared sizes and ratios against the limits; each read counts the inflated bytes again. Opening reads the
+ * end of the archive and its central directory, and a read the bytes of one entry, so that a source that reads by ranges is
+ * never read whole.
  *
- * @param zip - The archive.
+ * @param source - The archive.
  * @param limits - The limits, with every field set.
  * @returns The paths of the files, and a function that reads one.
  * @throws `ReadError` when the data is not a ZIP archive, is cut off, or uses a feature the runtime does not read.
  * @throws `SecurityError` when an entry breaks a rule or a limit.
  */
-export function openZip(zip: Uint8Array, limits: ZipLimits): PackageFiles {
-  const reader = new Reader(zip);
-  const entries = readDirectory(reader, limits);
+export function openZip(source: ByteSource, limits: ZipLimits): PackageFiles {
+  const entries = readDirectory(source, limits);
   return {
     paths: [...entries.keys()],
     read: (path) => {
       const entry = entries.get(path);
-      return entry === undefined ? undefined : extract(reader, entry);
+      return entry === undefined ? undefined : extract(source, entry);
     },
   };
 }

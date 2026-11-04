@@ -35,6 +35,12 @@ const SOURCES: Plugin = {
 /** The bytes of one MiB. */
 const MIB = 1024 * 1024;
 
+/**
+ * The environment variable that gives a reading the directory of its bundle for the files it makes, so that the run that made the
+ * bundle removes them: a process that runs out of heap ends without a chance to remove its own.
+ */
+const DIRECTORY_VARIABLE = "PEAK_MEMORY_DIRECTORY";
+
 /** What a reading in a process of its own gave: how far it raised the peak resident memory, and what it returned or threw. */
 export interface ReadingResult {
   /** The rise of the peak resident memory over the process before the reading, in bytes; it depends on when V8 collects. */
@@ -71,9 +77,17 @@ export function removeBundle({ directory }: Bundle): void {
 }
 
 /** Runs a program to its end, and resolves with its exit code and what it wrote. */
-function run(command: string, args: readonly string[]): Promise<{ code: number; stdout: string; stderr: string }> {
+function run(
+  command: string,
+  args: readonly string[],
+  directory?: string,
+): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((done, fail) => {
-    const child = spawn(command, args);
+    const child = spawn(
+      command,
+      args,
+      directory === undefined ? {} : { env: { ...process.env, [DIRECTORY_VARIABLE]: directory } },
+    );
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk: Buffer) => {
@@ -97,7 +111,11 @@ function run(command: string, args: readonly string[]): Promise<{ code: number; 
  * @returns The result of the reading, or the end of the process, which is `undefined` when it ran out of heap.
  */
 async function attempt(bundle: Bundle, name: ReadingName, heapMiB: number): Promise<ReadingResult | string> {
-  const { code, stdout, stderr } = await run(process.execPath, [`--max-old-space-size=${heapMiB}`, bundle.child, name]);
+  const { code, stdout, stderr } = await run(
+    process.execPath,
+    [`--max-old-space-size=${heapMiB}`, bundle.child, name],
+    bundle.directory,
+  );
   return code === 0 ? (JSON.parse(stdout) as ReadingResult) : stderr.slice(-1_000);
 }
 

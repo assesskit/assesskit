@@ -32,7 +32,10 @@ A validation lists at most `maxFindings` issues, 1,000 by default, and ends a lo
 `readModuleResolution` refuses a file longer than 65,536 characters before it parses it.
 The default limits keep the worst input of every reader within a budget of 256 MiB of heap, measured and pinned by a test: an XML
 document has at most 10 MiB (`maxBytes`) and 300,000 nodes (`maxNodes`), and a file of a package at most 64 MiB (`maxEntryBytes`);
-SECURITY.md has the peak of each reader and what raising a limit costs. `readResultsJson(json, { limits })` refuses the JSON of a
+SECURITY.md has the peak of each reader and what raising a limit costs. `readPackageFile` reads a ZIP file by ranges, its end and
+central directory when it opens and the bytes of an entry when it is read, so that the memory follows the directory and the largest
+entry opened and not the size of the file (up to `maxTotalBytes`, 2 GiB); a central directory of more than 512 bytes for each entry
+that `maxEntries` allows is a `SecurityError` of the limit `maxDirectoryBytes`, before it is read. `readResultsJson(json, { limits })` refuses the JSON of a
 result above `maxResultSize`, 8,388,608 by default, with a `SecurityError`, as `readCandidateAction` refuses an action above
 `maxActionSize`; `deserializeState` and `readView` read what the engine wrote, from the host's own store and server, and have no limit
 of size.

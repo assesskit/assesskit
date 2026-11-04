@@ -8,7 +8,7 @@ import type { PackageFiles } from "./package-files.js";
 import { normalizeEntryName, resolveReference } from "./paths.js";
 import { readManifest } from "./read-manifest.js";
 import { resolveZipLimits, type ZipLimits } from "./zip-limits.js";
-import { openZip } from "./zip-reader.js";
+import { memorySource, openZip } from "./zip-reader.js";
 
 /** The path of the manifest in a package. */
 export const MANIFEST_PATH = "imsmanifest.xml";
@@ -218,5 +218,8 @@ export function readPackage(zip: Uint8Array, options: ReadPackageOptions = {}): 
   checkOptions(options);
   const { limits = {}, xmlLimits } = options;
   if (!(zip instanceof Uint8Array)) throw new DataError(`The archive must be a Uint8Array, found ${describe(zip)}.`);
-  return openPackage(openZip(zip, resolveZipLimits(limits)), xmlLimits === undefined ? {} : { xmlLimits });
+  return openPackage(
+    openZip(memorySource(zip), resolveZipLimits(limits)),
+    xmlLimits === undefined ? {} : { xmlLimits },
+  );
 }

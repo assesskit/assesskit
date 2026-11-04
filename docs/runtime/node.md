@@ -51,10 +51,10 @@ schemas.close(); // frees the compiled schemas
 `readPackageFile(path, options?)` returns a `QtiPackage` (see [package](package.md)) and takes the options of `readPackage`: `limits`
 (`ZipLimits`) and `xmlLimits`. What the path is decides how it reads:
 
-| Path        | Reading                                                                                                                   |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------- |
-| A file      | The bytes go to `readPackage`. A file larger than `maxTotalBytes` is a `SecurityError` before it is read.                 |
-| A directory | The directory is listed once; each file is read when `file(path)` asks for it. `paths` are sorted, with `/` as separator. |
+| Path        | Reading                                                                                                                                                                                                                                                                                                                                       |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A file      | Read by ranges as `readPackage` reads an archive: the end of the file and its central directory when it opens, and the bytes of an entry when `file(path)` or `document(path)` asks for it, so that the memory follows the directory and the largest entry opened. A file larger than `maxTotalBytes` is a `SecurityError` before it is read. |
+| A directory | The directory is listed once; each file is read when `file(path)` asks for it. `paths` are sorted, with `/` as separator.                                                                                                                                                                                                                     |
 
 A directory is read with these rules:
 
@@ -189,14 +189,14 @@ is process-wide. Both are covered by the tests, which compile each primary schem
 
 Each file of `src/node/` holds one concept.
 
-| File                                    | Concept                                                              |
-| --------------------------------------- | -------------------------------------------------------------------- |
-| `schema-files.ts`, `schema-files.json`  | The pinned list of schemas                                           |
-| `schema-set.ts`                         | Loading, verifying and compiling a set of schemas                    |
-| `select-schema.ts`                      | Choosing the schema of a document                                    |
-| `validate-xml-files.ts`                 | Validating documents and reporting issues                            |
-| `package-file.ts`, `directory-files.ts` | Reading and writing packages as files and directories                |
-| `internal.ts`                           | What other modules and the tests use and the package does not export |
+| File                                                      | Concept                                                                             |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `schema-files.ts`, `schema-files.json`                    | The pinned list of schemas                                                          |
+| `schema-set.ts`                                           | Loading, verifying and compiling a set of schemas                                   |
+| `select-schema.ts`                                        | Choosing the schema of a document                                                   |
+| `validate-xml-files.ts`                                   | Validating documents and reporting issues                                           |
+| `package-file.ts`, `directory-files.ts`, `file-source.ts` | Reading and writing packages as files and directories, and the ranges of a ZIP file |
+| `internal.ts`                                             | What other modules and the tests use and the package does not export                |
 
 ## References
 

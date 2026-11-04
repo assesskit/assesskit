@@ -62,8 +62,12 @@ Points to be aware of when deploying the runtime:
 - **Packages.** `readPackage` and `readPackageFile` check a package before they read a file of it (section 2.6, BPIG section 6.7). An archive
   entry whose name is absolute, leaves the package with `..`, or has a backslash, a drive letter or a control character
   rejects the archive (zip-slip), as do two entries with one normalized name, a symbolic link, and an encrypted entry. The
-  entry count, the declared sizes and the compression ratio are checked from the central directory, and the bytes are counted
-  again while an entry inflates, so that a header that understates a size cannot make the output larger. A package directory is
+  entry count, the size of the central directory, the declared sizes and the compression ratio are checked from the central
+  directory, and the bytes are counted again while an entry inflates, so that a header that understates a size cannot make the
+  output larger. `readPackageFile` reads a ZIP file by ranges, the end of the file and its central directory when it opens and the
+  bytes of an entry when it is read, so that memory follows the directory and the largest entry opened, and not the size of the
+  file. A ZIP file that changes while its package is open gives a `ReadError` or the bytes that it holds then, never more than
+  the size an entry declared. A package directory is
   read with `lstat` and `realpath`: a symbolic link or a file that is not a regular file rejects it, and a file replaced by a
   link after the listing is not followed. A reference in a document that leaves the package, and an `xi:include` that names a
   file outside it, are never resolved; a file that many includes of a document name is read and parsed once. A package
@@ -366,13 +370,14 @@ Regular expressions (`XsdRegexLimits`; option `limits` of `compileXsdRegex`, who
 
 These numbers are fixed and cannot be replaced:
 
-| Number    | Applies to                                                                                                                                                      |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 100       | Runs of template processing for its constraints (INFO section 5.150), fixed by the specification.                                                               |
-| 256       | Levels of the JSON content of a view that `readView` reads, the depth that the XML reader allows.                                                               |
-| 65,536    | Characters of a module resolution file that `readModuleResolution` reads; a longer file is a `SecurityError` (`maxModuleResolutionLength`) before it is parsed. |
-| 1,100     | The width and the precision of a printed variable format; a larger one is ignored.                                                                              |
-| 1,000,000 | Entries, states and transitions together, that the matcher of a pattern keeps of its automaton; beyond it the matcher starts again.                             |
+| Number    | Applies to                                                                                                                                                             |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 100       | Runs of template processing for its constraints (INFO section 5.150), fixed by the specification.                                                                      |
+| 256       | Levels of the JSON content of a view that `readView` reads, the depth that the XML reader allows.                                                                      |
+| 65,536    | Characters of a module resolution file that `readModuleResolution` reads; a longer file is a `SecurityError` (`maxModuleResolutionLength`) before it is parsed.        |
+| 1,100     | The width and the precision of a printed variable format; a larger one is ignored.                                                                                     |
+| 512       | Bytes of the central directory of an archive for each entry that `maxEntries` allows; a longer directory is a `SecurityError` (`maxDirectoryBytes`) before it is read. |
+| 1,000,000 | Entries, states and transitions together, that the matcher of a pattern keeps of its automaton; beyond it the matcher starts again.                                    |
 
 ### Peak memory
 
@@ -396,9 +401,11 @@ and no reader peaks above 200.
 | `readResults`          | The most item results with an outcome variable that the limits hold                     |              144 |
 | `readUsageData`        | The most statistics that the limits hold                                                |              128 |
 | `validateAsi`          | An issue at every node of an item of the limits, stopped at 1,000 issues                |              120 |
-| `readPackage`          | 100,000 entries                                                                         |               40 |
+| `readPackage`          | 100,000 entries                                                                         |               32 |
 | `readPackage`          | A manifest of 10 MiB deflated at the ratio the limit allows                             |              200 |
 | `file` of a package    | A file of 64 MiB deflated at the ratio the limit allows                                 |               16 |
+| `readPackageFile`      | A ZIP file of 2 GiB with 100,000 entries, and a file of 64 MiB deflated, read from it   |               32 |
+| `readPackageFile`      | A ZIP file whose central directory has 512 bytes for each of 100,000 entries            |               80 |
 | `planTest`             | A selection with replacement of 9,999 items                                             |               16 |
 | `readResultsJson`      | One variable of a million values, the most that `maxResultSize` holds                   |              136 |
 | `readCandidateAction`  | The most response entries, or the most integers of one response, that fit               |       144 to 152 |
@@ -407,16 +414,19 @@ and no reader peaks above 200.
 | `readModuleResolution` | 65,536 characters                                                                       |               16 |
 | `createCatRestHandler` | A body of 32 MiB and a million tokens; or two million tokens, refused                   |        56 and 40 |
 
-The bytes of a file are outside the heap, so the test bounds the resident memory that `file` raises, which is 140 to 215 MiB:
-inflating a deflated entry holds the pieces and the joined bytes at once. The archive that `readPackage` takes is the
-host's; `readPackageFile` reads a ZIP file whole, up to `maxTotalBytes`, so a host with little memory lowers that limit.
+The bytes of a file and the central directory are outside the heap, so the test bounds the resident memory that these readings
+raise at 256 MiB, and they raise 110 to 220: inflating a deflated entry holds the pieces and the joined bytes at once. The
+archive that `readPackage` takes is the host's, and `readPackageFile` reads a ZIP file by ranges, so what it holds whole is the
+central directory (at most 512 bytes for each entry that `maxEntries` allows, 51 MB by default) and the entry that is opened,
+within `maxEntryBytes`. `maxTotalBytes` bounds the size of the ZIP file and the work of a host that reads every file, and costs no
+memory.
 
 Without `maxSettingListLength`, the settings list needs 240 MiB. A host with more memory raises a limit and pays for it:
 
 | Limit                       | What raising it costs                                                                                                        |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `maxBytes` with `maxNodes`  | Up to 20 MiB of heap for each MiB of `maxBytes` with 30,000 `maxNodes`; doubling both took the manifest from 200 to 384 MiB. |
-| `maxEntries`                | About 0.3 MiB for every 1,000 entries.                                                                                       |
+| `maxEntries`                | About 0.3 MiB of heap for every 1,000 entries, and 0.8 with the longest paths that the limit allows.                         |
 | `maxEntryBytes`             | Two to three and a half times the file in resident memory while `file` inflates it.                                          |
 | `maxActionSize`             | About 32 MiB for every million nodes.                                                                                        |
 | `maxSettingListLength`      | About 0.2 MiB for every 1,000 names.                                                                                         |

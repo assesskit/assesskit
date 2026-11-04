@@ -22,8 +22,9 @@ afterAll(() => {
  * Each reader of untrusted input on its worst input within its limits, in a process whose heap holds at most the heap given:
  * twice the least heap in which it ended on Node.js 22, 24 and 26, rounded up to 16 MiB. `node scripts/peak-memory.ts` finds
  * the least heap. A reading that keeps more alive at once than its heap fails, whenever the collector runs and however busy
- * the machine is. SECURITY.md lists the least heaps. The bytes of a file that `file` inflates are outside the heap, so that
- * reading has also a bound on the resident memory it raises, `riseMiB`, which is the budget of 256 MiB.
+ * the machine is. SECURITY.md lists the least heaps. The bytes of a file that `file` inflates and the central directory of an
+ * archive are outside the heap, so those readings have also a bound on the resident memory they raise, `riseMiB`, which is the
+ * budget of 256 MiB.
  */
 const READINGS: readonly {
   readonly title: string;
@@ -109,7 +110,7 @@ const READINGS: readonly {
   {
     title: "reads the directory of a package of 100,000 entries, the limit",
     name: "packageEntries",
-    heapMiB: 80,
+    heapMiB: 64,
     outcome: "100000 files",
   },
   {
@@ -124,6 +125,21 @@ const READINGS: readonly {
     heapMiB: 32,
     riseMiB: 256,
     outcome: "67108864 bytes",
+  },
+  {
+    title:
+      "reads a package in a ZIP file as long as a file may be, of 100,000 entries, by ranges, and inflates the file of the most bytes an entry may hold",
+    name: "packageFile",
+    heapMiB: 64,
+    riseMiB: 256,
+    outcome: "100000 files, 67108864 bytes",
+  },
+  {
+    title: "reads a ZIP file whose central directory is the longest that its 100,000 entries allow",
+    name: "packageDirectory",
+    heapMiB: 160,
+    riseMiB: 256,
+    outcome: "100000 files, 0 bytes",
   },
   {
     title: "plans a test whose selection with replacement draws as many items as a plan holds",

@@ -1,4 +1,6 @@
 import { once } from "node:events";
+import { closeSync, openSync, rmSync, writeSync } from "node:fs";
+import { join } from "node:path";
 import { createDeflateRaw, deflateRawSync, crc32 as nodeCrc32 } from "node:zlib";
 import { createCatRestHandler } from "../packages/player/src/cat-rest/index.ts";
 import {
@@ -24,9 +26,14 @@ import {
   USAGE_NAMESPACE,
   validateAsi,
 } from "../packages/runtime/src/index.ts";
+import { readPackageFile } from "../packages/runtime/src/node/package-file.ts";
+import { DIRECTORY_BYTES_PER_ENTRY } from "../packages/runtime/src/package/internal.ts";
 
 /** The bytes of one MiB. */
 const MIB = 1024 * 1024;
+
+/** The bytes of the end record of an archive without a comment. */
+const END_RECORD_BYTES = 22;
 
 /** The default `maxBytes` of an XML document, from which the documents are made, so that a new default changes the readings. */
 const XML_BYTES = DEFAULT_XML_LIMITS.maxBytes;
@@ -207,6 +214,79 @@ function archiveOf(count: number, entryAt: (index: number) => Entry, size: numbe
   buffer.writeUInt32LE(directory, offset + 16);
   buffer.writeUInt16LE(0, offset + 20);
   return buffer.subarray(0, offset + 22);
+}
+
+/**
+ * The bytes of a path that fill a record of the central directory to the bytes that an entry may take: the path and its 6 digits, the
+ * 46 bytes of the record and no extra field or comment.
+ */
+const DIRECTORY_PATH_BYTES = DIRECTORY_BYTES_PER_ENTRY - 46 - 6;
+
+/** The manifest of a package with no resource, as the first entry of an archive. */
+const MANIFEST_ENTRY: Entry = {
+  name: "imsmanifest.xml",
+  stored: EMPTY_MANIFEST,
+  method: 0,
+  size: EMPTY_MANIFEST.length,
+  crc: nodeCrc32(EMPTY_MANIFEST),
+};
+
+/**
+ * A file of `size` bytes, deflated at a ratio that the limit of ratios allows, without the file in memory: each MiB is zeros but for one
+ * byte in 128, which differs from one MiB to the next, and deflated it is about 1/50 of the size.
+ */
+async function deflatedFile(size: number): Promise<Pick<Entry, "stored" | "crc">> {
+  const piece = Buffer.alloc(MIB);
+  for (let at = 0; at < MIB; at += 128) piece[at] = (at * 2_654_435_761) >>> 24;
+  const deflate = createDeflateRaw({ level: 1 });
+  const chunks: Buffer[] = [];
+  deflate.on("data", (chunk: Buffer) => chunks.push(chunk));
+  const ended = once(deflate, "end");
+  let crc = 0;
+  for (let done = 0; done < size; done += MIB) {
+    piece[(done / MIB) % 128] = done >>> 20;
+    crc = nodeCrc32(piece, crc);
+    if (!deflate.write(piece)) await once(deflate, "drain");
+  }
+  deflate.end();
+  await ended;
+  return { stored: Buffer.concat(chunks), crc };
+}
+
+/**
+ * Writes an archive that {@link archiveOf} made to a file in the directory of the bundle, which the run that made it removes (the
+ * process of a reading may end without a chance to remove its own files), with `gap` bytes between its entries and its central
+ * directory that the file system does not store, so that the file is as long as a package may be and takes the disk of a small one.
+ *
+ * @returns The path of the file.
+ */
+function zipFile(zip: Uint8Array, gap: number): string {
+  const directory = process.env.PEAK_MEMORY_DIRECTORY;
+  if (directory === undefined)
+    throw new Error("A reading of a ZIP file runs through peak-memory.ts, which gives it a directory.");
+  const path = join(directory, `package-${process.pid}.zip`);
+  const bytes = Buffer.from(zip.buffer, zip.byteOffset, zip.byteLength);
+  const end = bytes.length - END_RECORD_BYTES;
+  const at = bytes.readUInt32LE(end + 16);
+  bytes.writeUInt32LE(at + gap, end + 16);
+  const file = openSync(path, "w");
+  try {
+    writeSync(file, bytes, 0, at, 0);
+    writeSync(file, bytes, at, bytes.length - at, at + gap);
+  } finally {
+    closeSync(file);
+  }
+  return path;
+}
+
+/** Reads the package in a ZIP file and its file named `file`, if it has one, and removes the file. */
+async function readZipFile(path: string): Promise<string> {
+  try {
+    const pkg = await readPackageFile(path);
+    return `${pkg.paths.length} files, ${pkg.file("file")?.length ?? 0} bytes`;
+  } finally {
+    rmSync(path, { force: true });
+  }
 }
 
 /** The text of a body of JSON with `tokens` tokens of empty objects, padded with white space to `bytes` bytes. */
@@ -394,34 +474,10 @@ export const READINGS = {
   packageEntry: {
     input: async () => {
       const size = DEFAULT_ZIP_LIMITS.maxEntryBytes;
-      // Each MiB is zeros but for one byte in 128, which differs from one MiB to the next: deflated, it is about 1/50 of the size.
-      const piece = Buffer.alloc(MIB);
-      for (let at = 0; at < MIB; at += 128) piece[at] = (at * 2_654_435_761) >>> 24;
-      const deflate = createDeflateRaw({ level: 1 });
-      const chunks: Buffer[] = [];
-      deflate.on("data", (chunk: Buffer) => chunks.push(chunk));
-      const ended = once(deflate, "end");
-      let crc = 0;
-      for (let done = 0; done < size; done += MIB) {
-        piece[(done / MIB) % 128] = done >>> 20;
-        crc = nodeCrc32(piece, crc);
-        if (!deflate.write(piece)) await once(deflate, "drain");
-      }
-      deflate.end();
-      await ended;
-      const stored = Buffer.concat(chunks);
+      const { stored, crc } = await deflatedFile(size);
       return archiveOf(
         2,
-        (index) =>
-          index === 0
-            ? {
-                name: "imsmanifest.xml",
-                stored: EMPTY_MANIFEST,
-                method: 0,
-                size: EMPTY_MANIFEST.length,
-                crc: nodeCrc32(EMPTY_MANIFEST),
-              }
-            : { name: "file", stored, method: 8, size, crc },
+        (index) => (index === 0 ? MANIFEST_ENTRY : { name: "file", stored, method: 8, size, crc }),
         stored.length + 1_000,
       );
     },
@@ -433,20 +489,52 @@ export const READINGS = {
       const empty = Buffer.alloc(0);
       return archiveOf(
         100_000,
-        (index) =>
-          index === 0
-            ? {
-                name: "imsmanifest.xml",
-                stored: EMPTY_MANIFEST,
-                method: 0,
-                size: EMPTY_MANIFEST.length,
-                crc: nodeCrc32(EMPTY_MANIFEST),
-              }
-            : { name: `f${index}`, stored: empty, method: 0, size: 0, crc: 0 },
+        (index) => (index === 0 ? MANIFEST_ENTRY : { name: `f${index}`, stored: empty, method: 0, size: 0, crc: 0 }),
         100_000 * 100,
       );
     },
     read: (zip: Uint8Array) => `${readPackage(zip).paths.length} files`,
+  },
+  /**
+   * A package at the limits, in a ZIP file: 100,000 entries, one of them a file of the most bytes an entry may hold, deflated at the
+   * ratio the limit allows, and a hole in the file up to the most bytes that a file may have. `readPackageFile` reads the end of
+   * the file, the central directory and the file that it opens, and not the hole.
+   */
+  packageFile: {
+    input: async () => {
+      const size = DEFAULT_ZIP_LIMITS.maxEntryBytes;
+      const { stored, crc } = await deflatedFile(size);
+      const empty = Buffer.alloc(0);
+      const zip = archiveOf(
+        100_000,
+        (index) =>
+          index === 0
+            ? MANIFEST_ENTRY
+            : index === 1
+              ? { name: "file", stored, method: 8, size, crc }
+              : { name: `f${index}`, stored: empty, method: 0, size: 0, crc: 0 },
+        stored.length + 100_000 * 100,
+      );
+      return zipFile(zip, DEFAULT_ZIP_LIMITS.maxTotalBytes - zip.length - MIB);
+    },
+    read: readZipFile,
+  },
+  /**
+   * A ZIP file whose central directory is the longest that its 100,000 entries allow, with the paths that fill it, which `readPackageFile`
+   * keeps as the entries it lists.
+   */
+  packageDirectory: {
+    input: () => {
+      const empty = Buffer.alloc(0);
+      const path = (index: number): string => `${"x".repeat(DIRECTORY_PATH_BYTES)}${String(index).padStart(6, "0")}`;
+      const zip = archiveOf(
+        100_000,
+        (index) => (index === 0 ? MANIFEST_ENTRY : { name: path(index), stored: empty, method: 0, size: 0, crc: 0 }),
+        100_000 * 2 * (80 + DIRECTORY_PATH_BYTES),
+      );
+      return zipFile(zip, 0);
+    },
+    read: readZipFile,
   },
   /** An archive whose manifest of as many resources as the limits hold is deflated, the ratio allowed. */
   packageManifest: {

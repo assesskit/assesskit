@@ -17,8 +17,8 @@ export interface ZipLimits {
    */
   readonly maxEntryBytes: number;
   /**
-   * The most bytes all files together may have when uncompressed. `readPackageFile` reads a ZIP file whole, so this is also the
-   * largest archive that it reads.
+   * The most bytes all files together may have when uncompressed. `readPackageFile` also refuses a ZIP file of more bytes than
+   * this before it reads it.
    *
    * @defaultValue `2147483648` (2 GiB)
    */

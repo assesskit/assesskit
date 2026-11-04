@@ -1,22 +1,41 @@
 import {
   appendFileSync,
+  closeSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readFileSync,
+  readSync,
   renameSync,
   rmSync,
   symlinkSync,
+  truncateSync,
   unlinkSync,
   writeFileSync,
+  writeSync,
 } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { DataError, type Manifest, ReadError, SecurityError, writeManifest, writePackage } from "../src/index.js";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  DataError,
+  type Manifest,
+  ReadError,
+  readPackage,
+  SecurityError,
+  writeManifest,
+  writePackage,
+} from "../src/index.js";
 import { loadSchemaSet, readPackageFile, SCHEMA_FILES, validateXmlFiles, writePackageFile } from "../src/node/index.js";
 import { PRIMARY_SCHEMAS, selectSchema } from "../src/node/internal.js";
 import { parseXml } from "../src/xml/index.js";
+
+// Reads of the ZIP file are counted, to show that they are ranges; every other function is the real one.
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  return { ...actual, readSync: vi.fn(actual.readSync) };
+});
 
 const PURL = "https://purl.imsglobal.org/spec/";
 
@@ -93,6 +112,79 @@ describe("reading package files", () => {
     const pkg = await readPackageFile(file);
     expect(pkg.paths).toEqual(["imsmanifest.xml", "a.txt"]);
     expect(pkg.file("a.txt")).toEqual(bytes("hello"));
+  });
+
+  /** Writes a ZIP file whose central directory starts `gap` bytes after its entries end, a hole that the file system does not store. */
+  function zipWithHole(name: string, zip: Uint8Array, gap: number): string {
+    const path = join(directory, name);
+    const end = zip.length - 22;
+    const at = new DataView(zip.buffer, zip.byteOffset, zip.byteLength).getUint32(end + 16, true);
+    const patched = zip.slice();
+    new DataView(patched.buffer).setUint32(end + 16, at + gap, true);
+    const file = openSync(path, "w");
+    try {
+      writeSync(file, patched, 0, at, 0);
+      writeSync(file, patched, at, patched.length - at, at + gap);
+    } finally {
+      closeSync(file);
+    }
+    return path;
+  }
+
+  /** The bytes that the reads of ZIP files have asked for since the last call. */
+  function bytesRead(): number {
+    const calls: readonly (readonly unknown[])[] = vi.mocked(readSync).mock.calls;
+    const asked = calls.reduce((sum, call) => sum + Number(call[3]), 0);
+    vi.mocked(readSync).mockClear();
+    return asked;
+  }
+
+  it("reads a ZIP file by ranges: its end and central directory when it opens, and the bytes of an entry when it is read", async () => {
+    const zip = writePackage(
+      MANIFEST,
+      new Map([
+        ["a.txt", bytes("hello")],
+        ["b.txt", bytes("world")],
+      ]),
+    );
+    const path = zipWithHole("hole.zip", zip, 200 * 1024 * 1024);
+    bytesRead();
+    const pkg = await readPackageFile(path);
+    // The last 65,557 bytes at most, where an end record with the longest comment starts, and the directory.
+    expect(bytesRead()).toBeLessThan(70_000);
+    expect(pkg.paths).toEqual(["imsmanifest.xml", "a.txt", "b.txt"]);
+    expect(pkg.file("b.txt")).toEqual(bytes("world"));
+    expect(bytesRead()).toBeLessThan(500);
+    expect(pkg.file("a.txt")).toEqual(bytes("hello"));
+  });
+
+  it("reads the same bytes from a ZIP file as from memory, in the archives that Python writes and in one with ZIP64 records", async () => {
+    for (const name of ["valid.zip", "streamed.zip", "zip64.zip"]) {
+      const path = join(import.meta.dirname, "fixtures/zip", name);
+      const memory = readPackage(new Uint8Array(readFileSync(path)));
+      const pkg = await readPackageFile(path);
+      expect(pkg.paths, name).toEqual(memory.paths);
+      for (const each of memory.paths) expect(pkg.file(each), `${name} ${each}`).toEqual(memory.file(each));
+    }
+  });
+
+  it("reports a ZIP file that is cut off or gone after it was opened, when a file is read", async () => {
+    const zip = writePackage(
+      MANIFEST,
+      new Map([["a.txt", new Uint8Array(3000).map((_, index) => (index * 7919) % 251)]]),
+    );
+    const cut = join(directory, "cut.zip");
+    writeFileSync(cut, zip);
+    const pkg = await readPackageFile(cut);
+    truncateSync(cut, 40);
+    expect(() => pkg.file("a.txt")).toThrow(ReadError);
+    expect(() => pkg.file("a.txt")).toThrow("The data of the archive is cut off.");
+    const gone = join(directory, "gone.zip");
+    writeFileSync(gone, zip);
+    const other = await readPackageFile(gone);
+    unlinkSync(gone);
+    expect(() => other.file("a.txt")).toThrow(DataError);
+    expect(() => other.file("a.txt")).toThrow(`The package ${gone} cannot be read: ENOENT`);
   });
 
   it("reads an unpacked directory: its files in order, read when asked for", async () => {

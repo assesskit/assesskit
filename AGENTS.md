@@ -285,7 +285,8 @@ tests of every engine, and waits for the next change to that part.
   `scripts/peak-memory-readings.ts`, from the default limits, so that a new default changes them. The worst input of the XML
   readers is the one of most nodes and attributes that the limits allow, not the longest. The budget is 256 MiB of heap, and a
   default that puts a reader above it is lowered. The bytes of a file that `file` inflates lie outside the heap, so its case
-  (`packageEntry`) also bounds the resident memory that the reading raises (`riseMiB`).
+  (`packageEntry`) also bounds the resident memory that the reading raises (`riseMiB`), as do the readings of a ZIP file, which the
+  reading writes as a sparse file of the length that a package may have (`packageFile`, `packageDirectory`).
 - A benchmark against a reference runs the two sides in turns on the same input, doing the same work to the same point, and
   gates the ratio; in the runtime it is `compareRow` of `test/budgets.ts`, which also gates the time.
 - A test reads a JSON fixture with `readFixture<T>` of `packages/runtime/test/fixtures.ts` and declares `T` for the fields it

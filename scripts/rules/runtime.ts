@@ -70,6 +70,13 @@ export const RUNTIME_RULES: readonly Rule[] = [
     test: PACKAGE_TEST,
   },
   {
+    rule: "An archive whose central directory is longer than 512 bytes for each entry that maxEntries allows is refused before the directory is read.",
+    file: ZIP,
+    find: "if (directory.size > maxDirectoryBytes) {",
+    replace: "if (false) {",
+    test: PACKAGE_TEST,
+  },
+  {
     rule: "An archive whose end record and directory disagree on the number of entries is refused.",
     file: ZIP,
     find: "if (records % directory.countRange !== directory.count) {",

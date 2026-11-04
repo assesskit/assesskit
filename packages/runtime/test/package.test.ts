@@ -32,7 +32,13 @@ import {
   writeManifest,
   writePackage,
 } from "../src/index.js";
-import { checkSynchronous } from "../src/package/internal.js";
+import {
+  type ByteSource,
+  checkSynchronous,
+  DIRECTORY_BYTES_PER_ENTRY,
+  memorySource,
+  openZip,
+} from "../src/package/internal.js";
 import { hostileArchives, manifests, smallZipLimits } from "./arbitraries/package.js";
 import { mutateBytes, mutateText, mutations } from "./arbitraries/xml.js";
 import { expectOutcome, FUZZ, fuzzReader } from "./fuzz.js";
@@ -1339,6 +1345,52 @@ describe("reading ZIP archives", () => {
     expect(pkg.paths).toEqual(expected.map((entry) => entry.name));
     for (const { name, sha256: hash } of expected) expect(sha256(pkg.file(name) ?? new Uint8Array()), name).toBe(hash);
     expect(pkg.manifest.identifier).toBe("fixture");
+  });
+
+  it("asks its source for the end of the archive and its central directory when it opens, and for the bytes of one entry when it reads it", () => {
+    const manifest = bytes(manifestXml(resources()));
+    const zip = buildZip([
+      { name: "imsmanifest.xml", data: manifest },
+      { name: "big.bin", data: new Uint8Array(1_000_000).map((_, index) => index % 251), method: 0 },
+    ]);
+    const memory = memorySource(zip);
+    const asked: number[] = [];
+    const source: ByteSource = {
+      length: memory.length,
+      read: (offset, length) => {
+        asked.push(length);
+        return memory.read(offset, length);
+      },
+      copy: (offset, length) => {
+        asked.push(length);
+        return memory.copy(offset, length);
+      },
+    };
+    const files = openZip(source, DEFAULT_ZIP_LIMITS);
+    const total = (): number => asked.reduce((sum, length) => sum + length, 0);
+    // The last 65,557 bytes at most, where an end record with the longest comment starts, and a directory of two records.
+    expect(total()).toBeLessThan(66_000);
+    asked.length = 0;
+    expect(files.read("imsmanifest.xml")).toEqual(manifest);
+    expect(total()).toBeLessThan(manifest.length + 200);
+    asked.length = 0;
+    expect(files.read("big.bin")?.length).toBe(1_000_000);
+    expect(total()).toBeGreaterThanOrEqual(1_000_000);
+    expect(total()).toBeLessThan(1_000_200);
+  });
+
+  it("refuses a central directory of more than 512 bytes for each entry that maxEntries allows, before it reads it", () => {
+    const manifest = { name: "imsmanifest.xml", data: bytes(manifestXml(resources())) } satisfies RawEntry;
+    // The records of the two entries take 46 bytes and the name each: 15 for the manifest, so a name of 917 fills 1,024 bytes.
+    const zip = (nameLength: number) =>
+      buildZip([manifest, { name: "a".repeat(nameLength), data: bytes("x"), method: 0 }]);
+    expect(DIRECTORY_BYTES_PER_ENTRY).toBe(512);
+    expect(readPackage(zip(917), { limits: { maxEntries: 2 } }).paths).toHaveLength(2);
+    const error = thrownAs(SecurityError, () => readPackage(zip(918), { limits: { maxEntries: 2 } }));
+    expect(error).toMatchObject({ limit: "maxDirectoryBytes", maximum: 1024 });
+    expect(error.message).toContain("1025 bytes");
+    expect(readPackage(zip(918), { limits: { maxEntries: 3 } }).paths).toHaveLength(2);
+    expect(readPackage(zip(918)).paths).toHaveLength(2);
   });
 
   it("leaves directory entries out of the paths and returns bytes the caller may change", () => {

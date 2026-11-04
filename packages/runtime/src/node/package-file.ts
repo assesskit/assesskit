@@ -1,4 +1,4 @@
-import { readFileSync, type Stats, statSync } from "node:fs";
+import { type Stats, statSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { checkString } from "../checks.js";
 import { checkOptions } from "../checks-internal.js";
@@ -8,11 +8,11 @@ import {
   openPackage,
   type QtiPackage,
   type ReadPackageOptions,
-  readPackage,
   writePackage,
 } from "../package/index.js";
-import { resolveZipLimits } from "../package/internal.js";
+import { openZip, resolveZipLimits } from "../package/internal.js";
 import { openDirectory } from "./directory-files.js";
+import { fileSource } from "./file-source.js";
 
 function reasonOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -21,7 +21,9 @@ function reasonOf(error: unknown): string {
 /**
  * Reads a QTI content package from a ZIP file or from an unpacked package directory, detected by what the path is.
  *
- * A ZIP file is read as {@link readPackage} reads it. A directory is listed once; its files are read when asked for,
+ * A ZIP file is read as `readPackage` reads it, by ranges: the end of the file and its central directory when the package
+ * opens, and the bytes of an entry when {@link QtiPackage.file} or {@link QtiPackage.document} asks for it, so that the memory
+ * follows the directory and the largest entry opened, and not the size of the file. A directory is listed once; its files are read when asked for,
  * and the limits `maxEntries`, `maxEntryBytes` and `maxTotalBytes` apply to its files and directories. The directory is
  * rejected when it holds a symbolic link or a file that is not a regular file, and a file is checked again with `lstat`
  * and `realpath` when it is read, so that nothing outside the directory is ever read.
@@ -30,7 +32,7 @@ function reasonOf(error: unknown): string {
  * @param options - See {@link ReadPackageOptions}.
  * @returns The package.
  * @throws `DataError` when an argument has the wrong type, a limit is not a positive integer, or the path cannot be read.
- * @throws `ReadError` and `SecurityError` as {@link readPackage} does, and `SecurityError` for the directory rules above.
+ * @throws `ReadError` and `SecurityError` as `readPackage` does, and `SecurityError` for the directory rules above.
  */
 export async function readPackageFile(path: string, options: ReadPackageOptions = {}): Promise<QtiPackage> {
   checkString(path, "The path");
@@ -53,7 +55,7 @@ export async function readPackageFile(path: string, options: ReadPackageOptions 
       resolved.maxTotalBytes,
     );
   }
-  return readPackage(new Uint8Array(readFileSync(path)), { ...packageOptions, limits });
+  return openPackage(openZip(fileSource(path, stat.size), resolved), packageOptions);
 }
 
 /**
