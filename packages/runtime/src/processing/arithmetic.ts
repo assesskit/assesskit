@@ -120,7 +120,8 @@ export function integerDivision(
   return bigIntegerResult(operator === "integer-divide" ? quotient : BigInt(x) - quotient * BigInt(y));
 }
 
-function bigGcd(a: bigint, b: bigint): bigint {
+/** The greatest common divisor of two integers of any size, by Euclid's algorithm; non-negative for non-negative input. */
+export function bigGcd(a: bigint, b: bigint): bigint {
   let [x, y] = [a, b];
   while (y !== 0n) [x, y] = [y, x % y];
   return x;

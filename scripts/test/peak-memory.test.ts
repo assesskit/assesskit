@@ -190,6 +190,12 @@ const READINGS: readonly {
     outcome: '{"cardinality":"single","baseType":"float","value":1}',
   },
   {
+    title: "compiles the keys of the most responses, each an order of the most choices scored per position",
+    name: "compileKeys",
+    heapMiB: 112,
+    outcome: "64129 rules",
+  },
+  {
     title: "checks the most lines of worked steps, each of the most characters",
     name: "mathSteps",
     heapMiB: 64,

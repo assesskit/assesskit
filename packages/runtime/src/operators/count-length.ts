@@ -1,5 +1,5 @@
 import { checkChoice, checkString } from "../checks.js";
-import type { LengthUnit } from "./keys.js";
+import type { LengthUnit } from "../keys/index.js";
 import { GRAPHEME_RUNS } from "./unicode-graphemes.js";
 import { isWhiteSpace, splitWhiteSpace } from "./white-space.js";
 

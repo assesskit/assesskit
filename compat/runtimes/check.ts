@@ -44,6 +44,7 @@ const EXPECTED: Omit<Results, "state"> & { readonly state: Pick<Results["state"]
   limits: { doctype: "SecurityError doctype", nodes: "SecurityError maxNodes", pattern: [true, true, false, false] },
   cat: { refused: 400, oversize: 413, missing: 404 },
   operators: { verdicts: [1, 1, 0, 1, 1, 1, 1, 0.5, 3], steps: [null, true, false] },
+  scoring: { score: 2, feedback: ["MARKED-incorrect", "STEPS-partial", "HALF-correct"] },
 };
 
 /** The options that both bundles share: one ES module of the packages as they ship, for a platform with the web standards alone. */

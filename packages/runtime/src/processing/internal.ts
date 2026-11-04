@@ -1,4 +1,5 @@
 /** Helpers that other modules of the package share. They are not part of the public API. */
+export { bigGcd } from "./arithmetic.js";
 export { assign, fitValue } from "./assign.js";
 export { NOT_ATTEMPTED } from "./built-ins.js";
 export { checkContext, checkProcessingOptions } from "./context.js";

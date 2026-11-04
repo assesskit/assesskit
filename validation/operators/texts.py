@@ -1,11 +1,13 @@
 # cspell:ignore Straße résumé λόγος
 """Writes the reference shares of `text-equivalent` from Python's `unicodedata` and an edit distance by dynamic programming.
 
-Keys of answers with points, counts, the schemes `forms` and `words`, every normalization, credit tiers by edit distance and
-length rules, against responses with fullwidth forms, ligatures, combining marks, case, other white space, slips and lengths.
+Keys of answers with points, counts, the schemes `forms` and `words`, every normalization, credit tiers by edit distance,
+length rules and numeric equivalence, against responses with fullwidth forms, ligatures, combining marks, case, other white
+space, slips, lengths and numbers in other notations.
 The share is computed here: each answer's texts and each response string normalized by `unicodedata.normalize` and
 `str.lower`, the most points that a matching of answers to strings keeps, found by trying every matching, then the credit
-of the strings left and the effects of the length rule. The characters come from blocks whose normalization and case are the
+of the strings left and the effects of the length rule. With numeric equivalence a string also matches an answer's text when both read as the same number, by the
+reading of `numbers.py` with the decimal mark `.` and fractions, as exact fractions. The characters come from blocks whose normalization and case are the
 same in Node's ICU and Python's `unicodedata`, Latin, Greek, Cyrillic, the Halfwidth and Fullwidth Forms and CJK.
 
 Run from the repository root, in a venv from `validation/operators/requirements.txt`:
@@ -13,12 +15,21 @@ Run from the repository root, in a venv from `validation/operators/requirements.
     python -I validation/operators/texts.py packages/runtime/test/fixtures/operators-texts.json
 """
 
+import importlib.util
 import itertools
 import json
 import platform
 import random
 import sys
 import unicodedata
+from pathlib import Path
+
+# The reading of numbers is the one of numbers.py, loaded by its path: Python runs with -I, which leaves the script's folder
+# out of the path of modules. It writes no bytecode beside the script.
+sys.dont_write_bytecode = True
+_spec = importlib.util.spec_from_file_location("numbers_reference", Path(__file__).resolve().parent / "numbers.py")
+numbers_reference = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(numbers_reference)
 
 SEED = 20261104
 MAX_EDIT_BAND = 64
@@ -76,19 +87,35 @@ def credit_share(tiers, texts, string):
     return 0
 
 
+def number_of(text):
+    """The exact value of a string that reads as a number with nothing after it, or None."""
+    written = numbers_reference.read_number(text, ".", True)
+    return None if written is None or written[2] != "" else written[0]
+
+
 def share_of(strings, key):
     normalization = {**DEFAULT_NORMALIZATION, **key.get("normalization", {})}
     if all(not s.strip() or all(ord(c) in WHITE_SPACE for c in s) for s in strings):
         return None
     normalized = [normalize(s, normalization) for s in strings]
     candidates = [w for s in normalized for w in split_white_space(s)] if key.get("scheme") == "words" else normalized
+    numeric = key.get("numericEquivalence", False)
     answers = sorted(
         [
-            {"texts": {normalize(t, normalization) for t in answer["texts"]}, "points": answer.get("points", 1)}
+            {
+                "texts": {normalize(t, normalization) for t in answer["texts"]},
+                "numbers": {n for t in answer["texts"] if numeric and (n := number_of(normalize(t, normalization))) is not None},
+                "points": answer.get("points", 1),
+            }
             for answer in key["answers"]
         ],
         key=lambda answer: -answer["points"],
     )
+    values = [number_of(c) if numeric else None for c in candidates]
+
+    def matches(answer, index):
+        return candidates[index] in answer["texts"] or (values[index] is not None and values[index] in answer["numbers"])
+
     count = key.get("count", 1)
     maximum = sum(answer["points"] for answer in answers[:count])
     # The greedy rule keeps the most points: the best matching of at most `count` answers, found by trying them all.
@@ -96,7 +123,7 @@ def share_of(strings, key):
     for size in range(min(count, len(answers), len(candidates)), 0, -1):
         for chosen in itertools.combinations(range(len(answers)), size):
             for strings_used in itertools.permutations(range(len(candidates)), size):
-                if all(candidates[s] in answers[a]["texts"] for a, s in zip(chosen, strings_used)):
+                if all(matches(answers[a], s) for a, s in zip(chosen, strings_used)):
                     points = sum(answers[a]["points"] for a in chosen)
                     if points > best:
                         best, best_kept = points, (chosen, strings_used)
@@ -168,13 +195,41 @@ def text_cases():
     return cases
 
 
+# Each number an answer writes, with other notations of its value; the wrong ones come from the other numbers.
+NUMBER_NOTATIONS = {
+    "0.5": [".5", "0.50", "5e-1", "1/2", "2/4", "+0.5", "\uff10.\uff15"],
+    "1/2": ["0.5", ".50", "4/8"],
+    "3": ["3.0", "003", "3/1", "3e0"],
+    "12.25": ["12.250", "49/4", "12 1/4"],
+    "-4": ["-4.0", "\u22124", "-8/2"],
+    "2.5e3": ["2500", "2.5E3", "2500.0"],
+    "7/8": ["0.875", "14/16"],
+}
+UNREADABLE = ["0.5 kg", "1,5", "half", "1/0", "1e401", "3 m"]
+
+
+def number_cases():
+    """Keys whose answers are numbers, with and without numeric equivalence, against numbers in other notations."""
+    cases = []
+    for _ in range(40):
+        answers = [{"texts": [rng.choice(list(NUMBER_NOTATIONS))]} for _ in range(rng.choice([1, 2]))]
+        key = {"kind": "text", "answers": answers, "numericEquivalence": rng.random() < 0.8,
+               "count": rng.choice([1, len(answers)]), "scheme": rng.choice(["forms", "words"])}
+        same = [n for a in answers for n in NUMBER_NOTATIONS[a["texts"][0]]]
+        others = [n for t, ns in NUMBER_NOTATIONS.items() if all(a["texts"][0] != t for a in answers) for n in ns] + UNREADABLE
+        for response in rng.sample(same, min(5, len(same))) + rng.sample(others, 3):
+            strings = [response] if key["scheme"] == "words" or key["count"] == 1 else [response, rng.choice(same + others)]
+            cases.append({"key": key, "response": strings, "share": share_of(strings, key)})
+    return cases
+
+
 def main(path):
     fixture = {
         "generator": "validation/operators/texts.py",
         "seed": SEED,
         "python": platform.python_version(),
         "unidata": unicodedata.unidata_version,
-        "cases": text_cases(),
+        "cases": text_cases() + number_cases(),
     }
     with open(path, "w", encoding="utf-8") as file:
         json.dump(fixture, file, indent=1, ensure_ascii=True)

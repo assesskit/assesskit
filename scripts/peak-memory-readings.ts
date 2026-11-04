@@ -7,6 +7,7 @@ import {
   AssesskitError,
   buildOperatorCall,
   compareMathSteps,
+  compileScoring,
   compileXsdRegex,
   createRandom,
   createScoringOperators,
@@ -28,6 +29,7 @@ import {
   readResultsJson,
   readUsageData,
   resolveStructure,
+  type ScoredResponse,
   SecurityError,
   USAGE_NAMESPACE,
   type Value,
@@ -689,6 +691,23 @@ export const READINGS = {
       ),
   },
   /** `compareMathSteps` on 200 lines, its default `maxSteps`, of `maxInputLength` characters each. */
+  /**
+   * `compileScoring` on as many responses as the default limits allow, each an order of as many choices as a key holds,
+   * scored per position: the scheme that writes the most rules for an entry, a condition for each choice.
+   */
+  compileKeys: {
+    input: (): ScoredResponse[] =>
+      Array.from({ length: DEFAULT_KEY_LIMITS.responses }, (_, at) => ({
+        identifier: `R${at}`,
+        key: {
+          kind: "order",
+          order: Array.from({ length: DEFAULT_KEY_LIMITS.entries }, (_, choice) => `C${choice}`),
+          scheme: "per-position",
+        },
+      })),
+    read: (responses: readonly ScoredResponse[]) =>
+      `${compileScoring(responses).responseProcessing.rules.length} rules`,
+  },
   mathSteps: {
     input: () =>
       Array.from({ length: 200 }, () => "x+".repeat(DEFAULT_OPERATOR_LIMITS.maxInputLength / 2 - 1).concat("x")),

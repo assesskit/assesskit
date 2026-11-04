@@ -15,6 +15,7 @@ flowchart LR
 python3 validation/printf.py       # printed variables: C-style conversions as Python's % operator formats them
 python3 validation/rounding.py     # qti-round-to and qti-equal-rounded as Python's decimal module computes them
 python3 validation/zip.py          # ZIP archives that Python's zipfile writes and reads: valid, ZIP64 and hostile
+python3 validation/scoring.py      # the scores of items of the keys that QTI scores, by the rules of the scoring guide
 ```
 
 ```bash

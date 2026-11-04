@@ -20,6 +20,7 @@ export {
   SecurityError,
 } from "./errors.js";
 export * from "./interactions/index.js";
+export * from "./keys/index.js";
 export * from "./metadata/index.js";
 export * from "./operators/index.js";
 export * from "./package/index.js";
@@ -28,6 +29,7 @@ export * from "./pnp/index.js";
 export * from "./processing/index.js";
 export { createRandom, type Random, type RandomState, restoreRandom, type SeededRandom } from "./random.js";
 export * from "./results/index.js";
+export * from "./scoring/index.js";
 export * from "./usage/index.js";
 export * from "./validate/index.js";
 export * from "./values/index.js";

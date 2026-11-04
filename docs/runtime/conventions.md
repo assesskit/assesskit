@@ -15,11 +15,12 @@ flowchart LR
   rubric -->|"ratings"| score["rubricScore: the score"]
 ```
 
-| Convention                                      | Marker                    | Place                                  | Says                                           |
-| ----------------------------------------------- | ------------------------- | -------------------------------------- | ---------------------------------------------- |
-| [Covers](#covers-of-externally-scored-outcomes) | `external-score-covers`   | A rubric block of a test               | Which responses an outcome of the test rates   |
-| [Scoring rubric](#scoring-rubrics)              | `external-scoring-rubric` | A rubric block of an item or of a test | The criteria, levels and weights of an outcome |
-| [Scoring operators](#scoring-operators)         | A `urn:uuid:` definition  | A `qti-custom-operator` of an item     | How a response is scored where QTI cannot      |
+| Convention                                      | Marker                           | Place                                  | Says                                           |
+| ----------------------------------------------- | -------------------------------- | -------------------------------------- | ---------------------------------------------- |
+| [Covers](#covers-of-externally-scored-outcomes) | `external-score-covers`          | A rubric block of a test               | Which responses an outcome of the test rates   |
+| [Scoring rubric](#scoring-rubrics)              | `external-scoring-rubric`        | A rubric block of an item or of a test | The criteria, levels and weights of an outcome |
+| [Scoring operators](#scoring-operators)         | A `urn:uuid:` definition         | A `qti-custom-operator` of an item     | How a response is scored where QTI cannot      |
+| [Compiled scoring](#compiled-scoring)           | `SCORE_<identifier>`, `FEEDBACK` | The outcomes of an item                | The score of each response and its verdict     |
 
 ## Covers of externally scored outcomes
 
@@ -406,3 +407,13 @@ processing throws a `ProcessingError`. The definitions name no brand, so an item
 | Definition | A `urn:uuid:` for each operator; a change that alters a verdict takes a new one, and the earlier ones stay registered |
 | Attribute  | `options` in `urn:uuid:37ee0bb1-9b3b-4da2-92a2-3102380d98b5`, read by namespace whatever its prefix                   |
 | Writer     | `buildOperatorCall`, which writes the prefix `operator` and checks the key as the operator reads it                   |
+
+## Compiled scoring
+
+`compileScoring` of [scoring](scoring.md) names the outcomes that QTI leaves to the author beside `SCORE` and `MAXSCORE`, so that a
+test's outcome processing and an item's feedback read them by name. They are plain outcome declarations, so the item stays valid.
+
+| Outcome              | Rule                                                                                                                         |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `SCORE_<identifier>` | A float, the points of one response of an item of several, with `normal-maximum` its maximum; `SCORE` is their sum           |
+| `FEEDBACK`           | Of cardinality `multiple`, base type `identifier`: `<identifier>-correct`, `-partial`, `-incorrect` or `-blank` per response |

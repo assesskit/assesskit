@@ -19,6 +19,8 @@ const DELIVERY_TEST = "packages/runtime/test/delivery.test.ts";
 const CAT_TEST = "packages/runtime/test/cat.test.ts";
 const OPERATORS = "packages/runtime/src/operators";
 const OPERATORS_TEST = "packages/runtime/test/operators.test.ts";
+const SCORING = "packages/runtime/src/scoring";
+const SCORING_TEST = "packages/runtime/test/scoring.test.ts";
 
 /** The limits and the security checks of the runtime, which SECURITY.md lists, each with the test that guards it. */
 export const RUNTIME_RULES: readonly Rule[] = [
@@ -448,5 +450,33 @@ export const RUNTIME_RULES: readonly Rule[] = [
     find: "return Math.abs(exponent) > MAX_EXPONENT ? undefined : { exponent, length: match[0].length };",
     replace: "return { exponent, length: match[0].length };",
     test: OPERATORS_TEST,
+  },
+  {
+    rule: "compileScoring refuses more responses than the limit responses.",
+    file: `${SCORING}/compile-scoring.ts`,
+    find: 'checkLimit(responses.length, "compileScoring was given responses:", "responses", limits);',
+    replace: "",
+    test: SCORING_TEST,
+  },
+  {
+    rule: "A key that QTI's own expressions score holds at most the limit entries, counted before it is read.",
+    file: `${SCORING}/compile-scoring.ts`,
+    find: 'checkLimit(entriesOf(response.key), `${named} has a key of entries:`, "entries", limits);',
+    replace: "",
+    test: SCORING_TEST,
+  },
+  {
+    rule: "A text key that an operator scores holds at most the lower limits that compileScoring takes.",
+    file: `${SCORING}/schemes.ts`,
+    find: 'checkKeyLimits(prepared.key, "key", limits);',
+    replace: "",
+    test: SCORING_TEST,
+  },
+  {
+    rule: "compileScoring takes at most 256 responses, the cap at which its worst item stays within 256 MiB.",
+    file: `${SCORING}/schemas.ts`,
+    find: "responses: 256,",
+    replace: "responses: Number.MAX_SAFE_INTEGER,",
+    test: SCORING_TEST,
   },
 ];

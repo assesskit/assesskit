@@ -390,9 +390,11 @@ a limit throws.
 | `maxSolutions`       | 16      | values                  | none            | The values of a solution set once `\pm` is expanded; capped at 64.                                            |
 | `maxEditBand`        | 64      | edits                   | none            | The widest edit distance that a credit tier of a text key measures; capped at 256.                            |
 
-Keys of the operators (`DEFAULT_KEY_LIMITS`, fixed): `entries`, 1,000 entries of one key (answers, their texts and patterns
-together, units, tiers, intervals, components, areas, and the coordinates of the areas in fours), and `patternLength`, 1,000
-characters of one pattern; a key past either is a `SecurityError`. `compareMathSteps` takes at most `maxSteps` lines, 200 by
+Keys (`DEFAULT_KEY_LIMITS` of `keys`, fixed for the operators): `entries`, 1,000 entries of one key (keys, options, pairs,
+choices, answers, their texts and patterns together, units, tiers, intervals, components, areas, and the coordinates of the
+areas in fours), and `patternLength`, 1,000 characters of one pattern; a key past either is a `SecurityError`. `compileScoring`
+takes `responses`, 64 responses of an item by default, up to 256 with its option `limits`, and lower values of the others; it
+counts the entries of a key before it reads it. `compareMathSteps` takes at most `maxSteps` lines, 200 by
 default, and refuses more with a `SecurityError`.
 
 These numbers are fixed and cannot be replaced:
@@ -444,6 +446,7 @@ and no reader peaks above 200.
 | `text-equivalent`       | 1,000 answers whose patterns every word matches, and a response of 1,000 words          |               24 |
 | `hotspot-matching`      | 1,000 areas and 1,000 points, each point in every area                                  |               24 |
 | `compareMathSteps`      | 200 lines of 2,000 characters                                                           |               32 |
+| `compileScoring`        | 64 orders of 1,000 choices scored per position, a condition for each choice             |               56 |
 
 The bytes of a file and the central directory are outside the heap, so the test bounds the resident memory that these readings
 raise at 256 MiB, and they raise 110 to 220: inflating a deflated entry holds the pieces and the joined bytes at once. The
@@ -454,16 +457,17 @@ memory.
 
 Without `maxSettingListLength`, the settings list needs 240 MiB. A host with more memory raises a limit and pays for it:
 
-| Limit                       | What raising it costs                                                                                                        |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `maxBytes` with `maxNodes`  | Up to 20 MiB of heap for each MiB of `maxBytes` with 30,000 `maxNodes`; doubling both took the manifest from 200 to 384 MiB. |
-| `maxEntries`                | About 0.3 MiB of heap for every 1,000 entries, and 0.8 with the longest paths that the limit allows.                         |
-| `maxEntryBytes`             | Two to three and a half times the file in resident memory while `file` inflates it.                                          |
-| `maxActionSize`             | About 32 MiB for every million nodes.                                                                                        |
-| `maxSettingListLength`      | About 0.2 MiB for every 1,000 names.                                                                                         |
-| `maxStates`                 | About 0.6 MiB for every 1,000 states.                                                                                        |
-| `maxResultSize`             | About 17 MiB for every million of size.                                                                                      |
-| `maxBodyBytes`, `maxTokens` | The memory of a parse follows the tokens: 32 MiB of empty objects took 850 MiB without the count.                            |
+| Limit                           | What raising it costs                                                                                                        |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `maxBytes` with `maxNodes`      | Up to 20 MiB of heap for each MiB of `maxBytes` with 30,000 `maxNodes`; doubling both took the manifest from 200 to 384 MiB. |
+| `maxEntries`                    | About 0.3 MiB of heap for every 1,000 entries, and 0.8 with the longest paths that the limit allows.                         |
+| `maxEntryBytes`                 | Two to three and a half times the file in resident memory while `file` inflates it.                                          |
+| `maxActionSize`                 | About 32 MiB for every million nodes.                                                                                        |
+| `maxSettingListLength`          | About 0.2 MiB for every 1,000 names.                                                                                         |
+| `maxStates`                     | About 0.6 MiB for every 1,000 states.                                                                                        |
+| `maxResultSize`                 | About 17 MiB for every million of size.                                                                                      |
+| `maxBodyBytes`, `maxTokens`     | The memory of a parse follows the tokens: 32 MiB of empty objects took 850 MiB without the count.                            |
+| `responses` of `compileScoring` | About 0.7 MiB for each response of 1,000 choices scored per position; at the cap of 256 the item ends in 224 MiB.            |
 
 An archive or a container at the limits is bounded by its size: an entry is inflated in steps of 8 KiB of input and
 never beyond the size its header declares.

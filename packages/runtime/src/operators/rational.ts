@@ -1,3 +1,5 @@
+import { bigGcd } from "../processing/internal.js";
+
 /** An exact rational number, its denominator above 0, so that a number's verdicts equal Python's `fractions` and `decimal`. */
 export interface Rational {
   readonly numerator: bigint;
@@ -78,6 +80,12 @@ export function roundSignificant(value: Rational, figures: number): Rational {
   const rounded = (2n * scaled.numerator + scaled.denominator) / (2n * scaled.denominator);
   const result = multiply({ numerator: rounded, denominator: 1n }, powerTen(-shift));
   return value.numerator < 0n ? { numerator: -result.numerator, denominator: result.denominator } : result;
+}
+
+/** The text of a rational in lowest terms, `numerator/denominator`, so that equal values have equal texts. */
+export function canonicalText(value: Rational): string {
+  const divisor = bigGcd(value.numerator < 0n ? -value.numerator : value.numerator, value.denominator);
+  return `${value.numerator / divisor}/${value.denominator / divisor}`;
 }
 
 /** 10^n as a rational, for any integer n. */

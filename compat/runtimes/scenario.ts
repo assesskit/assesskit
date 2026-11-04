@@ -1,20 +1,26 @@
 import { createCatRestHandler } from "@assesskit/player/cat-rest";
 import {
   type Action,
+  buildContainer,
   buildOperatorCall,
   buildSingle,
   compareMathSteps,
+  compileScoring,
   compileXsdRegex,
   countLength,
   createEngine,
+  createItemVariables,
   createPackageResolvers,
+  createRandom,
   createScoringOperators,
   type DeliveryState,
   deserializeState,
   parseXml,
+  readAsi,
   readManifest,
   readPackage,
   readView,
+  runResponseProcessing,
   SecurityError,
   serializeState,
   validatePackage,
@@ -55,6 +61,8 @@ export interface Results {
     readonly verdicts: readonly (number | boolean | null)[];
     readonly steps: readonly (boolean | null)[];
   };
+  /** The scores of an item whose keys `compileScoring` writes, in QTI's own expressions and with an operator. */
+  readonly scoring: { readonly score: number | null; readonly feedback: readonly string[] };
 }
 
 const NAMESPACE = 'xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"';
@@ -257,7 +265,42 @@ function runOperators(): Results["operators"] {
   };
 }
 
-/** Runs the scenario: a package, a session, its state and report, the limits, the CAT handler, and the scoring operators. */
+/** The scores of an item whose keys `compileScoring` writes: a negative mark, adjacent pairs, and a number in a text. */
+function runScoring(): Results["scoring"] {
+  const scoring = compileScoring([
+    { identifier: "MARKED", key: { kind: "choice-marking", keys: ["A"], correct: 4, wrong: -1 } },
+    { identifier: "STEPS", key: { kind: "order", order: ["A", "B", "C", "D"], scheme: "adjacent-pairs" } },
+    { identifier: "HALF", key: { kind: "text", answers: [{ texts: ["0.5"] }], numericEquivalence: true } },
+  ]);
+  const read = readAsi(`<qti-assessment-item ${NAMESPACE} identifier="i" title="Item" time-dependent="false"/>`);
+  if (read.kind !== "item") throw new Error("The scenario reads an item.");
+  const { responseDeclarations, outcomeDeclarations, responseProcessing } = scoring;
+  const item = { ...read.item, responseDeclarations, outcomeDeclarations, responseProcessing };
+  const variables = createItemVariables(item);
+  const responses = new Map(variables.responses)
+    .set("MARKED", buildSingle("identifier", "B"))
+    .set("STEPS", buildContainer("ordered", "identifier", ["B", "C", "D", "A"]))
+    .set("HALF", buildSingle("string", "2/4"));
+  const context = { random: createRandom(1), customOperators: createScoringOperators() };
+  const { outcomes } = runResponseProcessing(item, { ...variables, responses }, context);
+  const score = outcomes.get("SCORE");
+  const feedback = outcomes.get("FEEDBACK");
+  return {
+    score: score?.cardinality === "single" ? Number(score.value) : null,
+    feedback: feedback?.cardinality === "multiple" ? feedback.values.map(String) : [],
+  };
+}
+
+/**
+ * Runs the scenario: a package, a session, its state and report, the limits, the CAT handler, the scoring operators and a
+ * compiled item.
+ */
 export async function runAll(): Promise<Results> {
-  return { ...runSession(), limits: runLimits(), cat: await runCat(), operators: runOperators() };
+  return {
+    ...runSession(),
+    limits: runLimits(),
+    cat: await runCat(),
+    operators: runOperators(),
+    scoring: runScoring(),
+  };
 }

@@ -19,15 +19,17 @@ flowchart LR
   steps["Worked steps"] -- "compareMathSteps" --> checks["One check a line"]
 ```
 
-| Function or constant                               | Does                                                                                                                 |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `createScoringOperators(options?)`                 | The five operators by their definitions, for `customOperators`.                                                      |
-| `buildOperatorCall(call, response)`                | The `qti-custom-operator` that scores a response by a key, by the calling convention.                                |
-| `OPERATOR_DEFINITIONS`, `OPERATOR_NAMESPACE`       | The `urn:uuid:` definition of each operator, and the namespace of the attribute that carries its options.            |
-| `compareMathSteps(steps, options?)`                | Whether each line of worked steps follows from the nearest earlier line that reads.                                  |
-| `countLength(text, unit)`                          | The length of a text in words, characters, characters without spaces or the squares of a manuscript sheet.           |
-| `Key`, `FollowThrough`, `Area`, `Tolerance`, …     | The keys that the operators read: `expression`, `number`, `text` and `areas`, with the other kinds of the key model. |
-| `DEFAULT_OPERATOR_LIMITS`, `DEFAULT_KEY_LIMITS`, … | The limits of what an operator reads from a response, and of a key.                                                  |
+| Function or constant                         | Does                                                                                                       |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `createScoringOperators(options?)`           | The five operators by their definitions, for `customOperators`.                                            |
+| `buildOperatorCall(call, response)`          | The `qti-custom-operator` that scores a response by a key, by the calling convention.                      |
+| `OPERATOR_DEFINITIONS`, `OPERATOR_NAMESPACE` | The `urn:uuid:` definition of each operator, and the namespace of the attribute that carries its options.  |
+| `compareMathSteps(steps, options?)`          | Whether each line of worked steps follows from the nearest earlier line that reads.                        |
+| `countLength(text, unit)`                    | The length of a text in words, characters, characters without spaces or the squares of a manuscript sheet. |
+| `DEFAULT_OPERATOR_LIMITS`, `OperatorLimits`  | The limits of what an operator reads from a response.                                                      |
+
+The keys that the operators read, `expression`, `number`, `text` and `areas`, are the model of [keys](keys.md), with its limits;
+`compileScoring` of [scoring](scoring.md) writes the calls of an item's keys.
 
 ## Quick start
 
@@ -243,8 +245,9 @@ score(of("3.142"), figures).value; // => 0
 Halfwidth and Fullwidth Forms block by NFKC (default on); `ignoreMarks`, nonspacing marks removed after NFD and the text
 normalized back to `form` (default off); lower case by `toLowerCase` unless `caseSensitive` (default off); `collapseWhitespace`,
 each run of Unicode White_Space one space and the ends trimmed (default on). A string matches an answer when it equals one of
-its `texts` or fully matches one of its `patterns`, XSD regular expressions compiled by `compileXsdRegex`. With the scheme
-`words`, the response's words, split at white space, are its strings.
+its `texts` or fully matches one of its `patterns`, XSD regular expressions compiled by `compileXsdRegex`, or, with
+`numericEquivalence`, reads as the value of one of its texts. With the scheme `words`, the response's words, split at white
+space, are its strings.
 
 Each answer and each string counts once: answers are taken in descending `points`, each kept when an augmenting path finds it a
 string, the greedy rule of a transversal matroid, which keeps the most points, up to `count` answers; the share is the points
@@ -272,8 +275,25 @@ score(of("Jakrta"), capital).value; // => 0.5
 score(of("Bandung"), capital).value; // => 0
 ```
 
-`spelling` and `numericEquivalence` are in the key model with their defaults, `"exact"` and `false`, which are the only values
-the operator defines; another value is refused.
+With `numericEquivalence`, a string and an answer's text that both read as a number with nothing after it match when their
+values are equal, in exact rationals: a sign, digits with the decimal mark `.`, `a/b` and a mixed `a b/c`, and a power of ten,
+as `number-equivalent` reads them. So `.5`, `0.50`, `5e-1`, `1/2` and `2/4` are one value, as the numeric entries of the GRE and
+the SAT accept equivalent forms of a number, and a text that is not a number still matches as written. `spelling` takes
+`"exact"` alone: the sources list each accepted spelling, which an answer's `texts` hold, and none defines a rule that finds
+variants by itself, so `"variants"` is refused.
+
+```ts
+import { buildOperatorCall, createScoringOperators, OPERATOR_DEFINITIONS } from "@assesskit/runtime/operators";
+
+const score = createScoringOperators().get(OPERATOR_DEFINITIONS["text-equivalent"]);
+const of = (text) => [{ cardinality: "single", baseType: "string", value: text }];
+const half = buildOperatorCall(
+  { operator: "text-equivalent", key: { kind: "text", answers: [{ texts: ["0.5"] }], numericEquivalence: true } },
+  "R",
+);
+[".5", "0.50", "5e-1", "1/2", "2/4", "0.6", "0.5 kg"].map((text) => score(of(text), half).value);
+// => [1, 1, 1, 1, 1, 0, 0]
+```
 
 ## Hotspots and reading
 
@@ -352,22 +372,22 @@ countLength(String.fromCodePoint(0x1f1ee, 0x1f1e9, 0x63, 0x61, 0x66, 0x65, 0x301
 | `limits`                     | The limits of a line, as `createScoringOperators` takes them       | `DEFAULT_OPERATOR_LIMITS` |
 | `maxSteps`                   | The most lines                                                     | 200                       |
 
-A key's fields have the defaults of the `Key` type; `buildOperatorCall` writes each one resolved: a default that means none is
+A key's fields have the defaults of the [key model](keys.md#kinds); `buildOperatorCall` writes each one resolved: a default that means none is
 `null` (`significantFigures`, `intervals`, `components`, `length`, a tolerance's bounds, `followThrough`), and one where empty
 means absent is the empty list or object (`units`, `credit`, `variables`, `patterns`, a rule's `effects`).
 
 ## Limits
 
-| What                                                                                     | Bound                                  | Default | Cap    | When exceeded                                                                         |
-| ---------------------------------------------------------------------------------------- | -------------------------------------- | ------- | ------ | ------------------------------------------------------------------------------------- |
-| Characters of a response, all its strings together                                       | `maxInputLength`, in UTF-16 code units | 2,000   | 20,000 | Unreadable: NULL, `readable` false, a null check; a key's expression: `SecurityError` |
-| Levels of an expression                                                                  | `maxExpressionDepth`                   | 64      | 128    | As above                                                                              |
-| Values of a solution set after `\pm`                                                     | `maxSolutions`                         | 16      | 64     | As above                                                                              |
-| Edit distance that a credit tier measures                                                | `maxEditBand`, in edits                | 64      | 256    | A wider tier measures this far                                                        |
-| Entries of a key: answers, texts and patterns, units, tiers, areas, coordinates in fours | `DEFAULT_KEY_LIMITS.entries`           | 1,000   | fixed  | `SecurityError` with `limit` `entries`                                                |
-| Characters of a pattern                                                                  | `DEFAULT_KEY_LIMITS.patternLength`     | 1,000   | fixed  | `SecurityError` with `limit` `patternLength`                                          |
-| Lines of worked steps                                                                    | `maxSteps` of `compareMathSteps`       | 200     | none   | `SecurityError` with `limit` `maxSteps`                                               |
-| Points of a hotspot response                                                             | the count of the key's areas           | none    | none   | Unreadable: NULL                                                                      |
+| What                                                                                     | Bound                                           | Default | Cap    | When exceeded                                                                         |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------------- | ------- | ------ | ------------------------------------------------------------------------------------- |
+| Characters of a response, all its strings together                                       | `maxInputLength`, in UTF-16 code units          | 2,000   | 20,000 | Unreadable: NULL, `readable` false, a null check; a key's expression: `SecurityError` |
+| Levels of an expression                                                                  | `maxExpressionDepth`                            | 64      | 128    | As above                                                                              |
+| Values of a solution set after `\pm`                                                     | `maxSolutions`                                  | 16      | 64     | As above                                                                              |
+| Edit distance that a credit tier measures                                                | `maxEditBand`, in edits                         | 64      | 256    | A wider tier measures this far                                                        |
+| Entries of a key: answers, texts and patterns, units, tiers, areas, coordinates in fours | `DEFAULT_KEY_LIMITS.entries` of [keys](keys.md) | 1,000   | fixed  | `SecurityError` with `limit` `entries`                                                |
+| Characters of a pattern                                                                  | `DEFAULT_KEY_LIMITS.patternLength`              | 1,000   | fixed  | `SecurityError` with `limit` `patternLength`                                          |
+| Lines of worked steps                                                                    | `maxSteps` of `compareMathSteps`                | 200     | none   | `SecurityError` with `limit` `maxSteps`                                               |
+| Points of a hotspot response                                                             | the count of the key's areas                    | none    | none   | Unreadable: NULL                                                                      |
 
 The reader is linear in the text, and the comparator evaluates 24 points; the worst expression of 2,000 characters reads and
 compares in a few milliseconds (2.4 ms for a sum of 1,000 terms on a laptop). A text credit tier measures a banded edit distance, at most 2,000 × 129 cells an accepted
@@ -401,8 +421,9 @@ text; a hotspot response tests at most 1,000 points against areas of 4,000 coord
 | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | A symbolic algebra system: simplification, solving, derivatives  | Equivalence by sample points needs none and is linear in the text; a solution set lists its solutions, which an author's tool solves |
 | Inequalities, integrals, sums, limits, matrices, complex numbers | Outside the subset that a math entry writes; a step with an inequality has a null check                                              |
-| Spelling variants and numeric equivalence of texts               | Their rules are not defined yet; a key gives their defaults                                                                          |
-| A compiler of keys into response processing                      | The key model's compiler, which writes these calls                                                                                   |
+| A spelling rule that finds variants by itself                    | No source defines which variants count; an answer lists each accepted spelling among its `texts`                                     |
+| A decimal comma in the numeric equivalence of a text             | `1,500` is a thousand and a half where the sources write numbers; a `number` key reads the comma with `decimalSeparator`             |
+| A compiler of keys into response processing                      | `compileScoring` of [scoring](scoring.md), which writes these calls                                                                  |
 | Word segmentation by dictionary                                  | `Intl.Segmenter`, which the browser baseline lacks; `characters` counts any script                                                   |
 
 ## Build or adopt
@@ -475,7 +496,7 @@ operators.get(OPERATOR_DEFINITIONS["number-equivalent"])(of("4/3 yd"), length).v
 | `rational.ts`, `number-text.ts`                                                                                            | Exact rationals and the reading of a number                 |
 | `edit-distance.ts`, `matching.ts`, `count-length.ts`, `unicode-graphemes.ts`, `white-space.ts`, `operands.ts`              | Distances, matchings, lengths, and the operands             |
 | `math-steps.ts`                                                                                                            | The checks of worked steps                                  |
-| `keys.ts`, `key-limits.ts`, `limits.ts`                                                                                    | The key model and the limits                                |
+| `limits.ts`                                                                                                                | The limits of what an operator reads                        |
 
 ## References
 
@@ -486,6 +507,7 @@ operators.get(OPERATOR_DEFINITIONS["number-equivalent"])(of("4/3 yd"), length).v
 | Expressions, equations, solution sets | SymPy 1.14.0 on real symbols; `validation/operators/expressions.py`                                        |
 | Numbers                               | Python's `fractions` and `decimal`; `validation/operators/numbers.py`                                      |
 | Texts                                 | Python's `unicodedata` 16.0.0 and an edit distance by dynamic programming; `validation/operators/texts.py` |
+| Numeric equivalence of texts          | The numeric entries of the GRE and the SAT, which accept equivalent forms of a number                      |
 | Grapheme clusters                     | Unicode Standard Annex #29 and `GraphemeBreakTest.txt` of Unicode 17.0.0                                   |
 | Matching                              | Edmonds (1971) for the greedy rule of a matroid; Hopcroft and Karp (1973)                                  |
 | Edit distance                         | Ukkonen (1985), the band of a Levenshtein distance                                                         |

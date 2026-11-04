@@ -287,13 +287,15 @@ export interface TextKey {
    */
   readonly normalization?: TextNormalization;
   /**
-   * Whether spelling variants of an answer count; the operators define `"exact"` alone.
+   * How spelling counts: `"exact"`, the one value defined, takes the texts as written; list each accepted variant among
+   * an answer's texts.
    *
    * @defaultValue `"exact"`
    */
   readonly spelling?: "exact" | "variants";
   /**
-   * Whether a number written in words equals one in digits; the operators define `false` alone.
+   * Whether a string that reads as a number matches an answer's text that reads as the same number, in any notation:
+   * `.5`, `0.50`, `5e-1` and `1/2` are one value.
    *
    * @defaultValue `false`
    */
@@ -334,8 +336,154 @@ export interface KeyedAreasKey extends AreasKey {
   readonly scheme: "keyed";
 }
 
-/** The key of one response that an operator scores: an expression, a number, a text or areas. */
-export type Key = ExpressionKey | NumberKey | TextKey | AreasKey;
+/** The key of a choice among options: the options that are right, and how a selection scores against them. */
+export interface ChoiceKey {
+  /** The kind of the key. */
+  readonly kind: "choice";
+  /** The identifiers of the options that are right. */
+  readonly keys: readonly string[];
+  /**
+   * `all-or-nothing`: 1 when the selection equals the keys; `partial`: a point for each key selected less one for each other
+   * option selected, floored at 0; `per-key`: a point for each key selected, another option costing nothing.
+   *
+   * @defaultValue `"all-or-nothing"`
+   */
+  readonly scheme?: "all-or-nothing" | "partial" | "per-key";
+  /**
+   * The most options a response selects.
+   *
+   * @defaultValue the count of keys
+   */
+  readonly maxChoices?: number;
+}
+
+/** The key of a choice whose options earn points of their own, summed as QTI's `qti-map-response` sums them. */
+export interface ChoiceMappingKey {
+  /** The kind of the key. */
+  readonly kind: "choice-mapping";
+  /** The points of each option, by its identifier; an option it does not name earns 0. */
+  readonly points: Readonly<Record<string, number>>;
+  /**
+   * The most options a response selects.
+   *
+   * @defaultValue `1`, as QTI's `max-choices`
+   */
+  readonly maxChoices?: number;
+}
+
+/** The key of a choice marked per option: points for each key selected, for each other option selected, and for none. */
+export interface ChoiceMarkingKey {
+  /** The kind of the key. */
+  readonly kind: "choice-marking";
+  /** The identifiers of the options that are right. */
+  readonly keys: readonly string[];
+  /** The points for each key selected, above 0. */
+  readonly correct: number;
+  /** The points for each other option selected, below 0 for a negative mark. */
+  readonly wrong: number;
+  /**
+   * The points when nothing is selected.
+   *
+   * @defaultValue `0`
+   */
+  readonly blank?: number;
+  /**
+   * The most options a response selects.
+   *
+   * @defaultValue the count of keys
+   */
+  readonly maxChoices?: number;
+}
+
+/** The key of pairs that a response makes: a match, an association or a gap match. */
+export interface PairsKey {
+  /** The kind of the key. */
+  readonly kind: "pairs";
+  /** The pairs that are right, by the identifiers of their choices: source first, then target. */
+  readonly pairs: readonly (readonly [string, string])[];
+  /**
+   * Whether a pair has a source and a target, QTI's `directedPair`, or is unordered, QTI's `pair`.
+   *
+   * @defaultValue `true`
+   */
+  readonly directed?: boolean;
+  /**
+   * `all-or-nothing`: 1 when the pairs made equal the key's; `per-pair`: a point for each key pair made; `mapping`: the
+   * `points` of each key pair made.
+   *
+   * @defaultValue `"all-or-nothing"`
+   */
+  readonly scheme?: "all-or-nothing" | "per-pair" | "mapping";
+  /**
+   * The points of each pair under `mapping`, in the order of `pairs`.
+   *
+   * @defaultValue none: required by `mapping`, refused otherwise
+   */
+  readonly points?: readonly number[];
+  /**
+   * The most pairs a response makes.
+   *
+   * @defaultValue the count of pairs
+   */
+  readonly maxPairs?: number;
+  /**
+   * The most pairs that one source takes.
+   *
+   * @defaultValue none: unlimited
+   */
+  readonly maxPerSource?: number;
+  /**
+   * The most pairs that one target takes.
+   *
+   * @defaultValue `1`, or none with `reuse`
+   */
+  readonly maxPerTarget?: number;
+  /**
+   * Whether a target may be taken by more than one source.
+   *
+   * @defaultValue `false`
+   */
+  readonly reuse?: boolean;
+  /**
+   * The points lost for each pair a response makes past the count of the key's pairs.
+   *
+   * @defaultValue `0`
+   */
+  readonly surplus?: number;
+  /**
+   * The identifier of the target that answers "none", which any number of sources may take.
+   *
+   * @defaultValue none
+   */
+  readonly none?: string;
+}
+
+/** The key of an order of choices. */
+export interface OrderKey {
+  /** The kind of the key. */
+  readonly kind: "order";
+  /** The identifiers of the choices, in the right order. */
+  readonly order: readonly string[];
+  /**
+   * `all-or-nothing`: 1 when the order equals the key's; `per-position`: a point for each position right; `adjacent-pairs`:
+   * a point for each pair of the key's neighbors that stands next to each other, in that order.
+   *
+   * @defaultValue `"all-or-nothing"`
+   */
+  readonly scheme?: "all-or-nothing" | "per-position" | "adjacent-pairs";
+}
+
+/** The key of one response: a choice, pairs, an order, areas, a text, a number or an expression. */
+export type Key =
+  | ChoiceKey
+  | ChoiceMappingKey
+  | ChoiceMarkingKey
+  | PairsKey
+  | OrderKey
+  | AreasKey
+  | TextKey
+  | NumberKey
+  | ExpressionKey;
 
 /** Credit for an answer that follows from an earlier response: the key's operator scores it against both. */
 export interface FollowThrough {
@@ -349,4 +497,30 @@ export interface FollowThrough {
    * @defaultValue `"r"`
    */
   readonly variable?: string;
+}
+
+/** A response of an item, its key, and the points it earns. */
+export interface ScoredResponse {
+  /** The identifier of the response, a QTI identifier. */
+  readonly identifier: string;
+  /** The key that scores it. */
+  readonly key: Key;
+  /**
+   * The points of the response: the key's share of its own maximum, scaled to them.
+   *
+   * @defaultValue the key's own maximum
+   */
+  readonly maxPoints?: number;
+  /**
+   * The factor of the response's points in the item's score.
+   *
+   * @defaultValue `1`
+   */
+  readonly weight?: number;
+  /**
+   * Credit for an answer that follows from an earlier response, on a `number` or `expression` key.
+   *
+   * @defaultValue none
+   */
+  readonly followThrough?: FollowThrough;
 }

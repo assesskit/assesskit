@@ -22,10 +22,11 @@ flowchart TD
     cli["cli"] --> node["node"]
     node --> validate["validate"]
     delivery["delivery"] --> validate
+    scoring["scoring"] --> l5
     validate --> l5["cat, package, operators"]
     l5 --> l4["metadata, processing, interactions, pci, content"]
     l4 --> l3["asi, results, usage, pnp"]
-    l3 --> l2["xml, values"]
+    l3 --> l2["xml, values, keys"]
     l2 --> l1["errors, checks, checks-internal, random"]
   end
   pb -->|"subpaths"| delivery
@@ -42,7 +43,7 @@ checks that only the runtime uses and imports `errors.ts` and `checks.ts`, and `
 | Layer | Modules                                                     | Imports                                                                                                                    |
 | ----- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | 1     | `errors.ts`, `checks.ts`, `checks-internal.ts`, `random.ts` | as above                                                                                                                   |
-| 2     | `xml/`, `values/`                                           | none                                                                                                                       |
+| 2     | `xml/`, `values/`, `keys/`                                  | none                                                                                                                       |
 | 3     | `asi/`, `results/`, `usage/`                                | `xml/`, `values/`                                                                                                          |
 | 3     | `pnp/`                                                      | `xml/`                                                                                                                     |
 | 4     | `metadata/`                                                 | `xml/`, `asi/`                                                                                                             |
@@ -50,8 +51,9 @@ checks that only the runtime uses and imports `errors.ts` and `checks.ts`, and `
 | 4     | `content/`                                                  | `values/`, `asi/`, `pnp/`                                                                                                  |
 | 5     | `cat/`                                                      | `values/`, `asi/`, `results/`, `metadata/`                                                                                 |
 | 5     | `package/`                                                  | `xml/`, `asi/`, `metadata/`, `usage/`                                                                                      |
-| 5     | `operators/`                                                | `values/`, `asi/`, `processing/`                                                                                           |
+| 5     | `operators/`                                                | `values/`, `asi/`, `processing/`, `keys/`                                                                                  |
 | 6     | `validate/`                                                 | every module of layers 2 to 5                                                                                              |
+| 6     | `scoring/`                                                  | `values/`, `asi/`, `processing/`, `keys/`, `operators/`                                                                    |
 | 7     | `delivery/`                                                 | `values/`, `asi/`, `results/`, `pnp/`, `processing/`, `interactions/`, `pci/`, `content/`, `cat/`, `package/`, `validate/` |
 | 8     | `node/`                                                     | `xml/`, `package/`, `validate/`, `node:*`                                                                                  |
 | 9     | `cli/`                                                      | `xml/`, `asi/`, `results/`, `usage/`, `pnp/`, `package/`, `validate/`, `node/`, `node:*`                                   |

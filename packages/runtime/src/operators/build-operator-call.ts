@@ -1,5 +1,6 @@
 import { describe, isRecord } from "../checks.js";
 import { DataError } from "../errors.js";
+import type { ExpressionKey, FollowThrough, KeyedAreasKey, NumberKey, TextKey } from "../keys/index.js";
 import type { CustomOperatorExpression } from "../processing/index.js";
 import { isIdentifier } from "../values/index.js";
 import { writeCanonicalJson } from "./canonical-json.js";
@@ -13,13 +14,13 @@ import {
 } from "./definitions.js";
 import { prepareExpression } from "./expression-equivalent.js";
 import { prepareAreas } from "./hotspot-matching.js";
-import type { ExpressionKey, FollowThrough, KeyedAreasKey, NumberKey, TextKey } from "./keys.js";
 import { DEFAULT_OPERATOR_LIMITS } from "./limits.js";
 import { prepareNumber } from "./number-equivalent.js";
 import { parseOptions } from "./options.js";
 import { prepareReadable } from "./readable.js";
+import type { AreasKeyData, ExpressionKeyData, NumberKeyData } from "./schemas.js";
 import { resolveKeyDefaults } from "./schemas.js";
-import { prepareText } from "./text-equivalent.js";
+import { type PreparedText, prepareText } from "./text-equivalent.js";
 
 /** The call of `expression-equivalent`. */
 export interface ExpressionCall {
@@ -141,6 +142,34 @@ function checkOptions(name: OperatorName, options: unknown): unknown {
     case "readable":
       return prepareReadable(parseOptions(name, options, ""), limits, "");
   }
+}
+
+/** Reads the key of a call of `expression-equivalent` as `buildOperatorCall` reads it, every default resolved and checked. */
+export function readExpressionKey(key: unknown, followThrough: unknown): ExpressionKeyData {
+  const { options } = resolveCall("expression-equivalent", { key, followThrough });
+  const read = parseOptions("expression-equivalent", options, "");
+  prepareExpression(read, DEFAULT_OPERATOR_LIMITS, "");
+  return read.key;
+}
+
+/** Reads the key of a call of `number-equivalent` as `buildOperatorCall` reads it, every default resolved and checked. */
+export function readNumberKey(key: unknown, followThrough: unknown): NumberKeyData {
+  const { options } = resolveCall("number-equivalent", { key, followThrough });
+  const read = parseOptions("number-equivalent", options, "");
+  prepareNumber(read, DEFAULT_OPERATOR_LIMITS, "");
+  return read.key;
+}
+
+/** Reads the key of a call of `text-equivalent` as `buildOperatorCall` reads it, with the points of its `count` highest answers. */
+export function readTextKey(key: unknown): PreparedText {
+  const { options } = resolveCall("text-equivalent", { key });
+  return prepareText(parseOptions("text-equivalent", options, ""), "");
+}
+
+/** Reads the key of a call of `hotspot-matching` as `buildOperatorCall` reads it. */
+export function readAreasKey(key: unknown): AreasKeyData {
+  const { options } = resolveCall("hotspot-matching", { key });
+  return prepareAreas(parseOptions("hotspot-matching", options, ""), "");
 }
 
 /**

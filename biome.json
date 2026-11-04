@@ -622,6 +622,37 @@
       }
     },
     {
+      "includes": ["packages/runtime/src/keys/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../checks-internal.js",
+                      "!../random.js"
+                    ],
+                    "message": "keys/ is the key model, under the operators and the compiler: it imports no module."
+                  },
+                  {
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["packages/runtime/src/operators/**"],
       "linter": {
         "rules": {
@@ -640,9 +671,46 @@
                       "!../random.js",
                       "!../values/**",
                       "!../asi/**",
-                      "!../processing/**"
+                      "!../processing/**",
+                      "!../keys/**"
                     ],
-                    "message": "operators/ builds on values/, asi/ and processing/ only."
+                    "message": "operators/ builds on values/, asi/, processing/ and keys/ only."
+                  },
+                  {
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/runtime/src/scoring/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../checks-internal.js",
+                      "!../random.js",
+                      "!../values/**",
+                      "!../asi/**",
+                      "!../processing/**",
+                      "!../keys/**",
+                      "!../operators/**"
+                    ],
+                    "message": "scoring/ builds on values/, asi/, processing/, keys/ and operators/ only."
                   },
                   {
                     "group": ["@assesskit/player", "@assesskit/player/**"],

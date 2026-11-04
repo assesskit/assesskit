@@ -10,11 +10,11 @@ import {
   parseWith,
 } from "../checks.js";
 import { DataError, SecurityError } from "../errors.js";
+import type { VariableRange } from "../keys/index.js";
 import { agree, compareShapes, residualAt, type Shape, shapeOf } from "./compare.js";
 import { complex } from "./complex.js";
 import { collectVariables, evaluate, measured } from "./evaluate.js";
 import { checkVariableName } from "./expression-equivalent.js";
-import type { VariableRange } from "./keys.js";
 import { type OperatorLimits, resolveOperatorLimits } from "./limits.js";
 import { isBlank } from "./operands.js";
 import { readStatement } from "./read.js";

@@ -3,8 +3,10 @@ import { countLength } from "./count-length.js";
 import { boundedEditDistance } from "./edit-distance.js";
 import type { OperatorLimits } from "./limits.js";
 import { augmentMatching } from "./matching.js";
+import { readNumberText } from "./number-text.js";
 import { checkOperandCount, isBlank, share, stringsOf } from "./operands.js";
 import { type OptionsOf, optionsError, pathOf } from "./options.js";
+import { canonicalText } from "./rational.js";
 import type { TextKeyData } from "./schemas.js";
 import { collapseWhiteSpace, splitWhiteSpace } from "./white-space.js";
 
@@ -31,9 +33,13 @@ function normalizeText(text: string, normalization: TextKeyData["normalization"]
   return result;
 }
 
-/** An answer of a text key, normalized, with its patterns compiled and its texts as code points for the credit tiers. */
+/**
+ * An answer of a text key, normalized, with its patterns compiled, its texts as code points for the credit tiers, and with
+ * `numericEquivalence` the values of its texts that read as numbers.
+ */
 interface PreparedAnswer {
   readonly texts: ReadonlySet<string>;
+  readonly numbers: ReadonlySet<string>;
   readonly codePoints: readonly (readonly number[])[];
   readonly patterns: readonly XsdPattern[];
   readonly points: number;
@@ -48,6 +54,16 @@ export interface PreparedText {
   readonly tiers: TextKeyData["credit"];
 }
 
+/**
+ * The value of a string that reads as a number with nothing after it, as `numericEquivalence` reads it: a sign, digits with
+ * the decimal mark `.`, `a/b` and `a b/c`, a power of ten; as the text of the value in lowest terms, so that equal values
+ * compare equal.
+ */
+function numberOf(text: string): string | undefined {
+  const written = readNumberText(text, { separator: ".", fractions: true });
+  return written === undefined || written.unit !== "" ? undefined : canonicalText(written.value);
+}
+
 /** The code points of a text. */
 function codePointsOf(text: string): number[] {
   return Array.from(text, (character) => character.codePointAt(0) ?? 0);
@@ -56,18 +72,16 @@ function codePointsOf(text: string): number[] {
 /**
  * Reads and checks the options of `text-equivalent`.
  *
- * @throws `DataError` for a `spelling` or a `numericEquivalence` other than the defaults, which the operator does not define,
- *   a count above the answers, an answer with no text or pattern, no points to earn, a pattern that does not compile, or a
- *   `below` or `above` effect without its bound.
+ * @throws `DataError` for a `spelling` other than `"exact"`, which no source defines, a count above the answers, an answer
+ *   with no text or pattern, no points to earn, a pattern that does not compile, or a `below` or `above` effect without its
+ *   bound.
  */
 export function prepareText(options: OptionsOf<"text-equivalent">, prefix: string): PreparedText {
   const { key } = options;
   if (key.spelling !== "exact")
-    throw optionsError(pathOf(prefix, "key.spelling"), 'the operator defines "exact" spelling alone.');
-  if (key.numericEquivalence)
     throw optionsError(
-      pathOf(prefix, "key.numericEquivalence"),
-      "the operator defines no numeric equivalence of texts.",
+      pathOf(prefix, "key.spelling"),
+      'the operator defines "exact" spelling alone: list each accepted variant among the answer\'s texts.',
     );
   if (key.count > key.answers.length)
     throw optionsError(
@@ -110,12 +124,26 @@ function prepareAnswer(answer: TextKeyData["answers"][number], key: TextKeyData,
     }
   });
   const normalized = answer.texts.map((text) => normalizeText(text, key.normalization));
-  return { texts: new Set(normalized), codePoints: normalized.map(codePointsOf), patterns, points: answer.points };
+  const numbers = key.numericEquivalence ? normalized.flatMap((text) => numberOf(text) ?? []) : [];
+  return {
+    texts: new Set(normalized),
+    numbers: new Set(numbers),
+    codePoints: normalized.map(codePointsOf),
+    patterns,
+    points: answer.points,
+  };
 }
 
-/** Whether a normalized string matches an answer: it equals one of its texts, or fully matches one of its patterns. */
-function matches(answer: PreparedAnswer, text: string): boolean {
-  return answer.texts.has(text) || answer.patterns.some((pattern) => pattern.matches(text));
+/**
+ * Whether a normalized string matches an answer: it equals one of its texts, fully matches one of its patterns, or with
+ * `numericEquivalence` reads as the value of one of its texts.
+ */
+function matches(answer: PreparedAnswer, text: string, number: string | undefined): boolean {
+  return (
+    answer.texts.has(text) ||
+    (number !== undefined && answer.numbers.has(number)) ||
+    answer.patterns.some((pattern) => pattern.matches(text))
+  );
 }
 
 /**
@@ -201,8 +229,9 @@ export function scoreText(
   const { key } = prepared;
   const normalized = strings.map((text) => normalizeText(text, key.normalization));
   const candidates = key.scheme === "words" ? normalized.flatMap(splitWhiteSpace) : normalized;
+  const numbers = candidates.map((text) => (key.numericEquivalence ? numberOf(text) : undefined));
   const edges = prepared.answers.map((answer) =>
-    candidates.flatMap((text, index) => (matches(answer, text) ? [index] : [])),
+    candidates.flatMap((text, index) => (matches(answer, text, numbers[index]) ? [index] : [])),
   );
   const { kept, used } = augmentMatching(edges, candidates.length, key.count);
   const exact = kept.reduce((total, answer) => total + (prepared.answers[answer]?.points ?? 0), 0);

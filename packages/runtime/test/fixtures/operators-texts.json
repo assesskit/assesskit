@@ -53659,6 +53659,6506 @@
     "office"
    ],
    "share": 0.8
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "5e-1",
+    "12 1/4"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "0.50",
+    "1/2"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "-4.0",
+    "-8/2"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "\u22124",
+    "3e0"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "+0.5",
+    "0.875"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "half",
+    "+0.5"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "12 1/4",
+    "0.875"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "0.5 kg",
+    "3e0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "0.875"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "14/16"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "\u22124"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "3/1"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "half"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "-8/2",
+    "003"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "2500",
+    "0.50"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "\u22124",
+    "2/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "2500.0",
+    ".50"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "-4.0",
+    "49/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "1,5",
+    "0.5 kg"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "3e0",
+    ".5"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "\uff10.\uff15",
+    "-4.0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "\u22124"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "-4.0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "-8/2"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "14/16"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3/1"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "2500"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "0.50",
+    "2500"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "5e-1",
+    "\uff10.\uff15"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "1/2",
+    "\uff10.\uff15"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "\uff10.\uff15",
+    "5e-1"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "3e0",
+    "0.5"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "2500.0",
+    "1e401"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "4/8",
+    "3.0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "1e401",
+    "2500"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    ".50"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "-4.0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "\u22124"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "0.5"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "4/8"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3/1"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "2500.0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "2500"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "-8/2"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "\u22124"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "-4.0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    ".50"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "1/2"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3.0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "-8/2"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "-4.0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "\u22124"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3e0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "1,5"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3 m"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "003"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3e0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3.0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3/1"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "14/16"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "0.875"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    ".5"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "003"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "3/1"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "3/1"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "3.0"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "3e0"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "-8/2"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    ".50"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "0.5"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "5e-1"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    ".5"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "2/4"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "\uff10.\uff15"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "+0.5"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "0.875"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "half"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3/1"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "12 1/4"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "49/4"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    ".50"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "4/8"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "12.250"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "half"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "3 m"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "1/0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     },
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "2500"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     },
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "0.5"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     },
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "4/8"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     },
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "2500.0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     },
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    ".50"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     },
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "+0.5"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     },
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "0.50"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     },
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "0.875"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "003"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "\u22124"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3/1"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "-4.0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3.0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    ".50"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "0.5"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "2/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "3/1"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "49/4"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "003"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "3e0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "3.0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "2/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "half"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "3 m"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "49/4"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "12.250"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "49/4"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "12 1/4"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "12.250"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "3 m"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "-4.0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "1/0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "+0.5"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "1/2"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "\uff10.\uff15"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "2500"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "0.50"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "3 m"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "\u22124"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    ".50"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "-4.0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "-8/2"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "\u22124"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "2500.0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "2.5E3"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3e0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "3e0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    ".50"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "0.5"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "003"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "3.0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "12 1/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "2/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "3 m"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "\u22124"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "-8/2"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "49/4"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "12 1/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "12.250"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3 m"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3e0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "0.50"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "\uff10.\uff15"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "1/2"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    ".5"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "5e-1"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "0.50"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "12 1/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "0.875"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "0.5 kg"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3/1"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "12.250"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3.0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3e0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "003"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "1/2"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "4/8"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "half"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "12.250"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "3/1"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "003"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "49/4"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "3.0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "+0.5"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "\uff10.\uff15"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "12.25"
+      ]
+     },
+     {
+      "texts": [
+       "3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "2500"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "2500.0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "2.5E3"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "2500"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "\u22124"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "003"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "49/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "2500.0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "2.5E3"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "2500"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "0.5"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "3 m"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "1e401"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "14/16"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "\u22124"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "-8/2"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "0.875"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "-4.0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "2500"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "1e401"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "5e-1"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "12.250"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "12 1/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "0.875"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "49/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "14/16"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "1e401"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "3/1"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    ".50"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "0.875"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "14/16"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "\u22124"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3.0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "2500"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "-8/2"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "\u22124"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "-4.0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "2.5E3"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "2/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "12 1/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "+0.5"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "5e-1"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "-8/2"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    ".5"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "1/2"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "3.0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "1/0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "2500"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "12 1/4",
+    "-4.0"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "49/4",
+    "2500.0"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "0.875",
+    "2500"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "12.250",
+    "12 1/4"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "14/16",
+    "3e0"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "1e401",
+    "12.250"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "1/2",
+    "4/8"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "forms"
+   },
+   "response": [
+    "0.5",
+    "\u22124"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "14/16"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "0.875"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "1/0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "2.5E3"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    ".5"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "0.875"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "49/4"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "12 1/4"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "12.250"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "14/16"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "0.50"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "3.0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "7/8"
+      ]
+     },
+     {
+      "texts": [
+       "12.25"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "1/0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "2500"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "3.0"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "3/1"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "2500.0"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "2.5E3"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "49/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "0.5"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "14/16"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "4/8"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    ".50"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "0.5"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "+0.5"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "1/0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "1/2"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "2500"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "+0.5"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "5e-1"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "\uff10.\uff15"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "1/2"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "2/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "2500"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "0.5"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": false,
+    "count": 1,
+    "scheme": "forms"
+   },
+   "response": [
+    "49/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "3.0"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "14/16"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "0.875"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "003"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "3e0"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "1e401"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "-8/2"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "7/8"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "1/2"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "2500.0"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "2500"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "2.5E3"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3.0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "5e-1"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "2.5e3"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "3e0"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "003"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "3.0"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "3e0"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "-8/2"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "3/1"
+   ],
+   "share": 0.5
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "4/8"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    "0.875"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "3"
+      ]
+     },
+     {
+      "texts": [
+       "-4"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 2,
+    "scheme": "words"
+   },
+   "response": [
+    ".5"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "0.50"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "\uff10.\uff15"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "1/2"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "2/4"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "5e-1"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "12 1/4"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "0.5 kg"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "0.5"
+      ]
+     }
+    ],
+    "numericEquivalence": true,
+    "count": 1,
+    "scheme": "words"
+   },
+   "response": [
+    "49/4"
+   ],
+   "share": 0.0
   }
  ]
 }

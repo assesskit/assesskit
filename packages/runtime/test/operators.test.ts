@@ -14,14 +14,13 @@ import {
   validateAsi,
   writeAsi,
 } from "../src/index.js";
+import { DEFAULT_KEY_LIMITS, type Key } from "../src/keys/index.js";
 import {
   buildOperatorCall,
   compareMathSteps,
   countLength,
   createScoringOperators,
-  DEFAULT_KEY_LIMITS,
   DEFAULT_OPERATOR_LIMITS,
-  type Key,
   OPERATOR_DEFINITIONS,
   OPERATOR_NAMESPACE,
   type OperatorCall,

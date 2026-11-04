@@ -66,6 +66,10 @@
       "types": "./dist/interactions/index.d.ts",
       "default": "./dist/interactions/index.js"
     },
+    "./keys": {
+      "types": "./dist/keys/index.d.ts",
+      "default": "./dist/keys/index.js"
+    },
     "./pci": {
       "types": "./dist/pci/index.d.ts",
       "default": "./dist/pci/index.js"
@@ -77,6 +81,10 @@
     "./results": {
       "types": "./dist/results/index.d.ts",
       "default": "./dist/results/index.js"
+    },
+    "./scoring": {
+      "types": "./dist/scoring/index.d.ts",
+      "default": "./dist/scoring/index.js"
     },
     "./usage": {
       "types": "./dist/usage/index.d.ts",
