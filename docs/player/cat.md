@@ -1,4 +1,4 @@
-# CAT
+# Adaptive testing (CAT)
 
 The runtime defines `CatPort`, the six requests of a CAT 1.0 engine, and makes no network request and runs no CAT algorithm.
 The player has two subpaths for it. `@assesskit/player/cat` deploys the adaptive sections of a package through any port, on a

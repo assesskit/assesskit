@@ -1,4 +1,4 @@
-# PNP
+# Personal needs and preferences
 
 `pnp` reads and writes the Personal Needs and Preferences (PNP) profile of a candidate in the QTI profile of PNP 3.0: the
 supports a candidate needs, such as extra time, reading aloud or magnification. It also resolves what a profile asks for.

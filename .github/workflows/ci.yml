@@ -231,6 +231,8 @@ jobs:
       - run: pnpm check:audit
       - run: pnpm compat:baseline
       - run: pnpm docs:api
+      # The built site: titles, descriptions, canonical URLs and the sitemap, the Markdown copies, llms.txt and the links to it.
+      - run: pnpm check:site
       # Version and Dependabot pull requests change package files without a changeset of their own.
       - if: >-
           github.event_name == 'pull_request' &&

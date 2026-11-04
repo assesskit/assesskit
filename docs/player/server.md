@@ -1,4 +1,4 @@
-# Server
+# Session host and exam server
 
 `@assesskit/player/server` runs a candidate session for a candidate who is not trusted with its keys: the session host of
 exam mode, the [asset gate](asset-gate.md), the stores a host provides, and the log that receives each step's events

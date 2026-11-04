@@ -1,4 +1,4 @@
-# Results
+# Results reporting
 
 `results` reads and writes Results Reporting: the report on a candidate's session, with the test result, the result of each
 item instance and every variable. It imports `xml` and `values` and runs in any JavaScript runtime.

@@ -22,6 +22,15 @@ export const FAMILY = {
   author: "Fariz Wakan (https://github.com/luthfanwakan)",
 } as const;
 
+/** Facts of use that hold for every package, as `llms.txt` and `context7.json` state them to an assistant. */
+export const FACTS: readonly string[] = [
+  "Import each module from its subpath, such as `@assesskit/runtime/asi` or `@assesskit/player/server`, or every module of the runtime from `@assesskit/runtime`; every package is ESM with TypeScript types.",
+  "Documents are typed, immutable models: a reader throws `DataError` on content it cannot read, and the validator returns what it finds as issues in data, without throwing.",
+  "The delivery engine is a pure reducer of candidate sessions: a state and an action with the time it happened go in, a new state with its events or a refusal comes out; the runtime reads no clock and, outside its `node` and `cli` subpaths, no file or network.",
+  "The candidate view holds no answer key: on a server `@assesskit/player/server` hosts the engine, and a browser holds only views and sends actions.",
+  "The player draws in a shadow root, loads portable custom interactions in a sandboxed frame, and takes the host's `fetch`, stores and file callbacks as options and ports.",
+];
+
 /** The identity of one package: what npm, the README, the docs site and `llms.txt` say of it. */
 export interface PackageIdentity {
   /** The name on npm, which is also the folder below `packages/` and `docs/` after the scope. */

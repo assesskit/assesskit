@@ -1,4 +1,4 @@
-# Architecture
+# Architecture of custom-interactions
 
 `@assesskit/custom-interactions` holds portable custom interactions that any QTI item may use. Each is an AMD module that
 the item's package carries and the player's frame loads, with the type identifier it registers under. The package exports

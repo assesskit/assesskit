@@ -1,4 +1,4 @@
-# ASI
+# Assessment documents
 
 `asi` reads and writes the assessment documents of QTI 3.0: items, stimuli, tests, sections, outcome declarations, response
 processing templates and outcome processing, and the content they hold: HTML, MathML, SSML, interactions, feedback,

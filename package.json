@@ -26,6 +26,7 @@
     "format": "biome check --write .",
     "knip": "knip",
     "docs:api": "pnpm build && typedoc && node scripts/self-host-mermaid.ts",
+    "check:site": "node scripts/check-site.ts",
     "check:packages": "pnpm -r check:packages",
     "check:release": "node scripts/check-release.ts",
     "compat:baseline": "pnpm build && node compat/check.ts",

@@ -1,4 +1,4 @@
-# CAT
+# Computer adaptive testing
 
 `cat` is the runtime's side of computer adaptive testing (CAT 1.0), which QTI 3.0 references through `qti-adaptive-selection`: the
 port to a CAT engine, the models of its requests and responses, the JSON form of the assessment result and the item stage, the

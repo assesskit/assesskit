@@ -1,4 +1,4 @@
-# Content
+# Item content and feedback
 
 `content` decides what an item shows. It hides what an outcome or a template variable hides, prints variables with the number
 formats of the C `printf`, selects the rubric of a view and the card of a catalog, and maps the hazards of a resource to the terms

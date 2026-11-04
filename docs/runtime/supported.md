@@ -1,4 +1,4 @@
-# Supported
+# What the runtime supports
 
 What `@assesskit/runtime` reads, writes, validates and runs. A cell says Yes, Partly (the note says what is left out), No
 (see Not included) or n/a where the operation makes no sense.

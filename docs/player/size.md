@@ -1,4 +1,4 @@
-# Size
+# Size of the player
 
 What a browser loads from the player, and the budgets that keep it from growing. `packages/player/test/size.test.ts` bundles
 every entry point of both packages alone, as a host's bundler does: esbuild with code splitting, minified, for the browsers of

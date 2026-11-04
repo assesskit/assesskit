@@ -1,4 +1,4 @@
-# Styling
+# Styling the player
 
 `@assesskit/player/player.css` is the stylesheet of a content root: the base look, the QTI 3 shared vocabulary and its CSS
 classes, the interaction classes of the best practices guide, and the presentation that a candidate's PNP asks for. It is

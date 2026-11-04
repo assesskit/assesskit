@@ -1,4 +1,4 @@
-# Protocol
+# The session protocol
 
 `@assesskit/player/protocol` holds what a browser and a session host send each other: JSON envelopes around the runtime's JSON
 forms of actions and views, the caller that the host's authentication gives to a request, the session client that the player

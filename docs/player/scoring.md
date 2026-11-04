@@ -1,4 +1,4 @@
-# Scoring
+# Scoring sessions
 
 An outcome with `external-scored` is one that a person or a machine sets, not processing. The runtime's engine asks the host
 for each one with a scoring request and waits (see Scoring requests in the runtime's delivery guide).

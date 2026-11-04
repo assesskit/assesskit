@@ -1,4 +1,4 @@
-# XML
+# XML reading and writing
 
 `xml` reads XML 1.0 into an immutable tree, writes a tree back, replaces `xi:include` elements, and gives the readers of typed
 documents the checks they share. It is the only XML parser in the runtime: every module that reads a document starts here.

@@ -1,4 +1,4 @@
-# Supports
+# Candidate supports
 
 A candidate's personal needs and preferences (PNP) arrive in the runtime's view as `SupportView`s: a `name`, a `state`, whether
 the support is `active`, and its `settings`: those of the profile, as the candidate changed them. The player applies each support that is on. It does not

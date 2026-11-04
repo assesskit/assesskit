@@ -1,4 +1,4 @@
-# Operators
+# Scoring operators
 
 <!-- cspell:ignore Jakrta -->
 

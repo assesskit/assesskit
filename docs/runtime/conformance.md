@@ -1,4 +1,4 @@
-# Conformance
+# Conformance features
 
 Every feature ID of Appendix A of the [QTI 3.0 Conformance and Certification](https://www.imsglobal.org/spec/qti/v3p0/conf/)
 document (CERT), with the guide that says how assesskit implements it and the test that holds it. assesskit holds no

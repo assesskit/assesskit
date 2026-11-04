@@ -1,4 +1,4 @@
-# PCI
+# Portable custom interactions
 
 `pci` holds what a delivery engine and a player need of a portable custom interaction (PCI) besides the interaction's own
 code: the JSON in which variables travel to and from the module, the files that say where its modules are, the properties it

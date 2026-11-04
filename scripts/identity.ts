@@ -1,10 +1,15 @@
-import { FAMILY, HOLDERS, MARKS, type Mark, PACKAGES, type PackageIdentity, SITE } from "./family.ts";
+import { FAMILY, HOLDERS, MARKS, type Mark, PACKAGES, type PackageIdentity, REPOSITORY, SITE } from "./family.ts";
 
 /**
- * What the texts of the family say of themselves, computed from `family.ts`: the address of each package's page, the lines
- * of the marks of others, and the first paragraph of a Markdown page. Every family copies this file
- * unchanged.
+ * What the texts of the family say of themselves, computed from `family.ts`: the address of each package's page and of each
+ * page made from a Markdown file, the lines of the marks of others, and the title, first paragraph and description of a
+ * Markdown page. Every family copies this file unchanged.
  */
+
+/** The length near which a description of a page is cut, at a sentence: what a search result shows. */
+const DESCRIPTION_LENGTH = 155;
+/** The longest description made of whole sentences, so that one cut near the length may end a little after it. */
+const DESCRIPTION_LIMIT = 170;
 
 /** The folder of a package below `packages/` and `docs/`: its name after the scope. */
 export function folderOf(name: string): string {
@@ -19,6 +24,25 @@ export function packagePath(name: string): string {
 /** The address of a package's page on the docs site, which is its `homepage`. */
 export function packageUrl(name: string): string {
   return `${SITE}${packagePath(name)}`;
+}
+
+/** The address of a file of the repository on its default branch, for a link to what the docs site does not publish. */
+export function repositoryUrl(path: string): string {
+  return `${REPOSITORY}/blob/main/${path}`;
+}
+
+/**
+ * The path on the docs site of the page that a Markdown file of the repository becomes, or `undefined` for a file that the site
+ * does not publish: the root README is the home page, a package's README its page, and a guide of `docs/<package>/` a page
+ * below it, as the `structure-dir` router of TypeDoc writes them.
+ */
+export function sourcePagePath(source: string): string | undefined {
+  if (source === "README.md") return "";
+  const readme = /^packages\/([^/]+)\/README\.md$/.exec(source);
+  const guide = /^docs\/([^/]+)\/([^/]+)\.md$/.exec(source);
+  const identity = findPackage(readme?.[1] ?? guide?.[1] ?? "");
+  if (identity === undefined) return undefined;
+  return guide === null ? packagePath(identity.name) : `${packagePath(identity.name)}${guide[2]}/`;
 }
 
 /** The identity of the package of a folder below `packages/`, or `undefined` when the table has no row for it. */
@@ -111,4 +135,43 @@ export function firstParagraph(markdown: string): string | undefined {
   }
   const paragraph = blocks.find((block) => block.length > 0 && !NOT_PROSE.test(block[0] ?? ""));
   return paragraph?.join(" ");
+}
+
+/** The text of the first `#` heading of a Markdown text, or `undefined` when it has none. */
+export function titleOf(markdown: string): string | undefined {
+  for (const [, line] of unfencedLines(markdown)) {
+    const title = /^# (.+?)\s*$/.exec(line)?.[1];
+    if (title !== undefined) return plainText(title);
+  }
+  return undefined;
+}
+
+/** The text of Markdown as a reader sees it: links as their text, without images, code marks, emphasis or tags. */
+export function plainText(markdown: string): string {
+  return markdown
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\{@link(?:code|plain)?\s+(?:[^}|]*\|\s*)?([^}]*)\}/g, "$1")
+    .replace(/`([^`]*)`/g, "$1")
+    .replace(/(\*\*|__)(.*?)\1/g, "$2")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * A description of a page from a paragraph: the whole sentences that fit near 155 characters, or the first sentence cut at a
+ * word with an ellipsis when it alone is longer.
+ */
+export function describeParagraph(paragraph: string): string {
+  const sentences = plainText(paragraph).split(/(?<=[.!?])\s+(?=[A-Z0-9("])/);
+  let description = "";
+  for (const sentence of sentences) {
+    const longer = description === "" ? sentence : `${description} ${sentence}`;
+    if (longer.length > DESCRIPTION_LIMIT) break;
+    description = longer;
+  }
+  if (description !== "") return description;
+  const cut = (sentences[0] ?? "").slice(0, DESCRIPTION_LENGTH);
+  return `${cut.slice(0, cut.lastIndexOf(" ")).replace(/[,;:]$/, "")}…`;
 }

@@ -1,4 +1,4 @@
-# Architecture
+# Architecture of the runtime
 
 The runtime is one package with a subpath per module.
 

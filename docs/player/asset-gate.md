@@ -1,4 +1,4 @@
-# Asset gate
+# The asset gate
 
 The asset gate is the one place where package files and candidate files leave the server. A candidate's browser reads files
 of the package, such as images, stylesheets and the modules of portable custom interactions, with URLs that carry a signed

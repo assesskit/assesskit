@@ -5,6 +5,8 @@
   "entryPoints": ["packages/runtime", "packages/player", "packages/custom-interactions"],
   "readme": "README.md",
   "out": "docs/api",
+  "router": "structure-dir",
+  "favicon": "docs/favicon.svg",
   "plugin": ["typedoc-plugin-mermaid", "./docs/typedoc-seo.ts"],
   "treatWarningsAsErrors": true,
   "highlightLanguages": [

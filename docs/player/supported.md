@@ -1,4 +1,4 @@
-# Supported
+# What the player supports
 
 What `@assesskit/player` draws and operates. A cell says Yes, Partly (the note says what is left out) or No (see Not
 included).

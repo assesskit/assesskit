@@ -1,4 +1,4 @@
-# Client
+# The session client
 
 The player mounts against one of two session clients, each a subpath of its own: the remote session of an exam in
 `@assesskit/player/client`, and the local session of practice in `@assesskit/player/client/local`. Both implement

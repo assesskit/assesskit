@@ -1,4 +1,4 @@
-# Interactions
+# Interaction descriptors
 
 `interactions` describes the interactions of an item for the delivery engine and the player, checks that their response variables
 suit them, decides whether a response is valid, draws the order of the choices, and reads the numbers that a candidate types. It

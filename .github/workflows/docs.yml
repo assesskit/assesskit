@@ -29,6 +29,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm docs:api
+      - run: pnpm check:site
       - uses: actions/upload-pages-artifact@v5
         with:
           path: docs/api

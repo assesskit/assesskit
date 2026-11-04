@@ -1,4 +1,4 @@
-# Architecture
+# Architecture of the player
 
 The player is one package with a subpath per side of the wire. These principles hold for every folder; Biome enforces the
 ones marked lint, and the rest are checked in review.

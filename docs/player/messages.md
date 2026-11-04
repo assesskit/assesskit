@@ -1,4 +1,4 @@
-# Messages
+# Messages and languages
 
 The interface text is a catalog of plain strings, one per function of the interface, so that the same function has the
 same name everywhere. A message that goes with a count is a label before the number, such as `Words: 1`, so that no noun

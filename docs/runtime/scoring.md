@@ -1,4 +1,4 @@
-# Scoring
+# Compiling keys into scoring
 
 `scoring` compiles the [keys](keys.md) of an item's responses into its QTI scoring: a response declaration for each response,
 with its correct response and its mapping where the key has them; the outcomes `SCORE`, `MAXSCORE`, the score of each

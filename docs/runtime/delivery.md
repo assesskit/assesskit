@@ -1,4 +1,4 @@
-# Delivery
+# The delivery engine
 
 `delivery` is the headless delivery engine. `createEngine` builds the engine of a test, or of an item delivered alone for
 practice, after a static gate over everything a session can reach. The engine is a pure reducer of candidate sessions: an action

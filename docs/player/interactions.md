@@ -1,4 +1,4 @@
-# Interactions
+# Interaction elements
 
 `createInteractionRenderers` of `@assesskit/player/player` draws the interactions of an item: choice, order, associate,
 match, gap match, inline choice, text entry, extended text, hot text, slider, end attempt, media, upload and custom, and the

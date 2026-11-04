@@ -1,4 +1,4 @@
-# Conventions
+# Conventions for external scores
 
 A convention is something the runtime defines because QTI does not. It uses QTI's own elements, so that every document stays valid
 against the published schemas and other tools can still read it. There are three: two are a `qti-rubric-block` for scorers that a

@@ -1,4 +1,4 @@
-# Evidence
+# Evidence for the player
 
 How the player is tested. The claim that these tests support is stated in [Supported](supported.md).
 

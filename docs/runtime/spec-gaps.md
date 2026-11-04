@@ -1,4 +1,4 @@
-# Spec gaps
+# Gaps in the QTI 3.0 specifications
 
 The specifications contradict themselves in places and say nothing in others. Each place is a gap, numbered `G1` to `G53`,
 and the runtime resolves it the same way everywhere. Every gap has a test that fixes its

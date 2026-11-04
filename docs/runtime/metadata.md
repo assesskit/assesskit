@@ -1,4 +1,4 @@
-# Metadata
+# Resource metadata
 
 `metadata` reads and writes the metadata of a resource in a QTI content package: QTI metadata, IEEE LOM, curriculum
 standards and the accessibility description of a variant. It builds on `xml` and `asi`, uses no platform API and runs in any

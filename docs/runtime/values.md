@@ -1,4 +1,4 @@
-# Values
+# Values and types
 
 `values` holds the values of QTI variables and everything that reads, writes, compares and converts them. It imports no other
 module and runs in any JavaScript runtime.

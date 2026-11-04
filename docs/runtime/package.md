@@ -1,4 +1,4 @@
-# Package
+# Content packages
 
 `package` reads and writes QTI content packages: the manifest, the ZIP archive, the documents inside, the resolvers that the
 delivery engine uses, LTI link documents and the dependency closure. It builds on `xml`, `values`, `asi` and `metadata`,

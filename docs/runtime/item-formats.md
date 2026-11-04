@@ -1,4 +1,4 @@
-# Item formats
+# GIFT and Moodle XML
 
 `item-formats` converts QTI items to and from the item formats of another platform: GIFT, the text format of Moodle's
 question bank, and Moodle XML, its full format. A reader takes a file and gives QTI items that score each response as Moodle grades it; a writer takes items

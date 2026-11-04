@@ -1,4 +1,4 @@
-# Delivery
+# Mounting a test or an item
 
 `mountDelivery` of `@assesskit/player/player` shows a candidate session: the content of the engine's view and the chrome
 around it. It follows a session client ([client](client.md)) and never knows whether the engine runs on a server or on the

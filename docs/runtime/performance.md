@@ -1,4 +1,4 @@
-# Performance
+# Performance of the runtime
 
 The runtime is timed against Longsight `qti3-core` and libxml2 on the work each does with it, and against budgets on the
 work only it does; the player is timed against the Amp-up player in [size](../player/size.md#mount-time). The target is

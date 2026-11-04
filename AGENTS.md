@@ -45,6 +45,7 @@ Use these words with these meanings in code, comments and docs.
 | `packages/custom-interactions/{scripts,test,licenses}/`          | `build-modules.ts`, which bundles each module into `modules/` (ignored by git); the tests, with `fixtures/` (the asset origin and the commands of the browser tests); the licenses of files that a module carries beside it                                                                 |
 | `examples/<package>/<name>/`                                     | A runnable example, a package of its own; its `test/` runs it                                                                                                                                                                                                                               |
 | `docs/<package>/`                                                | The guides of a package, one per module, with architecture, evidence and supported; TypeDoc publishes them                                                                                                                                                                                  |
+| `docs/typedoc-seo.ts`, `docs/favicon.svg`                        | The plugin of TypeDoc that makes the docs site from `scripts/family.ts`, and the icon of the site; `.github/workflows/docs.yml` deploys the site to GitHub Pages and stays disabled until the repository is public                                                                          |
 | `compat/`, `scripts/`, `validation/`, `biome/`                   | The browser baseline (`compat/`) and the runtimes (`compat/runtimes/`); downloads, generators, CI checks (`check-*.ts`, `rules/`), the peak-memory harness, the runner of the samples of the guides and `prepare.ts`; fixture scripts (Python, and Moodle in containers); GritQL lint rules |
 
 [Layers](docs/runtime/architecture.md#layers) and [player layers](docs/player/architecture.md#layers) are rows of tables that
@@ -75,6 +76,7 @@ Biome enforces, folder by folder.
 | `pnpm check:audit`               | `pnpm audit` of the production dependencies at any severity and of all dependencies at high; needs the network                                                                                                                                                       |
 | `pnpm check:rules`               | Removes each security rule of `scripts/rules/` from a copy of the code and fails when its test still passes (exit 1); a run that takes too long is reported as `TIMED OUT` (exit 2), never as unguarded; needs Chromium; takes the source files whose rules to check |
 | `pnpm docs:api`                  | TypeDoc into `docs/api`, with the pinned Mermaid copied in so that no page loads a script from elsewhere; fails on undocumented exports                                                                                                                              |
+| `pnpm check:site`                | The site that `pnpm docs:api` built: a title, a description and a canonical URL for each page, the sitemap, the Markdown copy of each README and guide, `llms.txt` and the links to it                                                                               |
 | `pnpm compat:baseline`           | The built JavaScript and the CSS of the player stay inside the browser baseline                                                                                                                                                                                      |
 | `pnpm compat:engines`            | The smoke test in the pinned old browsers; needs Docker                                                                                                                                                                                                              |
 | `pnpm compat:runtimes`           | The built runtime and the handler of the CAT binding give the same results on Node.js, Deno, Bun and workerd; needs Deno and Bun                                                                                                                                     |
@@ -277,6 +279,13 @@ tests of every engine, and waits for the next change to that part.
   `## Which package`, with each package's description, `## Documentation`, `## Development`, `## Layout` and `## License`, in
   that order (`readme-sections`). The root README and the README of each package link absolutely: a guide or a package at its
   page on the docs site, any other file at its address in the repository.
+- The docs site is TypeDoc with the plugin `docs/typedoc-seo.ts` and the `structure-dir` router, whose paths never change once
+  the site is indexed. Each guide has a title that names its subject (the H1 of its file), and the plugin writes the title of
+  its page as `<H1> · <package> (<label>)`, a description from its first paragraph and a canonical URL that the sitemap lists;
+  `llms.txt`, `robots.txt`, `CNAME`, `404.html` and the Markdown copies are generated, never written by hand. The API pages are
+  named by the import path of their module (`@module @assesskit/runtime/asi`). The API page of an export and the folder of a
+  module differ only by case in one place, `Messages` and `messages/id`, so `pnpm check:site` passes on a case-sensitive file
+  system and reports three violations on the default one of macOS.
 - `scripts/family.ts` holds the identity of the family: `SITE`, the base of the docs site (`https://assesskit.wakan.dev/`, the
   owner's domain), the family's sentence, each package's description, label and keywords, and the marks of others with their
   holders. A package's `description`, `keywords`, `homepage` and `author` and the first sentence of its README come from its

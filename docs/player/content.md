@@ -1,4 +1,4 @@
-# Content
+# Content rendering
 
 The content of an item is the typed tree that the runtime's `asi` reads: text, HTML elements, QTI elements, interactions, and
 MathML and SSML kept as XML. `createBodyRenderer` of `@assesskit/player/player` builds the DOM for such nodes, and

@@ -1,4 +1,4 @@
-# Command line
+# The assesskit command line
 
 `cli` is the command line of the runtime, for Node.js 22 and later. The package installs it as the program `assesskit`. It
 validates a content package or an XML document against the published schemas and with the semantic checks of

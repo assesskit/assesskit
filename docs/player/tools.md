@@ -1,4 +1,4 @@
-# Tools
+# Tools of the host
 
 The tools of an item are what the item's companion materials ask the player to provide and what the candidate's profile
 puts on the screen: a rule, a protractor, calculators, digital and physical materials, a line reader, answer masking, a

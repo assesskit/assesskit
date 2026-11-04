@@ -1,4 +1,4 @@
-# Validate
+# The validator
 
 `validate` finds what a schema cannot: the rule sets of the XML binding, the constraints of the Information Model, the static
 types of processing, the structure of a test, the covers and scoring rubrics of externally scored outcomes, the files of a package, and the rules

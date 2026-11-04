@@ -1,4 +1,4 @@
-# Processing
+# Response and outcome processing
 
 `processing` runs the template, response and outcome processing of QTI 3.0: a tree interpreter for every expression and rule,
 the variables of an item session, the six standard response processing templates, custom operators, and the signatures of the
