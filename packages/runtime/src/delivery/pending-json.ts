@@ -10,9 +10,10 @@ import { DataError } from "../errors.js";
 import type { InteractionKind } from "../interactions/index.js";
 import { INTERACTION_KINDS } from "../interactions/internal.js";
 import type { ResultContext } from "../results/index.js";
+import { writeWireValue } from "../values/index.js";
 import { baseTypeSchema, cardinalitySchema } from "../values/internal.js";
 import { CAT_STATUSES, type CatOutcome, type CatSession, type CatWait, type ReportedItem } from "./cat-session.js";
-import { valueJsonSchema, valueToJson } from "./entries-json.js";
+import { valueJsonSchema } from "./entries-json.js";
 import { itemKeySchema } from "./item-key.js";
 import type { Scorer, ScoringCover, ScoringDeclaration, ScoringRequest, SuppliedScore } from "./scoring.js";
 
@@ -34,7 +35,7 @@ function coverToJson(cover: ScoringCover): unknown {
     ...(label === undefined ? {} : { label }),
     presented,
     ...(interaction === undefined ? {} : { interaction }),
-    response: valueToJson(response),
+    response: response === null ? null : writeWireValue(response),
   };
 }
 
@@ -80,7 +81,9 @@ export function scoringToJson(requests: readonly ScoringRequest[]): unknown {
       declaration: request.declaration,
       covers: request.covers.map(coverToJson),
       requestedAt: request.requestedAt,
-      ...(supplied === undefined ? {} : { supplied: { ...supplied, value: valueToJson(supplied.value) } }),
+      ...(supplied === undefined
+        ? {}
+        : { supplied: { ...supplied, value: supplied.value === null ? null : writeWireValue(supplied.value) } }),
     };
   });
 }
@@ -116,7 +119,7 @@ function outcomeToJson(outcome: CatOutcome): unknown {
   return {
     ...(item === undefined ? {} : { item }),
     identifier: outcome.identifier,
-    value: valueToJson(outcome.value),
+    value: outcome.value === null ? null : writeWireValue(outcome.value),
     declared: outcome.declared,
     ...(variableIdentifierRef === undefined ? {} : { variableIdentifierRef }),
   };

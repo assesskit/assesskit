@@ -1,4 +1,4 @@
-import type { CallOptions } from "../../protocol/index.js";
+import type { CallOptions } from "@assesskit/runtime/checks";
 import type { ItemSettings } from "./settings.js";
 import type { MountState } from "./state.js";
 

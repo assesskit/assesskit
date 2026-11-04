@@ -144,8 +144,8 @@ type Invocation = () => Promise<() => unknown>;
  *   that is busy; every other error of the port, of `authorize` or of the encoding is 500 with a fixed text, and goes to
  *   `onError`.
  * - **Abort.** A request whose signal aborts ends the wait: the promise rejects with the reason, nothing is sent, the read of
- *   the body is cancelled, and the port is not called when the abort came first. A call of the port that has begun runs
- *   on, because `CatPort` takes no signal.
+ *   the body is cancelled, and the port is not called when the abort came first. A call of the port gets the signal of the
+ *   request, so that a port such as `createRestCatPort` stops its own request too.
  * - **Metadata.** A `qtiMetadata` object of Create Section reaches the port as `qtiMetadataRecord`, and Get Section returns
  *   it. The metadata file of the section data is not returned, because the binding gives the file no place (see the guide).
  * - **Session end.** A stage without items is sent as no `nextItems`, which is how the binding ends a session.
@@ -188,41 +188,48 @@ export function createCatRestHandler(
     request: Request,
   ): Promise<Invocation> => {
     const body = (): Promise<unknown> => readJsonBody(request, limits, request.signal);
+    const call = { signal: request.signal };
     switch (operation) {
       case "createSection": {
         const data = readSectionBody(await body());
         return async () => {
-          const answer = await engine.createSection(engineReference, data);
+          const answer = await engine.createSection(engineReference, data, call);
           return () => writeCreateSectionAnswer(answer);
         };
       }
       case "getSection":
         return async () => {
-          const answer = await engine.getSection(engineReference, sectionIdentifier);
+          const answer = await engine.getSection(engineReference, sectionIdentifier, call);
           return () => writeGetSectionAnswer(answer);
         };
       case "endSection":
         return async () => {
-          await engine.endSection(engineReference, sectionIdentifier);
+          await engine.endSection(engineReference, sectionIdentifier, call);
           return () => undefined;
         };
       case "createSession": {
         const session = readCreateSessionBody(await body());
         return async () => {
-          const answer = await engine.createSession(engineReference, sectionIdentifier, session);
+          const answer = await engine.createSession(engineReference, sectionIdentifier, session, call);
           return () => writeCreateSessionAnswer(answer);
         };
       }
       case "submitResults": {
         const results = readResultsBody(await body());
         return async () => {
-          const answer = await engine.submitResults(engineReference, sectionIdentifier, sessionIdentifier, results);
+          const answer = await engine.submitResults(
+            engineReference,
+            sectionIdentifier,
+            sessionIdentifier,
+            results,
+            call,
+          );
           return () => writeSubmitResultsAnswer(answer);
         };
       }
       case "endSession":
         return async () => {
-          await engine.endSession(engineReference, sectionIdentifier, sessionIdentifier);
+          await engine.endSession(engineReference, sectionIdentifier, sessionIdentifier, call);
           return () => undefined;
         };
     }

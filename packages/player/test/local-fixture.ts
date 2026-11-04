@@ -1,7 +1,7 @@
+import type { CallOptions } from "@assesskit/runtime/checks";
 import type { CandidateAction, CandidateView, DeliveryEvent } from "@assesskit/runtime/delivery";
 import { buildSingle } from "@assesskit/runtime/values";
 import type { createLocalSession, LocalStore } from "../src/client/local/index.js";
-import type { CallOptions } from "../src/protocol/index.js";
 import { examDefinition, fakeClock } from "./exam-fixture.js";
 
 /** A second in milliseconds. */

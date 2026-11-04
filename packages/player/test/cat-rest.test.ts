@@ -570,6 +570,95 @@ describe("createRestCatPort", () => {
     await expect(port.endSection(PREFIX, "sec1")).rejects.toMatchObject({ name: "TimeoutError" });
   });
 
+  it("stops the request of a call whose signal aborts, and sends nothing for a signal that aborted already", async () => {
+    const reason = new Error("The candidate left.");
+    const service = fakeService();
+    const idle = onePort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
+    await expect(idle.endSection(PREFIX, "sec1", { signal: AbortSignal.abort(reason) })).rejects.toBe(reason);
+    expect(service.calls).toEqual([]);
+
+    const controller = new AbortController();
+    const sent: AbortSignal[] = [];
+    let reached: () => void = () => undefined;
+    const arrived = new Promise<void>((resolve) => (reached = resolve));
+    const port = onePort({
+      endpoint: PREFIX,
+      credentials: CREDENTIALS,
+      // A fetch that never answers and ignores its signal: the wait of the call ends on the signal all the same.
+      fetch: async (url, request) => {
+        if (url === TOKEN_URL) return { ok: true, status: 200, text: async () => JSON.stringify(TOKEN.body) };
+        sent.push(request.signal);
+        reached();
+        return new Promise(() => undefined);
+      },
+    });
+    const pending = port.endSection(PREFIX, "sec1", { signal: controller.signal });
+    await arrived;
+    controller.abort(reason);
+    await expect(pending).rejects.toBe(reason);
+    expect(sent.map((signal) => [signal.aborted, signal.reason])).toEqual([[true, reason]]);
+  });
+
+  it("ends the wait of a call for a token when its signal aborts, and lets the token request go on for the other calls", async () => {
+    const reason = new Error("The candidate left.");
+    const tokenSignals: AbortSignal[] = [];
+    const engineUrls: string[] = [];
+    let issue: () => void = () => undefined;
+    let asked: () => void = () => undefined;
+    const tokenAsked = new Promise<void>((resolve) => (asked = resolve));
+    const port = onePort({
+      endpoint: PREFIX,
+      credentials: CREDENTIALS,
+      fetch: async (url, request) => {
+        if (url === TOKEN_URL) {
+          tokenSignals.push(request.signal);
+          asked();
+          await new Promise<void>((resolve) => (issue = resolve));
+          return { ok: true, status: 200, text: async () => JSON.stringify(TOKEN.body) };
+        }
+        engineUrls.push(url);
+        return { ok: true, status: 204, text: async () => "" };
+      },
+    });
+    const controller = new AbortController();
+    const first = port.endSection(PREFIX, "sec1", { signal: controller.signal });
+    const second = port.endSection(PREFIX, "sec2");
+    await tokenAsked;
+    controller.abort(reason);
+    await expect(first).rejects.toBe(reason);
+    issue();
+    await expect(second).resolves.toBeUndefined();
+    expect(tokenSignals.map((signal) => signal.aborted)).toEqual([false]);
+    expect(engineUrls).toEqual([`${PREFIX}/sections/sec2`]);
+  });
+
+  it("gives a function of engines the options of the call, and ends the wait for it on the signal", async () => {
+    const reason = new Error("The candidate left.");
+    const given: unknown[] = [];
+    const port = createRestCatPort({
+      fetch: fakeService().fetch,
+      engines: (_reference, options) => {
+        given.push(options);
+        return new Promise<undefined>(() => undefined);
+      },
+    });
+    const controller = new AbortController();
+    const pending = port.getSection(PREFIX, "sec1", { signal: controller.signal });
+    controller.abort(reason);
+    await expect(pending).rejects.toBe(reason);
+    expect(given).toEqual([{ signal: controller.signal }]);
+  });
+
+  it("refuses options of a call that are not an object with an AbortSignal", async () => {
+    const port = onePort({ fetch: fakeService().fetch, endpoint: PREFIX, credentials: CREDENTIALS });
+    await expect(port.endSection(PREFIX, "sec1", json("null"))).rejects.toThrow(
+      new DataError("The options must be an object, found null."),
+    );
+    await expect(port.endSection(PREFIX, "sec1", json('{"signal":5}'))).rejects.toThrow(
+      new DataError("The option signal must be an AbortSignal, found 5."),
+    );
+  });
+
   it("sends nothing to a reference that the host did not configure, and nothing over http", async () => {
     const service = fakeService();
     const port = onePort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
@@ -983,13 +1072,25 @@ describe("createRestCatPort", () => {
 function stubPort(replace: Partial<CatPort> = {}): {
   readonly port: CatPort;
   readonly received: unknown[][];
+  readonly options: unknown[];
   readonly calls: () => string[];
 } {
+  /** The arguments of each method before its options. */
+  const ARITY: Readonly<Record<keyof CatPort, number>> = {
+    createSection: 2,
+    getSection: 2,
+    createSession: 3,
+    submitResults: 4,
+    endSession: 3,
+    endSection: 2,
+  };
   const received: unknown[][] = [];
+  const options: unknown[] = [];
   const recording =
-    <Args extends unknown[], Result>(name: string, answer: (...args: Args) => Promise<Result>) =>
+    <Args extends unknown[], Result>(name: keyof CatPort, answer: (...args: Args) => Promise<Result>) =>
     (...args: Args): Promise<Result> => {
-      received.push([name, ...args]);
+      received.push([name, ...args.slice(0, ARITY[name])]);
+      options.push(args[ARITY[name]]);
       return answer(...args);
     };
   const port: CatPort = {
@@ -1007,9 +1108,9 @@ function stubPort(replace: Partial<CatPort> = {}): {
     endSection: recording("endSection", async () => undefined),
   };
   for (const [name, answer] of Object.entries(replace)) {
-    Object.assign(port, { [name]: recording(name, answer as never) });
+    Object.assign(port, { [name]: recording(name as keyof CatPort, answer as never) });
   }
-  return { port, received, calls: () => received.map(([name]) => String(name)) };
+  return { port, received, options, calls: () => received.map(([name]) => String(name)) };
 }
 
 describe("createCatRestHandler", () => {
@@ -1600,6 +1701,24 @@ describe("createCatRestHandler", () => {
       "endSession",
       "endSection",
     ]);
+  });
+
+  it("gives the port the signal of the request with each of the six calls, so that the port can stop its own work", async () => {
+    const { port, options } = stubPort();
+    const handler = handlerOf(port);
+    const requests = [
+      requestOf("POST", "/sections", { body: { sectionConfiguration: "e30=" } }),
+      requestOf("GET", "/sections/sec1"),
+      requestOf("POST", "/sections/sec1/sessions", { body: {} }),
+      requestOf("POST", "/sections/sec1/sessions/s1/results", { body: RESULT_BODY }),
+      requestOf("DELETE", "/sections/sec1/sessions/s1"),
+      requestOf("DELETE", "/sections/sec1"),
+    ];
+    for (const request of requests) await handler(request);
+    expect(options).toEqual(requests.map(({ signal }) => ({ signal })));
+    expect(options.map((each) => (each as { readonly signal: AbortSignal }).signal)).toEqual(
+      requests.map(({ signal }) => signal),
+    );
   });
 
   it("tells onError the error, the request and the operation behind every answer of 500, from the four origins", async () => {

@@ -120,7 +120,8 @@ record.
 | `writeWireValue`, `readWireValue` | A `WireValue` `{ cardinality, baseType?, value }`, where `value` is that JSON, or `null` for NULL. Reading needs nothing |
 
 A wire value decodes without a declaration and loses nothing through `JSON.stringify` and `JSON.parse`: it keeps `multiple`
-apart from `ordered`, gives a NULL its type, and keeps `NaN`, infinities and `-0`. A record has no `baseType`.
+apart from `ordered`, gives a NULL its type, and keeps `NaN`, infinities and `-0`. A record has no `baseType`. A value names its
+own type, so `writeWireValue` needs the option `declaration` only for a NULL; given for a value, the value must have its type.
 
 ```ts
 import { readJsonValue, buildSingle, writeJsonValue, writeWireValue } from "@assesskit/runtime/values";
@@ -129,7 +130,9 @@ writeJsonValue(buildSingle("duration", 90.5), { cardinality: "single", baseType:
 // => { base: { duration: "PT90.5S" } }
 readJsonValue({ base: { duration: "PT90.5S" } }, { cardinality: "single", baseType: "duration" });
 // => { cardinality: "single", baseType: "duration", value: 90.5 }
-writeWireValue(null, { cardinality: "ordered", baseType: "point" });
+writeWireValue(buildSingle("integer", 5));
+// => { cardinality: "single", baseType: "integer", value: { base: { integer: 5 } } }
+writeWireValue(null, { declaration: { cardinality: "ordered", baseType: "point" } });
 // => { cardinality: "ordered", baseType: "point", value: null }
 ```
 
@@ -246,8 +249,8 @@ In a library of that kind, `a{99999999}` in a hostile pattern builds a program o
 
 ## Errors
 
-Every function checks its arguments, as plain JavaScript and JSON can pass anything. None throws for NULL: `null` is a value
-of the model.
+Every function checks its arguments, as plain JavaScript and JSON can pass anything. None throws for NULL, which is a value of
+the model, but `writeWireValue` without a declaration: a NULL has no type of its own to write.
 
 | Situation                                                                                     | Result                                                                          |
 | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
@@ -255,6 +258,7 @@ of the model.
 | A value outside its base type, such as an integer above the safe integers                     | `DataError` that says what the base type expects                                |
 | Text that is not in the lexical form of its base type                                         | `DataError` that quotes the text and the form expected                          |
 | JSON that is not the value of its declaration, with inline file data, or with years or months | `DataError` that names the path of the first problem                            |
+| A NULL for `writeWireValue` without the option `declaration`                                  | `DataError` that asks for the declaration                                       |
 | A pattern outside the dialect, or above a limit                                               | `DataError` that names the problem and its position in characters               |
 | A limit that is not a positive integer                                                        | `DataError` whose message begins `The limit maxStates`, or `The limit maxDepth` |
 | A text that is not base64                                                                     | `undefined` from the decoders                                                   |

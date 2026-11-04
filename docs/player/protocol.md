@@ -33,7 +33,6 @@ submission, because the server writes it and the browser shows it.
 | `LTI_TOOL_FRAME`, `LTI_STORAGE_FRAME`                     | The names of the two frames of an LTI item.                                                            |
 | `SessionClient`, `DispatchResult`                         | The one interface the player mounts against.                                                           |
 | `HostSession`, `HostStep`, `HostApplyOptions`             | The host side of a session, which a session host and a local session both offer.                       |
-| `CallOptions`                                             | The options of a call that waits on a store or a service: a signal.                                    |
 | `Clock`                                                   | The source of the time that a client, a session host and a test pass in.                               |
 | `OfficialResult`, `isOfficialResult`                      | A results report that the session host marked official.                                                |
 | `Submission` and its parts, `checkSubmission`             | What a rater needs to rate an externally scored outcome.                                               |
@@ -158,7 +157,6 @@ flowchart LR
 | `HostStep`         | `events`     | The events of the step, in order; empty when the action was refused or changed nothing.                                                                |
 | `HostStep`         | `refusal`    | Why the engine refused the action, as a value. Default: none, the action was applied.                                                                  |
 | `HostStep`         | `catFailure` | The `request` and `message` of a CAT request that the option `cat` failed to answer after the step; the step stands. Default: none.                    |
-| `CallOptions`      | `signal`     | An `AbortSignal` that stops the call before it applies anything. Work already saved stays saved. Default: none.                                        |
 | `HostApplyOptions` | `scoredBy`   | Who supplies a score, such as the rater or the scoring service: a non-empty string that a session host passes to its log with the step. Default: none. |
 
 A `time` action that finds nothing to do is accepted with no events; it is refused only as `ended` or `suspended`. A second

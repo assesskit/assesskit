@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { isRecord } from "@assesskit/runtime/checks";
+import { checkCallOptions, isRecord } from "@assesskit/runtime/checks";
 import {
   type CandidateAction,
   type CandidateView,
@@ -39,7 +39,6 @@ import {
 } from "../src/protocol/index.js";
 import {
   type CatAnswerer,
-  checkCallOptions,
   checkHostAction,
   checkHostApplyOptions,
   checkViewRequest,
@@ -493,27 +492,24 @@ describe("the answer loop of CAT requests", () => {
 describe("the options of a session call", () => {
   it("accept absent options, no property and a signal", () => {
     const signal = new AbortController().signal;
-    for (const check of [checkCallOptions, checkHostApplyOptions]) {
-      expect(() => check(undefined)).not.toThrow();
-      expect(() => check({})).not.toThrow();
-      expect(() => check({ signal })).not.toThrow();
-      expect(() => check({ signal: undefined })).not.toThrow();
-    }
+    expect(() => checkHostApplyOptions(undefined)).not.toThrow();
+    expect(() => checkHostApplyOptions({})).not.toThrow();
+    expect(() => checkHostApplyOptions({ signal })).not.toThrow();
+    expect(() => checkHostApplyOptions({ signal: undefined })).not.toThrow();
     expect(() => checkHostApplyOptions({ signal, scoredBy: "https://rater.example/1" })).not.toThrow();
   });
 
   it("refuse null, an array, a signal of another type and a property they do not know", () => {
-    for (const check of [checkCallOptions, checkHostApplyOptions]) {
-      expect(() => check(json("null"))).toThrow(new DataError("The options must be an object, found null."));
-      expect(() => check(json("[]"))).toThrow(new DataError("The options must be an object, found an array."));
-      expect(() => check(json('{"signal":5}'))).toThrow(
-        new DataError("The option signal must be an AbortSignal, found 5."),
-      );
-      expect(() => check(json('{"signal":null}'))).toThrow(
-        new DataError("The option signal must be an AbortSignal, found null."),
-      );
-      expect(() => check(json('{"timeout":1}'))).toThrow(DataError);
-    }
+    const check = checkHostApplyOptions;
+    expect(() => check(json("null"))).toThrow(new DataError("The options must be an object, found null."));
+    expect(() => check(json("[]"))).toThrow(new DataError("The options must be an object, found an array."));
+    expect(() => check(json('{"signal":5}'))).toThrow(
+      new DataError("The option signal must be an AbortSignal, found 5."),
+    );
+    expect(() => check(json('{"signal":null}'))).toThrow(
+      new DataError("The option signal must be an AbortSignal, found null."),
+    );
+    expect(() => check(json('{"timeout":1}'))).toThrow(DataError);
   });
 
   it("refuse a scoredBy that is not a non-empty string only where the host applies an action", () => {

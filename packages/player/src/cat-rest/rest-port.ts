@@ -1,5 +1,7 @@
 import type { CatPort } from "@assesskit/runtime/cat";
 import {
+  type CallOptions,
+  checkCallOptions,
   checkNonEmptyString,
   checkString,
   describe,
@@ -8,6 +10,7 @@ import {
   parseWith,
   positiveIntegerSchema,
   positiveSchema,
+  raceAbort,
   type Schema,
 } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
@@ -56,8 +59,14 @@ export interface CatEngine {
  */
 export type CatEngines = ReadonlyMap<string, CatEngine> | CatEngineResolver;
 
-/** A function from the reference that a package names to the engine it stands for, or `undefined` for an unknown reference. */
-export type CatEngineResolver = (reference: string) => CatEngine | undefined | Promise<CatEngine | undefined>;
+/**
+ * A function from the reference that a package names to the engine it stands for, or `undefined` for an unknown reference. It
+ * gets the options of the call of the port, whose `signal` ends the wait for it whether or not it honours the signal.
+ */
+export type CatEngineResolver = (
+  reference: string,
+  options?: CallOptions,
+) => CatEngine | undefined | Promise<CatEngine | undefined>;
 
 /** Options of {@link createRestCatPort}. */
 export interface RestCatPortOptions {
@@ -149,6 +158,8 @@ function checkedMap(engines: ReadonlyMap<string, CatEngine>): ReadonlyMap<string
  * - **Requests.** Redirects are errors, and every request, the token request included, is aborted after `timeoutMs`. A
  *   network error or a timeout rejects with the error of `fetch`. An answer is read whole, and its JSON has at most
  *   `maxTokens` tokens.
+ * - **Signals.** The `signal` of a call ends its wait, for the engine of a resolver function too, and aborts its request;
+ *   the token request, which the calls share, goes on to its timeout. A call whose signal has aborted sends nothing.
  * - **Personal data.** Create Session sends the personal needs and preferences only to an engine with `sharePnp`.
  * - **Binding.** The bodies are those of the binding's OpenAPI file, and the port sends no other shape. The `qtiMetadata`
  *   of the binding is one QTI metadata record, which `qtiMetadataRecord` of the section data carries; the metadata file of
@@ -168,10 +179,13 @@ export function createRestCatPort(options: RestCatPortOptions): CatPort {
   const client = createRestClient({ fetch, timeoutMs, maxTokens });
 
   /** Finds the engine that a reference stands for; a reference that the host did not configure is refused. */
-  const engineOf = async (prefix: unknown): Promise<CatEngine> => {
+  const engineOf = async (prefix: unknown, signal: AbortSignal | undefined): Promise<CatEngine> => {
     checkString(prefix, "The prefix");
     const reference = withoutTrailingSlashes(prefix);
-    const found = resolve === undefined ? known?.get(reference) : await resolve(reference);
+    const found =
+      resolve === undefined
+        ? known?.get(reference)
+        : await raceAbort(Promise.resolve(resolve(reference, { signal })), { signal });
     if (found === undefined) {
       throw new DataError(
         `The reference ${describe(prefix)} is not an engine that the host configured; the port sends nothing to another engine.`,
@@ -185,7 +199,8 @@ export function createRestCatPort(options: RestCatPortOptions): CatPort {
   /** Where a path is at an engine, and the engine. */
   const at = async (
     prefix: string,
-    ...path: readonly string[]
+    path: readonly string[],
+    signal: AbortSignal | undefined,
   ): Promise<{ readonly engine: CatEngine; readonly url: string }> => {
     const step = path.find((segment) => DOT_SEGMENTS.has(segment));
     if (step !== undefined) {
@@ -193,54 +208,76 @@ export function createRestCatPort(options: RestCatPortOptions): CatPort {
         `The identifier ${describe(step)} cannot be sent in the path of a URL, which takes it as a step to another path.`,
       );
     }
-    const engine = await engineOf(prefix);
+    const engine = await engineOf(prefix, signal);
     return { engine, url: [withoutTrailingSlashes(engine.endpoint), ...path.map(encodeURIComponent)].join("/") };
   };
-  const section = (prefix: string, sectionIdentifier: string): ReturnType<typeof at> => {
+  const section = (
+    prefix: string,
+    sectionIdentifier: string,
+    signal: AbortSignal | undefined,
+  ): ReturnType<typeof at> => {
     checkNonEmptyString(sectionIdentifier, "The section identifier");
-    return at(prefix, "sections", sectionIdentifier);
+    return at(prefix, ["sections", sectionIdentifier], signal);
   };
-  const session = (prefix: string, sectionIdentifier: string, sessionIdentifier: string): ReturnType<typeof at> => {
+  const session = (
+    prefix: string,
+    sectionIdentifier: string,
+    sessionIdentifier: string,
+    signal: AbortSignal | undefined,
+  ): ReturnType<typeof at> => {
     checkNonEmptyString(sessionIdentifier, "The session identifier");
     checkNonEmptyString(sectionIdentifier, "The section identifier");
-    return at(prefix, "sections", sectionIdentifier, "sessions", sessionIdentifier);
+    return at(prefix, ["sections", sectionIdentifier, "sessions", sessionIdentifier], signal);
+  };
+  /** Reads the signal of the options of a call, which a caller from JavaScript may pass with the wrong type. */
+  const signalOf = (options: CallOptions | undefined): AbortSignal | undefined => {
+    checkCallOptions(options);
+    options?.signal?.throwIfAborted();
+    return options?.signal;
   };
 
   return {
-    async createSection(prefix, data) {
-      const { engine, url } = await at(prefix, "sections");
-      const body = await client.send(engine.credentials, "POST", url, writeSectionBody(data));
+    async createSection(prefix, data, options) {
+      const signal = signalOf(options);
+      const { engine, url } = await at(prefix, ["sections"], signal);
+      const body = await client.send(engine.credentials, "POST", url, { body: writeSectionBody(data), signal });
       return readCreateSectionAnswer(body);
     },
 
-    async getSection(prefix, sectionIdentifier) {
-      const { engine, url } = await section(prefix, sectionIdentifier);
-      return readGetSectionAnswer(await client.send(engine.credentials, "GET", url));
+    async getSection(prefix, sectionIdentifier, options) {
+      const signal = signalOf(options);
+      const { engine, url } = await section(prefix, sectionIdentifier, signal);
+      return readGetSectionAnswer(await client.send(engine.credentials, "GET", url, { signal }));
     },
 
-    async createSession(prefix, sectionIdentifier, request) {
+    async createSession(prefix, sectionIdentifier, request, options) {
+      const signal = signalOf(options);
       checkNonEmptyString(sectionIdentifier, "The section identifier");
-      const { engine, url } = await at(prefix, "sections", sectionIdentifier, "sessions");
+      const { engine, url } = await at(prefix, ["sections", sectionIdentifier, "sessions"], signal);
       const body = writeCreateSessionBody(request, engine.sharePnp ?? false);
-      return readCreateSessionAnswer(await client.send(engine.credentials, "POST", url, body));
+      return readCreateSessionAnswer(await client.send(engine.credentials, "POST", url, { body, signal }));
     },
 
-    async submitResults(prefix, sectionIdentifier, sessionIdentifier, request) {
+    async submitResults(prefix, sectionIdentifier, sessionIdentifier, request, options) {
+      const signal = signalOf(options);
       const body = writeResultsBody(request);
       checkNonEmptyString(sessionIdentifier, "The session identifier");
       checkNonEmptyString(sectionIdentifier, "The section identifier");
-      const { engine, url } = await at(prefix, "sections", sectionIdentifier, "sessions", sessionIdentifier, "results");
-      return readSubmitResultsAnswer(await client.send(engine.credentials, "POST", url, body));
+      const path = ["sections", sectionIdentifier, "sessions", sessionIdentifier, "results"];
+      const { engine, url } = await at(prefix, path, signal);
+      return readSubmitResultsAnswer(await client.send(engine.credentials, "POST", url, { body, signal }));
     },
 
-    async endSession(prefix, sectionIdentifier, sessionIdentifier) {
-      const { engine, url } = await session(prefix, sectionIdentifier, sessionIdentifier);
-      await client.send(engine.credentials, "DELETE", url);
+    async endSession(prefix, sectionIdentifier, sessionIdentifier, options) {
+      const signal = signalOf(options);
+      const { engine, url } = await session(prefix, sectionIdentifier, sessionIdentifier, signal);
+      await client.send(engine.credentials, "DELETE", url, { signal });
     },
 
-    async endSection(prefix, sectionIdentifier) {
-      const { engine, url } = await section(prefix, sectionIdentifier);
-      await client.send(engine.credentials, "DELETE", url);
+    async endSection(prefix, sectionIdentifier, options) {
+      const signal = signalOf(options);
+      const { engine, url } = await section(prefix, sectionIdentifier, signal);
+      await client.send(engine.credentials, "DELETE", url, { signal });
     },
   };
 }

@@ -47,16 +47,19 @@ sequenceDiagram
 `CatPort` has one method for each endpoint of CAT. Every method takes `prefix` first: the URL prefix that `qti-adaptive-engine-ref`
 gives. A document names the prefix, so the host checks it against the engines it trusts before it sends a candidate's results
 there. `CatSessionPort` is the three methods of the delivery of a session, `createSession`, `submitResults` and `endSession`: `drainCat`,
-`sendCatRequest` and the option `cat` of the player take it, so that a port without the deployment of sections serves.
+`sendCatRequest` and the option `cat` of the player take it, so that a port without the deployment of sections serves. Every
+method takes `options?` last, the `CallOptions` of `@assesskit/runtime/checks`: its `signal` ends the wait of the caller, and a
+port that sends a request passes it on, so that the request stops too. `drainCat`, `sendCatRequest`, `deployCatSections` and
+the REST handler pass the signal of their caller.
 
-| Method                                                                 | Request                                | Made by                       |
-| ---------------------------------------------------------------------- | -------------------------------------- | ----------------------------- |
-| `createSection(prefix, data)`                                          | `POST {prefix}/sections`               | The host, once, at deployment |
-| `getSection(prefix, sectionIdentifier)`                                | `GET {prefix}/sections/{id}`           | The host, to verify the pool  |
-| `createSession(prefix, sectionIdentifier, request)`                    | `POST {prefix}/sections/{id}/sessions` | The delivery engine           |
-| `submitResults(prefix, sectionIdentifier, sessionIdentifier, request)` | `POST .../sessions/{id}/results`       | The delivery engine           |
-| `endSession(prefix, sectionIdentifier, sessionIdentifier)`             | `DELETE .../sessions/{id}`             | The delivery engine           |
-| `endSection(prefix, sectionIdentifier)`                                | `DELETE /sections/{id}`                | The host                      |
+| Method                                                                           | Request                                | Made by                       |
+| -------------------------------------------------------------------------------- | -------------------------------------- | ----------------------------- |
+| `createSection(prefix, data, options?)`                                          | `POST {prefix}/sections`               | The host, once, at deployment |
+| `getSection(prefix, sectionIdentifier, options?)`                                | `GET {prefix}/sections/{id}`           | The host, to verify the pool  |
+| `createSession(prefix, sectionIdentifier, request, options?)`                    | `POST {prefix}/sections/{id}/sessions` | The delivery engine           |
+| `submitResults(prefix, sectionIdentifier, sessionIdentifier, request, options?)` | `POST .../sessions/{id}/results`       | The delivery engine           |
+| `endSession(prefix, sectionIdentifier, sessionIdentifier, options?)`             | `DELETE .../sessions/{id}`             | The delivery engine           |
+| `endSection(prefix, sectionIdentifier, options?)`                                | `DELETE /sections/{id}`                | The host                      |
 
 - Create Section is not idempotent: the host makes it once and gives the returned identifier to the delivery definition.
 - A missing `sessionState` in an answer means there is none. A stateless engine sends one, and the next Submit Results request

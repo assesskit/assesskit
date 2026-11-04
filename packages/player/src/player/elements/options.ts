@@ -1,4 +1,5 @@
 import type { CustomInteraction } from "@assesskit/runtime/asi";
+import type { CallOptions } from "@assesskit/runtime/checks";
 import {
   checkBoolean,
   checkFunction,
@@ -12,7 +13,6 @@ import { DataError } from "@assesskit/runtime/errors";
 import type { FileValue, Value } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";
-import type { CallOptions } from "../../protocol/index.js";
 
 /** Where uploads, recordings and drawings are kept: the host's storage, which values refer to. */
 export interface InteractionFiles {

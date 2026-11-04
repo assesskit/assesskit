@@ -1,9 +1,8 @@
-import { checkFunction, checkRecord } from "@assesskit/runtime/checks";
+import { type CallOptions, checkCallOptions, checkFunction, checkRecord } from "@assesskit/runtime/checks";
 import type { ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { buildSingle } from "@assesskit/runtime/values";
-import type { CallOptions, HostApplyOptions, HostSession } from "../protocol/index.js";
-import { checkCallOptions } from "../protocol/internal.js";
+import type { HostApplyOptions, HostSession } from "../protocol/index.js";
 import type { StepSink } from "./forward.js";
 import type { ToolScore, ToolScoreStore } from "./tool-score-store.js";
 

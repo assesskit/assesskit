@@ -4,6 +4,7 @@ import {
   checkAbortSignal,
   checkArray,
   checkBoolean,
+  checkCallOptions,
   checkChoice,
   checkFunction,
   checkNonEmptyString,
@@ -187,6 +188,32 @@ describe("raceAbort", () => {
   it("rejects at once for a signal that has aborted", async () => {
     const reason = new Error("Too late.");
     await expect(raceAbort(new Promise(() => undefined), { signal: AbortSignal.abort(reason) })).rejects.toBe(reason);
+  });
+});
+
+describe("checkCallOptions", () => {
+  it("accepts absent options, no property and a signal", () => {
+    const signal = new AbortController().signal;
+    expect(() => checkCallOptions(undefined)).not.toThrow();
+    expect(() => checkCallOptions({})).not.toThrow();
+    expect(() => checkCallOptions({ signal })).not.toThrow();
+    expect(() => checkCallOptions({ signal: undefined })).not.toThrow();
+  });
+
+  it("refuses null, an array, a signal of another type and a property it does not know", () => {
+    expect(() => checkCallOptions(JSON.parse("null"))).toThrow(
+      new DataError("The options must be an object, found null."),
+    );
+    expect(() => checkCallOptions(JSON.parse("[]"))).toThrow(
+      new DataError("The options must be an object, found an array."),
+    );
+    expect(() => checkCallOptions(JSON.parse('{"signal":5}'))).toThrow(
+      new DataError("The option signal must be an AbortSignal, found 5."),
+    );
+    expect(() => checkCallOptions(JSON.parse('{"signal":null}'))).toThrow(
+      new DataError("The option signal must be an AbortSignal, found null."),
+    );
+    expect(() => checkCallOptions(JSON.parse('{"timeout":1}'))).toThrow(DataError);
   });
 });
 

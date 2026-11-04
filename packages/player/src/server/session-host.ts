@@ -1,15 +1,8 @@
 import type { CatSessionPort } from "@assesskit/runtime/cat";
+import type { CallOptions } from "@assesskit/runtime/checks";
 import type { ActionLimits, Engine, StartOptions } from "@assesskit/runtime/delivery";
 import type { QtiPackage } from "@assesskit/runtime/package";
-import type {
-  Caller,
-  CallOptions,
-  Clock,
-  HostSession,
-  HostStep,
-  OfficialResult,
-  ViewEnvelope,
-} from "../protocol/index.js";
+import type { Caller, Clock, HostSession, HostStep, OfficialResult, ViewEnvelope } from "../protocol/index.js";
 import type { ForwardOptions } from "./forward.js";
 import type { AssetGate } from "./gate/index.js";
 import type { CandidateActionType } from "./policy.js";
@@ -28,10 +21,23 @@ export interface SessionHostOptions {
   readonly engine: Engine;
   /** The storage of sessions. */
   readonly store: SessionStore;
-  /** The scheduler of time-outs. */
-  readonly scheduler: Scheduler;
-  /** The clock of the server, such as `SYSTEM_CLOCK`. */
-  readonly clock: Clock;
+  /**
+   * The scheduler of time-outs, so that a session ends when its maximum time passes even if no request comes.
+   *
+   * @remarks
+   * A host of untimed practice leaves it out. A step that has a maximum time to schedule is then refused with a `DataError`
+   * before anything is saved: the start of a test with a maximum time from its start, and the step that enters a timed
+   * test part, section or item.
+   *
+   * @defaultValue none, so that a session with a maximum time cannot run
+   */
+  readonly scheduler?: Scheduler;
+  /**
+   * The clock of the server.
+   *
+   * @defaultValue `SYSTEM_CLOCK`
+   */
+  readonly clock?: Clock;
   /** The asset gate that signs the prefixes of each envelope. */
   readonly gate: AssetGate;
   /** Returns the package that a session delivers; the gate takes the same function. It may ignore the options. */
@@ -97,7 +103,8 @@ export interface SessionHost {
    * @param options - What `Engine.start` takes but the time, and the `signal` of the call, which does not reach the engine.
    * @returns The first envelope, with the sequence number 0.
    * @throws `AccessError` (`session-exists`) when the session exists: a session is never started again or rebound.
-   * @throws `DataError` when an argument has the wrong type, or the engine cannot start.
+   * @throws `DataError` when an argument has the wrong type, the engine cannot start, or the test has a maximum time from its
+   * start and the host has no scheduler.
    * @throws `signal.reason` when the signal aborts before the store or the scheduler is called. A call that waits on one
    * rejects when the service does.
    */
@@ -139,7 +146,8 @@ export interface SessionHost {
    * @param options - See {@link CallOptions}.
    * @returns The envelope that answers it.
    * @throws `AccessError` (`not-bound`) when the session is not bound to the caller's principal.
-   * @throws `DataError` when the envelope or the action is not valid, the action is outside the policy, or the sequence number is stale.
+   * @throws `DataError` when the envelope or the action is not valid, the action is outside the policy, the sequence number is
+   * stale, or the step starts a maximum time and the host has no scheduler.
    * @throws `SecurityError` when the action is above a limit of `limits`.
    * @throws `ServiceError` when the session cannot be saved after the retries.
    * @throws `signal.reason` when the signal aborts before a load, including the load of a retry. Nothing was applied.
@@ -153,7 +161,8 @@ export interface SessionHost {
    * @param action - The action.
    * @param options - See {@link CallOptions}.
    * @returns The events of the step, or the refusal.
-   * @throws `DataError` when the session does not exist or the action is not valid.
+   * @throws `DataError` when the session does not exist, the action is not valid, or the step starts a maximum time and the
+   * host has no scheduler.
    * @throws `ServiceError` when the session cannot be saved after the retries.
    * @throws `signal.reason` when the signal aborts before a load. Nothing was applied.
    */

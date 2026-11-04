@@ -42,7 +42,7 @@ sequenceDiagram
 ```ts
 import { createEngine } from "@assesskit/runtime/delivery";
 import { openPackage, createPackageResolvers } from "@assesskit/runtime/package";
-import { createAssetGate, createSessionHost, SYSTEM_CLOCK } from "@assesskit/player/server";
+import { createAssetGate, createSessionHost } from "@assesskit/player/server";
 
 const ASI = "http://www.imsglobal.org/xsd/imsqtiasi_v3p0";
 const files = new Map(
@@ -95,7 +95,7 @@ const key = await crypto.subtle.generateKey({ name: "HMAC", hash: "SHA-256" }, f
 const packages = async () => pkg;
 const gate = createAssetGate({ key, origin: "https://assets.example", packages, files: fileStore });
 
-const host = createSessionHost({ engine, store, scheduler, clock: SYSTEM_CLOCK, gate, packages });
+const host = createSessionHost({ engine, store, scheduler, gate, packages });
 
 // In the handler of POST /exam/start, for the caller that the host authenticated:
 const caller = { session: "s1", principal: "candidate-7" };
@@ -115,8 +115,8 @@ records.get("s1").version; // => 1
 | --------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `engine`        | `Engine`                                     | The delivery engine of the test. One engine serves every session.                                                                                                              |
 | `store`         | `SessionStore`                               | The storage of sessions.                                                                                                                                                       |
-| `scheduler`     | `Scheduler`                                  | The scheduler of time-outs, such as a job queue.                                                                                                                               |
-| `clock`         | `Clock`                                      | The time of the server. `SYSTEM_CLOCK` is the machine's.                                                                                                                       |
+| `scheduler`     | `Scheduler`                                  | The scheduler of time-outs, such as a job queue. Without one, a step that has a maximum time to schedule is a `DataError` and saves nothing. Default: none.                    |
+| `clock`         | `Clock`                                      | The time of the server. Default: `SYSTEM_CLOCK`, the machine's.                                                                                                                |
 | `gate`          | `AssetGate`                                  | Signs the prefixes of each envelope.                                                                                                                                           |
 | `packages`      | `(session, options?) => Promise<QtiPackage>` | The package that a session delivers; the gate takes the same function. It may ignore the options.                                                                              |
 | `clientActions` | `CandidateActionType[]`                      | The types of action a client may send. Default: every type but `suspend` and `resume` (`EXAM_CLIENT_ACTIONS`).                                                                 |
@@ -135,7 +135,8 @@ records.get("s1").version; // => 1
 | `proctor(session, action, options?)` | Applies `suspend`, `resume`, `end-part` or `end-test` on the host's authority and answers with a `HostStep`.                                                                                                                                                                                          |
 | `session(session)`                   | The host side of the session, a `HostSession` ([protocol](protocol.md#the-host-session)): `apply`, `pending`, `scorerView` and `results`, as below.                                                                                                                                                   |
 
-`options` of a call is `{ signal? }`: an `AbortSignal` that stops the call before its next load, as [signals](#signals) says.
+`options` of a call is `{ signal? }`, the `CallOptions` of `@assesskit/runtime/checks`: an `AbortSignal` that stops the call
+before its next load, as [signals](#signals) says. Every method of a store and of the scheduler takes the same options last.
 
 ### The host side
 
@@ -242,7 +243,8 @@ sequenceDiagram
 
 ### Time
 
-The scheduler is the host's, such as a job queue, so a restart loses no time-out. After each step the host calls
+The scheduler is the host's, such as a job queue, so a restart loses no time-out. A host without one runs only sessions with no
+maximum time: a step that has one to schedule is a `DataError`, and nothing is saved. After each step the host calls
 `schedule(session, at)` for every maximum time of the new state, rounded up to a millisecond; the call is idempotent for a
 pair. The job calls `session(id).apply({ type: "time" })` when `at` arrives. The runtime applies a passed deadline on the next
 action and its view shows a time-out as applied, so a late job delays only a proactive time-out, never correctness. A `time` that
@@ -568,6 +570,7 @@ The host throws the runtime's `DataError` for a request it refuses and the playe
 | `SecurityError`                                   | The action is above a limit of `limits`                                                                                                | Do not send it again; raise the limit only for a reason                                                                                                                                                                                                                               |
 | `DataError`                                       | A call of `session(id)`, for the proctor, the scorer or a score, names a session that does not exist                                   | Check the identifier                                                                                                                                                                                                                                                                  |
 | `DataError`                                       | `The session cannot start: …`, the engine refused the start                                                                            | Read the refusal in the message; check the definition and the profile                                                                                                                                                                                                                 |
+| `DataError`                                       | A maximum time to schedule, `start` of a timed test or a step that enters a timed part, section or item, and no `scheduler`            | Pass a `Scheduler`; a host of untimed practice needs none                                                                                                                                                                                                                             |
 | `DataError`                                       | The option `maxIdleMs` without `suspend` in `clientActions`, or another option of the wrong type                                       | Fix the options; the message says which                                                                                                                                                                                                                                               |
 | `DataError`                                       | The session refused the score of a tool                                                                                                | Read the refusal in the message; the request may be answered already                                                                                                                                                                                                                  |
 | `ServiceError` 409                                | Another request saved the session first, four times in a row                                                                           | Send the request again; one session with many writers needs a store with less contention                                                                                                                                                                                              |

@@ -1,6 +1,7 @@
+import type { CallOptions } from "@assesskit/runtime/checks";
 import type { CandidateItem, ItemKey } from "@assesskit/runtime/delivery";
 import type { Messages } from "../../messages/index.js";
-import type { CallOptions, LtiFrame } from "../../protocol/index.js";
+import type { LtiFrame } from "../../protocol/index.js";
 import { html } from "../internal.js";
 import { LTI_SLOT, type LtiFrameHandle, mountLtiFrame } from "./frame.js";
 

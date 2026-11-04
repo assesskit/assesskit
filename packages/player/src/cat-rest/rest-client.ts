@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers, OAuth parameters and the OAuth protocol are those of their specifications.
 
-import { checkRecord, describe, nonEmptyStringSchema, type Schema } from "@assesskit/runtime/checks";
+import { checkRecord, describe, nonEmptyStringSchema, raceAbort, type Schema } from "@assesskit/runtime/checks";
 import { encodeBase64 } from "@assesskit/runtime/values";
 import * as v from "valibot";
 import { httpsUrlSchema } from "../checks.js";
@@ -17,7 +17,7 @@ export interface CatFetchRequest {
   readonly body?: string;
   /** Always `manual`: a redirect would send the bearer token to another address, or from HTTPS to HTTP, so the client refuses the 3xx answer. */
   readonly redirect: "manual";
-  /** Aborts the request when it takes longer than the timeout. */
+  /** Aborts the request when it takes longer than the timeout, or when the caller of the port stops waiting. */
   readonly signal: AbortSignal;
 }
 
@@ -65,6 +65,17 @@ export const oauthCredentialsSchema: Schema<OAuthClientCredentials> = v.strictOb
   scope: nonEmptyStringSchema,
 });
 
+/** What a request of the REST client sends besides its method and URL. */
+interface RestRequest {
+  /** The JSON body; none for a request without one. */
+  readonly body?: unknown;
+  /**
+   * Ends the wait of the caller and aborts the request. The request for a token, which the requests of other callers share,
+   * goes on to its timeout.
+   */
+  readonly signal?: AbortSignal | undefined;
+}
+
 /** A client of REST services that authorize with OAuth 2.0 client credentials. */
 export interface RestClient {
   /**
@@ -74,12 +85,13 @@ export interface RestClient {
    * @param credentials - The credentials of the service: the client keeps one token for each token URL, client and scope.
    * @param method - The HTTP method.
    * @param url - The URL.
-   * @param body - The JSON body; none for a request without one.
+   * @param request - The body and the signal of the caller.
    * @returns The parsed JSON of the answer.
    * @throws `ServiceError` when the service answers with another status than 2xx after that, or with a body that is not JSON;
    *   `TokenEndpointError`, a `ServiceError`, when the request for a token fails.
+   * @throws `signal.reason` when the signal aborts before the answer is read.
    */
-  send(credentials: OAuthClientCredentials, method: string, url: string, body?: unknown): Promise<unknown>;
+  send(credentials: OAuthClientCredentials, method: string, url: string, request?: RestRequest): Promise<unknown>;
 }
 
 /** The options of {@link createRestClient}. */
@@ -229,40 +241,54 @@ export function createRestClient({ fetch, timeoutMs, maxTokens }: RestClientOpti
     method: string,
     url: string,
     body: string | undefined,
+    signal: AbortSignal | undefined,
   ): Promise<{ readonly response: CatFetchResponse; readonly token: Promise<string> }> => {
     const token = bearer(credentials);
+    // The token is shared, so the caller's signal ends only the wait for it; the request is the caller's own.
+    const bearerToken = await raceAbort(token, { signal });
+    const timeout = AbortSignal.timeout(timeoutMs);
     const response = await fetch(url, {
       method,
       headers: {
-        Authorization: `Bearer ${await token}`,
+        Authorization: `Bearer ${bearerToken}`,
         Accept: "application/json",
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
       ...(body === undefined ? {} : { body }),
       redirect: "manual",
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: signal === undefined ? timeout : AbortSignal.any([signal, timeout]),
     });
     refuseRedirect(response, `The CAT engine at ${url}`);
     return { response, token };
   };
 
+  const sendText = async (
+    credentials: OAuthClientCredentials,
+    method: string,
+    url: string,
+    text: string | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<unknown> => {
+    let { response, token } = await attempt(credentials, method, url, text, signal);
+    if (response.status === 401) {
+      forget(credentials, token);
+      ({ response } = await attempt(credentials, method, url, text, signal));
+    }
+    const answer = await response.text();
+    const what = `The CAT engine at ${url}`;
+    if (!response.ok)
+      throw new ServiceError(`${what} answered ${method} with the status ${response.status}.`, response.status, answer);
+    return answer === "" ? undefined : parseBody(answer, what, response.status, maxTokens);
+  };
+
   return {
-    async send(credentials, method, url, body) {
-      const text = body === undefined ? undefined : JSON.stringify(body);
-      let { response, token } = await attempt(credentials, method, url, text);
-      if (response.status === 401) {
-        forget(credentials, token);
-        ({ response } = await attempt(credentials, method, url, text));
-      }
-      const answer = await response.text();
-      const what = `The CAT engine at ${url}`;
-      if (!response.ok)
-        throw new ServiceError(
-          `${what} answered ${method} with the status ${response.status}.`,
-          response.status,
-          answer,
-        );
-      return answer === "" ? undefined : parseBody(answer, what, response.status, maxTokens);
+    async send(credentials, method, url, { body, signal } = {}) {
+      signal?.throwIfAborted();
+      // A fetch that a host passes may not honour the signal, so the wait ends on it whatever the fetch does.
+      return raceAbort(
+        sendText(credentials, method, url, body === undefined ? undefined : JSON.stringify(body), signal),
+        { signal },
+      );
     },
   };
 }

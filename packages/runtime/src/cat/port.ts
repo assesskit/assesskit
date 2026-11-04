@@ -1,3 +1,4 @@
+import type { CallOptions } from "../checks.js";
 import type {
   CreateSectionResponse,
   CreateSessionRequest,
@@ -16,7 +17,7 @@ import type {
  * and never implements it. `prefix` is the URL prefix of the engine that `qti-adaptive-engine-ref` gives, so a host
  * checks it against the engines it trusts before it sends a candidate's results there. The deployment of a section
  * (`createSection`, `getSection`, `endSection`) is the host's concern; the delivery of a session (`createSession`,
- * `submitResults`, `endSession`) is the delivery engine's.
+ * `submitResults`, `endSession`) is the delivery engine's. Each method takes the {@link CallOptions} of its caller last.
  *
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, requests}
  */
@@ -30,9 +31,11 @@ export interface CatPort {
    *
    * @param prefix - The URL prefix of the engine.
    * @param data - The configuration of the section.
+   * @param options - The `signal` that ends the caller's wait; a port that sends a request passes it on, so that the request
+   *   stops too.
    * @returns The identifier of the new section.
    */
-  createSection(prefix: string, data: SectionData): Promise<CreateSectionResponse>;
+  createSection(prefix: string, data: SectionData, options?: CallOptions): Promise<CreateSectionResponse>;
   /**
    * Returns the section as the engine has deployed it and its item pool: `GET {prefix}/sections/{sectionIdentifier}`.
    *
@@ -41,9 +44,11 @@ export interface CatPort {
    *
    * @param prefix - The URL prefix of the engine.
    * @param sectionIdentifier - The identifier that `createSection` returned.
+   * @param options - The `signal` that ends the caller's wait; a port that sends a request passes it on, so that the request
+   *   stops too.
    * @returns The section data and the item pool.
    */
-  getSection(prefix: string, sectionIdentifier: string): Promise<GetSectionResponse>;
+  getSection(prefix: string, sectionIdentifier: string, options?: CallOptions): Promise<GetSectionResponse>;
   /**
    * Starts the session of a candidate in a section and returns the first stage:
    * `POST {prefix}/sections/{sectionIdentifier}/sessions`.
@@ -51,12 +56,15 @@ export interface CatPort {
    * @param prefix - The URL prefix of the engine.
    * @param sectionIdentifier - The identifier of the section.
    * @param request - What is known of the candidate.
+   * @param options - The `signal` that ends the caller's wait; a port that sends a request passes it on, so that the request
+   *   stops too.
    * @returns The identifier of the session and the first stage.
    */
   createSession(
     prefix: string,
     sectionIdentifier: string,
     request: CreateSessionRequest,
+    options?: CallOptions,
   ): Promise<CreateSessionResponse>;
   /**
    * Sends the results of a stage and returns the engine's outcomes and the next stage:
@@ -66,6 +74,8 @@ export interface CatPort {
    * @param sectionIdentifier - The identifier of the section.
    * @param sessionIdentifier - The identifier of the session.
    * @param request - The results of the items presented since the last request.
+   * @param options - The `signal` that ends the caller's wait; a port that sends a request passes it on, so that the request
+   *   stops too.
    * @returns The outcomes and the next stage.
    */
   submitResults(
@@ -73,6 +83,7 @@ export interface CatPort {
     sectionIdentifier: string,
     sessionIdentifier: string,
     request: SubmitResultsRequest,
+    options?: CallOptions,
   ): Promise<SubmitResultsResponse>;
   /**
    * Aborts the session of a candidate: `DELETE {prefix}/sections/{sectionIdentifier}/sessions/{sessionIdentifier}`.
@@ -83,8 +94,15 @@ export interface CatPort {
    * @param prefix - The URL prefix of the engine.
    * @param sectionIdentifier - The identifier of the section.
    * @param sessionIdentifier - The identifier of the session.
+   * @param options - The `signal` that ends the caller's wait; a port that sends a request passes it on, so that the request
+   *   stops too.
    */
-  endSession(prefix: string, sectionIdentifier: string, sessionIdentifier: string): Promise<void>;
+  endSession(
+    prefix: string,
+    sectionIdentifier: string,
+    sessionIdentifier: string,
+    options?: CallOptions,
+  ): Promise<void>;
   /**
    * Ends a section and all its sessions: `DELETE /sections/{sectionIdentifier}` under the prefix.
    *
@@ -93,8 +111,10 @@ export interface CatPort {
    *
    * @param prefix - The URL prefix of the engine.
    * @param sectionIdentifier - The identifier of the section.
+   * @param options - The `signal` that ends the caller's wait; a port that sends a request passes it on, so that the request
+   *   stops too.
    */
-  endSection(prefix: string, sectionIdentifier: string): Promise<void>;
+  endSection(prefix: string, sectionIdentifier: string, options?: CallOptions): Promise<void>;
 }
 
 /**

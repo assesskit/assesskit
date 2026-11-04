@@ -40,7 +40,7 @@ function wire(value: Value | null): SubmissionValue {
     value.cardinality === "record"
       ? { cardinality: "record" }
       : { cardinality: value.cardinality, baseType: value.baseType };
-  return writeWireValue(value, declaration);
+  return writeWireValue(value, { declaration });
 }
 
 const text = (value: string): SubmissionValue => wire(buildSingle("string", value));

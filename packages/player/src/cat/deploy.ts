@@ -1,6 +1,13 @@
 import type { AdaptiveSelection } from "@assesskit/runtime/asi";
 import { buildSectionData, type CatPort, type SectionFiles, validatePool } from "@assesskit/runtime/cat";
-import { checkFunction, checkRecord, describe } from "@assesskit/runtime/checks";
+import {
+  type CallOptions,
+  checkCallOptions,
+  checkFunction,
+  checkRecord,
+  describe,
+  raceAbort,
+} from "@assesskit/runtime/checks";
 import { resolveStructure, type SectionNode } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { createPackageResolvers, type QtiPackage, resolveResourcePath } from "@assesskit/runtime/package";
@@ -63,6 +70,17 @@ function adaptiveSections(pkg: QtiPackage): SectionNode[] {
     });
 }
 
+/** The options of {@link deployCatSections}. */
+export interface DeployCatSectionsOptions extends CallOptions {
+  /**
+   * Ends the wait of the caller: the call rejects with the reason of the signal, before the next request or while one
+   * waits for its answer. The port gets the signal with each request. The sections made before stay, as after a failure.
+   *
+   * @defaultValue none
+   */
+  readonly signal?: AbortSignal;
+}
+
 /**
  * Deploys the adaptive sections of a package to their engines.
  *
@@ -82,18 +100,23 @@ function adaptiveSections(pkg: QtiPackage): SectionNode[] {
  *
  * @param pkg - The package that holds the tests.
  * @param port - Returns the engine for an adaptive selection.
+ * @param options - See {@link DeployCatSectionsOptions}.
  * @returns The sections of the engines by the identifier of the adaptive section.
  * @throws `DataError` when an argument has the wrong type, a referenced file is not in the package, two tests have an
  * adaptive section with the same identifier, or the pool of the engine and the section disagree.
  * @throws `ReadError` and `SecurityError` as `readPackage` documents for a package that cannot be read.
+ * @throws `signal.reason` when the signal aborts before a request or while one waits for its answer.
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding, Create Section and Get Section}
  */
 export async function deployCatSections(
   pkg: QtiPackage,
   port: (selection: AdaptiveSelection) => CatPort,
+  options: DeployCatSectionsOptions = {},
 ): Promise<ReadonlyMap<string, DeployedCatSection>> {
   checkRecord(pkg, "The package must be an object");
   checkFunction(port, "The port must be a function of an adaptive selection");
+  checkCallOptions(options);
+  const { signal } = options;
   const deployed = new Map<string, DeployedCatSection>();
   for (const section of adaptiveSections(pkg)) {
     const { identifier, adaptiveSelection: selection } = section.model;
@@ -105,11 +128,10 @@ export async function deployCatSections(
     }
     const prefix = selection.adaptiveEngineRef.href;
     const engine = port(selection);
-    const { sectionIdentifier } = await engine.createSection(
-      prefix,
-      buildSectionData(selection, filesOf(pkg, section, selection)),
-    );
-    const { items } = await engine.getSection(prefix, sectionIdentifier);
+    const data = buildSectionData(selection, filesOf(pkg, section, selection));
+    signal?.throwIfAborted();
+    const { sectionIdentifier } = await raceAbort(engine.createSection(prefix, data, { signal }), { signal });
+    const { items } = await raceAbort(engine.getSection(prefix, sectionIdentifier, { signal }), { signal });
     const issues = validatePool(section.model, items);
     if (issues.length > 0) {
       throw new DataError(

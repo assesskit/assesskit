@@ -1,4 +1,5 @@
 import {
+  type CallOptions,
   checkAbortSignal,
   checkNonEmptyString,
   checkOptional,
@@ -7,16 +8,6 @@ import {
 } from "@assesskit/runtime/checks";
 import type { DeliveryEvent, HostAction, PendingWork, Refusal, ScorerView } from "@assesskit/runtime/delivery";
 import type { AssessmentResult } from "@assesskit/runtime/results";
-
-/** The options of a call that waits on a store, a service or the host. */
-export interface CallOptions {
-  /**
-   * Stops the call before it applies anything. Work already saved stays saved.
-   *
-   * @defaultValue none
-   */
-  readonly signal?: AbortSignal;
-}
 
 /** The options of {@link HostSession.apply}. */
 export interface HostApplyOptions extends CallOptions {
@@ -87,20 +78,7 @@ export interface HostSession<TResult extends AssessmentResult = AssessmentResult
   results(options?: CallOptions): Promise<TResult>;
 }
 
-const CALL_OPTIONS = ["signal"] as const;
 const HOST_APPLY_OPTIONS = ["signal", "scoredBy"] as const;
-
-/**
- * Checks the options of a session call, as a host passes them from JavaScript.
- *
- * @throws `DataError` when they are not absent or an object with a `signal` that is an `AbortSignal` and no other property.
- */
-export function checkCallOptions(options: unknown): asserts options is CallOptions | undefined {
-  if (options === undefined) return;
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", CALL_OPTIONS);
-  checkOptional(options.signal, (value) => checkAbortSignal(value, "The option signal"));
-}
 
 /**
  * Checks the options of {@link HostSession.apply}.

@@ -129,13 +129,27 @@ export function checkAbortSignal(value: unknown, label: string): asserts value i
 }
 
 /**
+ * The options of a call that waits on a port, a store, a service or the host: the ports of the runtime and of the player take
+ * them last.
+ */
+export interface CallOptions {
+  /**
+   * Ends this caller's wait: the call rejects with the reason of the signal. Work that several callers share runs on, and
+   * what the call saved before the abort stays saved.
+   *
+   * @defaultValue none
+   */
+  readonly signal?: AbortSignal;
+}
+
+/**
  * Ends the wait for a promise when a signal aborts. The promise itself goes on.
  *
  * @param promise - What the caller waits for.
  * @param options - The `signal` of the caller. Without one the promise is returned as it is.
  * @returns The promise, or a promise that rejects with `signal.reason` as soon as the signal aborts.
  */
-export function raceAbort<T>(promise: Promise<T>, options?: { readonly signal?: AbortSignal }): Promise<T> {
+export function raceAbort<T>(promise: Promise<T>, options?: CallOptions): Promise<T> {
   const signal = options?.signal;
   if (signal === undefined) return promise;
   return new Promise<T>((resolve, reject) => {
@@ -147,6 +161,21 @@ export function raceAbort<T>(promise: Promise<T>, options?: { readonly signal?: 
     signal.addEventListener("abort", onAbort, { once: true });
     promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
   });
+}
+
+/** The properties of {@link CallOptions}. */
+const CALL_OPTIONS = ["signal"] as const;
+
+/**
+ * Checks the options of a call that waits, as a caller passes them from JavaScript.
+ *
+ * @throws `DataError` when they are not absent or an object with a `signal` that is an `AbortSignal` and no other property.
+ */
+export function checkCallOptions(options: unknown): asserts options is CallOptions | undefined {
+  if (options === undefined) return;
+  checkRecord(options, "The options must be an object");
+  checkProperties(options, "The options", CALL_OPTIONS);
+  checkOptional(options.signal, (value) => checkAbortSignal(value, "The option signal"));
 }
 
 /**

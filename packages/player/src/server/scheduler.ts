@@ -1,4 +1,4 @@
-import type { CallOptions } from "../protocol/index.js";
+import type { CallOptions } from "@assesskit/runtime/checks";
 
 /**
  * The host's scheduler of time-outs, such as a job queue.

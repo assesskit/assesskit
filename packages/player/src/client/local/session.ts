@@ -1,7 +1,9 @@
 import type { AssessmentItem } from "@assesskit/runtime/asi";
 import type { CatSessionPort } from "@assesskit/runtime/cat";
 import {
+  type CallOptions,
   checkAbortSignal,
+  checkCallOptions,
   checkFunction,
   checkOptional,
   checkPositiveInteger,
@@ -28,7 +30,6 @@ import { DataError } from "@assesskit/runtime/errors";
 import { resolveReference } from "@assesskit/runtime/package";
 import * as v from "valibot";
 import {
-  type CallOptions,
   type Clock,
   type DocumentSource,
   type HostSession,
@@ -40,7 +41,6 @@ import {
 import {
   type CatAnswerer,
   type CatLoopFailure,
-  checkCallOptions,
   checkHostAction,
   checkHostApplyOptions,
   clockSchema,

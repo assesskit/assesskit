@@ -1,5 +1,5 @@
+import type { CallOptions } from "@assesskit/runtime/checks";
 import type { FileValue } from "@assesskit/runtime/values";
-import type { CallOptions } from "../protocol/index.js";
 
 /** The host's storage of the files that candidates upload, record or draw: file values are references to it. */
 export interface FileStore {

@@ -1,6 +1,6 @@
+import type { CallOptions } from "@assesskit/runtime/checks";
 import type { CandidateAction, CandidateView, Refusal } from "@assesskit/runtime/delivery";
 import type { ViewDocuments } from "./documents.js";
-import type { CallOptions } from "./host-session.js";
 
 /** What a session client answers to an action: the view after it, and the engine's refusal when it did not apply. */
 export interface DispatchResult {

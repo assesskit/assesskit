@@ -1,4 +1,4 @@
-import type { CallOptions } from "../protocol/index.js";
+import type { CallOptions } from "@assesskit/runtime/checks";
 
 /** What a session store holds for one session. */
 export interface StoredSession {

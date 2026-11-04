@@ -29,18 +29,22 @@ import { runGuideSamples } from "./guide-samples.js";
 function recordingEngine(pool: (sectionIdentifier: string) => readonly string[] = () => IDS): {
   readonly port: CatPort;
   readonly calls: string[];
+  readonly signals: (AbortSignal | undefined)[];
 } {
   const calls: string[] = [];
   const unused = async (): Promise<never> => {
     throw new Error("Deployment makes only Create Section and Get Section.");
   };
+  const signals: (AbortSignal | undefined)[] = [];
   const port: CatPort = {
-    async createSection(prefix, data) {
+    async createSection(prefix, data, options) {
       calls.push(`create ${prefix} ${JSON.stringify(data)}`);
+      signals.push(options?.signal);
       return { sectionIdentifier: `engine-${calls.length}` };
     },
-    async getSection(prefix, sectionIdentifier) {
+    async getSection(prefix, sectionIdentifier, options) {
       calls.push(`get ${prefix} ${sectionIdentifier}`);
+      signals.push(options?.signal);
       return { sectionData: { sectionConfiguration: "" }, items: { itemIdentifiers: [...pool(sectionIdentifier)] } };
     },
     createSession: unused,
@@ -48,7 +52,7 @@ function recordingEngine(pool: (sectionIdentifier: string) => readonly string[] 
     endSession: unused,
     endSection: unused,
   };
-  return { port, calls };
+  return { port, calls, signals };
 }
 
 describe("deployCatSections", () => {
@@ -156,12 +160,43 @@ describe("deployCatSections", () => {
     );
   });
 
+  it("gives the port the signal of the caller with each request", async () => {
+    const engine = recordingEngine();
+    const { signal } = new AbortController();
+    await deployCatSections(DEPLOYABLE, () => engine.port, { signal });
+    expect(engine.signals).toEqual([signal, signal]);
+  });
+
+  it("ends the wait when the signal aborts, before a request or while one waits, and keeps the sections made", async () => {
+    const reason = new Error("The deployment was cancelled.");
+    const idle = recordingEngine();
+    await expect(deployCatSections(DEPLOYABLE, () => idle.port, { signal: AbortSignal.abort(reason) })).rejects.toBe(
+      reason,
+    );
+    expect(idle.calls).toEqual([]);
+
+    const controller = new AbortController();
+    const engine = recordingEngine();
+    const slow: CatPort = { ...engine.port, getSection: () => new Promise(() => undefined) };
+    const pending = deployCatSections(DEPLOYABLE, () => slow, { signal: controller.signal });
+    await Promise.resolve();
+    controller.abort(reason);
+    await expect(pending).rejects.toBe(reason);
+    expect(engine.calls).toHaveLength(1);
+  });
+
   it("checks its arguments", async () => {
     await expect(deployCatSections(json("null"), () => recordingEngine().port)).rejects.toThrow(
       new DataError("The package must be an object, found null."),
     );
     await expect(deployCatSections(DEPLOYABLE, json("5"))).rejects.toThrow(
       new DataError("The port must be a function of an adaptive selection, found 5."),
+    );
+    await expect(deployCatSections(DEPLOYABLE, () => recordingEngine().port, json("null"))).rejects.toThrow(
+      new DataError("The options must be an object, found null."),
+    );
+    await expect(deployCatSections(DEPLOYABLE, () => recordingEngine().port, json('{"signal":5}'))).rejects.toThrow(
+      new DataError("The option signal must be an AbortSignal, found 5."),
     );
   });
 });

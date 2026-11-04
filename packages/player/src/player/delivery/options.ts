@@ -1,3 +1,4 @@
+import type { CallOptions } from "@assesskit/runtime/checks";
 import {
   checkBoolean,
   checkChoice,
@@ -15,7 +16,7 @@ import type { CandidateView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { FileValue } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
-import type { CallOptions, SessionClient } from "../../protocol/index.js";
+import type { SessionClient } from "../../protocol/index.js";
 import { MAX_TIMER_DELAY_MS } from "../../protocol/internal.js";
 import { readOrigins } from "../content/internal.js";
 import type { CustomInteractionHook } from "../elements/index.js";

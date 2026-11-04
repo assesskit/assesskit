@@ -1187,12 +1187,12 @@ describe("the JSON of a value", () => {
 describe("wire values", () => {
   it("keeps a string exactly, line breaks included, so that an essay travels in state as written", () => {
     const essay = nonNull(buildSingle("string", "Dear Ana,\r\n\n  I arrived.\t"));
-    const wire = writeWireValue(essay, declare("single", "string"));
+    const wire = writeWireValue(essay);
     expect(readWireValue(JSON.parse(JSON.stringify(wire)))).toEqual(essay);
   });
 
   it("wraps the JSON of a value in its cardinality and base type", () => {
-    expect(writeWireValue(buildSingle("integer", 5), declare("single", "integer"))).toEqual({
+    expect(writeWireValue(buildSingle("integer", 5))).toEqual({
       cardinality: "single",
       baseType: "integer",
       value: { base: { integer: 5 } },
@@ -1203,7 +1203,6 @@ describe("wire values", () => {
           [1, 2],
           [3, 4],
         ]),
-        declare("ordered", "point"),
       ),
     ).toEqual({
       cardinality: "ordered",
@@ -1220,12 +1219,14 @@ describe("wire values", () => {
   });
 
   it("has no base type for a record", () => {
-    const wire = writeWireValue(buildRecord([["a", buildSingle("integer", 1)]]), { cardinality: "record" });
+    const record = buildRecord([["a", buildSingle("integer", 1)]]);
+    const wire = writeWireValue(record);
     expect(wire).toStrictEqual({ cardinality: "record", value: { record: [{ name: "a", base: { integer: 1 } }] } });
+    expect(writeWireValue(record, { declaration: { cardinality: "record" } })).toStrictEqual(wire);
   });
 
   it("keeps the type of a NULL: the wire value of NULL has null for its value", () => {
-    expect(writeWireValue(null, declare("multiple", "float"))).toStrictEqual({
+    expect(writeWireValue(null, { declaration: declare("multiple", "float") })).toStrictEqual({
       cardinality: "multiple",
       baseType: "float",
       value: null,
@@ -1240,8 +1241,8 @@ describe("wire values", () => {
     expect(writeJsonValue(ordered, declare("ordered", "identifier"))).toEqual(
       writeJsonValue(multiple, declare("multiple", "identifier")),
     );
-    expect(readWireValue(writeWireValue(ordered, declare("ordered", "identifier")))).toEqual(ordered);
-    expect(readWireValue(writeWireValue(multiple, declare("multiple", "identifier")))).toEqual(multiple);
+    expect(readWireValue(writeWireValue(ordered))).toEqual(ordered);
+    expect(readWireValue(writeWireValue(multiple))).toEqual(multiple);
   });
 
   it("refuses a duration with years or months", () => {
@@ -1278,17 +1279,31 @@ describe("wire values", () => {
   });
 
   it("refuses a value that differs from its declaration", () => {
-    expect(() => writeWireValue(buildSingle("integer", 1), declare("single", "string"))).toThrow(DataError);
-    expect(() => writeWireValue(null, json("{}"))).toThrow(DataError);
+    const declaration = declare("single", "string");
+    expect(() => writeWireValue(buildSingle("integer", 1), { declaration })).toThrow(DataError);
+    expect(() => writeWireValue(null, { declaration: json("{}") })).toThrow(DataError);
+  });
+
+  it("refuses a NULL without a declaration, which alone has no type of its own, and what is not a value", () => {
+    expect(() => writeWireValue(null)).toThrow(
+      new DataError("A NULL has no cardinality or base type of its own: pass the option declaration to write it."),
+    );
+    expect(() => writeWireValue(json("5"))).toThrow(new DataError("The value must be a value or NULL, found 5."));
+    expect(() => writeWireValue(json('{"cardinality":"single","baseType":"unknown","value":1}'))).toThrow(
+      new DataError("The value must be a value or NULL, found an object."),
+    );
+    expect(() => writeWireValue(buildSingle("integer", 1), json("null"))).toThrow(
+      "The options must be an object, found null.",
+    );
   });
 
   it("reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
     fuzzJson(readWireValue, [
-      writeWireValue(buildSingle("integer", 1), declare("single", "integer")),
-      writeWireValue(buildContainer("ordered", "identifier", ["a", "b"]), declare("ordered", "identifier")),
-      writeWireValue(buildRecord([["a", buildSingle("float", 1.5)]]), { cardinality: "record" }),
-      writeWireValue(buildSingle("duration", 2.5), declare("single", "duration")),
-      writeWireValue(null, declare("multiple", "float")),
+      writeWireValue(buildSingle("integer", 1)),
+      writeWireValue(buildContainer("ordered", "identifier", ["a", "b"])),
+      writeWireValue(buildRecord([["a", buildSingle("float", 1.5)]])),
+      writeWireValue(buildSingle("duration", 2.5)),
+      writeWireValue(null, { declaration: declare("multiple", "float") }),
     ]);
   });
 });
@@ -1965,10 +1980,18 @@ describe("properties", () => {
       );
     });
 
+    it("writes a value with its own type as with a declaration of that type", () => {
+      fc.assert(
+        fc.property(value, (built) => {
+          expect(writeWireValue(built)).toStrictEqual(writeWireValue(built, { declaration: declarationOf(built) }));
+        }),
+      );
+    });
+
     it("reads back the wire value that it writes, with no declaration, also after it went through JSON text", () => {
       fc.assert(
         fc.property(value, (built) => {
-          const wire = writeWireValue(built, declarationOf(built));
+          const wire = writeWireValue(built);
           expect(readWireValue(wire)).toStrictEqual(built);
           expect(readWireValue(JSON.parse(JSON.stringify(wire)))).toStrictEqual(built);
         }),
@@ -1982,7 +2005,7 @@ describe("properties", () => {
           baseType,
           (cardinality, type) => {
             const declaration = { cardinality, baseType: type };
-            const wire = JSON.parse(JSON.stringify(writeWireValue(null, declaration)));
+            const wire = JSON.parse(JSON.stringify(writeWireValue(null, { declaration })));
             expect(wire).toEqual({ cardinality, baseType: type, value: null });
             expect(readWireValue(wire)).toBeNull();
           },

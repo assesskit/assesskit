@@ -7,20 +7,9 @@ import { wireValueSchema } from "../values/internal.js";
 /** A value in the JSON form of a session: its wire value, or `null` for NULL. */
 export type ValueJson = WireValue | null;
 
-/** Writes a value with its own type; NULL needs none, because its variable is declared. */
-export function valueToJson(value: Value | null): ValueJson {
-  if (value === null) return null;
-  return writeWireValue(
-    value,
-    value.cardinality === "record"
-      ? { cardinality: "record" }
-      : { cardinality: value.cardinality, baseType: value.baseType },
-  );
-}
-
-/** Writes values by identifier as entries `[identifier, value]`. */
+/** Writes values by identifier as entries `[identifier, value]`, each with its own type; NULL needs none, because its variable is declared. */
 export function valuesToJson(values: ReadonlyMap<string, Value | null>): (readonly [string, ValueJson])[] {
-  return [...values].map(([identifier, value]) => [identifier, valueToJson(value)]);
+  return [...values].map(([identifier, value]) => [identifier, value === null ? null : writeWireValue(value)]);
 }
 
 /**

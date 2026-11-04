@@ -31,7 +31,7 @@ export {
   type SingleValue,
   type Value,
 } from "./value.js";
-export { readWireValue, type WireValue, writeWireValue } from "./wire.js";
+export { readWireValue, type WireValue, type WriteWireValueOptions, writeWireValue } from "./wire.js";
 export { isXsdDate, isXsdDateTime } from "./xsd-date-time.js";
 export {
   type CompileXsdRegexOptions,

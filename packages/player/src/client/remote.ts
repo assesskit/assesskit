@@ -1,4 +1,12 @@
-import { checkFunction, functionSchema, parseWith, raceAbort, recordSchema } from "@assesskit/runtime/checks";
+import {
+  type CallOptions,
+  checkCallOptions,
+  checkFunction,
+  functionSchema,
+  parseWith,
+  raceAbort,
+  recordSchema,
+} from "@assesskit/runtime/checks";
 import {
   type ActionLimits,
   type CandidateAction,
@@ -13,7 +21,6 @@ import * as v from "valibot";
 import { AccessError } from "../errors.js";
 import {
   type ActionEnvelope,
-  type CallOptions,
   type Clock,
   checkViewEnvelope,
   type DispatchResult,
@@ -22,7 +29,7 @@ import {
   type ViewEnvelope,
   type ViewRequest,
 } from "../protocol/index.js";
-import { checkCallOptions, clockSchema, MAX_TIMER_DELAY_MS } from "../protocol/internal.js";
+import { clockSchema, MAX_TIMER_DELAY_MS } from "../protocol/internal.js";
 import { assetResolver } from "./assets.js";
 import { BROWSER_CLOCK } from "./clock.js";
 import { notifyListeners } from "./notify.js";

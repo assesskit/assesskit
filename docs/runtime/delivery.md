@@ -774,9 +774,9 @@ host deployed the section. The host answers the engine's requests: `sendCatReque
   because the requests of a CAT engine are not idempotent: a host that must resume reads `pending(state).cat`, calls
   `sendCatRequest` and applies the `cat-response` itself, one request at a time.
 
-| Option   | Type          | Default | Meaning                                                                                                                                                                                                                        |
-| -------- | ------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `signal` | `AbortSignal` | none    | Ends the wait of the caller, of `sendCatRequest` and of `drainCat`: the call rejects with the reason of the signal, at once if it has aborted. A request already sent runs to the timeout of the port, and its answer is lost. |
+| Option | Type | Default | Meaning |
+| -------- | ------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -------------------------------------------------------------------------------|
+| `signal` | `AbortSignal` | none | Ends the wait of the caller, of `sendCatRequest` and of `drainCat`: the call rejects with the reason of the signal, at once if it has aborted. The port gets the signal with the request, so that it can stop the request; one that it does not stop runs to the timeout of the port, and its answer is lost. |
 
 A test part that holds an adaptive section should be linear; the engine waits for the first stage where the walk
 reaches the section, in a nonlinear part too.

@@ -1,7 +1,9 @@
 import * as v from "valibot";
-import { parseWith, type Schema, transformWith } from "../checks.js";
-import { type BaseType, baseTypeSchema } from "./base-type.js";
-import type { Cardinality } from "./cardinality.js";
+import { describe, isRecord, parseWith, type Schema, transformWith } from "../checks.js";
+import { checkOptions } from "../checks-internal.js";
+import { DataError } from "../errors.js";
+import { type BaseType, baseTypeSchema, isBaseType } from "./base-type.js";
+import { type Cardinality, isCardinality } from "./cardinality.js";
 import type { ValueDeclaration } from "./declaration.js";
 import { readJsonValue } from "./json-read.js";
 import type { JsonValue } from "./json-value.js";
@@ -24,18 +26,44 @@ export interface WireValue {
   readonly value: JsonValue | null;
 }
 
+/** The options of {@link writeWireValue}. */
+export interface WriteWireValueOptions {
+  /**
+   * The cardinality and base type of the variable. They type a NULL, and a value must have them.
+   *
+   * @defaultValue the cardinality and base type that the value names itself, so that a NULL needs the declaration
+   */
+  readonly declaration?: ValueDeclaration;
+}
+
+/** Returns the declaration that a value names itself; a NULL names none. */
+function ownDeclaration(value: unknown): ValueDeclaration {
+  if (value === null) {
+    throw new DataError("A NULL has no cardinality or base type of its own: pass the option declaration to write it.");
+  }
+  if (isRecord(value) && value.cardinality === "record") return { cardinality: "record" };
+  if (isRecord(value) && isCardinality(value.cardinality) && isBaseType(value.baseType)) {
+    return { cardinality: value.cardinality, baseType: value.baseType };
+  }
+  throw new DataError(`The value must be a value or NULL, found ${describe(value)}.`);
+}
+
 /**
  * Writes a value, or NULL, as a {@link WireValue}.
  *
  * @remarks
- * Durations are `PT<seconds>S` and files are references, as in {@link writeJsonValue}.
+ * Durations are `PT<seconds>S` and files are references, as in {@link writeJsonValue}. A value names its own cardinality and
+ * base type, so it needs no declaration; a NULL needs one.
  *
  * @param value - The value, or `null` for NULL.
- * @param declaration - The cardinality and base type of the variable. They type a NULL, and a value must have them.
+ * @param options - See {@link WriteWireValueOptions}.
  * @returns The wire value.
- * @throws `DataError` when `value` is not a value or `null`, `declaration` is not a declaration, or they differ.
+ * @throws `DataError` when `value` is not a value or `null`, the declaration is not one or differs from the value, or
+ * `value` is NULL and there is no declaration.
  */
-export function writeWireValue(value: Value | null, declaration: ValueDeclaration): WireValue {
+export function writeWireValue(value: Value | null, options: WriteWireValueOptions = {}): WireValue {
+  checkOptions(options);
+  const { declaration = ownDeclaration(value) } = options;
   const json = writeJsonValue(value, declaration);
   const { cardinality, baseType } = declaration;
   const typed = cardinality === "record" ? { cardinality } : { cardinality, baseType };

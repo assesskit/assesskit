@@ -1,3 +1,4 @@
+import type { CallOptions } from "@assesskit/runtime/checks";
 import {
   type CandidateAction,
   type CandidateView,
@@ -14,11 +15,11 @@ import { DataError } from "@assesskit/runtime/errors";
 import { type PersonalNeedsProfile, PNP_NAMESPACE, readPnp } from "@assesskit/runtime/pnp";
 import { buildSingle } from "@assesskit/runtime/values";
 import fc from "fast-check";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import assetGateGuide from "../../../docs/player/asset-gate.md?raw";
 import serverGuide from "../../../docs/player/server.md?raw";
 import { AccessError, ServiceError } from "../src/index.js";
-import { type CallOptions, type HostApplyOptions, isOfficialResult, type ViewEnvelope } from "../src/protocol/index.js";
+import { type HostApplyOptions, isOfficialResult, type ViewEnvelope } from "../src/protocol/index.js";
 import {
   type AssetGate,
   CANDIDATE_ACTION_TYPES,
@@ -1087,6 +1088,38 @@ describe("createSessionHost", () => {
     expect(store.records.get("exam-1")?.version).toBe(3);
   });
 
+  it("runs a test with no maximum time without a scheduler", async () => {
+    const { host, store } = await examHost({ scheduler: undefined });
+    await host.start(ALICE, { seed: 7 });
+    await host.handle(ALICE, request(1, answer("A")));
+    expect(store.records.get("exam-1")?.version).toBe(1);
+  });
+
+  it("refuses without a scheduler a start that has a maximum time to schedule, and saves nothing", async () => {
+    const limits = '<qti-time-limits max-time="600"/>';
+    const { host, store } = await examHost({ scheduler: undefined }, examFiles({ limits }));
+    await expect(host.start(ALICE, { seed: 7 })).rejects.toThrow(
+      new DataError(
+        'The item "q1" has a maximum time, which the session host cannot schedule without the option scheduler: pass a Scheduler, so that the session ends when the time passes.',
+      ),
+    );
+    expect(store.records.size).toBe(0);
+  });
+
+  it("refuses without a scheduler the step that enters a timed item, and saves nothing", async () => {
+    const files = { ...examFiles() };
+    files["tests/exam.xml"] = String(files["tests/exam.xml"]).replace(
+      '<qti-assessment-item-ref identifier="q2" href="../items/q2/item.xml"/>',
+      '<qti-assessment-item-ref identifier="q2" href="../items/q2/item.xml"><qti-time-limits max-time="600"/></qti-assessment-item-ref>',
+    );
+    const { host, store } = await examHost({ scheduler: undefined }, files);
+    await host.start(ALICE, { seed: 7 });
+    await expect(host.handle(ALICE, request(1, { type: "move", to: "next" }))).rejects.toThrow(
+      'The item "q2" has a maximum time, which the session host cannot schedule without the option scheduler',
+    );
+    expect(store.records.get("exam-1")?.version).toBe(0);
+  });
+
   it("loses no time-out when the scheduler fails: nothing is saved and the request can be sent again", async () => {
     const limits = '<qti-time-limits max-time="600"/>';
     let failing = true;
@@ -1377,6 +1410,8 @@ describe("createSessionHost", () => {
       "The options object is invalid at scheduler: expected an object with the function schedule, found an object.",
     );
     expect(() => make({ clock: {} })).toThrow("The function now of the option clock");
+    expect(() => make({ clock: null })).toThrow("The option clock");
+    expect(make({ clock: undefined, scheduler: undefined })).toBeDefined();
     expect(() => make({ gate: {} })).toThrow(
       "The options object is invalid at gate: expected an object with the function sign, found an object.",
     );
@@ -1408,6 +1443,20 @@ describe("createSessionHost", () => {
   it("reads or refuses arbitrary JSON as options with a DataError, and nothing else", () => {
     fuzzJson((options) => createSessionHost(options as never));
     fuzzJson((options) => createAssetGate(options as never));
+  });
+});
+
+describe("the default clock of the session host", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("stamps the steps with SYSTEM_CLOCK, the time of the machine, when the host passes no clock", async () => {
+    const now = Date.UTC(2026, 10, 4, 8);
+    vi.useFakeTimers({ now, toFake: ["Date"] });
+    const { host, store } = await examHost({ clock: undefined });
+    await host.start(ALICE, { seed: 7 });
+    expect(deserializeState(store.records.get("exam-1")?.state ?? "").at).toBe(now);
   });
 });
 

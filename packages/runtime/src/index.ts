@@ -1,11 +1,13 @@
 /**
- * Every public module of the runtime, the errors it throws, the issues it reports and its seeded random number generator.
+ * Every public module of the runtime, the errors it throws, the issues it reports, the options of a call that waits and its
+ * seeded random number generator.
  *
  * @module @assesskit/runtime
  */
 
 export * from "./asi/index.js";
 export * from "./cat/index.js";
+export type { CallOptions } from "./checks.js";
 export * from "./content/index.js";
 export * from "./delivery/index.js";
 export {

@@ -1,5 +1,5 @@
+import type { CallOptions } from "@assesskit/runtime/checks";
 import type { ItemKey } from "@assesskit/runtime/delivery";
-import type { CallOptions } from "../protocol/index.js";
 
 /** The score that the tool of an item gave, as delivery needs it. */
 export interface ToolScore {

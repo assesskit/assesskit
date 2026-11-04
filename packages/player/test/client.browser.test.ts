@@ -1,3 +1,4 @@
+import type { CallOptions } from "@assesskit/runtime/checks";
 import { raceAbort } from "@assesskit/runtime/checks";
 import {
   type ActionLimits,
@@ -11,7 +12,7 @@ import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { AUTOSAVE_MS, createRemoteSession, FLUSH_BEFORE_DEADLINE_MS } from "../src/client/index.js";
 import { createLocalSession } from "../src/client/local/index.js";
 import { ServiceError } from "../src/index.js";
-import type { ActionEnvelope, CallOptions, ViewRequest } from "../src/protocol/index.js";
+import type { ActionEnvelope, ViewRequest } from "../src/protocol/index.js";
 import { examDefinition, examFiles, examHost, packageOf } from "./exam-fixture.js";
 import { answer, localOptions, Q1, SECOND, statusOfQ1 } from "./local-fixture.js";
 import { waitFor } from "./wait.js";

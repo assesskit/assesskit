@@ -4,4 +4,4 @@
  *
  * @module @assesskit/player/cat
  */
-export { type DeployedCatSection, deployCatSections } from "./deploy.js";
+export { type DeployCatSectionsOptions, type DeployedCatSection, deployCatSections } from "./deploy.js";

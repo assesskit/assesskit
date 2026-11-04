@@ -1,5 +1,13 @@
 import type { CatResponse, CatSessionPort } from "../cat/index.js";
-import { checkAbortSignal, checkChoice, checkFunction, checkOptional, checkRecord, raceAbort } from "../checks.js";
+import {
+  type CallOptions,
+  checkAbortSignal,
+  checkChoice,
+  checkFunction,
+  checkOptional,
+  checkRecord,
+  raceAbort,
+} from "../checks.js";
 import { checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import type { DeliveryState } from "./delivery-state.js";
@@ -31,31 +39,37 @@ function readSignal(options: SendCatRequestOptions): AbortSignal | undefined {
   return signal;
 }
 
-/** Calls the method of the port that the request needs. */
-async function call(port: CatSessionPort, request: CatRequest): Promise<CatResponse> {
+/** Calls the method of the port that the request needs, with the options of the caller. */
+async function call(port: CatSessionPort, request: CatRequest, options: CallOptions): Promise<CatResponse> {
   switch (request.kind) {
     case "create-session":
       checkMethod(port, "createSession");
-      return port.createSession(request.prefix, request.sectionIdentifier, request.body);
+      return port.createSession(request.prefix, request.sectionIdentifier, request.body, options);
     case "submit-results":
       checkMethod(port, "submitResults");
-      return port.submitResults(request.prefix, request.sectionIdentifier, request.sessionIdentifier, {
-        assessmentResult: request.assessmentResult,
-        ...(request.sessionState === undefined ? {} : { sessionState: request.sessionState }),
-      });
+      return port.submitResults(
+        request.prefix,
+        request.sectionIdentifier,
+        request.sessionIdentifier,
+        {
+          assessmentResult: request.assessmentResult,
+          ...(request.sessionState === undefined ? {} : { sessionState: request.sessionState }),
+        },
+        options,
+      );
     case "end-session":
       checkMethod(port, "endSession");
-      await port.endSession(request.prefix, request.sectionIdentifier, request.sessionIdentifier);
+      await port.endSession(request.prefix, request.sectionIdentifier, request.sessionIdentifier, options);
       return { ended: true };
   }
 }
 
 /** The options of {@link sendCatRequest}. */
-export interface SendCatRequestOptions {
+export interface SendCatRequestOptions extends CallOptions {
   /**
    * Ends the wait of the caller: the call rejects with the reason of the signal, before the request when the signal has
-   * aborted already, else as soon as it aborts. A request already sent goes on to the timeout of the port, and its answer
-   * is lost.
+   * aborted already, else as soon as it aborts. The port gets the signal with the request, so that it can stop the
+   * request; one that it does not stop goes on to the timeout of the port, and its answer is lost.
    *
    * @defaultValue none
    */
@@ -90,11 +104,11 @@ export async function sendCatRequest(
   checkChoice(request.kind, "The kind of the request", REQUEST_KINDS);
   const signal = readSignal(options);
   signal?.throwIfAborted();
-  return raceAbort(call(port, request), { signal });
+  return raceAbort(call(port, request, { signal }), { signal });
 }
 
 /** The options of {@link drainCat}. */
-export interface DrainCatOptions {
+export interface DrainCatOptions extends CallOptions {
   /**
    * Ends the wait of the caller, before the next request or while one waits for its answer, as in
    * {@link SendCatRequestOptions}. The call then rejects with the reason of the signal, and the answers applied so far are

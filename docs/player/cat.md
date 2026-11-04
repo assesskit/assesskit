@@ -25,7 +25,7 @@ flowchart LR
 
 | Subpath                      | Side   | Export                                              | Purpose                                                                                       |
 | ---------------------------- | ------ | --------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `@assesskit/player/cat`      | shared | `deployCatSections(pkg, port)`                      | Creates the sections of a package's adaptive selections at the engine and checks their pool.  |
+| `@assesskit/player/cat`      | shared | `deployCatSections(pkg, port, options?)`            | Creates the sections of a package's adaptive selections at the engine and checks their pool.  |
 | `@assesskit/player/cat`      | shared | `DeployedCatSection`                                | What a deployment returns for an adaptive section.                                            |
 | `@assesskit/player/cat-rest` | server | `createRestCatPort(options)`                        | A client of a remote engine, over the REST/JSON binding of CAT 1.0.                           |
 | `@assesskit/player/cat-rest` | server | `createCatRestHandler(port, options)`               | The engine side of the binding: a `Request` to a `Response`, over any `CatPort`.              |
@@ -269,6 +269,9 @@ requests; // => ["POST https://auth.example/token", "POST https://gateway.intern
   A `403` is a failure and is not repeated.
 - **Transport.** Every URL is `https` (binding section 4.1). Redirects are errors, because a redirect would send the token to
   another address. The error of `fetch`, such as a timeout, is passed on unchanged.
+- **Signals.** The `signal` of a call aborts its request and ends its wait, also for a function of `engines`, which gets the
+  options of the call. The token request, which the calls share, goes on to its timeout. A call whose signal has aborted
+  sends nothing.
 - **Failure.** A status other than 2xx, and a body that is not JSON, are a `ServiceError` with the `status` and the `body`. A
   failed request for a token is one too, with the status of the token endpoint; a gateway answers it as a fault (500) and not
   with that status, because the credentials or the token URL of the host are wrong, not the request of the caller.
@@ -532,8 +535,8 @@ that the round trip through both gives the same error back.
   checks the bearer token and the scope that `operation` needs. The handler neither reads the `Authorization` header nor keeps a
   token. `authorize` runs once for each request, and requests run at once, so it must be safe to call at once.
 - **Abort.** A request whose signal aborts ends the wait: the promise rejects with the reason and nothing is sent. The read of
-  the body is cancelled, and the port is not called when the abort came first. A call of the port that has begun runs on, because
-  `CatPort` takes no signal. `onError` does not run after an abort.
+  the body is cancelled, and the port is not called when the abort came first. A call of the port gets the signal of the
+  request, so that the port can stop its own work. `onError` does not run after an abort.
 - **Prefix.** The port gets the `prefix` option, or the origin and `root` of the request.
 - **Logging.** The handler logs nothing. `onError` gets the error of every 500, which may hold addresses, tokens or candidate
   data: the host decides where it goes.
@@ -557,7 +560,7 @@ over an engine of measurekit, with a port for each client, and the Node adapter.
 
 ## deployCatSections
 
-`deployCatSections(pkg, port)`, from `@assesskit/player/cat`, deploys the adaptive sections of every test of a package, in document order. For each:
+`deployCatSections(pkg, port, options?)`, from `@assesskit/player/cat`, deploys the adaptive sections of every test of a package, in document order. For each:
 
 1. It reads the files that the `qti-adaptive-selection` references, against the document that holds the section: the
    settings, and the usage data and the metadata when referenced. A selection without a settings reference sends an empty
@@ -568,7 +571,9 @@ over an engine of measurekit, with a port for each client, and the Node adapter.
 
 The result maps the identifier of each adaptive section to `{ prefix, sectionIdentifier }`, which is
 `DeliveryDefinition.catSections`. Create Section is not idempotent at a remote engine, so deploy once. When a check fails,
-the sections made so far stay, and the `DataError` names the section at the engine, so that the host can end it.
+the sections made so far stay, and the `DataError` names the section at the engine, so that the host can end it. The `signal`
+of `options` ends the wait before the next request or while one waits, and the port gets it with each request; the sections
+made before stay, as after a failure.
 
 ## Errors
 

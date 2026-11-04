@@ -8,27 +8,18 @@ import {
   type SubmissionItem,
   type SubmissionPart,
   type SubmissionSupplied,
-  type SubmissionValue,
   type SubmissionVariable,
 } from "../protocol/index.js";
 
 /**
- * Writes a value, or NULL, as the runtime's wire value. A value names its own cardinality and base type, so the entry decodes
- * without a declaration; NULL is `null`, because the scorer view does not say which type a NULL would have.
+ * Returns the entries of a map of variables, in the map's order. A value names its own cardinality and base type, so the
+ * entry decodes without a declaration; NULL is `null`, because the scorer view does not say which type a NULL would have.
  */
-function valueToWire(value: Value | null): SubmissionValue {
-  if (value === null) return null;
-  return writeWireValue(
-    value,
-    value.cardinality === "record"
-      ? { cardinality: "record" }
-      : { cardinality: value.cardinality, baseType: value.baseType },
-  );
-}
-
-/** Returns the entries of a map of variables, in the map's order. */
 function variablesOf(values: ReadonlyMap<string, Value | null>): SubmissionVariable[] {
-  return [...values].map(([identifier, value]) => ({ identifier, value: valueToWire(value) }));
+  return [...values].map(([identifier, value]) => ({
+    identifier,
+    value: value === null ? null : writeWireValue(value),
+  }));
 }
 
 function partOf(cover: ScoringCover): SubmissionPart {
@@ -39,7 +30,7 @@ function partOf(cover: ScoringCover): SubmissionPart {
     ...(label === undefined ? {} : { label }),
     presented,
     ...(interaction === undefined ? {} : { interaction }),
-    value: valueToWire(response),
+    value: response === null ? null : writeWireValue(response),
   };
 }
 
@@ -58,7 +49,7 @@ function itemOf(scored: ScorerItem): SubmissionItem {
 function suppliedOf(request: ScoringRequest): SubmissionSupplied | undefined {
   if (request.supplied === undefined) return undefined;
   const { value, at, scorer } = request.supplied;
-  return { value: valueToWire(value), at, scorer };
+  return { value: value === null ? null : writeWireValue(value), at, scorer };
 }
 
 /** Checks the parts of a scorer view that are read before the submission is built, so that a wrong type is not a `TypeError`. */

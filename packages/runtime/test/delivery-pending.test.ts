@@ -4,6 +4,7 @@ import {
   type Action,
   type AssessmentResult,
   buildSingle,
+  type CatSessionPort,
   type CreateSessionResponse,
   createEngine,
   createRandom,
@@ -60,6 +61,24 @@ import {
   write,
 } from "./pending-fixtures.js";
 import { criterionMarkup, ESSAY, ESSAY_MARKUP, rubricMarkup } from "./scoring-rubrics.js";
+
+/** Wraps a port so that it records the signal that each request gets. */
+function recordingSignals(port: CatSessionPort, signals: (AbortSignal | undefined)[]): CatSessionPort {
+  return {
+    createSession: (prefix, section, body, options) => {
+      signals.push(options?.signal);
+      return port.createSession(prefix, section, body);
+    },
+    submitResults: (prefix, section, session, body, options) => {
+      signals.push(options?.signal);
+      return port.submitResults(prefix, section, session, body);
+    },
+    endSession: (prefix, section, session, options) => {
+      signals.push(options?.signal);
+      return port.endSession(prefix, section, session);
+    },
+  };
+}
 
 const wire = (state: DeliveryState): DeliveryState => deserializeState(serializeState(state));
 
@@ -1523,6 +1542,14 @@ describe("sendCatRequest", () => {
     expect(answered).toMatchObject({ sessionIdentifier: "session-1" });
   });
 
+  it("gives the port the signal of the caller with the request, so that the port can stop it", async () => {
+    const signals: (AbortSignal | undefined)[] = [];
+    const signal = new AbortController().signal;
+    await sendCatRequest(recordingSignals(fakePort([]), signals), waiting(engine, begun(engine).state), { signal });
+    await sendCatRequest(recordingSignals(fakePort([]), signals), waiting(engine, begun(engine).state));
+    expect(signals).toEqual([signal, undefined]);
+  });
+
   it("checks its arguments", async () => {
     const request = waiting(engine, begun(engine).state);
     await expect(sendCatRequest(fakePort([]), request, JSON.parse("null"))).rejects.toThrow(
@@ -1647,6 +1674,13 @@ describe("drainCat", () => {
     };
     await expect(drainCat(engine, left.state, stopping, clock(), { signal: controller.signal })).rejects.toBe(reason);
     expect(port.calls.map(({ method }) => method)).toEqual(["submitResults"]);
+  });
+
+  it("gives the port the signal of the caller with each request", async () => {
+    const signals: (AbortSignal | undefined)[] = [];
+    const { signal } = new AbortController();
+    await drainCat(engine, begun(engine).state, recordingSignals(fakePort([]), signals), clock(), { signal });
+    expect(signals).toEqual([signal]);
   });
 
   it("ends the wait for the answer to a request when the signal aborts", async () => {

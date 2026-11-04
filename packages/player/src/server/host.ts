@@ -1,6 +1,8 @@
 import type { CatSessionPort } from "@assesskit/runtime/cat";
 import {
+  type CallOptions,
   checkAbortSignal,
+  checkCallOptions,
   checkChoice,
   checkNonEmptyString,
   checkOptional,
@@ -35,7 +37,6 @@ import { AccessError, ServiceError } from "../errors.js";
 import {
   type ActionEnvelope,
   type Caller,
-  type CallOptions,
   checkActionEnvelope,
   checkCaller,
   checkViewEnvelope,
@@ -45,7 +46,6 @@ import {
 import {
   type CatAnswerer,
   type CatLoopFailure,
-  checkCallOptions,
   checkClock,
   checkHostAction,
   checkHostApplyOptions,
@@ -56,6 +56,7 @@ import {
   readClock,
   stepAfterIdle,
 } from "../protocol/internal.js";
+import { SYSTEM_CLOCK } from "./clock.js";
 import type { StepSink, SuppliedGrade } from "./forward.js";
 import { type AssetGate, collectAssetPrefixes, locateDocuments } from "./gate/index.js";
 import {
@@ -89,8 +90,8 @@ const notBound = (): AccessError =>
 const hostOptionsSchema = v.strictObject({
   engine: methodsSchema<Engine>("start", "apply", "view", "deadlines", "pending", "scorerView", "results"),
   store: methodsSchema<SessionStore>("create", "load", "save"),
-  scheduler: methodsSchema<Scheduler>("schedule"),
-  clock: v.unknown(),
+  scheduler: v.optional(methodsSchema<Scheduler>("schedule")),
+  clock: v.optional(v.unknown()),
   gate: methodsSchema<AssetGate>("sign"),
   packages: functionSchema<(session: string, options?: CallOptions) => Promise<QtiPackage>>(),
   clientActions: v.optional(v.unknown()),
@@ -103,7 +104,7 @@ const hostOptionsSchema = v.strictObject({
 
 function checkHostOptions(options: unknown): asserts options is SessionHostOptions {
   const { clock, maxIdleMs } = parseWith(hostOptionsSchema, options, "The options object");
-  checkClock(clock);
+  checkOptional(clock, checkClock);
   checkOptional(maxIdleMs, (value) => checkPositiveInteger(value, "The option maxIdleMs"));
 }
 
@@ -131,7 +132,8 @@ function loggedAction(action: CandidateAction | HostAction, at: number): string 
  * - **Idempotence.** A repeated sequence number gets the stored answer, with fresh asset tokens; a stale one is refused.
  * - **Time.** An action is stamped with the server's clock (the runtime's `stamp` never goes back), the deadlines of the new
  *   state are scheduled before it is saved so that a failure of the scheduler loses no time-out, and the scheduler's job
- *   calls `session(id).apply` with `time`. With {@link SessionHostOptions.maxIdleMs}, a gap above it counts as suspended, and
+ *   calls `session(id).apply` with `time`. Without a scheduler, a step that has a maximum time to schedule is refused with
+ *   a `DataError` and nothing is saved. With {@link SessionHostOptions.maxIdleMs}, a gap above it counts as suspended, and
  *   the job's `time` action that finds one is dropped.
  * - **Saving.** The store saves by version; a conflict reloads and handles the request again.
  * - **Signals.** A call with an aborted `signal` stops before its next load and applies nothing. The signal reaches the
@@ -146,7 +148,18 @@ function loggedAction(action: CandidateAction | HostAction, at: number): string 
  */
 export function createSessionHost(options: SessionHostOptions): SessionHost {
   checkHostOptions(options);
-  const { engine, store, scheduler, clock, gate, packages, limits = {}, forward, cat, maxIdleMs } = options;
+  const {
+    engine,
+    store,
+    scheduler,
+    clock = SYSTEM_CLOCK,
+    gate,
+    packages,
+    limits = {},
+    forward,
+    cat,
+    maxIdleMs,
+  } = options;
   const { profileBreaks = true } = options;
   const policy = readClientActions(options.clientActions ?? EXAM_CLIENT_ACTIONS);
   const policyOf = (state: DeliveryState): ReadonlySet<CandidateActionType> =>
@@ -194,7 +207,13 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     signal: AbortSignal | undefined,
   ): Promise<void> => {
     for (const deadline of engine.deadlines(state)) {
-      if (deadline.kind === "max-time") await scheduler.schedule(session, Math.ceil(deadline.at), { signal });
+      if (deadline.kind !== "max-time") continue;
+      if (scheduler === undefined) {
+        throw new DataError(
+          `The ${deadline.scope} ${describe(deadline.identifier)} has a maximum time, which the session host cannot schedule without the option scheduler: pass a Scheduler, so that the session ends when the time passes.`,
+        );
+      }
+      await scheduler.schedule(session, Math.ceil(deadline.at), { signal });
     }
   };
 
