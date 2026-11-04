@@ -31,7 +31,7 @@ describe("the size of each module", () => {
       const gzip = gzipSync(readFileSync(join(directory, `${name}.js`)), { level: 9 }).length;
       expect(gzip, `The gzipped bytes of ${name}.js`).toBeLessThan(budget.gzip);
       const files = source.assets.size === 0 ? 0 : bytesBelow(join(directory, name));
-      expect(files, `The bytes of the files of ${name}`).toBeLessThan(budget.files);
+      expect(files, `The bytes of the files of ${name}`).toBeLessThanOrEqual(budget.files);
       expect(bundled.map((entry) => entry.name)).toEqual(budget.holds);
     },
   );

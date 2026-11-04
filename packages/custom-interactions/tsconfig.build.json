@@ -6,6 +6,10 @@
     "outDir": "dist",
     "types": ["node"]
   },
-  "include": ["src/index.ts", "src/interaction-types.ts", "src/node"],
-  "references": [{ "path": "../runtime/tsconfig.build.json" }]
+  "include": ["src/*.ts", "src/node"],
+  "references": [
+    {
+      "path": "../runtime/tsconfig.build.json"
+    }
+  ]
 }

@@ -2,6 +2,9 @@ import type { Rule } from "./rule.ts";
 
 const INTERACTION = "packages/custom-interactions/src/math-entry/interaction.ts";
 const BROWSER_TEST = "packages/custom-interactions/test/math-entry.browser.test.ts";
+const STROKES = "packages/custom-interactions/src/stroke-writing/interaction.ts";
+const STROKES_TEST = "packages/custom-interactions/test/stroke-writing.browser.test.ts";
+const CHARACTER = "packages/custom-interactions/src/write-character-module.ts";
 
 /** The rules of the custom interactions that decide what a candidate's response is, each with the test that guards it. */
 export const CUSTOM_INTERACTION_RULES: readonly Rule[] = [
@@ -50,5 +53,51 @@ export const CUSTOM_INTERACTION_RULES: readonly Rule[] = [
     replace: "if (false) {",
     test: BROWSER_TEST,
     browser: true,
+  },
+  {
+    rule: "A stroke drawn that does not match its reference stroke counts as a mistake.",
+    file: STROKES,
+    find: "onMistake: ({ strokeNum, totalMistakes }) => update({ strokes: strokeNum, mistakes: before + totalMistakes }),",
+    replace: "onMistake: ({ strokeNum }) => update({ strokes: strokeNum, mistakes: before }),",
+    test: STROKES_TEST,
+    browser: true,
+  },
+  {
+    rule: "A quiz that resumes keeps the mistakes made before it.",
+    file: STROKES,
+    find: "update({ strokes: strokeNum + 1, mistakes: before + totalMistakes }),",
+    replace: "update({ strokes: strokeNum + 1, mistakes: totalMistakes }),",
+    test: STROKES_TEST,
+    browser: true,
+  },
+  {
+    rule: "Before the first stroke, the response is NULL.",
+    file: STROKES,
+    find: "if (strokes === 0 && mistakes === 0) return { record: null };",
+    replace: "",
+    test: STROKES_TEST,
+    browser: true,
+  },
+  {
+    rule: "A character takes no stroke when its status is closed, solution or review.",
+    file: STROKES,
+    find: "const editable = takesInput(configuration.status) && progress.strokes < total;",
+    replace: "const editable = progress.strokes < total;",
+    test: STROKES_TEST,
+    browser: true,
+  },
+  {
+    rule: "The outline of a stroke is SVG path data and nothing else.",
+    file: CHARACTER,
+    find: 'v.regex(PATH_DATA, "a string of SVG path data")',
+    replace: 'v.regex(/^/, "a string of SVG path data")',
+    test: "packages/custom-interactions/test/stroke-writing.test.ts",
+  },
+  {
+    rule: "A character has a median for each stroke.",
+    file: CHARACTER,
+    find: "({ strokes, medians }) => medians.length === strokes.length",
+    replace: "() => true",
+    test: "packages/custom-interactions/test/stroke-writing.test.ts",
   },
 ];

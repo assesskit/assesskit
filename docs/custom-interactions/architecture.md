@@ -10,10 +10,12 @@ flowchart LR
   subgraph tool["An author's tool, in Node.js"]
     ids["INTERACTION_TYPES"]
     read["readModuleFiles"]
+    write
   end
   subgraph pkg["The item's package"]
     item["item.xml<br/>qti-portable-custom-interaction"]
-    module["modules/math-entry.js<br/>with MathLive, and its fonts"]
+    module["modules/math-entry.js, modules/stroke-writing.js<br/>with MathLive and Hanzi Writer"]
+    char["modules/characters/5341.js<br/>a character's strokes"]
   end
   subgraph page["The candidate's page"]
     player["@assesskit/player<br/>mountPciFrame"]
@@ -21,8 +23,10 @@ flowchart LR
   end
   ids --> item
   read --> module
+  write["writeCharacterModule"] --> char
   item --> player --> frame
   module --> frame
+  char --> frame
 ```
 
 ## Why a package of its own
@@ -35,7 +39,8 @@ flowchart LR
 | The interactions share their glue                                                                                                    | One package holds them: the AMD definition and the configuration of the binding (`src/frame/`), the reader of the files (`src/node/`) and the build (`scripts/build-modules.ts`). Each is a module file of its own, so an item's package carries only the module it uses, and a page loads only that |
 
 The libraries are bundled at build time and are development dependencies: installing the package installs no runtime
-dependency but `@assesskit/runtime`, whose checks and errors the reader of files uses. The tarball carries every module, so a
+dependency but `@assesskit/runtime`, whose checks and errors `readModuleFiles` and `writeCharacterModule` use, and `valibot`, which
+reads the strokes of a character as the runtime reads JSON. The tarball carries every module, so a
 host that uses one interaction still has the others' files on disk.
 
 ## Build and layout
@@ -76,6 +81,8 @@ under the asset gate's prefix.
 | Package               | Version | License     | Why                                                                                                                                                                                                                                                                                                                 |
 | --------------------- | ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `mathlive`            | 0.111.1 | MIT         | The field and the virtual keyboard of math entry. Pinned exactly at the newest release older than 14 days on 2026-11-04 (released 2026-10-09); 0.111.4 passes the rule on 2026-11-14                                                                                                                                |
+| `hanzi-writer`        | 3.7.3   | MIT         | The quiz of stroke writing, which matches each stroke's shape, direction and order. Released 2025-09-17, with commits until 2025-12-31 and no advisory; it fetches a character's data from a CDN unless given a loader, and the module gives it the item's character                                                |
+| `valibot`             | 1.5.0   | MIT         | Reads the strokes of a character in `writeCharacterModule`, as the runtime and the player read JSON                                                                                                                                                                                                                 |
 | The fonts of MathLive | KaTeX's | SIL OFL 1.1 | MathLive draws a formula with KaTeX's 20 fonts and loads them all when a field first shows. The Open Font License lets the fonts travel with software under the copyright and the license, which `fonts/OFL.txt` carries beside them; it is a license of fonts, not one of those STANDARDS section 3 lists for code |
 
 MathQuill, the other field of its kind, is MPL-2.0, outside the licenses that STANDARDS section 3 allows, and has no
@@ -100,4 +107,6 @@ state.
 | `items.xsd.test.ts`          | `pnpm test:xsd`     | The items of the interactions against the official ASI schema                                                                                                                                                                   |
 
 The browser tests serve the player's frame and the modules, built for the run, from an asset origin of their own
-(`test/fixtures/browser-setup.ts`), and drive the frame with Playwright's keyboard and pointer (`test/fixtures/commands.ts`).
+(`test/fixtures/browser-setup.ts`), with the module of 十 that it writes from `test/fixtures/hanzi-writer-data/`, the one
+character the repository holds, under the Arphic Public License with its credit; they drive the frame with Playwright's
+keyboard and pointer (`test/fixtures/commands.ts`).

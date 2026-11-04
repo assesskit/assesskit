@@ -27,6 +27,8 @@ export const MODULES: readonly ModuleSource[] = [
       ["fonts/OFL.txt", resolve(PACKAGE, "licenses/katex-fonts-ofl.txt")],
     ]),
   },
+  // The reference strokes are content of the item's package, never of the module.
+  { name: "stroke-writing", assets: new Map() },
 ];
 
 /** A package of `node_modules` whose code a module holds: its name, version, license and the text of its license file. */

@@ -7,6 +7,7 @@ declare module "vitest/browser" {
     keysInFrame: (title: string, selector: string, keys: readonly string[], press?: boolean) => Promise<void>;
     pressInFrame: (title: string, selector: string) => Promise<void>;
     readInFrame: (title: string, script: string) => Promise<unknown>;
+    drawInFrame: (title: string, selector: string, strokes: readonly (readonly (readonly [number, number])[])[]) => Promise<void>;
   }
 }
 
@@ -65,5 +66,36 @@ const pressInFrame: BrowserCommand<[title: string, selector: string], void> = as
 const readInFrame: BrowserCommand<[title: string, script: string], unknown> = async (context, title, script) =>
   (await frameTitled(context, title)).evaluate(script);
 
+/**
+ * Draws strokes with the pointer in the frame of an interaction, as a candidate's mouse does: each stroke is pressed at its
+ * first point, moved through the others and lifted. The points are in the units of an SVG group in the frame, the one that
+ * `selector` names, which the command maps to the page with the group's own transform.
+ */
+const drawInFrame: BrowserCommand<
+  [title: string, selector: string, strokes: readonly (readonly (readonly [number, number])[])[]],
+  void
+> = async (context, title, selector, strokes) => {
+  const frame = await frameTitled(context, title);
+  const box = await (await frame.frameElement()).boundingBox();
+  if (box === null) throw new Error(`The frame titled ${JSON.stringify(title)} is not shown.`);
+  const toFrame = `(() => {
+    const matrix = document.querySelector(${JSON.stringify(selector)}).getScreenCTM();
+    return ${JSON.stringify(strokes)}.map((stroke) => stroke.map(([x, y]) => {
+      const point = new DOMPoint(x, y).matrixTransform(matrix);
+      return [point.x, point.y];
+    }));
+  })()`;
+  const mapped: readonly (readonly [number, number])[][] = await frame.evaluate(toFrame);
+  const { mouse } = context.page;
+  for (const stroke of mapped) {
+    const [first, ...rest] = stroke;
+    if (first === undefined) continue;
+    await mouse.move(box.x + first[0], box.y + first[1]);
+    await mouse.down();
+    for (const [x, y] of rest) await mouse.move(box.x + x, box.y + y, { steps: 4 });
+    await mouse.up();
+  }
+};
+
 /** The browser commands of the tests of the custom interactions. */
-export const CUSTOM_INTERACTION_COMMANDS = { keysInFrame, pressInFrame, readInFrame };
+export const CUSTOM_INTERACTION_COMMANDS = { keysInFrame, pressInFrame, readInFrame, drawInFrame };

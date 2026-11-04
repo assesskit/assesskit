@@ -2,7 +2,7 @@
 export interface ModuleBudget {
   /** The most that `<name>.js` may take after gzip at its best level, which is what a server sends, in bytes. */
   readonly gzip: number;
-  /** The most that the files below `<name>/` may take together as they are, in bytes: fonts are compressed already. */
+  /** The most that the files below `<name>/` may take together as they are, in bytes, as fonts are compressed already. */
   readonly files: number;
   /** The packages of `node_modules` whose code the script holds, by name, so that a new dependency fails until it is listed. */
   readonly holds: readonly string[];
@@ -16,4 +16,6 @@ export interface ModuleBudget {
 export const MODULE_BUDGETS: Readonly<Record<string, ModuleBudget>> = {
   // 228,053 bytes, and 264,499 bytes of 20 fonts and their license, with MathLive 0.111.1.
   "math-entry": { gzip: 285_500, files: 331_000, holds: ["mathlive"] },
+  // 13,159 bytes with Hanzi Writer 3.7.3; the reference strokes are the item's, never the module's.
+  "stroke-writing": { gzip: 16_500, files: 0, holds: ["hanzi-writer"] },
 };

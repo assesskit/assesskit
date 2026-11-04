@@ -2,13 +2,14 @@
 
 Portable custom interactions for QTI 3.0 items: `math-entry`, a formula typed in a [MathLive](https://mathlive.io) field with
 a virtual keyboard, whose LaTeX the `expression-equivalent` operator of [`@assesskit/runtime`](../runtime/README.md)
-scores. Each is an AMD module that the item's package carries, so that it loads entirely from the package in the frame of
+scores, and `stroke-writing`, a character written with strokes in [Hanzi Writer](https://hanziwriter.org)'s quiz, whose
+strokes and mistakes response processing scores. Each is an AMD module that the item's package carries, so that it loads entirely from the package in the frame of
 [`@assesskit/player`](../player/README.md), which reaches no network, or in any delivery engine that loads modules by the
 QTI 3.0 Best Practices and Implementation Guide.
 
 ```mermaid
 flowchart LR
-  tool["An author's tool<br/>INTERACTION_TYPES, readModuleFiles"] --> pkg["The item's package<br/>item.xml, modules/math-entry.js"]
+  tool["An author's tool<br/>INTERACTION_TYPES, readModuleFiles,<br/>writeCharacterModule"] --> pkg["The item's package<br/>item.xml, modules/*.js"]
   pkg --> frame["The player's frame<br/>loads the module"]
   frame -- "the response" --> rp["Response processing<br/>@assesskit/runtime/operators"]
 ```
@@ -18,7 +19,8 @@ npm install @assesskit/custom-interactions
 ```
 
 The package depends on [`@assesskit/runtime`](../runtime/README.md), for its checks and errors. The modules hold their
-libraries, bundled and pinned exactly, with each library's license at the head of its module: MathLive 0.111.1 (MIT).
+libraries, bundled and pinned exactly, with each library's license at the head of its module: MathLive 0.111.1 (MIT) and
+Hanzi Writer 3.7.3 (MIT).
 
 ## Quick start
 
@@ -45,9 +47,10 @@ and its package.
 
 ## Supported
 
-| Interaction  | Response                                                                    | Scored by                                                               |
-| ------------ | --------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `math-entry` | `single` `string`: LaTeX; `ordered` `string`: worked steps, one line a step | `expression-equivalent` and `readable`; the steps by `compareMathSteps` |
+| Interaction      | Response                                                                    | Scored by                                                               |
+| ---------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `math-entry`     | `single` `string`: LaTeX; `ordered` `string`: worked steps, one line a step | `expression-equivalent` and `readable`; the steps by `compareMathSteps` |
+| `stroke-writing` | `record`: `strokes` and `mistakes`, integers                                | QTI's own expressions, by `qti-field-value`                             |
 
 The modules run in Chromium 111, Firefox 115 and Safari 16.4, and later versions, the
 [baseline](https://github.com/assesskit/assesskit/blob/main/docs/player/baseline.md) of the player, and are tested in its
@@ -62,5 +65,5 @@ frame in the current Chromium, Firefox and WebKit.
 
 ## License
 
-[Apache-2.0](LICENSE). Copyright Fariz Wakan. The modules include MathLive, under the MIT license, which [NOTICE](NOTICE)
-reproduces.
+[Apache-2.0](LICENSE). Copyright Fariz Wakan. The modules include MathLive and Hanzi Writer, under the MIT license, which
+[NOTICE](NOTICE) reproduces with the license of MathLive's fonts.

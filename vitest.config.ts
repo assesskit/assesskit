@@ -84,8 +84,9 @@ const FLOORS: Record<string, { statements: number; branches: number; functions: 
           functions: 96,
           lines: 97,
         },
-        // The modules of the custom interactions run in a frame, where the browser tests run them; Node runs the reader of files.
-        "packages/custom-interactions/src/node/**": { statements: 88, branches: 75, functions: 100, lines: 89 },
+        // The modules of the custom interactions run in a frame, where the browser tests run them; Node runs the root entry and
+        // the reader of files.
+        "packages/custom-interactions/src/{*.ts,node/**}": { statements: 92, branches: 90, functions: 100, lines: 92 },
       };
 
 // biome-ignore lint/style/noDefaultExport: Vitest reads its configuration from the default export.

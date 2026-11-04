@@ -59,6 +59,83 @@ export function writeStepsItem(prompt: string): string {
   });
 }
 
+/** The response processing of stroke writing: 1 for every stroke written without a mistake, 0.5 with one or two, else 0. */
+const STROKE_SCORING = `<qti-response-processing>
+  <qti-response-condition>
+    <qti-response-if>
+      <qti-is-null><qti-variable identifier="RESPONSE"/></qti-is-null>
+      <qti-set-outcome-value identifier="SCORE"><qti-base-value base-type="float">0</qti-base-value></qti-set-outcome-value>
+    </qti-response-if>
+    <qti-response-else-if>
+      <qti-and>
+        <qti-equal tolerance-mode="exact">
+          <qti-field-value field-identifier="strokes"><qti-variable identifier="RESPONSE"/></qti-field-value>
+          <qti-variable identifier="STROKES"/>
+        </qti-equal>
+        <qti-equal tolerance-mode="exact">
+          <qti-field-value field-identifier="mistakes"><qti-variable identifier="RESPONSE"/></qti-field-value>
+          <qti-base-value base-type="integer">0</qti-base-value>
+        </qti-equal>
+      </qti-and>
+      <qti-set-outcome-value identifier="SCORE"><qti-base-value base-type="float">1</qti-base-value></qti-set-outcome-value>
+    </qti-response-else-if>
+    <qti-response-else-if>
+      <qti-and>
+        <qti-equal tolerance-mode="exact">
+          <qti-field-value field-identifier="strokes"><qti-variable identifier="RESPONSE"/></qti-field-value>
+          <qti-variable identifier="STROKES"/>
+        </qti-equal>
+        <qti-lte>
+          <qti-field-value field-identifier="mistakes"><qti-variable identifier="RESPONSE"/></qti-field-value>
+          <qti-base-value base-type="integer">2</qti-base-value>
+        </qti-lte>
+      </qti-and>
+      <qti-set-outcome-value identifier="SCORE"><qti-base-value base-type="float">0.5</qti-base-value></qti-set-outcome-value>
+    </qti-response-else-if>
+    <qti-response-else>
+      <qti-set-outcome-value identifier="SCORE"><qti-base-value base-type="float">0</qti-base-value></qti-set-outcome-value>
+    </qti-response-else>
+  </qti-response-condition>
+</qti-response-processing>`;
+
+/**
+ * Writes an item that asks for the character 十 with the stroke writing interaction, its character module at
+ * `modules/characters/5341`, and scores the record `{ strokes, mistakes }` with QTI's own expressions.
+ *
+ * @param prompt - The prompt, which names the frame.
+ * @param attributes - More attributes of the interaction, such as `data-show-outline="false"`.
+ */
+export function writeStrokeWritingItem(prompt: string, attributes = ""): string {
+  return writeAsi({
+    kind: "item",
+    item: itemOf(`<qti-assessment-item ${NS} identifier="stroke-writing" title="Stroke writing" adaptive="false"
+        time-dependent="false">
+      <qti-response-declaration identifier="RESPONSE" cardinality="record"/>
+      <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float">
+        <qti-default-value><qti-value>0</qti-value></qti-default-value>
+      </qti-outcome-declaration>
+      <qti-outcome-declaration identifier="MAXSCORE" cardinality="single" base-type="float">
+        <qti-default-value><qti-value>1</qti-value></qti-default-value>
+      </qti-outcome-declaration>
+      <qti-outcome-declaration identifier="STROKES" cardinality="single" base-type="integer">
+        <qti-default-value><qti-value>2</qti-value></qti-default-value>
+      </qti-outcome-declaration>
+      <qti-item-body>
+        <qti-portable-custom-interaction response-identifier="RESPONSE" module="stroke-writing"
+            custom-interaction-type-identifier="${INTERACTION_TYPES["stroke-writing"]}" ${attributes}>
+          <qti-prompt>${prompt}</qti-prompt>
+          <qti-interaction-modules>
+            <qti-interaction-module id="stroke-writing" primary-path="modules/stroke-writing"/>
+            <qti-interaction-module id="stroke-writing-character" primary-path="modules/characters/5341"/>
+          </qti-interaction-modules>
+          <qti-interaction-markup/>
+        </qti-portable-custom-interaction>
+      </qti-item-body>
+      ${STROKE_SCORING}
+    </qti-assessment-item>`),
+  });
+}
+
 /** Reads the one interaction of an item that the fixtures write, and the declaration of its response. */
 export function interactionOf(xml: string) {
   const item = itemOf(xml);

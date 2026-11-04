@@ -322,6 +322,9 @@ importers:
       '@assesskit/runtime':
         specifier: workspace:^
         version: link:../runtime
+      valibot:
+        specifier: 1.5.0
+        version: 1.5.0(typescript@6.0.3)
     devDependencies:
       '@assesskit/player':
         specifier: workspace:^
@@ -329,6 +332,9 @@ importers:
       esbuild:
         specifier: 0.28.2
         version: 0.28.2
+      hanzi-writer:
+        specifier: 3.7.3
+        version: 3.7.3
       mathlive:
         specifier: 0.111.1
         version: 0.111.1
@@ -2646,6 +2652,9 @@ packages:
 
   hachure-fill@0.5.2:
     resolution: {integrity: sha512-3GKBOn+m2LX9iq+JC1064cSFprJY4jL1jCXTcpnfER5HYE2l/4EfWSGzkPa/ZDBmYI0ZOEj5VHV/eKnPGkHuOg==}
+
+  hanzi-writer@3.7.3:
+    resolution: {integrity: sha512-fdOFrb1cXWL/pV/oplJkcdziCvjJzhhf+qoIBm5IpVGxPBZEu4eLB6ZG5RJDbKXyNbNlyx8oIpa3XrcUBcSXpg==}
 
   has-flag@4.0.0:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
@@ -6103,6 +6112,8 @@ snapshots:
   gopd@1.2.0: {}
 
   hachure-fill@0.5.2: {}
+
+  hanzi-writer@3.7.3: {}
 
   has-flag@4.0.0: {}
 

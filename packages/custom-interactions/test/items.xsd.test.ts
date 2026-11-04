@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "@assesskit/runtime/node";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { requireSchemas } from "../../../scripts/schemas.js";
-import { writeMathEntryItem, writeStepsItem } from "./fixtures/items.js";
+import { writeMathEntryItem, writeStepsItem, writeStrokeWritingItem } from "./fixtures/items.js";
 
 let set: SchemaSet;
 beforeAll(async () => {
@@ -11,7 +11,7 @@ beforeAll(async () => {
 afterAll(() => set.close());
 
 describe("the items of the interactions", () => {
-  it("are valid against the official ASI schema: an expression scored by its key, with either decimal mark, and worked steps", async () => {
+  it("are valid against the official ASI schema: an expression scored by its key, with either decimal mark, worked steps and a character scored by its record", async () => {
     const items = [
       writeMathEntryItem({ kind: "expression", expression: "2x+2" }, "Expand 2(x + 1)."),
       writeMathEntryItem(
@@ -20,6 +20,7 @@ describe("the items of the interactions", () => {
         'data-decimal-separator=","',
       ),
       writeStepsItem("Solve 2x + 3 = 7."),
+      writeStrokeWritingItem("Write the character for ten.", 'data-show-outline="false" data-size="240"'),
     ];
     const issues = await validateXmlFiles(
       set,

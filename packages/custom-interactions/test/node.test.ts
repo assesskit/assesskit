@@ -24,6 +24,15 @@ describe("readModuleFiles", () => {
     expect(script.startsWith("/*! mathlive 0.111.1 (MIT)\nCopyright (c) 2017 - present Arno Gourdol.")).toBe(true);
   });
 
+  it("reads the module of stroke writing alone: the characters are content of the item's package", async () => {
+    const files = await readModuleFiles("stroke-writing");
+    expect([...files.keys()]).toEqual(["modules/stroke-writing.js"]);
+    const script = new TextDecoder().decode(files.get("modules/stroke-writing.js"));
+    expect(
+      script.startsWith("/*! hanzi-writer 3.7.3 (MIT)\nThe MIT License (MIT)\n\nCopyright (c) 2014 David Chanin"),
+    ).toBe(true);
+  });
+
   it("puts the files below another folder of the package, or at its root", async () => {
     expect([...(await readModuleFiles("math-entry", { directory: "items/shared/" })).keys()][0]).toBe(
       "items/shared/math-entry.js",
@@ -33,7 +42,7 @@ describe("readModuleFiles", () => {
 
   it("refuses a name that is not an interaction, a folder outside normal form and an unknown option", async () => {
     await expect(readModuleFiles(JSON.parse('"choice"'))).rejects.toThrow(
-      new DataError('The name of an interaction must be one of "math-entry", found "choice".'),
+      new DataError('The name of an interaction must be one of "math-entry", "stroke-writing", found "choice".'),
     );
     for (const directory of ["/modules/", "modules", "../modules/", "modules/../", "a\\b/", "./"]) {
       await expect(readModuleFiles("math-entry", { directory }), directory).rejects.toThrow(DataError);

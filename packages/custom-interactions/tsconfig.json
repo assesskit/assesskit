@@ -16,5 +16,5 @@
       "@assesskit/player/*": ["../player/src/*/index.ts"]
     }
   },
-  "include": ["src", "scripts", "test"]
+  "include": ["src/*.ts", "src/node", "scripts", "test"]
 }

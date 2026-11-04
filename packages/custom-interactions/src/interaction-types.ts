@@ -1,5 +1,5 @@
 /** The name of an interaction of this package, which is also the id of its AMD module. */
-export type InteractionName = "math-entry";
+export type InteractionName = "math-entry" | "stroke-writing";
 
 /**
  * The `custom-interaction-type-identifier` of each interaction of this package, by its name.
@@ -12,4 +12,5 @@ export type InteractionName = "math-entry";
  */
 export const INTERACTION_TYPES: Readonly<Record<InteractionName, string>> = {
   "math-entry": "urn:uuid:d8feb3d2-0816-4d3b-a66a-9e4461e2c156",
+  "stroke-writing": "urn:uuid:36366dbf-22d7-4942-85e7-f334a950edfc",
 };
