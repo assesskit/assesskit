@@ -1,6 +1,5 @@
 import type { AssessmentItem } from "../asi/index.js";
 import { isShown } from "../content/internal.js";
-import { ProcessingError } from "../errors.js";
 import {
   type CustomOperator,
   createItemVariables,
@@ -30,11 +29,8 @@ export interface ProbeResult {
   readonly shown: readonly number[];
 }
 
-/** Runs an item's response processing on single responses of one variable. */
-export interface Probe {
-  /** Returns the score and the feedback shown for a response, the other responses being NULL. */
-  run(response: Value | null): ProbeResult;
-}
+/** Runs an item's response processing on a single response of one variable: the score and the feedback shown, the other responses being NULL. */
+export type Probe = (response: Value | null) => ProbeResult;
 
 /** Returns a number that a value holds, or `null`. */
 function numberOf(value: Value | null | undefined): number | null {
@@ -57,24 +53,17 @@ export function createProbe(
   customOperators: ReadonlyMap<string, CustomOperator>,
 ): Probe {
   const variables: ItemVariables = createItemVariables(item);
-  return {
-    run(value) {
-      const responses = new Map(variables.responses).set(response, value);
-      const after = runResponseProcessing(
-        item,
-        { ...variables, responses },
-        { random: createRandom(0), customOperators },
-      );
-      const shown: number[] = [];
-      for (const [index, { outcome, identifier, showHide }] of feedback.entries()) {
-        if (isShown(showHide, identifier, after.outcomes.get(outcome) ?? null)) shown.push(index);
-      }
-      return { score: numberOf(after.outcomes.get("SCORE")), shown };
-    },
+  return (value) => {
+    const responses = new Map(variables.responses).set(response, value);
+    const after = runResponseProcessing(
+      item,
+      { ...variables, responses },
+      { random: createRandom(0), customOperators },
+    );
+    const shown: number[] = [];
+    for (const [index, { outcome, identifier, showHide }] of feedback.entries()) {
+      if (isShown(showHide, identifier, after.outcomes.get(outcome) ?? null)) shown.push(index);
+    }
+    return { score: numberOf(after.outcomes.get("SCORE")), shown };
   };
-}
-
-/** Whether an error is one that response processing raises on an item, as opposed to a defect of the caller. */
-export function isProcessingFailure(error: unknown): error is ProcessingError {
-  return error instanceof ProcessingError;
 }

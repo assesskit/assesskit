@@ -7,7 +7,6 @@ import {
   elements,
   type FeedbackUse,
   type ItemView,
-  Omitted,
   readCorrect,
   SAME,
   type Sample,
@@ -21,6 +20,7 @@ import {
   percent,
   type Question,
   type QuestionCommon,
+  Refused,
 } from "./question.js";
 
 // A choice interaction as Moodle's multiple choice: one answer gives its credit; several give the sum of theirs, floored at
@@ -59,7 +59,7 @@ function choiceValue(single: boolean, ids: readonly string[]): Value | null {
 
 function runChoices(probe: Probe, ids: readonly string[], members: readonly number[]): number {
   return (
-    probe.run(
+    probe(
       choiceValue(
         false,
         members.map((index) => ids[index] ?? ""),
@@ -101,7 +101,7 @@ function scoreChoices(
   single: boolean,
   declared: number | undefined,
 ): ChoiceScores {
-  const alone = ids.map((id) => probe.run(choiceValue(single, [id])).score ?? 0);
+  const alone = ids.map((id) => probe(choiceValue(single, [id])).score ?? 0);
   const positive = [...alone.keys()].filter((index) => (alone[index] ?? 0) > 0);
   const subsets = single ? [] : choiceSubsets(ids.length, positive);
   const subsetScores = subsets.map((subset) => runChoices(probe, ids, subset));
@@ -109,7 +109,7 @@ function scoreChoices(
   for (const score of single ? alone : subsetScores) best = Math.max(best, score);
   const mark = declared ?? best;
   if (!(mark > 0))
-    throw new Omitted("No response earns credit, and Moodle's multiple choice needs an answer that does.");
+    throw new Refused("No response earns credit, and Moodle's multiple choice needs an answer that does.");
   return { single, ids, alone, positive, subsets, subsetScores, mark };
 }
 
@@ -180,7 +180,7 @@ function recordSettings(interaction: XmlElement, single: boolean, count: number,
 function choiceFeedback(probe: Probe, scores: ChoiceScores, view: ItemView): FeedbackUse {
   const { single, ids, positive, mark } = scores;
   const samples: Sample[] = [
-    { answers: [], result: probe.run(null), fraction: 0 },
+    { answers: [], result: probe(null), fraction: 0 },
     ...ids.map((id, index) => sampleOf(probe, choiceValue(single, [id]), [index], mark)),
   ];
   if (!single && positive.length > 0) {
@@ -218,9 +218,9 @@ export function convertChoices(
   context: ConvertContext,
 ): Question {
   const single = findAttribute(view.declaration ?? interaction, "cardinality") !== "multiple";
-  if (choices.length < 2) throw new Omitted("Moodle's multiple choice needs at least two answers.");
+  if (choices.length < 2) throw new Refused("Moodle's multiple choice needs at least two answers.");
   if (choices.length > context.limits.maxAnswers) {
-    throw new Omitted(
+    throw new Refused(
       `The interaction has ${choices.length} choices, over the limit maxAnswers of ${context.limits.maxAnswers}.`,
     );
   }

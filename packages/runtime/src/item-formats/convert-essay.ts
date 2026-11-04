@@ -20,7 +20,7 @@ export function convertEssay(interaction: XmlElement, probe: Probe, view: ItemVi
       message: `The attribute ${name} of the extended text has no place in Moodle's essay.`,
     });
   }
-  const result = probe.run(buildSingle("string", "x"));
+  const result = probe(buildSingle("string", "x"));
   if ((result.score ?? 0) !== 0) {
     view.losses.push({
       reason: "scoring",

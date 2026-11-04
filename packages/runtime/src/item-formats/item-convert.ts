@@ -1,6 +1,6 @@
 import type { AssessmentItem } from "../asi/index.js";
 import { typeNamed, writeElement } from "../asi/internal.js";
-import { DataError } from "../errors.js";
+import { DataError, ProcessingError } from "../errors.js";
 import { collectText, findAttribute, type XmlElement } from "../xml/index.js";
 import { type HtmlVisitor, writeHtml } from "./body-html.js";
 import { type Choice, convertChoices } from "./convert-choices.js";
@@ -9,9 +9,9 @@ import { convertMatch } from "./convert-match.js";
 import { convertNumerical } from "./convert-number.js";
 import { convertShortAnswer } from "./convert-text.js";
 import type { ItemLoss } from "./item-build.js";
-import { type ConvertContext, descendants, elements, html, type ItemView, Omitted } from "./item-view.js";
-import { createProbe, type FeedbackElement, isProcessingFailure, type Probe } from "./probe.js";
-import { emptyText, type Question, type QuestionCommon } from "./question.js";
+import { type ConvertContext, descendants, elements, html, type ItemView } from "./item-view.js";
+import { createProbe, type FeedbackElement, type Probe } from "./probe.js";
+import { emptyText, type Question, type QuestionCommon, Refused } from "./question.js";
 
 // An item as Moodle's question model: the interaction gives the question type, its response processing run on the responses
 // that matter gives each answer's credit and the feedback each shows, and its body gives the question's text.
@@ -89,16 +89,16 @@ function feedbackElements(tree: XmlElement, body: XmlElement | undefined): Feedb
 /** Finds the one interaction of an item that converts, or leaves the item out with the reason. */
 function findInteraction(tree: XmlElement, body: XmlElement | undefined): XmlElement | undefined {
   if (elements(tree).some(({ name }) => name === "qti-template-declaration" || name === "qti-template-processing")) {
-    throw new Omitted("The item has template variables, which GIFT and Moodle XML do not hold.");
+    throw new Refused("The item has template variables, which GIFT and Moodle XML do not hold.");
   }
   const interactions =
     body === undefined ? [] : descendants(body, ({ name }) => name.startsWith("qti-") && name.endsWith("-interaction"));
   if (interactions.length > 1) {
-    throw new Omitted(`The item has ${interactions.length} interactions; a question of GIFT or Moodle XML holds one.`);
+    throw new Refused(`The item has ${interactions.length} interactions; a question of GIFT or Moodle XML holds one.`);
   }
   const [interaction] = interactions;
   if (interaction !== undefined && !INTERACTIONS.has(interaction.name)) {
-    throw new Omitted(`The ${interaction.name} has no question type in GIFT or Moodle XML.`);
+    throw new Refused(`The ${interaction.name} has no question type in GIFT or Moodle XML.`);
   }
   return interaction;
 }
@@ -156,7 +156,7 @@ function convertInteraction(
       if (baseType === "string") return convertShortAnswer(probe, view, common, context);
       if (baseType === "float" || baseType === "integer")
         return convertNumerical(probe, view, common, baseType, context);
-      throw new Omitted(`A text entry of the base type ${baseType} has no question type in Moodle.`);
+      throw new Refused(`A text entry of the base type ${baseType} has no question type in Moodle.`);
     case "qti-match-interaction":
       return convertMatch(interaction, probe, view, common, context);
     default:
@@ -181,7 +181,7 @@ function convertView(
     }
     return { ...common, defaultMark: 0, qtype: "description" };
   }
-  if (view.declaration === undefined) throw new Omitted("The interaction's response has no declaration.");
+  if (view.declaration === undefined) throw new Refused("The interaction's response has no declaration.");
   const probe = createProbe(
     item,
     findAttribute(interaction, "response-identifier") ?? "",
@@ -239,8 +239,8 @@ export function convertItem(item: AssessmentItem, context: ConvertContext): Conv
     }
     return { question, losses };
   } catch (error) {
-    if (error instanceof Omitted) return { question: undefined, losses: [{ reason: "item", message: error.message }] };
-    if (isProcessingFailure(error) || error instanceof DataError) {
+    if (error instanceof Refused) return { question: undefined, losses: [{ reason: "item", message: error.message }] };
+    if (error instanceof ProcessingError || error instanceof DataError) {
       return {
         question: undefined,
         losses: [{ reason: "item", message: `The item's response processing fails: ${error.message}` }],

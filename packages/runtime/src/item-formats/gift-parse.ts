@@ -1,10 +1,10 @@
 import { SecurityError } from "../errors.js";
-import { escapePost, escapePre, GiftError, readAnswers, withFormat } from "./gift-answers.js";
+import { escapePost, escapePre, readAnswers, withFormat } from "./gift-answers.js";
 import { importEntries, readFileText, resolveReadOptions } from "./import-items.js";
 import type { ItemFormatLimits } from "./limits.js";
 import type { ImportedItems, ReadItemsOptions } from "./model.js";
 import { phpEmpty, phpExplode, phpSubstr, phpSubstrReplace, phpTrim } from "./php-strings.js";
-import type { QuestionCommon, ReadEntry } from "./question.js";
+import { type QuestionCommon, type ReadEntry, Refused } from "./question.js";
 
 // The GIFT importer of Moodle 5.3 (question/format/gift/format.php), step by step: a file means what that importer reads,
 // with its edge cases, such as a line "0" that ends a question and an answer of a numerical question that is not a number,
@@ -196,7 +196,7 @@ function readQuestion(lines: readonly string[], limits: ItemFormatLimits): ReadE
   try {
     return { kind: "question", question: readAnswers(common, split.answerText, limits) };
   } catch (error) {
-    if (error instanceof GiftError) return { kind: "error", name: common.name, message: error.message };
+    if (error instanceof Refused) return { kind: "error", name: common.name, message: error.message };
     throw error;
   }
 }

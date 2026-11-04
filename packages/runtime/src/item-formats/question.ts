@@ -159,3 +159,12 @@ export function hasCombined(combined: CombinedFeedback | undefined): combined is
     (combined.correct.text !== "" || combined.partiallyCorrect.text !== "" || combined.incorrect.text !== "")
   );
 }
+
+/** A question or an item that a format refuses, with the reason in the message: a reader or a writer throws it and catches it. */
+export class Refused {
+  readonly message: string;
+
+  constructor(message: string) {
+    this.message = message;
+  }
+}

@@ -8,14 +8,13 @@ import {
   type ItemView,
   mapEntries,
   markOf,
-  Omitted,
   rankAnswers,
   readCorrect,
   SAME,
 } from "./item-view.js";
 import { operatorKey } from "./operator-key.js";
 import type { Probe, ProbeResult } from "./probe.js";
-import { emptyText, type NumberAnswer, type Question, type QuestionCommon } from "./question.js";
+import { emptyText, type NumberAnswer, type Question, type QuestionCommon, Refused } from "./question.js";
 
 // A text entry of a number as Moodle's numerical question: the values and intervals that the item's declaration and
 // processing name, each an answer of a value and a tolerance with the credit that the item gives it, in order of credit.
@@ -144,7 +143,7 @@ function checkBounds(
   view: ItemView,
 ): void {
   for (const bound of [low(kept.interval), high(kept.interval)]) {
-    if (Math.abs((probe.run(value(bound)).score ?? 0) / mark - kept.fraction) > SAME) {
+    if (Math.abs((probe(value(bound)).score ?? 0) / mark - kept.fraction) > SAME) {
       view.losses.push({
         reason: "scoring",
         message: `The item scores ${bound} unlike ${kept.interval.value}, which Moodle's tolerance around it holds alike.`,
@@ -169,7 +168,7 @@ export function convertNumerical(
 ): Question {
   const candidates = numberCandidates(view);
   if (candidates.length > context.limits.maxAnswers) {
-    throw new Omitted(
+    throw new Refused(
       `The item names ${candidates.length} answers, over the limit maxAnswers of ${context.limits.maxAnswers}.`,
     );
   }
@@ -178,12 +177,12 @@ export function convertNumerical(
     const rounded = Math.round(number);
     return Number.isSafeInteger(rounded) ? buildSingle("integer", rounded) : null;
   };
-  const results = candidates.map((interval) => probe.run(value(ownPoint(interval, candidates))));
+  const results = candidates.map((interval) => probe(value(ownPoint(interval, candidates))));
   const mark = markOf(view, results, "numerical question");
   let outside = 1;
   for (const interval of candidates)
     outside = Math.max(outside, Math.abs(high(interval)) * 2 + Math.abs(low(interval)) + 1);
-  const wrong = probe.run(value(Math.round(outside)));
+  const wrong = probe(value(Math.round(outside)));
   const kept: Kept[] = candidates.flatMap((interval, index) => {
     const result = results[index];
     return result === undefined || ((result.score ?? 0) === 0 && result.shown.length === 0)
@@ -201,6 +200,6 @@ export function convertNumerical(
     feedback: feedback.answers.get(index) ?? emptyText(),
   }));
   if (other !== undefined) answers.push({ value: null, tolerance: 0, ...other });
-  if (answers.length === 0) throw new Omitted("The item names no number that earns credit.");
+  if (answers.length === 0) throw new Refused("The item names no number that earns credit.");
   return { ...common, defaultMark: mark, generalFeedback: feedback.general, qtype: "numerical", answers };
 }

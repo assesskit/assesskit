@@ -15,6 +15,7 @@ import {
   type Question,
   type QuestionCommon,
   type ReadEntry,
+  Refused,
   type TextFormat,
 } from "./question.js";
 
@@ -46,15 +47,6 @@ const UNCONVERTED: ReadonlyMap<string, string> = new Map([
     "A calculated question draws its values from datasets, which QTI's template processing does not read.",
   ],
 ]);
-
-/** A question that Moodle refuses, with the reason it gives. */
-class XmlRefusal {
-  readonly message: string;
-
-  constructor(message: string) {
-    this.message = message;
-  }
-}
 
 /** The child elements of a name; none for an element that is not there. */
 function children(element: XmlElement | undefined, name: string): XmlElement[] {
@@ -113,7 +105,7 @@ function formattedText(element: XmlElement | undefined, fallback: TextFormat): F
 /** A number of the file, as PHP's arithmetic reads it, which throws on a string that is not a number. */
 function numberOf(text: string, what: string): number {
   if (phpIsNumeric(text)) return phpNumber(text);
-  throw new XmlRefusal(`The ${what} ${text} is not a number.`);
+  throw new Refused(`The ${what} ${text} is not a number.`);
 }
 
 /** The credit of an answer: its attribute `fraction` in percent, as a grade of Moodle's list when it is one. */
@@ -174,7 +166,7 @@ function readMultichoice(question: XmlElement, common: QuestionCommon, limits: I
     fraction: fractionOf(answer),
     feedback: formattedText(child(answer, "feedback"), format),
   }));
-  if (read.length < 2) throw new XmlRefusal("A multiple choice needs at least two answers.");
+  if (read.length < 2) throw new Refused("A multiple choice needs at least two answers.");
   const numbering = pathText(question, ["answernumbering"], "abc");
   return {
     ...common,
@@ -325,7 +317,7 @@ function readQuestion(question: XmlElement, limits: ItemFormatLimits): ReadEntry
         return { kind: "unconverted", name, message: `Moodle's question type ${type} has no conversion to QTI here.` };
     }
   } catch (error) {
-    if (error instanceof XmlRefusal) return { kind: "error", name, message: error.message };
+    if (error instanceof Refused) return { kind: "error", name, message: error.message };
     throw error;
   }
 }

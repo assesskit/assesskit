@@ -82,10 +82,7 @@ export function omitEntry(plan: ExportPlan, entry: ExportEntry, message: string)
 
 /** Returns the losses in the order of the items, a format's own after the conversion's of the same item. */
 export function sortedLosses(plan: ExportPlan): readonly ConversionLoss[] {
-  return plan.losses
-    .map((loss, order) => ({ loss, order }))
-    .sort((a, b) => a.loss.index - b.loss.index || a.order - b.order)
-    .map(({ loss }) => loss);
+  return plan.losses.toSorted((a, b) => a.index - b.index);
 }
 
 /**

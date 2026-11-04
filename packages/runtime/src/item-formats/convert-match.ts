@@ -7,14 +7,13 @@ import {
   elements,
   html,
   type ItemView,
-  Omitted,
   readCorrect,
   SAME,
   type Sample,
   sampleOf,
 } from "./item-view.js";
 import type { Probe } from "./probe.js";
-import { emptyText, type Question, type QuestionCommon, type Subquestion } from "./question.js";
+import { emptyText, type Question, type QuestionCommon, Refused, type Subquestion } from "./question.js";
 
 // A match interaction as Moodle's matching question, whose stems each have one right answer and earn an equal share of the
 // mark.
@@ -128,19 +127,19 @@ export function convertMatch(
     elements(set, "qti-simple-associable-choice"),
   );
   if (sources === undefined || targets === undefined || sources.length === 0)
-    throw new Omitted("The match has no stems.");
+    throw new Refused("The match has no stems.");
   if (sources.length > context.limits.maxAnswers || targets.length > context.limits.maxAnswers) {
-    throw new Omitted(`The match has more than ${context.limits.maxAnswers} choices in a set, the limit maxAnswers.`);
+    throw new Refused(`The match has more than ${context.limits.maxAnswers} choices in a set, the limit maxAnswers.`);
   }
-  const credit = sources.map((source) => targets.map((target) => probe.run(pairsValue([[source, target]])).score ?? 0));
+  const credit = sources.map((source) => targets.map((target) => probe(pairsValue([[source, target]])).score ?? 0));
   const right = rightTargets(sources, targets, credit, view);
   const full: Pair[] = sources.flatMap((source, index) => {
     const target = right[index];
     return target === undefined ? [] : [[source, target] as const];
   });
-  const fullScore = probe.run(pairsValue(full)).score ?? 0;
+  const fullScore = probe(pairsValue(full)).score ?? 0;
   const mark = view.mark ?? fullScore;
-  if (!(mark > 0)) throw new Omitted("No response earns credit, and Moodle's match needs right answers.");
+  if (!(mark > 0)) throw new Refused("No response earns credit, and Moodle's match needs right answers.");
   if (full.length < sources.length) {
     view.losses.push({
       reason: "scoring",
@@ -149,7 +148,7 @@ export function convertMatch(
   }
   checkShares(targets, right, credit, { full: fullScore, mark, stems: full.length }, view);
   const samples: Sample[] = [
-    { answers: [], result: probe.run(null), fraction: 0 },
+    { answers: [], result: probe(null), fraction: 0 },
     ...full.map((pair, index) => sampleOf(probe, pairsValue([pair]), [index], mark)),
     sampleOf(
       probe,

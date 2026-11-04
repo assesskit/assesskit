@@ -10,6 +10,7 @@ import {
   type NumberAnswer,
   type Question,
   type QuestionCommon,
+  Refused,
   type Subquestion,
   type TextAnswer,
   type TextFormat,
@@ -43,15 +44,6 @@ const FORMATS: ReadonlyMap<string, TextFormat> = new Map([
 
 /** The answers of a true-false question. */
 const TRUE_FALSE: ReadonlySet<string> = new Set(["T", "TRUE", "F", "FALSE"]);
-
-/** A question that Moodle refuses, with the reason it gives. */
-export class GiftError {
-  readonly message: string;
-
-  constructor(message: string) {
-    this.message = message;
-  }
-}
 
 /** Hides the escaped marks behind placeholders, as `escapedchar_pre` does; `\\` stands for a backslash. */
 export function escapePre(text: string): string {
@@ -93,7 +85,7 @@ function readWeight(answer: string, fallback: number): readonly [number, string]
   const end = rest.indexOf("%");
   const weight = rest.slice(0, end);
   // PHP's division throws on a string that is not numeric, as "--50" is, and Moodle's import stops there.
-  if (!phpIsNumeric(weight)) throw new GiftError(`The weight %${weight}% is not a number.`);
+  if (!phpIsNumeric(weight)) throw new Refused(`The weight %${weight}% is not a number.`);
   return [phpNumber(weight) / 100, rest.slice(end + 1)];
 }
 
@@ -107,7 +99,7 @@ function splitAnswers(answerText: string, mark: string, min: number, limits: Ite
   const parts = phpExplode(mark, answerText);
   parts[0] = phpTrim(parts[0] ?? "");
   if (phpEmpty(parts[0])) parts.shift();
-  if (parts.length < min) throw new GiftError(`A question of this type needs at least ${min} answers.`);
+  if (parts.length < min) throw new Refused(`A question of this type needs at least ${min} answers.`);
   if (parts.length > limits.maxAnswers) {
     throw new SecurityError(
       `A question has ${parts.length} answers, over the limit maxAnswers of ${limits.maxAnswers}.`,
@@ -138,7 +130,7 @@ function readTextAnswers(answerText: string, format: TextFormat, limits: ItemFor
 /** Reads a bound of a range as PHP's arithmetic does, which throws on a string that is not a number. */
 function rangeNumber(text: string): number {
   if (phpIsNumeric(text)) return phpNumber(text);
-  throw new GiftError(`The bound ${text} of a range is not a number.`);
+  throw new Refused(`The bound ${text} of a range is not a number.`);
 }
 
 /** Reads a value: `min..max`, `value:tolerance` or `value`; a value that is not a number becomes `*`, as in the importer. */
@@ -153,7 +145,7 @@ function readValue(written: string): Pick<NumberAnswer, "value" | "tolerance"> {
   const colon = written.indexOf(":");
   const tolerance = colon > 0 ? phpTrim(written.slice(colon + 1)) : "0";
   const number = phpTrim(colon > 0 ? written.slice(0, colon) : written);
-  if (!phpIsNumeric(tolerance)) throw new GiftError(`The tolerance ${tolerance} is not a number.`);
+  if (!phpIsNumeric(tolerance)) throw new Refused(`The tolerance ${tolerance} is not a number.`);
   // The importer tests `is_numeric($ans) || $ans = '*'`: an answer that is not a number becomes `*`.
   return phpIsNumeric(number)
     ? { value: phpNumber(number), tolerance: phpNumber(tolerance) }
@@ -178,7 +170,7 @@ function readSubquestions(answerText: string, format: TextFormat, limits: ItemFo
   return splitAnswers(answerText, "=", 2, limits).map((raw) => {
     const pair = phpTrim(raw);
     const arrow = pair.indexOf("->");
-    if (arrow < 0) throw new GiftError(`The pair ${escapePost(pair)} of a matching question has no "->".`);
+    if (arrow < 0) throw new Refused(`The pair ${escapePost(pair)} of a matching question has no "->".`);
     return { text: withFormat(pair.slice(0, arrow), format), answer: phpTrim(escapePost(pair.slice(arrow + 2))) };
   });
 }
@@ -210,7 +202,7 @@ function isTrueFalse(answerText: string): boolean {
  * first for a numerical question, `~` for a multiple choice, `=` with `->` for a matching question, T or F for true or
  * false, and a short answer otherwise.
  *
- * @throws `GiftError` for a question that Moodle refuses.
+ * @throws `Refused` for a question that Moodle refuses.
  * @throws `SecurityError` past `maxAnswers`.
  */
 export function readAnswers(common: QuestionCommon, answerText: string, limits: ItemFormatLimits): Question {

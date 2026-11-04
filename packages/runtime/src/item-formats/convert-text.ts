@@ -8,13 +8,12 @@ import {
   type ItemView,
   mapEntries,
   markOf,
-  Omitted,
   rankAnswers,
   readCorrect,
 } from "./item-view.js";
 import { operatorKey } from "./operator-key.js";
 import type { Probe, ProbeResult } from "./probe.js";
-import { emptyText, type Question, type QuestionCommon, type TextAnswer } from "./question.js";
+import { emptyText, type Question, type QuestionCommon, Refused, type TextAnswer } from "./question.js";
 
 // A text entry of a string as Moodle's short answer: the answers that the item's declaration and processing name, each with
 // the credit that the item's response processing gives it, in order of credit, Moodle taking the first that matches.
@@ -155,7 +154,7 @@ function caseOf(probe: Probe, kept: readonly Kept[], view: ItemView): boolean {
   const cased = kept.flatMap(({ sample, pattern, caseSensitive, result }) => {
     if (pattern) return caseSensitive === undefined ? [] : [caseSensitive];
     if (swapCase(sample) === sample) return [];
-    return [probe.run(buildSingle("string", swapCase(sample))).score !== result.score];
+    return [probe(buildSingle("string", swapCase(sample))).score !== result.score];
   });
   const sensitive = cased.length > 0 && cased.every(Boolean);
   if (cased.some(Boolean) && !sensitive) {
@@ -184,13 +183,13 @@ export function convertShortAnswer(
   }
   const candidates = textCandidates(view);
   if (candidates.length > context.limits.maxAnswers) {
-    throw new Omitted(
+    throw new Refused(
       `The item names ${candidates.length} answers, over the limit maxAnswers of ${context.limits.maxAnswers}.`,
     );
   }
-  const results = candidates.map(({ sample }) => probe.run(sample === "" ? null : buildSingle("string", sample)));
+  const results = candidates.map(({ sample }) => probe(sample === "" ? null : buildSingle("string", sample)));
   const mark = markOf(view, results, "short answer");
-  const wrong = probe.run(buildSingle("string", noAnswer(candidates.map(({ sample }) => sample))));
+  const wrong = probe(buildSingle("string", noAnswer(candidates.map(({ sample }) => sample))));
   const kept: Kept[] = candidates.flatMap((candidate, index) => {
     const result = results[index];
     if (result === undefined) return [];
@@ -208,7 +207,7 @@ export function convertShortAnswer(
     feedback: feedback.answers.get(index) ?? emptyText(),
   }));
   if (other !== undefined) answers.push({ text: "*", ...other });
-  if (answers.length === 0) throw new Omitted("The item names no answer that earns credit.");
+  if (answers.length === 0) throw new Refused("The item names no answer that earns credit.");
   return {
     ...common,
     defaultMark: mark,

@@ -6,7 +6,7 @@ import { findGrade, nearestGrade } from "./grades.js";
 import type { ItemLoss } from "./item-build.js";
 import type { ItemFormatLimits } from "./limits.js";
 import type { FeedbackElement, Probe, ProbeResult } from "./probe.js";
-import { type CombinedFeedback, emptyText, type FormattedText, percent } from "./question.js";
+import { type CombinedFeedback, emptyText, type FormattedText, percent, Refused } from "./question.js";
 
 // What the writer knows of an item while it converts it, and the helpers that each type of question shares: the item's XML,
 // the samples of its response processing, the feedback each shows, and Moodle's grades.
@@ -21,15 +21,6 @@ export const SAME = 1e-9;
 export interface ConvertContext {
   readonly operators: ReadonlyMap<string, CustomOperator>;
   readonly limits: Pick<ItemFormatLimits, "maxAnswers">;
-}
-
-/** An item left out, by the reason in the message. */
-export class Omitted {
-  readonly message: string;
-
-  constructor(message: string) {
-    this.message = message;
-  }
 }
 
 /** What the writer knows of an item while it converts it. */
@@ -97,7 +88,7 @@ export function html(nodes: readonly XmlNode[], view: ItemView): FormattedText {
 
 /** Runs a response and returns it as a sample of the given answers. */
 export function sampleOf(probe: Probe, value: Value | null, answers: readonly number[], mark: number): Sample {
-  const result = probe.run(value);
+  const result = probe(value);
   return { answers, result, fraction: (result.score ?? 0) / mark };
 }
 
@@ -189,7 +180,7 @@ export function markOf(view: ItemView, results: readonly ProbeResult[], question
   for (const { score } of results) best = Math.max(best, score ?? 0);
   const mark = view.mark ?? best;
   if (!(mark > 0))
-    throw new Omitted(`No answer of the item earns credit, and Moodle's ${question} needs one that does.`);
+    throw new Refused(`No answer of the item earns credit, and Moodle's ${question} needs one that does.`);
   return mark;
 }
 
