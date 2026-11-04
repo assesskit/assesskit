@@ -4,10 +4,15 @@
  * that alters any verdict takes a new one.
  */
 export const OPERATOR_DEFINITIONS = Object.freeze({
+  /** The definition of `expression-equivalent`. */
   "expression-equivalent": "urn:uuid:bca67099-ac73-46d0-acb0-2b025e61b552",
+  /** The definition of `number-equivalent`. */
   "number-equivalent": "urn:uuid:12fcd638-f818-41f5-a3f0-93f97e2a6250",
+  /** The definition of `text-equivalent`. */
   "text-equivalent": "urn:uuid:02d09ea0-c251-49b1-95b2-96e4f3b9b540",
+  /** The definition of `hotspot-matching`. */
   "hotspot-matching": "urn:uuid:3c8b8eae-0afe-4329-ab44-eb1679444afc",
+  /** The definition of `readable`. */
   readable: "urn:uuid:6fab098c-9ba4-4314-92dd-8662c0c0489c",
 });
 
