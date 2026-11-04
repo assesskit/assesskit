@@ -54,9 +54,11 @@ import {
 } from "../src/index.js";
 import { expressions } from "./arbitraries/processing.js";
 import { expressionKinds } from "./asi-elements.js";
-import rounding from "./fixtures/rounding.json" with { type: "json" };
+import { type RoundingFixture, readFixture } from "./fixtures.js";
 import { FUZZ } from "./fuzz.js";
 import { runGuideSamples } from "./guide-samples.js";
+
+const rounding = readFixture<RoundingFixture>("rounding.json");
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {

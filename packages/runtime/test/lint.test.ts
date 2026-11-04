@@ -159,6 +159,19 @@ const packages = {
   ]),
 };
 
+/** The three forms of an import of a JSON file, in the order of the lines: static with its attribute, static, and dynamic. */
+const jsonImports = (name: string): string[] => [
+  `import a from "./fixtures/${name}.json" with { type: "json" };`,
+  `import b from "./fixtures/${name}.json";`,
+  `export const c = [a, b, await import("./fixtures/${name}.json")];`,
+];
+const json = {
+  runtimeTest: source("packages/runtime/test/json.test.ts", jsonImports("a")),
+  runtimeBench: source("packages/runtime/test/json.bench.ts", jsonImports("a")),
+  playerTest: source("packages/player/test/json.test.ts", jsonImports("a")),
+  runtimeSource: source("packages/runtime/src/node/json.ts", jsonImports("a")),
+};
+
 beforeAll(() => {
   project = mkdtempSync(join(tmpdir(), "runtime-lint-"));
   cpSync(join(ROOT, "biome.json"), join(project, "biome.json"));
@@ -239,5 +252,17 @@ describe("layering", () => {
 
   it("keeps the player to the published subpaths of the runtime", () => {
     expect(linesFor(packages.player, RESTRICTED_IMPORT)).toEqual([1, 2]);
+  });
+});
+
+describe("fixtures", () => {
+  it("keeps a test or a benchmark from importing a JSON file, in the static and the dynamic form", () => {
+    for (const path of [json.runtimeTest, json.runtimeBench, json.playerTest]) {
+      expect(linesFor(path, RESTRICTED_IMPORT), path).toEqual([1, 2, 3]);
+    }
+  });
+
+  it("leaves the sources of the runtime the JSON files that they import", () => {
+    expect(whatFor(json.runtimeSource)).not.toContain(RESTRICTED_IMPORT);
   });
 });

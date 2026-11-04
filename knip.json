@@ -2,7 +2,8 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
-      "entry": ["scripts/peak-memory-child.ts"]
+      "entry": ["scripts/peak-memory-child.ts"],
+      "ignoreDependencies": ["jscpd"]
     },
     "packages/runtime": {
       "entry": ["src/index.ts", "src/checks.ts", "src/*/index.ts", "src/delivery/wire.ts", "src/cli/bin.ts"]

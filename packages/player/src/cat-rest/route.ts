@@ -1,5 +1,12 @@
 import type { CatPort } from "@assesskit/runtime/cat";
 
+/** Removes the slashes that end a URL, so that a reference, a prefix and an endpoint with and without one are the same. */
+export function withoutTrailingSlashes(url: string): string {
+  let end = url.length;
+  while (end > 0 && url[end - 1] === "/") end -= 1;
+  return url.slice(0, end);
+}
+
 /** The six requests of the binding, named as the methods of the runtime's `CatPort`. */
 export type CatOperation = keyof CatPort;
 

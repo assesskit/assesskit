@@ -23,7 +23,7 @@ import {
 } from "./binding.js";
 import { readJsonBody } from "./body.js";
 import { DEFAULT_MAX_TOKENS } from "./json-tokens.js";
-import { type CatOperation, matchRoute, type PathIdentifiers } from "./route.js";
+import { type CatOperation, matchRoute, type PathIdentifiers, withoutTrailingSlashes } from "./route.js";
 import {
   AUTHORIZATION_FAILURE,
   bodyFailure,
@@ -114,13 +114,6 @@ const portSchema = methodsSchema<CatPort>(
 );
 
 const requestSchema = guardSchema((value): value is Request => value instanceof Request, "a Request");
-
-/** Removes the slashes that end a URL, so that a reference with and without one is the same. */
-function withoutTrailingSlashes(url: string): string {
-  let end = url.length;
-  while (end > 0 && url[end - 1] === "/") end -= 1;
-  return url.slice(0, end);
-}
 
 /** Calls the port and returns the function that encodes its answer, so that a failure of the port is told from one of the encoding. */
 type Invocation = () => Promise<() => unknown>;

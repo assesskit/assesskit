@@ -41,8 +41,10 @@ import {
   validateCatalog,
 } from "../src/index.js";
 import { asProfile } from "./arbitraries/pnp.js";
-import printf from "./fixtures/printf.json" with { type: "json" };
+import { type PrintfFixture, readFixture } from "./fixtures.js";
 import { runGuideSamples } from "./guide-samples.js";
+
+const printf = readFixture<PrintfFixture>("printf.json");
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {

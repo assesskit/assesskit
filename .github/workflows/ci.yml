@@ -208,6 +208,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm check:standards
+      - run: pnpm check:duplication
       - run: pnpm knip
       - run: pnpm check:packages
       - run: pnpm check:release

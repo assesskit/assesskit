@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import printf from "./fixtures/printf.json" with { type: "json" };
-import rounding from "./fixtures/rounding.json" with { type: "json" };
+import { type PrintfFixture, type RoundingFixture, readFixture } from "./fixtures.js";
+
+const printf = readFixture<PrintfFixture>("printf.json");
+const rounding = readFixture<RoundingFixture>("rounding.json");
 
 const SPECIFICATION = /^%([-+ #0]*)(\d*)(?:\.(\d+))?([a-zA-Z])$/;
 

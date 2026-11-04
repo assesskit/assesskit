@@ -1407,6 +1407,54 @@
       }
     },
     {
+      "includes": ["packages/runtime/test/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
+                  },
+                  {
+                    "group": ["**/*.json"],
+                    "message": "Read a fixture with a typed loader of the package's test folder: the type checker builds a type for every element of an imported JSON file."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/player/test/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["../**/runtime/**"],
+                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
+                  },
+                  {
+                    "group": ["**/*.json"],
+                    "message": "Read a fixture with a typed loader of the package's test folder: the type checker builds a type for every element of an imported JSON file."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["**/test/**"],
       "linter": {
         "rules": {

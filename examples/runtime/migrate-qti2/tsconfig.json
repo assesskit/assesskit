@@ -3,6 +3,7 @@
   "compilerOptions": {
     "noEmit": true,
     "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "paths": {
       "@assesskit/runtime": ["../../../packages/runtime/src/index.ts"],
       "@assesskit/runtime/checks": ["../../../packages/runtime/src/checks.ts"],

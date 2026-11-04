@@ -27,6 +27,7 @@ import {
 } from "./binding.js";
 import { DEFAULT_MAX_TOKENS } from "./json-tokens.js";
 import { type CatFetch, createRestClient, type OAuthClientCredentials, oauthCredentialsSchema } from "./rest-client.js";
+import { withoutTrailingSlashes } from "./route.js";
 
 /** An engine that the port reaches: where it is, how to authorize at it, and what it may be told about the candidate. */
 export interface CatEngine {
@@ -118,13 +119,6 @@ const optionsSchema = v.strictObject({
  * @see {@link https://url.spec.whatwg.org/#single-dot-path-segment | URL Standard, dot segments}
  */
 const DOT_SEGMENTS: ReadonlySet<string> = new Set([".", ".."]);
-
-/** Removes the slashes that end a URL, so that a reference and an endpoint with and without one are the same. */
-function withoutTrailingSlashes(url: string): string {
-  let end = url.length;
-  while (end > 0 && url[end - 1] === "/") end -= 1;
-  return url.slice(0, end);
-}
 
 /** Checks the engines of a map, and keys them by their reference without trailing slashes. */
 function checkedMap(engines: ReadonlyMap<string, CatEngine>): ReadonlyMap<string, CatEngine> {

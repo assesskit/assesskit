@@ -47,7 +47,9 @@ import {
 } from "../src/index.js";
 import { readPackageFile } from "../src/node/index.js";
 import { exampleItems } from "./corpus-items.js";
-import written from "./fixtures/state-1.json" with { type: "json" };
+import { readFixture, type StateFixture } from "./fixtures.js";
+
+const written = readFixture<StateFixture>("state-1.json");
 
 const examples = join(requireCorpus(resolve(import.meta.dirname, "../../..")), "qti-examples/qtiv3-examples");
 
