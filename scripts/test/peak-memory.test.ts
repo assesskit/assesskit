@@ -2,6 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type Bundle, bundleReadings, readInProcess, readingNames, removeBundle, risen } from "../peak-memory.ts";
 import type { ReadingName } from "../peak-memory-readings.ts";
 
+/** The bytes of one MiB. */
+const MIB = 1024 * 1024;
+
 /** The reading that is read without a limit, to show that a heap fails what the limit spares. */
 const CONTROL = "settingsListUnlimited";
 
@@ -19,74 +22,82 @@ afterAll(() => {
  * Each reader of untrusted input on its worst input within its limits, in a process whose heap holds at most the heap given:
  * twice the least heap in which it ended on Node.js 22, 24 and 26, rounded up to 16 MiB. `node scripts/peak-memory.ts` finds
  * the least heap. A reading that keeps more alive at once than its heap fails, whenever the collector runs and however busy
- * the machine is. SECURITY.md lists the least heaps.
+ * the machine is. SECURITY.md lists the least heaps. The bytes of a file that `file` inflates are outside the heap, so that
+ * reading has also a bound on the resident memory it raises, `riseMiB`, which is the budget of 256 MiB.
  */
 const READINGS: readonly {
   readonly title: string;
   readonly name: ReadingName;
   readonly heapMiB: number;
+  readonly riseMiB?: number;
   readonly outcome: string;
 }[] = [
   {
-    title: "reads a document of a million nodes, the limit, into a tree",
+    title: "reads a document of the most nodes, the limit, into a tree",
     name: "xmlNodes",
-    heapMiB: 336,
-    outcome: "999998 children",
+    heapMiB: 112,
+    outcome: "299999 children",
   },
   {
-    title: "stops the tree of a document of eight million nodes at the limit of nodes",
+    title: "stops the tree of a document of eight times the limit of nodes at the limit",
     name: "xmlOverNodes",
-    heapMiB: 384,
+    heapMiB: 128,
     outcome: "SecurityError maxNodes",
   },
   {
-    title: "reads a document of 32 MiB whose elements have 256 attributes each",
+    title: "reads a document of the most bytes whose elements have 256 attributes each",
     name: "xmlAttributes",
-    heapMiB: 576,
-    outcome: "17278 elements",
+    heapMiB: 192,
+    outcome: "5399 elements",
   },
-  { title: "reads one text of 32 MiB", name: "xmlText", heapMiB: 32, outcome: "1 node" },
+  { title: "reads one text of the most bytes", name: "xmlText", heapMiB: 32, outcome: "1 node" },
   {
-    title: "reads an item of a million nodes into its model",
+    title: "reads an item of the most nodes into its model",
     name: "itemNodes",
-    heapMiB: 640,
+    heapMiB: 208,
     outcome: "item",
   },
   {
-    title: "reads an item whose choice interaction has as many choices as 32 MiB hold",
+    title: "reads an item of the most nodes whose elements carry as many attributes as the limit of bytes allows",
+    name: "itemAttributes",
+    heapMiB: 400,
+    outcome: "item",
+  },
+  {
+    title: "reads an item whose choice interaction has as many choices as the limits hold",
     name: "itemChoices",
-    heapMiB: 848,
+    heapMiB: 288,
     outcome: "item",
   },
   {
-    title: "reads a test whose section has as many item references as 32 MiB hold",
+    title: "reads a test whose section has as many item references as the limits hold",
     name: "testReferences",
-    heapMiB: 816,
+    heapMiB: 272,
     outcome: "test",
   },
   {
-    title: "reads a manifest with as many resources as 32 MiB hold",
+    title: "reads a manifest with as many resources as the limits hold",
     name: "manifestResources",
-    heapMiB: 1088,
-    outcome: "297259 resources",
+    heapMiB: 400,
+    outcome: "184798 resources",
   },
   {
-    title: "reads a results report with as many item results as 32 MiB hold",
+    title: "reads a results report with as many item results as the limits hold",
     name: "resultsItems",
-    heapMiB: 880,
-    outcome: "161853 item results",
+    heapMiB: 288,
+    outcome: "50709 item results",
   },
   {
-    title: "reads usage data with as many statistics as 32 MiB hold",
+    title: "reads usage data with as many statistics as the limits hold",
     name: "usageStatistics",
-    heapMiB: 736,
-    outcome: "217913 statistics",
+    heapMiB: 256,
+    outcome: "68679 statistics",
   },
   {
     title:
       "validates an item that is wrong at every node, and keeps the findings of the limit and one that says it stopped",
     name: "validateFindings",
-    heapMiB: 736,
+    heapMiB: 240,
     outcome: "1001 issues, the last assesskit/validate/findings-stopped",
   },
   {
@@ -96,10 +107,17 @@ const READINGS: readonly {
     outcome: "100000 files",
   },
   {
-    title: "reads a package whose manifest of 32 MiB is deflated at the ratio the limit allows",
+    title: "reads a package whose manifest of the most bytes is deflated at the ratio the limit allows",
     name: "packageManifest",
-    heapMiB: 1088,
-    outcome: "297259 resources",
+    heapMiB: 400,
+    outcome: "184798 resources",
+  },
+  {
+    title: "inflates a file of the most bytes an entry may hold, deflated at the ratio the limit allows",
+    name: "packageEntry",
+    heapMiB: 32,
+    riseMiB: 256,
+    outcome: "67108864 bytes",
   },
   {
     title: "plans a test whose selection with replacement draws as many items as a plan holds",
@@ -152,11 +170,12 @@ const READINGS: readonly {
 ];
 
 describe("the peak memory of the readers of untrusted input", () => {
-  for (const { title, name, heapMiB, outcome } of READINGS) {
+  for (const { title, name, heapMiB, riseMiB, outcome } of READINGS) {
     it(title, async ({ annotate }) => {
       const result = await readInProcess(bundle, name, heapMiB);
       await annotate(`${name}: ${risen(result.rise)} The heap holds ${heapMiB} MiB.`);
       expect(result.outcome).toBe(outcome);
+      if (riseMiB !== undefined) expect(result.rise).toBeLessThanOrEqual(riseMiB * MIB);
     });
   }
 
@@ -168,7 +187,7 @@ describe("the peak memory of the readers of untrusted input", () => {
 
 describe("the heap of a reading", () => {
   it("fails a reading that keeps more alive than the heap holds", async () => {
-    await expect(readInProcess(bundle, "xmlNodes", 64)).rejects.toThrow("did not end within a heap of 64 MiB");
+    await expect(readInProcess(bundle, "manifestResources", 64)).rejects.toThrow("did not end within a heap of 64 MiB");
   });
 
   it("runs out on a settings action read without the limit of a list, which the limit spares", async () => {

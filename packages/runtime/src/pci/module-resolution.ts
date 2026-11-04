@@ -14,7 +14,7 @@ export const DEFAULT_WAIT_SECONDS = 7;
 /**
  * The longest module resolution file that is read, in UTF-16 code units: a hundred times the largest of the 1EdTech examples
  * (663), room for hundreds of modules. The file comes from a package, and the memory of `JSON.parse` follows its tokens:
- * a file of the 512 MiB that a package entry may hold would parse into tens of gigabytes.
+ * a file of the 64 MiB that a package entry may hold would parse into gigabytes.
  */
 const MAX_LENGTH = 65_536;
 

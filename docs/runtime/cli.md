@@ -44,7 +44,7 @@ What the path is decides what is validated:
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | A directory                            | A package, read as [`readPackageFile`](node.md#package-files) reads a directory: symbolic links refused.   |
 | A file that starts with the bytes `PK` | A package, read as `readPackageFile` reads a ZIP file.                                                     |
-| Any other file                         | One XML document, read whole; a file above `maxBytes` of `parseXml` (32 MiB) is refused before it is read. |
+| Any other file                         | One XML document, read whole; a file above `maxBytes` of `parseXml` (10 MiB) is refused before it is read. |
 
 The checks run in this order, and the report lists their issues in the same order.
 

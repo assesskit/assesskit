@@ -105,15 +105,18 @@ prefix or local part is not an `NCName`, such as `p:1`.
 
 ## Limits
 
-Every limit is a positive integer, and the defaults are about 1,000 times the largest document of the 1EdTech QTI 3.0
+Every limit is a positive integer, and the defaults are about 300 times the largest document of the 1EdTech QTI 3.0
 examples for size and node count (32 KiB, 1,126 nodes), 16 times its depth (16) and 20 times its attributes on an element (12).
+`maxBytes` and `maxNodes` are as large as the memory allows: the worst document within both peaks at 200 MiB of heap or less in
+every reader, under the budget of 256 MiB, and a host with more memory raises them together, at up to 20 MiB of heap for each
+MiB of `maxBytes` with 30,000 `maxNodes` ([SECURITY.md](../../SECURITY.md#peak-memory)).
 
 | Limit             | Default    | Unit       | Applies to                                                            |
 | ----------------- | ---------- | ---------- | --------------------------------------------------------------------- |
-| `maxBytes`        | 33,554,432 | bytes      | The bytes of a document (UTF-8 for a string).                         |
+| `maxBytes`        | 10,485,760 | bytes      | The bytes of a document (UTF-8 for a string).                         |
 | `maxDepth`        | 256        | levels     | Nesting of elements; the root is depth 1.                             |
 | `maxAttributes`   | 256        | attributes | Attributes on one element, namespace declarations included.           |
-| `maxNodes`        | 1,000,000  | nodes      | Elements, text, CDATA sections, comments and processing instructions. |
+| `maxNodes`        | 300,000    | nodes      | Elements, text, CDATA sections, comments and processing instructions. |
 | `maxIncludeDepth` | 8          | levels     | Nesting of includes (`resolveIncludes`).                              |
 
 A limit that a document exceeds throws a `SecurityError` whose `limit` is the limit's name and `maximum` its value. The

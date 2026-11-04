@@ -1553,11 +1553,11 @@ describe("reading ZIP archives", () => {
 });
 
 describe("default ZIP limits", () => {
-  it("is about 1,000 times the entries of the largest example, 100 times its largest entry, 200 times its size and 9 times its ratio", () => {
+  it("is about 1,000 times the entries of the largest example, 13 times its largest entry, 200 times its size and 9 times its ratio", () => {
     // The largest 1EdTech example package has 99 entries, an entry of 5,251,725 bytes, 11,018,253 bytes and a ratio of 27.9.
     expect(DEFAULT_ZIP_LIMITS).toEqual({
       maxEntries: 100_000,
-      maxEntryBytes: 536_870_912,
+      maxEntryBytes: 67_108_864,
       maxTotalBytes: 2_147_483_648,
       maxRatio: 250,
     });

@@ -195,7 +195,7 @@ describe("hottext", () => {
 
   it("draws a passage of more nodes than a call takes as arguments", () => {
     const count = 150_000;
-    const passage = `${"<p>a</p>".repeat(count)}<p><qti-hottext identifier="A">dog</qti-hottext></p>`;
+    const passage = `${"<p/>".repeat(count)}<p><qti-hottext identifier="A">dog</qti-hottext></p>`;
     const scene = mountScene(
       declare("single", "identifier"),
       `<qti-hottext-interaction response-identifier="R">${passage}</qti-hottext-interaction>`,

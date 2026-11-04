@@ -10,13 +10,15 @@ export interface ZipLimits {
    */
   readonly maxEntries: number;
   /**
-   * The most bytes one file may have when uncompressed.
+   * The most bytes one file may have when uncompressed. Reading a deflated file of this size keeps up to three and a half
+   * times its bytes in memory while it inflates.
    *
-   * @defaultValue `536870912` (512 MiB)
+   * @defaultValue `67108864` (64 MiB)
    */
   readonly maxEntryBytes: number;
   /**
-   * The most bytes all files together may have when uncompressed.
+   * The most bytes all files together may have when uncompressed. `readPackageFile` reads a ZIP file whole, so this is also the
+   * largest archive that it reads.
    *
    * @defaultValue `2147483648` (2 GiB)
    */
@@ -36,12 +38,12 @@ export interface ZipLimits {
  *
  * @remarks
  * The largest package of the 1EdTech QTI 3.0 examples has 99 entries, an entry of 5.0 MiB, 11.0 MB uncompressed and a
- * largest ratio of 27.9. `maxEntries` is about 1,000 times its entries, `maxEntryBytes` about 100 times its largest entry,
+ * largest ratio of 27.9. `maxEntries` is about 1,000 times its entries, `maxEntryBytes` about 13 times its largest entry,
  * `maxTotalBytes` about 200 times its size and `maxRatio` about 9 times its ratio.
  */
 export const DEFAULT_ZIP_LIMITS: ZipLimits = {
   maxEntries: 100_000,
-  maxEntryBytes: 536_870_912,
+  maxEntryBytes: 67_108_864,
   maxTotalBytes: 2_147_483_648,
   maxRatio: 250,
 };

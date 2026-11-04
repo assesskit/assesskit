@@ -53,9 +53,9 @@ Points to be aware of when deploying the runtime:
   pinned ones.
 - **Validation.** A validation lists at most `maxFindings` issues, 1,000 by default, over every document it checks, and ends a
   longer list with the error `assesskit/validate/findings-stopped` instead of throwing. Content that is wrong at every
-  element of a document at the XML limits makes close to a million issues, about 700 MB, and a package of such documents,
-  small once compressed, would hold gigabytes. libxml2 still reports every violation of the schema to `validateXmlFiles`, so
-  such a document takes minutes there; validate untrusted uploads off the request path.
+  element of a document at the XML limits makes an issue for each element, up to 300,000 of them, and a package of such
+  documents, small once compressed, would hold gigabytes of them. libxml2 still reports every violation of the schema to
+  `validateXmlFiles`, so such a document takes minutes there; validate untrusted uploads off the request path.
 - **Command line.** `assesskit validate` reads the path it is given and the schema directory, and no other file: an `xi:include`
   of a lone document is not resolved. It refuses a package that breaks a rule of **Packages** below, and an XML file above
   `maxBytes` of `parseXml` before it reads the file, with the exit code 2.
@@ -297,17 +297,18 @@ another party, and its frame has `allow-same-origin`, so that the tool keeps its
 Every limit is a positive integer that a caller can replace per call, field by field, with the option named above its table;
 a limit left out keeps its default. Input over a limit is a `SecurityError` whose `limit` is the limit's name, except a
 regular expression, which is a `DataError` from `compileXsdRegex` and a `ProcessingError` in processing. Each default is a safety factor over the largest value among the
-1EdTech QTI 3.0 examples, where the examples have one.
+1EdTech QTI 3.0 examples, where the examples have one, and the factor is as large as the memory allows: the limits are set so that the worst
+input within all of them peaks at 200 MiB of heap or less in every reader, under a budget of 256 MiB ([Peak memory](#peak-memory)).
 
 XML (`XmlLimits`; option `limits` of `parseXml`, `resolveIncludes`, `readAsi`, `readManifest` and the other readers, and
 `xmlLimits` of `readPackage`, `openPackage` and `readPackageFile`):
 
 | Limit             | Default    | Unit       | Largest example | Applies to                                                                  |
 | ----------------- | ---------- | ---------- | --------------- | --------------------------------------------------------------------------- |
-| `maxBytes`        | 33,554,432 | bytes      | 32 KiB          | One XML document.                                                           |
+| `maxBytes`        | 10,485,760 | bytes      | 32 KiB          | One XML document.                                                           |
 | `maxDepth`        | 256        | levels     | 16              | The nesting of elements in a document, and in a document with its includes. |
 | `maxAttributes`   | 256        | attributes | 12              | One element.                                                                |
-| `maxNodes`        | 1,000,000  | nodes      | 1,126           | A tree, and a tree with its includes resolved.                              |
+| `maxNodes`        | 300,000    | nodes      | 1,126           | A tree, and a tree with its includes resolved.                              |
 | `maxIncludeDepth` | 8          | levels     | none            | The nesting of `xi:include`.                                                |
 
 Archives and package directories (`ZipLimits`; option `limits` of `readPackage` and `readPackageFile`):
@@ -315,7 +316,7 @@ Archives and package directories (`ZipLimits`; option `limits` of `readPackage` 
 | Limit           | Default       | Unit    | Largest example | Applies to                                                                                               |
 | --------------- | ------------- | ------- | --------------- | -------------------------------------------------------------------------------------------------------- |
 | `maxEntries`    | 100,000       | entries | 99              | Entries of an archive, directories included; files and directories of a package directory.               |
-| `maxEntryBytes` | 536,870,912   | bytes   | 5.0 MiB         | The uncompressed bytes of one file.                                                                      |
+| `maxEntryBytes` | 67,108,864    | bytes   | 5.0 MiB         | The uncompressed bytes of one file.                                                                      |
 | `maxTotalBytes` | 2,147,483,648 | bytes   | 11.0 MB         | The uncompressed bytes of all files.                                                                     |
 | `maxRatio`      | 250           | ratio   | 27.9            | The uncompressed size of an entry over its compressed size; entries of 102,400 bytes or less are exempt. |
 
@@ -358,36 +359,55 @@ These numbers are fixed and cannot be replaced:
 | 1,100     | The width and the precision of a printed variable format; a larger one is ignored.                                                                              |
 | 1,000,000 | Entries, states and transitions together, that the matcher of a pattern keeps of its automaton; beyond it the matcher starts again.                             |
 
+### Peak memory
+
 A test pins the peak of each reader of untrusted input on its worst input within these limits
 (`scripts/test/peak-memory.test.ts`). Each reading runs in a Node.js process of its own whose heap holds twice the least heap
 in which it ended on Node.js 22, 24 and 26, so a regression fails it and the load of the machine cannot; `node
 scripts/peak-memory.ts` finds the least heap. The inputs are made in memory outside the heap. Memory follows the nodes and the
-attributes that a reader builds, not the bytes: a document of a million nodes peaks between 168 and 544 MiB of heap by what the
-reader keeps of it, so a host with less memory lowers `maxNodes` and `maxBytes`.
+attributes that a reader builds, not the bytes: 300,000 paragraphs of 4 bytes take 104 MiB to read as an item, and 300,000
+paragraphs of 31 bytes with three attributes each take 200, so `maxNodes` and `maxBytes` are set together. The budget is 256 MiB,
+and no reader peaks above 200.
 
-| Reader                 | Worst input within the limits                                             | Least heap (MiB) |
-| ---------------------- | ------------------------------------------------------------------------- | ---------------: |
-| `parseXml`             | 1,000,000 nodes                                                           |              168 |
-| `parseXml`             | 32 MiB of elements with 256 attributes each                               |              288 |
-| `parseXml`             | One text of 32 MiB                                                        |               16 |
-| `parseXml`             | 8,000,000 nodes, stopped at the limit                                     |              192 |
-| `readAsi` of an item   | 1,000,000 nodes; or the most choices of one interaction that 32 MiB hold  |       320 to 424 |
-| `readAsi` of a test    | The most item references that 32 MiB hold                                 |              408 |
-| `readManifest`         | The most resources that 32 MiB hold                                       |              544 |
-| `readResults`          | The most item results with an outcome variable that 32 MiB hold           |              440 |
-| `readUsageData`        | The most statistics that 32 MiB hold                                      |              368 |
-| `validateAsi`          | An issue at every node of an item of 32 MiB, stopped at 1,000 issues      |              368 |
-| `readPackage`          | 100,000 entries                                                           |               40 |
-| `readPackage`          | A manifest of 32 MiB deflated at the ratio the limit allows               |              544 |
-| `planTest`             | A selection with replacement of 9,999 items                               |               16 |
-| `readCandidateAction`  | The most response entries, or the most integers of one response, that fit |       144 to 152 |
-| `readCandidateAction`  | A settings list of a million names, refused                               |               24 |
-| `compileXsdRegex`      | 100,000 states, matched against 100,000 characters                        |               64 |
-| `readModuleResolution` | 65,536 characters                                                         |               16 |
-| `createCatRestHandler` | A body of 32 MiB and a million tokens; or two million tokens, refused     |        56 and 40 |
+| Reader                 | Worst input within the limits                                                           | Least heap (MiB) |
+| ---------------------- | --------------------------------------------------------------------------------------- | ---------------: |
+| `parseXml`             | 300,000 nodes                                                                           |               56 |
+| `parseXml`             | 10 MiB of elements with 256 attributes each                                             |               96 |
+| `parseXml`             | One text of 10 MiB                                                                      |               16 |
+| `parseXml`             | 2,400,000 nodes, stopped at the limit                                                   |               64 |
+| `readAsi` of an item   | 300,000 nodes; the most choices of one interaction; or 300,000 elements of 3 attributes |       104 to 200 |
+| `readAsi` of a test    | The most item references that the limits hold                                           |              136 |
+| `readManifest`         | The most resources that 10 MiB hold                                                     |              200 |
+| `readResults`          | The most item results with an outcome variable that the limits hold                     |              144 |
+| `readUsageData`        | The most statistics that the limits hold                                                |              128 |
+| `validateAsi`          | An issue at every node of an item of the limits, stopped at 1,000 issues                |              120 |
+| `readPackage`          | 100,000 entries                                                                         |               40 |
+| `readPackage`          | A manifest of 10 MiB deflated at the ratio the limit allows                             |              200 |
+| `file` of a package    | A file of 64 MiB deflated at the ratio the limit allows                                 |               16 |
+| `planTest`             | A selection with replacement of 9,999 items                                             |               16 |
+| `readCandidateAction`  | The most response entries, or the most integers of one response, that fit               |       144 to 152 |
+| `readCandidateAction`  | A settings list of a million names, refused                                             |               24 |
+| `compileXsdRegex`      | 100,000 states, matched against 100,000 characters                                      |               64 |
+| `readModuleResolution` | 65,536 characters                                                                       |               16 |
+| `createCatRestHandler` | A body of 32 MiB and a million tokens; or two million tokens, refused                   |        56 and 40 |
 
-Without `maxFindings`, the same item makes 882,985 issues and needs 656 MiB; without `maxSettingListLength`, the settings list
-needs 216. An archive or a container at the limits is bounded by its size: an entry is inflated in steps of 8 KiB of input and
+The bytes of a file are outside the heap, so the test bounds the resident memory that `file` raises, which is 140 to 215 MiB:
+inflating a deflated entry holds the pieces and the joined bytes at once. The archive that `readPackage` takes is the
+host's; `readPackageFile` reads a ZIP file whole, up to `maxTotalBytes`, so a host with little memory lowers that limit.
+
+Without `maxSettingListLength`, the settings list needs 240 MiB. A host with more memory raises a limit and pays for it:
+
+| Limit                       | What raising it costs                                                                                                        |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `maxBytes` with `maxNodes`  | Up to 20 MiB of heap for each MiB of `maxBytes` with 30,000 `maxNodes`; doubling both took the manifest from 200 to 384 MiB. |
+| `maxEntries`                | About 0.3 MiB for every 1,000 entries.                                                                                       |
+| `maxEntryBytes`             | Two to three and a half times the file in resident memory while `file` inflates it.                                          |
+| `maxActionSize`             | About 32 MiB for every million nodes.                                                                                        |
+| `maxSettingListLength`      | About 0.2 MiB for every 1,000 names.                                                                                         |
+| `maxStates`                 | About 0.6 MiB for every 1,000 states.                                                                                        |
+| `maxBodyBytes`, `maxTokens` | The memory of a parse follows the tokens: 32 MiB of empty objects took 850 MiB without the count.                            |
+
+An archive or a container at the limits is bounded by its size: an entry is inflated in steps of 8 KiB of input and
 never beyond the size its header declares.
 
 ## Runtime dependencies

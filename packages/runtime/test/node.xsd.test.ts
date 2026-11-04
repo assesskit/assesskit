@@ -9,6 +9,7 @@ import { loadSchemaSet, type SchemaSet, validateXmlFiles, type XmlFile } from ".
 import { PRIMARY_SCHEMAS } from "../src/node/internal.js";
 import { parseXml } from "../src/xml/index.js";
 import { runGuideSamples } from "./guide-samples.js";
+import { SCHEMA_LIMITS } from "./schema-declarations.js";
 
 const root = resolve(import.meta.dirname, "../../..");
 const schemaDirectory = requireSchemas(root);
@@ -244,7 +245,7 @@ describe("validating documents", () => {
     for (const [namespace, file] of PRIMARY_SCHEMAS) {
       const bytes = readFileSync(join(schemaDirectory, file));
       const text = bytes[0] === 0xff ? bytes.toString("utf16le") : bytes.toString("utf8");
-      const schema = parseXml(text);
+      const schema = parseXml(text, { limits: SCHEMA_LIMITS });
       expect(schema.attributes.find(({ name }) => name === "targetNamespace")?.value, file).toBe(namespace);
     }
   });

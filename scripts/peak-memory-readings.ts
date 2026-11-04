@@ -1,9 +1,12 @@
-import { deflateRawSync, crc32 as nodeCrc32 } from "node:zlib";
+import { once } from "node:events";
+import { createDeflateRaw, deflateRawSync, crc32 as nodeCrc32 } from "node:zlib";
 import { createCatRestHandler } from "../packages/player/src/cat-rest/index.ts";
 import {
   AssesskitError,
   compileXsdRegex,
   createRandom,
+  DEFAULT_XML_LIMITS,
+  DEFAULT_ZIP_LIMITS,
   parseXml,
   planTest,
   RESULTS_NAMESPACE,
@@ -23,8 +26,14 @@ import {
 /** The bytes of one MiB. */
 const MIB = 1024 * 1024;
 
-/** The default `maxBytes` of an XML document and `maxBodyBytes` of a request. */
-const XML_BYTES = 32 * MIB;
+/** The default `maxBytes` of an XML document, from which the documents are made, so that a new default changes the readings. */
+const XML_BYTES = DEFAULT_XML_LIMITS.maxBytes;
+
+/** The default `maxNodes` of an XML tree. */
+const XML_NODES = DEFAULT_XML_LIMITS.maxNodes;
+
+/** The default `maxBodyBytes` of a request to the handler of the CAT binding. */
+const BODY_BYTES = 32 * MIB;
 
 /**
  * A reading of untrusted input on its worst input within the limits: what it reads, made before the reading, and the reading,
@@ -66,25 +75,31 @@ function repeated(opening: string, unit: string, count: number, closing: string)
   return bytes;
 }
 
+/** The nodes that a document keeps for the elements around its units, out of the nodes it may have. */
+const WRAPPER_NODES = 16;
+
 /**
- * The bytes of `opening`, then `unit(0)`, `unit(1)` and so on for as long as the document stays within `limit` bytes with the
- * `closing`, in one buffer: for the units that differ, such as the identifiers, which only a count can tell apart.
+ * The bytes of `opening`, then `unit(0)`, `unit(1)` and so on for as long as the document stays within the limits of bytes and
+ * of nodes with the `closing`, in one buffer: for the units that differ, such as the identifiers, which only a count can tell
+ * apart.
  *
+ * @param nodes - The nodes of one unit.
  * @returns The bytes and the number of units.
  */
 function numbered(
   opening: string,
   unit: (index: number) => string,
   closing: string,
-  limit = XML_BYTES,
+  nodes = 1,
 ): { readonly bytes: Uint8Array; readonly count: number } {
-  const bytes = Buffer.allocUnsafe(limit);
+  const bytes = Buffer.allocUnsafe(XML_BYTES);
   let offset = bytes.write(opening, 0);
   const reserved = Buffer.byteLength(closing);
+  const most = Math.floor((XML_NODES - WRAPPER_NODES) / nodes);
   let count = 0;
-  for (;;) {
+  while (count < most) {
     const next = unit(count);
-    if (offset + Buffer.byteLength(next) + reserved > limit) break;
+    if (offset + Buffer.byteLength(next) + reserved > XML_BYTES) break;
     offset += bytes.write(next, offset);
     count += 1;
   }
@@ -96,15 +111,37 @@ const ASI = 'xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"';
 const ITEM = `<qti-assessment-item ${ASI} identifier="i" title="t" adaptive="false" time-dependent="false">`;
 const CP = 'xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1"';
 
-/** A manifest of resources `numbered` makes, as bytes. */
-const manifestOf = (resources: number, within = XML_BYTES) =>
+/**
+ * A manifest with as many resources as the limits hold, as bytes: a resource of the fewest bytes, the two attributes that it
+ * must have, is the heaviest in memory for the bytes it takes.
+ */
+const manifestOf = () =>
   numbered(
     `<manifest ${CP} identifier="m"><metadata><schema>QTI Package</schema><schemaversion>3.0.0</schemaversion></metadata><organizations/><resources>`,
-    (index) =>
-      `<resource identifier="r${index}" type="imsqti_item_xmlv3p0" href="r${index}.xml"><file href="r${index}.xml"/></resource>`,
+    (index) => `<resource identifier="r${index.toString(36)}" type="imsqti_item_xmlv3p0"/>`,
     "</resources></manifest>",
-    Math.min(within, resources * 120),
   );
+
+/** The manifest of a package with no resource, as bytes. */
+const EMPTY_MANIFEST = Buffer.from(
+  `<manifest ${CP} identifier="m"><metadata><schema>QTI Package</schema><schemaversion>3.0.0</schemaversion></metadata><organizations/><resources/></manifest>`,
+);
+
+/** The attributes that a paragraph of an item takes, in the order that {@link crowdedParagraph} adds them. */
+const PARAGRAPH_ATTRIBUTES = [' id="i"', ' class="c"', ' label="l"', ' dir="ltr"', ' xml:lang="en"'];
+
+/**
+ * The paragraph with the most attributes of which the most nodes still fit in the limit of bytes: the cost of an attribute in
+ * memory is far above its bytes, so a document of paragraphs with attributes is heavier than one without.
+ */
+function crowdedParagraph(): string {
+  let paragraph = "<p";
+  for (const attribute of PARAGRAPH_ATTRIBUTES) {
+    if ((paragraph.length + attribute.length + 2) * XML_NODES > XML_BYTES) break;
+    paragraph += attribute;
+  }
+  return `${paragraph}/>`;
+}
 
 /** An entry of the archive that {@link archiveOf} writes: the bytes as stored, and what the headers declare of them. */
 interface Entry {
@@ -211,28 +248,28 @@ async function catStatus(body: Uint8Array): Promise<string> {
   return `status ${response.status}`;
 }
 
-/** An item with a printed variable of an undeclared variable at every node that 32 MiB hold. */
+/** An item with a printed variable of an undeclared variable at every node that the limits hold. */
 const validateInput = (): Uint8Array =>
   repeated(
     `${ITEM}<qti-item-body><p>`,
     '<qti-printed-variable identifier="X"/>',
-    Math.floor((XML_BYTES - 1_000) / 38),
+    Math.min(Math.floor((XML_BYTES - 1_000) / 38), XML_NODES - WRAPPER_NODES),
     "</p></qti-item-body></qti-assessment-item>",
   );
 
 /** The readings, by name: the readers of documents, packages, actions and states, and the bodies of the player. */
 export const READINGS = {
-  /** A document of 1,000,000 nodes, the limit, in the tree of the XML reader. */
+  /** A document of the most nodes, the limit, in the tree of the XML reader. */
   xmlNodes: {
-    input: () => repeated("<a>", "<b/>", 999_998, "</a>"),
+    input: () => repeated("<a>", "<b/>", XML_NODES - 1, "</a>"),
     read: (xml: Uint8Array) => `${parseXml(xml).children.length} children`,
   },
-  /** A document of 8,000,000 nodes, over the limit of nodes, which stops the tree at 1,000,000. */
+  /** A document of eight times the limit of nodes, which stops the tree at the limit. */
   xmlOverNodes: {
-    input: () => repeated("<a>", "<b/>", 8_000_000, "</a>"),
+    input: () => repeated("<a>", "<b/>", 8 * XML_NODES, "</a>"),
     read: (xml: Uint8Array) => refusal(() => parseXml(xml, { limits: { maxBytes: 64 * MIB } })),
   },
-  /** A document of 32 MiB whose elements have the most attributes an element may have, 256. */
+  /** A document of the most bytes whose elements have the most attributes an element may have, 256. */
   xmlAttributes: {
     input: () => {
       const attributes = Array.from({ length: 256 }, (_, index) => ` a${index}=""`).join("");
@@ -241,17 +278,23 @@ export const READINGS = {
     },
     read: (xml: Uint8Array) => `${parseXml(xml).children.length} elements`,
   },
-  /** A document of one text node of 32 MiB, the limit. */
+  /** A document of one text node of the most bytes. */
   xmlText: {
     input: () => repeated("<a>", "x", XML_BYTES - 7, "</a>"),
     read: (xml: Uint8Array) => `${parseXml(xml).children.length} node`,
   },
-  /** An item of 1,000,000 nodes in the model of the reader of items. */
+  /** An item of the most nodes in the model of the reader of items. */
   itemNodes: {
-    input: () => repeated(`${ITEM}<qti-item-body>`, "<p/>", 999_997, "</qti-item-body></qti-assessment-item>"),
+    input: () => repeated(`${ITEM}<qti-item-body>`, "<p/>", XML_NODES - 2, "</qti-item-body></qti-assessment-item>"),
     read: (xml: Uint8Array) => readAsi(xml).kind,
   },
-  /** An item whose one choice interaction has as many choices as 32 MiB hold. */
+  /** An item of the most nodes whose elements carry as many attributes as the limit of bytes lets them. */
+  itemAttributes: {
+    input: () =>
+      repeated(`${ITEM}<qti-item-body>`, crowdedParagraph(), XML_NODES - 2, "</qti-item-body></qti-assessment-item>"),
+    read: (xml: Uint8Array) => readAsi(xml).kind,
+  },
+  /** An item whose one choice interaction has as many choices as the limits hold. */
   itemChoices: {
     input: () =>
       numbered(
@@ -261,7 +304,7 @@ export const READINGS = {
       ).bytes,
     read: (xml: Uint8Array) => readAsi(xml).kind,
   },
-  /** A test whose one section has as many item references as 32 MiB hold. */
+  /** A test whose one section has as many item references as the limits hold. */
   testReferences: {
     input: () =>
       numbered(
@@ -271,12 +314,12 @@ export const READINGS = {
       ).bytes,
     read: (xml: Uint8Array) => readAsi(xml).kind,
   },
-  /** A manifest with as many resources as 32 MiB hold. */
+  /** A manifest with as many resources as the limits hold. */
   manifestResources: {
-    input: () => manifestOf(1_000_000).bytes,
+    input: () => manifestOf().bytes,
     read: (xml: Uint8Array) => `${readManifest(xml).resources.length} resources`,
   },
-  /** A results report with as many item results as 32 MiB hold. */
+  /** A results report with as many item results as the limits hold. */
   resultsItems: {
     input: () =>
       numbered(
@@ -284,10 +327,11 @@ export const READINGS = {
         (index) =>
           `<itemResult identifier="q${index}" datestamp="2020-08-25T18:19:20" sessionStatus="final"><outcomeVariable identifier="SCORE" cardinality="single" baseType="float"><value>1</value></outcomeVariable></itemResult>`,
         "</assessmentResult>",
+        4,
       ).bytes,
     read: (xml: Uint8Array) => `${readResults(xml).itemResults.length} item results`,
   },
-  /** Usage data with as many statistics as 32 MiB hold. */
+  /** Usage data with as many statistics as the limits hold. */
   usageStatistics: {
     input: () =>
       numbered(
@@ -295,10 +339,11 @@ export const READINGS = {
         (index) =>
           `<ordinaryStatistic name="AIS" context="http://example.com/c" caseCount="${index}"><targetObject identifier="i${index}"/><value>0.87</value></ordinaryStatistic>`,
         "</usageData>",
+        4,
       ).bytes,
     read: (xml: Uint8Array) => `${readUsageData(xml).statistics.length} statistics`,
   },
-  /** An item with a printed variable of an undeclared variable at every one of its 1,000,000 nodes, whose findings stop at 1,000. */
+  /** An item with a printed variable of an undeclared variable at every node that the limits hold, whose findings stop at 1,000. */
   validateFindings: {
     input: () => validateInput(),
     read: (xml: Uint8Array) => {
@@ -306,28 +351,71 @@ export const READINGS = {
       return `${issues.length} issues, the last ${issues.at(-1)?.rule}`;
     },
   },
+  /**
+   * An archive with a file of the most bytes an entry may hold, deflated at a ratio that the limit allows, which `file` inflates.
+   * The bytes of the file are outside the heap, so the case bounds the resident memory that the reading raises.
+   */
+  packageEntry: {
+    input: async () => {
+      const size = DEFAULT_ZIP_LIMITS.maxEntryBytes;
+      // Each MiB is zeros but for one byte in 128, which differs from one MiB to the next: deflated, it is about 1/50 of the size.
+      const piece = Buffer.alloc(MIB);
+      for (let at = 0; at < MIB; at += 128) piece[at] = (at * 2_654_435_761) >>> 24;
+      const deflate = createDeflateRaw({ level: 1 });
+      const chunks: Buffer[] = [];
+      deflate.on("data", (chunk: Buffer) => chunks.push(chunk));
+      const ended = once(deflate, "end");
+      let crc = 0;
+      for (let done = 0; done < size; done += MIB) {
+        piece[(done / MIB) % 128] = done >>> 20;
+        crc = nodeCrc32(piece, crc);
+        if (!deflate.write(piece)) await once(deflate, "drain");
+      }
+      deflate.end();
+      await ended;
+      const stored = Buffer.concat(chunks);
+      return archiveOf(
+        2,
+        (index) =>
+          index === 0
+            ? {
+                name: "imsmanifest.xml",
+                stored: EMPTY_MANIFEST,
+                method: 0,
+                size: EMPTY_MANIFEST.length,
+                crc: nodeCrc32(EMPTY_MANIFEST),
+              }
+            : { name: "file", stored, method: 8, size, crc },
+        stored.length + 1_000,
+      );
+    },
+    read: (zip: Uint8Array) => `${readPackage(zip).file("file")?.length} bytes`,
+  },
   /** An archive of 100,000 entries, the limit, of which the reader reads the directory and the manifest. */
   packageEntries: {
     input: () => {
-      const manifest = Buffer.from(
-        `<manifest ${CP} identifier="m"><metadata><schema>QTI Package</schema><schemaversion>3.0.0</schemaversion></metadata><organizations/><resources/></manifest>`,
-      );
       const empty = Buffer.alloc(0);
       return archiveOf(
         100_000,
         (index) =>
           index === 0
-            ? { name: "imsmanifest.xml", stored: manifest, method: 0, size: manifest.length, crc: nodeCrc32(manifest) }
+            ? {
+                name: "imsmanifest.xml",
+                stored: EMPTY_MANIFEST,
+                method: 0,
+                size: EMPTY_MANIFEST.length,
+                crc: nodeCrc32(EMPTY_MANIFEST),
+              }
             : { name: `f${index}`, stored: empty, method: 0, size: 0, crc: 0 },
         100_000 * 100,
       );
     },
     read: (zip: Uint8Array) => `${readPackage(zip).paths.length} files`,
   },
-  /** An archive whose manifest of as many resources as 32 MiB hold is deflated, the ratio allowed. */
+  /** An archive whose manifest of as many resources as the limits hold is deflated, the ratio allowed. */
   packageManifest: {
     input: () => {
-      const { bytes } = manifestOf(1_000_000);
+      const { bytes } = manifestOf();
       const stored = deflateRawSync(bytes);
       return archiveOf(
         1,
@@ -404,14 +492,14 @@ export const READINGS = {
       }).padEnd(65_536, " "),
     read: (text: string) => `${readModuleResolution(text).paths.size} paths`,
   },
-  /** A body of 32 MiB of 2,000,000 tokens, over the limit, which is refused before it is parsed. */
+  /** A body of 32 MiB of 2,000,000 tokens, over the limit of tokens, which is refused before it is parsed. */
   catBodyTokens: {
-    input: () => Buffer.from(emptyObjects(2_000_000, XML_BYTES)),
+    input: () => Buffer.from(emptyObjects(2_000_000, BODY_BYTES)),
     read: (body: Uint8Array) => catStatus(body),
   },
   /** A body of the CAT REST binding of 32 MiB and a million tokens of empty objects, which the schema of the binding refuses. */
   catBody: {
-    input: () => Buffer.from(emptyObjects(1_000_000, XML_BYTES)),
+    input: () => Buffer.from(emptyObjects(1_000_000, BODY_BYTES)),
     read: (body: Uint8Array) => catStatus(body),
   },
 } satisfies Readonly<Record<string, Reading>>;

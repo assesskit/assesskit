@@ -198,12 +198,15 @@ asynchronous. The reader stays, with the inflater of `fflate`.
 | Limit           | Default       | Unit    | Applies to                                                                                 |
 | --------------- | ------------- | ------- | ------------------------------------------------------------------------------------------ |
 | `maxEntries`    | 100,000       | entries | Entries of an archive, directories included; files and directories of a package directory. |
-| `maxEntryBytes` | 536,870,912   | bytes   | The uncompressed bytes of one file.                                                        |
+| `maxEntryBytes` | 67,108,864    | bytes   | The uncompressed bytes of one file.                                                        |
 | `maxTotalBytes` | 2,147,483,648 | bytes   | The uncompressed bytes of all files.                                                       |
 | `maxRatio`      | 250           | ratio   | Uncompressed over compressed size of an entry above 102,400 bytes.                         |
 
 The largest package of the 1EdTech QTI 3.0 examples has 99 entries, an entry of 5.0 MiB and 11.0 MB uncompressed; its largest ratio
-is 27.9, on a 7.5 KB entry, and 3.6 on the entries above 102,400 bytes. The defaults are about 1,000, 100, 200 and 9 times those.
+is 27.9, on a 7.5 KB entry, and 3.6 on the entries above 102,400 bytes. The defaults are about 1,000, 13, 200 and 9 times those.
+`file` inflates a deflated entry with its pieces and the joined bytes in memory at once, so an entry of `maxEntryBytes` raises the
+resident memory of the process by up to 215 MiB, under the budget of 256 MiB ([SECURITY.md](../../SECURITY.md#peak-memory)); a host
+that packs larger files raises the limit, at two to three and a half times the file.
 
 ## Documents
 

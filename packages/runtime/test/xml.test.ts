@@ -677,13 +677,13 @@ describe("language tags", () => {
 });
 
 describe("default limits", () => {
-  it("is about 1,000 times the largest example for size and nodes, 16 times for depth and 20 times for attributes", () => {
+  it("is about 300 times the largest example for size and nodes, 16 times for depth and 20 times for attributes", () => {
     // The largest 1EdTech example has 32 KiB, depth 16, 12 attributes on an element and 1,126 nodes.
     expect(DEFAULT_XML_LIMITS).toEqual({
-      maxBytes: 33_554_432,
+      maxBytes: 10_485_760,
       maxDepth: 256,
       maxAttributes: 256,
-      maxNodes: 1_000_000,
+      maxNodes: 300_000,
       maxIncludeDepth: 8,
     });
   });

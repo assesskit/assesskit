@@ -5,7 +5,7 @@ export interface XmlLimits {
   /**
    * The most bytes of UTF-8 a document may have.
    *
-   * @defaultValue `33554432` (32 MiB)
+   * @defaultValue `10485760` (10 MiB)
    */
   readonly maxBytes: number;
   /**
@@ -24,7 +24,7 @@ export interface XmlLimits {
   /**
    * The most nodes a tree may have: elements, text, CDATA sections, comments and processing instructions.
    *
-   * @defaultValue `1000000`
+   * @defaultValue `300000`
    */
   readonly maxNodes: number;
   /**
@@ -40,14 +40,18 @@ export interface XmlLimits {
  *
  * @remarks
  * The largest document of the 1EdTech QTI 3.0 examples has 32 KiB, depth 16, 12 attributes on an element and 1,126 nodes.
- * `maxBytes` and `maxNodes` are about 1,000 times those, `maxDepth` 16 times and `maxAttributes` 20 times.
+ * `maxBytes` and `maxNodes` are about 300 times those, `maxDepth` 16 times and `maxAttributes` 20 times.
  * `maxIncludeDepth` is a convention of the runtime.
+ *
+ * The memory of a reading follows the nodes and the attributes it builds more than the bytes, and `maxBytes` and `maxNodes` are
+ * set so that the worst document within both, read by any reader of the runtime, keeps at most 256 MiB of heap alive. A host
+ * with more memory raises them together: each MiB of `maxBytes` with 30,000 `maxNodes` costs up to 20 MiB of heap.
  */
 export const DEFAULT_XML_LIMITS: XmlLimits = {
-  maxBytes: 33_554_432,
+  maxBytes: 10_485_760,
   maxDepth: 256,
   maxAttributes: 256,
-  maxNodes: 1_000_000,
+  maxNodes: 300_000,
   maxIncludeDepth: 8,
 };
 

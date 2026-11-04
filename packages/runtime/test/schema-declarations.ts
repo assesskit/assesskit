@@ -4,6 +4,12 @@ import { parseXml, XML_NAMESPACE, XMLNS_NAMESPACE, type XmlElement } from "../sr
 
 const XSD_NAMESPACE = "http://www.w3.org/2001/XMLSchema";
 
+/**
+ * The limits for reading an official schema, which is not a document of QTI: the ASI schema has 18.8 MB of text, most of it
+ * documentation, and 55,580 nodes. Its hash is pinned, so it is not untrusted input.
+ */
+export const SCHEMA_LIMITS = { maxBytes: 32 * 1024 * 1024 } as const;
+
 /** The elements and attributes that schemas declare, or that documents use: `name` for an element, `name@attribute` for an attribute. */
 export type Names = ReadonlySet<string>;
 
@@ -30,7 +36,7 @@ interface Schema {
 }
 
 function readSchema(text: string): Schema {
-  const root = parseXml(text);
+  const root = parseXml(text, { limits: SCHEMA_LIMITS });
   const types = new Map<string, XmlElement>();
   const declarations: XmlElement[] = [];
   const visit = (element: XmlElement): void => {

@@ -20,8 +20,10 @@ function declaredElements(schema: XmlElement): string[] {
 
 describe("html-elements", () => {
   it("names every HTML element that the ASI schema declares, and no other: the elements without the prefix qti-", () => {
+    // The schema has 18.8 MB of text, most of it documentation, above the limit of a document; its hash is pinned.
     const schema = parseXml(
       readFileSync(join(requireSchemas(resolve(import.meta.dirname, "../../..")), "imsqti_asiv3p0p1_v1p0.xsd"), "utf8"),
+      { limits: { maxBytes: 32 * 1024 * 1024 } },
     );
     const declared = new Set(declaredElements(schema).filter((name) => !name.startsWith("qti-")));
     expect([...HTML_ELEMENT_NAMES].sort()).toEqual([...declared].sort());

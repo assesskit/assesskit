@@ -270,11 +270,11 @@ describe("assesskit validate: documents", () => {
     expect(missing.stdout).toBe("");
     expect(missing.stderr).toContain(`assesskit: The path ${join(directory, "missing.xml")} cannot be read: ENOENT`);
     const huge = write("huge.xml", "<x/>");
-    truncateSync(huge, 33_554_433);
+    truncateSync(huge, 10_485_761);
     expect(await run(["validate", huge])).toEqual({
       code: 2,
       stdout: "",
-      stderr: `assesskit: The file ${huge} has 33554433 bytes, above the limit maxBytes of 33554432.\n`,
+      stderr: `assesskit: The file ${huge} has 10485761 bytes, above the limit maxBytes of 10485760.\n`,
     });
   });
 });
