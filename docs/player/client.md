@@ -31,7 +31,9 @@ sequenceDiagram
   Note over C,H: At FLUSH_BEFORE_DEADLINE_MS before a timer ends, the held<br/>responses go; at 0 an empty set-responses learns the time-out
 ```
 
-## Remote session
+## Quick start
+
+Create a remote session over a transport, send an action and read the view that answers:
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
@@ -60,6 +62,8 @@ answer.view.current?.title; // => "Question"
 client.assets("items/q1.xml"); // => "https://assets.example/g/token/items/q1.xml"
 client.close();
 ```
+
+## Remote session
 
 `createRemoteSession(transport, initial, options)` throws `DataError` when an argument is not of its type.
 
@@ -313,3 +317,6 @@ A listener that throws, and a send of an autosave or a deadline that failed, go 
 | Exam mode on a device                              | The engine and the answer keys are on the device in a local session, so it is for practice; an exam runs on the server                     |
 | Two live sessions on one store key                 | `LocalStore.save` has no version, so they overwrite each other; the host keeps one live session per key                                    |
 | Rating, scoring and CAT in the browser for an exam | The session host does them on the server ([server](server.md)); a local session gives `host` for practice                                  |
+## Differences from the references
+
+None. No specification defines the session client: it speaks the envelopes of [protocol](protocol.md), and [Evidence](evidence.md) lists the tests of the clients.

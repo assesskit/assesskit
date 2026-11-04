@@ -1,6 +1,8 @@
 // cspell:ignore Approximative Likert handlebarsv
+import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
   ASI_NAMESPACE,
   type BaseType,
@@ -30,7 +32,6 @@ import {
 } from "../src/index.js";
 import { baseType, recordValue, valueArbitrary } from "./arbitraries/values.js";
 import { fuzzJson } from "./fuzz.js";
-import { runGuideSamples } from "./guide-samples.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {
@@ -726,7 +727,7 @@ describe("checks of a PCI", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/pci.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/pci.md", import.meta.url), "utf8");
     const modules = {
       "@assesskit/runtime/asi": await import("../src/asi/index.js"),
       "@assesskit/runtime/pci": await import("../src/pci/index.js"),

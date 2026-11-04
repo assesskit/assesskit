@@ -13,16 +13,9 @@ flowchart LR
   tag --> result["Messages<br/>every key has a message"]
 ```
 
-## Choosing a catalog
+## Quick start
 
-`selectMessages(language, catalogs)` returns the messages for the language of the interface. Each step of the diagram
-replaces the keys that it has; a language without a catalog gets English. The mounts of the player take the same `catalogs` as
-their option `messages`, with `language`, and call `selectMessages` themselves.
-
-| Parameter  | Type                                | Meaning                                                                                                                                                                        |
-| ---------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `language` | `string`                            | A BCP 47 tag, such as `id` or `id-ID`. Case is ignored.                                                                                                                        |
-| `catalogs` | `Record<string, Partial<Messages>>` | The catalogs of the host by language tag; a catalog may have only some keys, and one for a tag may change a few messages of its language. Without it the messages are English. |
+Choose the messages for a language, with the Indonesian catalog as the host's, and fall back to English:
 
 ```ts
 import { selectMessages } from "@assesskit/player";
@@ -34,6 +27,17 @@ selectMessages("jv", { id: ID_MESSAGES }).toolRule; // => "Ruler"
 selectMessages("id", { id: { ...ID_MESSAGES, toolRule: "Mistar" } }).toolRule; // => "Mistar"
 selectMessages("id-ID", { id: ID_MESSAGES, "id-ID": { toolRule: "Penggaris kelas" } }).toolRule; // => "Penggaris kelas"
 ```
+
+## Choosing a catalog
+
+`selectMessages(language, catalogs)` returns the messages for the language of the interface. Each step of the diagram
+replaces the keys that it has; a language without a catalog gets English. The mounts of the player take the same `catalogs` as
+their option `messages`, with `language`, and call `selectMessages` themselves.
+
+| Parameter  | Type                                | Meaning                                                                                                                                                                        |
+| ---------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `language` | `string`                            | A BCP 47 tag, such as `id` or `id-ID`. Case is ignored.                                                                                                                        |
+| `catalogs` | `Record<string, Partial<Messages>>` | The catalogs of the host by language tag; a catalog may have only some keys, and one for a tag may change a few messages of its language. Without it the messages are English. |
 
 `selectMessages` throws `DataError` when `language` is not a string, `catalogs` is not an object of objects, a catalog
 has a key that is not a message key, or a message is not a string.
@@ -451,6 +455,23 @@ in `@assesskit/player/messages/id`. A catalog for another language has the same 
 A message is a property of `Messages` with a TSDoc comment, and a string in both `en.ts` and `id.ts`; the type checker
 refuses a catalog that lacks one. Its text names a function of the interface, never a shape, color or position alone
 (WCAG 1.3.3), and no two keys of a catalog have the same text.
+
+## Errors
+
+| Situation                                                                                                                                                             | Result                                         | What to do                                                                                |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `selectMessages` gets a `language` that is not a string, `catalogs` that are not an object of objects, a key that is not a message, or a message that is not a string | `DataError` that names the argument or the key | Pass a BCP 47 tag and catalogs of `Partial<Messages>`, whose keys are those of `Messages` |
+
+## Not included
+
+| Not included                               | Why                                                                                                                                    |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| UI languages beyond English and Indonesian | `language-of-interface` is elective in QTI; a host adds a language, or changes a text, with the catalogs it passes to `selectMessages` |
+| The translation of the content of an item  | `item-translation` is a support of the personal needs profile: its language chooses the entries of the cards ([supports](supports.md)) |
+
+## Differences from the references
+
+None. QTI defines no interface text: the catalog is the player's own.
 
 ## Files
 

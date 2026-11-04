@@ -35,7 +35,7 @@ flowchart LR
 Readers take a parsed `XmlElement` (`parseXml` of [xml](xml.md)); writers return one, and `serializeXml` writes it. The option `path` of a reader
 names the document in the issues of a `ReadError`.
 
-## Example
+## Quick start
 
 ```ts
 import { readLomGeneral, readResourceMetadata } from "@assesskit/runtime/metadata";
@@ -198,6 +198,14 @@ The readers throw `DataError` for an argument of the wrong type. The writers thr
 | Resolving a CASE item URI                              | `caseItemUri` is kept as a string; fetching it is a network concern                        |
 | Checking terms against an external registry            | The vocabularies are the lists of the schemas, and an extension term is open               |
 | Metadata that an author wrote and the item contradicts | `deriveQtiMetadata` gives what the item shows; the author's value is kept as read          |
+
+## Differences from the references
+
+| Case                                                                                 | Resolution                                                                                       |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| The namespaces in the samples of the specifications differ from those of the schemas | The schemas decide, and the namespaces of metadata are strict ([G12](spec-gaps.md))              |
+| The lists of the curriculum standards schema have at least one item                  | The reader accepts what the document has; the writer throws a `DataError` for an empty list      |
+| The LOM has nine categories                                                          | The LOM stays XML, kept as it is; only `general` is interpreted, which is what the package needs |
 
 ## Files
 

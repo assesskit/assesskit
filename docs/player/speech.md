@@ -14,6 +14,10 @@ flowchart LR
   request --> hook["SpeechHook<br/>the host's voice or createWebSpeech()"]
 ```
 
+## Quick start
+
+Build the speech request of a range of content, with a lexicon, and give it to a voice:
+
 ```ts
 import { EN_MESSAGES } from "@assesskit/player";
 import { buildSpeechRequest, readLexicon } from "@assesskit/player/player";
@@ -240,6 +244,12 @@ A voice that fails while the typing echo speaks does not stop the typing.
 | A screen reader                               | A candidate with the reading type `screen-reader` reads the DOM with their own; the player only keeps what is suppressed from it |
 | Voice selection by the candidate              | The host's voice decides; the request carries `lang`, `rate`, `pitch` and `volume`                                               |
 | Pronunciation beyond the lexicons of the item | The lexicons that the item names are applied; the host adds none of its own                                                      |
+
+## Differences from the references
+
+| Case                                                                                                                    | Resolution                                                                                  |
+| ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| The example of the best practices guide uses `emphasis` with the `level` of SSML 1.1, which `data-ssml` does not define | Accepted too, with the rate of a `prosody` as a label or a percentage, as SSML 1.1 has them |
 
 ## Files
 

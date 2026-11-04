@@ -29,6 +29,10 @@ flowchart LR
 The parts do not navigate and do not build the chrome. The chrome mounts them, calls `update` with `view.supports` for every
 view, and sends the `support` and `support-settings` actions when a part asks for one ([in the player](#in-the-player)).
 
+## Quick start
+
+Mount the panel of supports, press a button and resolve the presentation that the supports ask for:
+
 ```ts
 import { selectMessages } from "@assesskit/player";
 import { applyPresentation, mountSupportPanel, resolvePresentation } from "@assesskit/player/player";
@@ -397,9 +401,9 @@ A support that is wrong for the candidate is not an error of the player: the run
 | A picker of any color for the text and the background                                                                 | The 14 color themes change both at the contrast that the guide asks for; a host that needs any color sends the settings of `text-appearance` itself |
 | Live captions and media that the content does not provide                                                             | The player shows the media and tracks of the content                                                                                                |
 
-## Where the sources differ
+## Differences from the references
 
-| Case                                                                                             | Reading                                                                                     |
+| Case                                                                                             | Resolution                                                                                  |
 | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
 | The design lists `captions` and `alternative-text` with the cards                                | The schema gives a `qti-card` no such `support`; they act on text tracks and on `alt`       |
 | The best practices guide leaves the presentation of a card to the platform                       | The table above                                                                             |

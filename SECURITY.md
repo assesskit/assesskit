@@ -7,7 +7,18 @@ Every input is untrusted: packages, documents, personal needs profiles, results,
 callbacks and resolvers return. The sections below state the controls of the runtime and what a deployment adds; the sections that
 start with the player state those of the player.
 
-Points to be aware of when deploying the runtime:
+```mermaid
+flowchart LR
+  input["Untrusted input<br/>documents, packages, client actions,<br/>answers of services"] --> lib["assesskit<br/>limits, validates, withholds the keys"]
+  lib -->|"views without keys, plain data"| host["Your application<br/>stores, routes, accounts, the seed"]
+  host -->|"resolvers, stores, ports, fetch"| lib
+  lib -->|"cat-rest: HTTPS with a deadline<br/>and a limit of size"| engines["The CAT engines you configured"]
+  lib -->|"schemas fetch: pinned addresses<br/>and hashes"| schemas["The schemas of 1EdTech and W3C"]
+```
+
+## Points to be aware of when deploying
+
+The points below are the runtime's; the sections that start with "The player" hold the player's.
 
 - **No I/O.** The runtime core reads no files, makes no network requests, reads no environment variables, reads no clock and
   runs no code it is given. Only the `node` and `cli` modules use Node.js. `node` reads only the paths it is given.

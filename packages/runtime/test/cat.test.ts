@@ -1,8 +1,11 @@
 // cspell:ignore Gxvb foob fooba
 // biome-ignore-all lint/style/useNamingConvention: The names of the JSON fields are those of the binding.
+
 import { Buffer } from "node:buffer";
+import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
   type AdaptiveSelection,
   ASI_NAMESPACE,
@@ -36,7 +39,6 @@ import {
 } from "../src/index.js";
 import { qtiMetadata } from "./arbitraries/metadata.js";
 import { fuzzJson } from "./fuzz.js";
-import { runGuideSamples } from "./guide-samples.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {
@@ -1053,7 +1055,7 @@ describe("section data", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/cat.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/cat.md", import.meta.url), "utf8");
     const modules = {
       "@assesskit/runtime/asi": await import("../src/asi/index.js"),
       "@assesskit/runtime/cat": await import("../src/cat/index.js"),

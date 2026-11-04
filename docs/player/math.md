@@ -17,6 +17,10 @@ flowchart LR
   typeset --> styles["Adopt the styles of the output<br/>into the shadow root"]
 ```
 
+## Quick start
+
+Typeset a fraction with MathJax and read its speech and braille labels:
+
 ```ts
 import { createMathTypesetter } from "@assesskit/player/player";
 
@@ -133,6 +137,13 @@ AA reports no violation for it in a shadow root.
 | UEB math braille                                                          | MathJax's Speech Rule Engine has no UEB map ([Braille](#braille)) |
 | Elementary math (`mstack`, `mlongdiv` and the elements that go with them) | MathJax 4 does not implement it; the browser renders MathML Core  |
 | Authoring of MathML                                                       | The player shows the MathML of the content                        |
+
+## Differences from the references
+
+| Case                                                                                                         | Resolution                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| An expression of elementary math: `mstack`, `mlongdiv`, `msgroup`, `msrow`, `mscarries`, `mscarry`, `msline` | MathJax 4 does not implement them and would replace the expression by an error; it stays MathML, which the browser renders as MathML Core ([What it does](#what-it-does)) |
+| A PNP that asks for UEB math braille                                                                         | The labels are Nemeth braille, since the speech rule engine of MathJax has no UEB map; the player can remove the labels ([Braille](#braille))                             |
 
 ## Files
 

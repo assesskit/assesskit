@@ -26,6 +26,10 @@ sequenceDiagram
   F->>P: completed: final response and state
 ```
 
+## Quick start
+
+Mount the frame of a portable custom interaction, and take it down:
+
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
 import { resolveModuleConfigurationPaths, readModuleResolution } from "@assesskit/runtime/pci";
@@ -313,6 +317,19 @@ and a port, an interaction that names no module to load, a module without a loca
 origin that the frame loads no scripts from. The runtime's `DataError` passes
 through unchanged. A message from the frame that fails its check, and a response that is not a value of its declaration,
 are dropped, not thrown. An error of the host's storage goes to `reportError`.
+
+## Not included
+
+| Not included                                   | Why                                                                                                                         |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Running a module in the document of the player | The frame isolates the module in a sandbox with no network, no storage and no `eval`, so that its code cannot read the page |
+| Network access by a module                     | The policy of the frame refuses it; the host passes the data that a module needs as variables and files                     |
+| A defense against WebRTC and DNS prefetch      | No policy stops them; the host's part is in the table above, and a package it does not trust gets no personal data          |
+| An answer key in a module                      | A module is code of the package and its source is visible to the candidate; keys stay in the runtime                        |
+
+## Differences from the references
+
+None for the protocol: the player loads modules by the configuration files of the best practices guide and gives them its properties and events. The sandbox limits what a module may do, as [The frame and its limits](#the-frame-and-its-limits) lists.
 
 ## Files
 

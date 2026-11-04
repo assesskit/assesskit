@@ -25,7 +25,7 @@ The runtime has five runtime dependencies, pinned to exact versions: `saxes` and
 archives, `valibot` reads untrusted JSON, and `libxml2-wasm` validates against the official schemas in the `node` subpath
 ([SECURITY](../../SECURITY.md#runtime-dependencies)).
 
-## Example
+## Quick start
 
 Read a package, create the engine of its test, run a short session with `apply`, show the candidate view and write the
 results. The engine is a reducer: `apply` takes a state and an action and gives the next state and its events, or a
@@ -219,7 +219,7 @@ The errors are `DataError` for a wrong argument, `ReadError` for a document that
 input that breaks a limit and `ProcessingError` for a condition that processing does not define as NULL. Validation does
 not throw: it returns `Issue`s, each with the specification reference that defines the rule.
 
-## Supported versions
+## Supported
 
 | Specification                               | Version                                                                        |
 | ------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -233,6 +233,14 @@ not throw: it returns `Issue`s, each with the specification reference that defin
 
 The runtime does not read QTI 2.x content.
 
+The runtime is not certified by 1EdTech. [Supported](https://github.com/assesskit/assesskit/blob/main/docs/runtime/supported.md) says what it reads, writes, validates and runs,
+and what it does not. The claim is
+scoped: items differentially tested; test sessions specification-tested. Items are compared with the Longsight
+`qti3-core` engine and, for the 1EdTech examples that it supports, with the Amp-up `qti3-item-player`. No independent implementation of a QTI 3 test session was found to compare with, so the rules of test
+sessions rest on tests whose expected values are statements and worked examples of the specifications, on properties
+checked with random input, and on the 1EdTech examples. [Spec gaps](https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md) lists where the specifications
+contradict themselves or are silent, and what the runtime does.
+
 ## Stored states
 
 | Rule                             | Meaning                                                                                                                                                 |
@@ -244,16 +252,6 @@ The runtime does not read QTI 2.x content.
 | Content edited since the session | Name the content to `createEngine` as `contentVersion`; the engine then refuses a state that another version started.                                   |
 
 [Delivery](https://github.com/assesskit/assesskit/blob/main/docs/runtime/delivery.md#state-across-releases) has the details.
-
-## What is supported
-
-The runtime is not certified by 1EdTech. [Supported](https://github.com/assesskit/assesskit/blob/main/docs/runtime/supported.md) says what it reads, writes, validates and runs,
-and what it does not. The claim is
-scoped: items differentially tested; test sessions specification-tested. Items are compared with the Longsight
-`qti3-core` engine and, for the 1EdTech examples that it supports, with the Amp-up `qti3-item-player`. No independent implementation of a QTI 3 test session was found to compare with, so the rules of test
-sessions rest on tests whose expected values are statements and worked examples of the specifications, on properties
-checked with random input, and on the 1EdTech examples. [Spec gaps](https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md) lists where the specifications
-contradict themselves or are silent, and what the runtime does.
 
 ## Documentation
 
@@ -287,4 +285,4 @@ contradict themselves or are silent, and what the runtime does.
 
 ## License
 
-[Apache License 2.0](../../LICENSE). QTI and 1EdTech are trademarks of 1EdTech Consortium, Inc.; see [NOTICE](NOTICE).
+[Apache-2.0](LICENSE). Copyright Fariz Wakan. QTI and 1EdTech are trademarks of 1EdTech Consortium, Inc.; see [NOTICE](NOTICE).

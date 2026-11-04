@@ -35,6 +35,43 @@ flowchart LR
 | `@assesskit/player/cat-rest` | server | `CatFetch`, `CatFetchRequest`, `CatFetchResponse`   | The part of `fetch` that `createRestCatPort` uses.                                            |
 | `@assesskit/player/cat-rest` | server | `OAuthClientCredentials`                            | The client credentials with which `createRestCatPort` asks for a token.                       |
 
+## Quick start
+
+Create a REST port for one configured engine and create a section on it; the port asks for a token first:
+
+```ts
+import { createRestCatPort } from "@assesskit/player/cat-rest";
+
+const requests = [];
+const fetch = async (url, request) => {
+  requests.push(`${request.method} ${url}`);
+  const body = url.endsWith("/token") ? { access_token: "t0ken", token_type: "Bearer" } : { sectionIdentifier: "s1" };
+  return { ok: true, status: 200, text: async () => JSON.stringify(body) };
+};
+// The package names the engine by its public address; the platform reaches it through a gateway.
+const reference = "https://engine.example/ims/cat/v1p0";
+const port = createRestCatPort({
+  fetch,
+  engines: new Map([
+    [
+      reference,
+      {
+        endpoint: "https://gateway.internal/engines/a/ims/cat/v1p0",
+        credentials: {
+          tokenUrl: "https://auth.example/token",
+          clientId: "tool",
+          clientSecret: "secret",
+          scope: "https://purl.imsglobal.org/cat/v1p0/scope/api",
+        },
+      },
+    ],
+  ]),
+});
+const section = await port.createSection(reference, { sectionConfiguration: "e30=" });
+section; // => { sectionIdentifier: "s1" }
+requests; // => ["POST https://auth.example/token", "POST https://gateway.internal/engines/a/ims/cat/v1p0/sections"]
+```
+
 ## Why the REST subpath stays on servers
 
 `createRestCatPort` holds an OAuth client secret and sends the candidate's results to a remote engine, so it must never reach a
@@ -203,39 +240,6 @@ flowchart LR
 | `endpoint`         | required | The `https` URL prefix of the engine, such as `https://cat.example/ims/cat/v1p0`. It may differ from the reference. |
 | `credentials`      | required | `{ tokenUrl, clientId, clientSecret, scope }`; `tokenUrl` is an `https` URL.                                        |
 | `sharePnp`         | `false`  | Whether Create Session sends the candidate's personal needs and preferences to this engine.                         |
-
-```ts
-import { createRestCatPort } from "@assesskit/player/cat-rest";
-
-const requests = [];
-const fetch = async (url, request) => {
-  requests.push(`${request.method} ${url}`);
-  const body = url.endsWith("/token") ? { access_token: "t0ken", token_type: "Bearer" } : { sectionIdentifier: "s1" };
-  return { ok: true, status: 200, text: async () => JSON.stringify(body) };
-};
-// The package names the engine by its public address; the platform reaches it through a gateway.
-const reference = "https://engine.example/ims/cat/v1p0";
-const port = createRestCatPort({
-  fetch,
-  engines: new Map([
-    [
-      reference,
-      {
-        endpoint: "https://gateway.internal/engines/a/ims/cat/v1p0",
-        credentials: {
-          tokenUrl: "https://auth.example/token",
-          clientId: "tool",
-          clientSecret: "secret",
-          scope: "https://purl.imsglobal.org/cat/v1p0/scope/api",
-        },
-      },
-    ],
-  ]),
-});
-const section = await port.createSection(reference, { sectionConfiguration: "e30=" });
-section; // => { sectionIdentifier: "s1" }
-requests; // => ["POST https://auth.example/token", "POST https://gateway.internal/engines/a/ims/cat/v1p0/sections"]
-```
 
 - **Which engine.** The `prefix` of a request is the reference that the package names, with trailing slashes removed. A
   reference that `engines` does not know is a `DataError`, and nothing is sent: no candidate data and no token leave for an
@@ -597,3 +601,10 @@ has the error ([status table](#createcatresthandler)).
 | Another transport than the REST/JSON binding | Implement `CatPort` over it                                                                                                                                   |
 | The authorization server                     | The token endpoint is an OAuth 2.0 service, and a library or a hosted service issues the tokens; `authorize` only checks them (the example has a minimal one) |
 | TLS and the listener                         | The host terminates TLS and mounts the handler on its runtime                                                                                                 |
+## Differences from the references
+
+| Case                                                                                                                                                     | Resolution                                                                                                                      |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| The `default` response of every endpoint asks for `failure/error`, and the service calls `unsupported` the required default for an unsupported operation | The handler answers 405 with no code minor, as the service specification says                                                   |
+| The code minor of a busy engine is `server_busy` in the binding and `serverbusy` in the service                                                          | The wire follows the enumeration of the JSON schema: `server_busy`, for the status 429 and 503 ([G45](../runtime/spec-gaps.md)) |
+| The OpenAPI file that defines the field names of the assessment result is named by addresses that fail                                                   | The listing in the appendix of the binding is the source ([G21](../runtime/spec-gaps.md))                                       |

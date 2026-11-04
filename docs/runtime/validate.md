@@ -31,7 +31,7 @@ Every function returns `readonly Issue[]` and none throws for content that is in
 order in which the checks found them. A wrong argument, or a model whose shape is not the one the schema gives it, is a
 `DataError`. The functions are pure: they read the model and change nothing.
 
-## Example
+## Quick start
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
@@ -236,11 +236,22 @@ a duplicate. A shape or duplicate rule is checked once every value of the block 
 is checked with the response processing templates the package holds, and a test is checked as `validateTest` checks it
 with `createPackageResolvers`. Each document is checked once, however many tests name it.
 
-## Decisions
+## Errors
+
+| Situation                                                                                                                 | Result                                                                                                        | What to do                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Content that breaks a rule or fails when it runs                                                                          | An `Issue` with the severity `error` in the result, never a throw                                             | Fix the content where the issue says: its `location` has the path and the element path |
+| Content that runs but deviates from a recommendation                                                                      | An `Issue` with the severity `warning`                                                                        | Fix it, or accept it knowing what the message says                                     |
+| The checks find more issues than `maxFindings`                                                                            | The list ends with the error `assesskit/validate/findings-stopped`                                            | Fix the first issues and validate again, or raise `maxFindings`                        |
+| A reference cannot be resolved, or a document cannot be read                                                              | One issue: those of the `ReadError`, or `assesskit/validate/unresolved-reference` for any other runtime error | Fix the reference or the document; what is unresolved is not checked further           |
+| An argument of the wrong type, a model whose shape is not the schema's, or a `maxFindings` that is not a positive integer | `DataError` that says what is wrong and what is expected                                                      | Pass the model that a reader of the runtime returns                                    |
+| A resolver or a custom operator of the host throws an error that is not one of the runtime's                              | The error itself: a defect of the host's code, not a finding                                                  | Fix the function that threw                                                            |
+
+## Differences from the references
 
 Where the specifications are silent or ambiguous, the validator reads them like this:
 
-| Case                                                  | Decision                                                                                                                |
+| Case                                                  | Resolution                                                                                                              |
 | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | A type that cannot be known statically                | It passes: custom operators, record fields and variables without a base type are never reported.                        |
 | A standard outcome of another base type               | A warning, as content varies and still runs.                                                                            |

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import fc from "fast-check";
 import { unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
   CP_NAMESPACE,
   CPX_NAMESPACE,
@@ -42,7 +43,6 @@ import {
 import { hostileArchives, manifests, smallZipLimits } from "./arbitraries/package.js";
 import { mutateBytes, mutateText, mutations } from "./arbitraries/xml.js";
 import { expectOutcome, FUZZ, fuzzReader } from "./fuzz.js";
-import { runGuideSamples } from "./guide-samples.js";
 import { buildZip, bytes, concat, type RawEntry } from "./zip-builder.js";
 
 const FIXTURES = join(import.meta.dirname, "fixtures/zip");
@@ -1618,7 +1618,7 @@ describe("default ZIP limits", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/package.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/package.md", import.meta.url), "utf8");
     const pkg = await import("../src/package/index.js");
     expect(await runGuideSamples(guide, { "@assesskit/runtime/package": pkg })).toBeGreaterThan(0);
   });

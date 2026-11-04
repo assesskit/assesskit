@@ -37,6 +37,10 @@ submission, because the server writes it and the browser shows it.
 | `OfficialResult`, `isOfficialResult`                      | A results report that the session host marked official.                                                |
 | `Submission` and its parts, `checkSubmission`             | What a rater needs to rate an externally scored outcome.                                               |
 
+## Quick start
+
+Check the envelope of an action and the caller of a session, and tell an official result:
+
 ```ts
 import { checkActionEnvelope, checkCaller, isOfficialResult } from "@assesskit/player/protocol";
 
@@ -222,3 +226,15 @@ Every check throws `DataError` with a sentence that names the path of the first 
 | `checkLtiFrame`                            | `value` is not an object of `url`, `storageUrl` and `allow` only, or a URL is not absolute `http` or `https`                                                                                                                                                             |
 | `checkAllowList`                           | the value is empty or has a character outside an allow list                                                                                                                                                                                                              |
 | `checkSubmission`                          | a property outside the form, a field of another type, a time outside the years 1 to 9999, content that is not a list of nodes with a string `kind`, a scoring rubric that `checkScoringRubric` refuses, a part that names an item the submission lacks, or an item twice |
+
+## Not included
+
+| Not included                            | Why                                                                                                                          |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| The routes, HTTP and the authentication | The host's: it gives the session host an authenticated `Caller`, and the envelopes are the JSON that the two send each other |
+| A session identifier in an envelope     | The host takes it from the authenticated request, so that a candidate cannot name another candidate's session                |
+| A DOM, Node.js, timer or network API    | The module uses none: a client and a host implement the ports                                                                |
+
+## Differences from the references
+
+None. QTI defines no protocol between a browser and a session host: the envelopes are the player's own form of the runtime's JSON of actions and views.

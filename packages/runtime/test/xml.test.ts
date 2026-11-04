@@ -1,6 +1,8 @@
 // cspell:ignore waytoolongsubtag
+import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
   buildElement,
   collectText,
@@ -29,7 +31,6 @@ import {
 } from "../src/index.js";
 import { mutateBytes, mutateText, mutations } from "./arbitraries/xml.js";
 import { expectOutcome, FUZZ } from "./fuzz.js";
-import { runGuideSamples } from "./guide-samples.js";
 
 const XSI = "http://www.w3.org/2001/XMLSchema-instance";
 const DECLARATION = '<?xml version="1.0" encoding="UTF-8"?>\n';
@@ -1338,7 +1339,7 @@ describe("serializing", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/xml.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/xml.md", import.meta.url), "utf8");
     const xml = await import("../src/xml/index.js");
     expect(await runGuideSamples(guide, { "@assesskit/runtime/xml": xml })).toBeGreaterThan(0);
   });

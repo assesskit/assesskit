@@ -32,6 +32,8 @@ sequenceDiagram
   P->>E: view, drawn again only when it differs
 ```
 
+## Quick start
+
 The sample mounts the player on a preview of one item, which the device runs:
 
 ```ts
@@ -393,3 +395,6 @@ An error of the session client, such as `ServiceError` for a host that is down, 
 | An LTI launch                                        | The host gives `ltiLogin`; [interopkit](https://github.com/interopkit/interopkit) implements the protocol |
 | A heading, a map or a timer on a page of many items  | `mountItem` draws the content and the interactions only; a lesson page keeps its own layout               |
 | A server-side render                                 | The player needs a DOM; importing it in Node is safe, mounting it is not                                  |
+## Differences from the references
+
+None. The player draws the view that the runtime builds and decides nothing of QTI; where the specifications differ or are silent, [spec gaps](../runtime/spec-gaps.md) gives the resolution that the engine applies. The accessibility of the chrome is held by the tests of [Evidence](evidence.md).

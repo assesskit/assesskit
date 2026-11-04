@@ -20,6 +20,10 @@ flowchart TD
 | The document of a PCI frame | The frame links it. `:root` is the root.                        |
 | The host page               | Never. Its rules for `:root` and `body` would restyle the page. |
 
+## Quick start
+
+Adopt the stylesheet of the player in the shadow root of a content root:
+
 ```ts
 import css from "@assesskit/player/player.css?inline"; // any bundler that imports a file as text
 
@@ -219,9 +223,29 @@ The messages (`data-max-selections-message`, `data-patternmask-message`, `data-p
 counters (`qti-counter-up` and `-down`) and the media attributes are behavior of the elements, so the stylesheet does not
 read them.
 
-## Where the sources differ
+## Errors
 
-| Case                                                                                                                                                                                           | Reading                                                                            |
+The stylesheet throws nothing. What a host meets:
+
+| Situation                                                          | Result                                                   | What to do                                                                              |
+| ------------------------------------------------------------------ | -------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| A browser older than the baseline, without constructed stylesheets | `new CSSStyleSheet()` or `adoptedStyleSheets` is missing | Run in a browser of the [baseline](baseline.md): Chromium 111, Firefox 115, Safari 16.4 |
+| The stylesheet is linked in the host page                          | Its rules for `:root` and `body` restyle the page        | Adopt it in the shadow root of a content root, or link it in a PCI frame                |
+| WebKit and a root that appears after the window was resized        | The root can lay out for the old width                   | Keep the sheet adopted by one root that lives as long as the player                     |
+
+## Not included
+
+| Not included                                          | Why                                                                                                                  |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| The look of the host page                             | The stylesheet is for a content root and a PCI frame; its rules for `:root` and `body` would restyle a page          |
+| `@import` and other files                             | It is one file, so that a constructed stylesheet can hold it                                                         |
+| `qti-gap-placement`                                   | The summary tables list it with no definition                                                                        |
+| The `.container` and `.container-fluid` of the sample | They are classes of Bootstrap 2, not of the vocabulary                                                               |
+| An inline `style` of the content                      | It is not kept: a class of the shared vocabulary does what an author needs, and an inline style could cover the page |
+
+## Differences from the references
+
+| Case                                                                                                                                                                                           | Resolution                                                                         |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | The list of classes names `qti-writing-mode-vertical-tb`, the sample `qti-writing-mode-horizontal-tb`                                                                                          | Both set `horizontal-tb`                                                           |
 | The list of classes has `kannada`, `katakana` and `katakana-iroha`, which the sample lacks; the sample has `ethiopic-halehame*`, `hangul`, `hangul-consonant` and `urdu`, which the list lacks | Every name of both is a class                                                      |

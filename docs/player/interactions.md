@@ -23,6 +23,10 @@ sequenceDiagram
   H->>E: value of the next view, ignored while it equals the element's own
 ```
 
+## Quick start
+
+Draw a choice interaction in a content root, check a box and read the response that the element reports:
+
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
 import { describeInteractions } from "@assesskit/runtime/interactions";
@@ -425,9 +429,9 @@ An interaction never throws at the candidate: it says in words what is wrong and
 | Storing uploads                                                                                         | `files.upload` is the host's: the player holds the reference, never the bytes          |
 | A server render                                                                                         | The elements need a DOM; importing the module in Node is safe, defining them is not    |
 
-## Where the sources differ
+## Differences from the references
 
-| Case                                                                                              | Reading                                                                                                                                                                                                       |
+| Case                                                                                              | Resolution                                                                                                                                                                                                    |
 | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | The design has the descriptor, the value, `disabled` and the messages as the element's properties | They are. The element builds its controls when the descriptor is set, from the node and the descriptor, so a view that carries the same data again changes nothing.                                           |
 | A radio button cannot be cleared                                                                  | A choice with `max-choices` 1 is a radio group, as in any form. A candidate who does not answer leaves it NULL; once chosen, a choice can be changed, not cleared. A hotspot can be chosen again to clear it. |

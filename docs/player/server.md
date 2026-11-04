@@ -39,6 +39,10 @@ sequenceDiagram
 | `createToolScoreIntake`, `ToolScoreIntake`, `ToolScoreIntakeOptions`   | The scores of tool items                                                             |
 | `SYSTEM_CLOCK`                                                         | The clock of the machine                                                             |
 
+## Quick start
+
+Create a session host for a test over stores in memory, start a session for a candidate and send an action:
+
 ```ts
 import { createEngine } from "@assesskit/runtime/delivery";
 import { openPackage, createPackageResolvers } from "@assesskit/runtime/package";
@@ -588,3 +592,6 @@ The host throws the runtime's `DataError` for a request it refuses and the playe
 | Who may proctor, and the proctor's page            | The host calls `proctor` for the people it trusts; the player has no proctor interface                                                                 |
 | LTI, Caliper and the other protocols of a platform | [interopkit](https://github.com/interopkit/interopkit) implements them; the host has the ports `forward.log` and `buildSessionScore` to plug them into |
 | Logging and metrics                                | The player never logs; the host wraps the stores and the log                                                                                           |
+## Differences from the references
+
+None. No specification defines a session host: it applies the runtime's engine to the actions that a client sends, and [spec gaps](../runtime/spec-gaps.md) gives the resolutions of the specifications that the engine applies.

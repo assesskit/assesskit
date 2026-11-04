@@ -1,6 +1,8 @@
 // cspell:ignore mrow allô
+import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
   ASI_NAMESPACE,
   type AssessmentItem,
@@ -42,7 +44,6 @@ import {
 } from "../src/index.js";
 import { asProfile } from "./arbitraries/pnp.js";
 import { type PrintfFixture, readFixture } from "./fixtures.js";
-import { runGuideSamples } from "./guide-samples.js";
 
 const printf = readFixture<PrintfFixture>("printf.json");
 
@@ -1011,7 +1012,7 @@ describe("companion materials", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/content.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/content.md", import.meta.url), "utf8");
     const modules = {
       "@assesskit/runtime/asi": await import("../src/asi/index.js"),
       "@assesskit/runtime/content": await import("../src/content/index.js"),

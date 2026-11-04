@@ -3,6 +3,7 @@ import type { CatPort } from "@assesskit/runtime/cat";
 import { DataError } from "@assesskit/runtime/errors";
 import { describe, expect, it } from "vitest";
 import catGuide from "../../../docs/player/cat.md?raw";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { deployCatSections } from "../src/cat/index.js";
 import {
   ASI,
@@ -23,7 +24,6 @@ import {
   USAGE_REF,
   usageXml,
 } from "./cat-fixture.js";
-import { runGuideSamples } from "./guide-samples.js";
 
 /** A CAT engine that records Create Section and Get Section, and reports the pool it was told to. */
 function recordingEngine(pool: (sectionIdentifier: string) => readonly string[] = () => IDS): {

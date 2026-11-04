@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
   ACCESS_MODES,
   type AccessForAllResource,
@@ -40,7 +42,6 @@ import {
   type XmlNode,
 } from "../src/index.js";
 import { accessForAllResource, curriculumStandardsSet, lom, qtiMetadata } from "./arbitraries/metadata.js";
-import { runGuideSamples } from "./guide-samples.js";
 
 const QMD = `xmlns="${QTI_METADATA_NAMESPACE}"`;
 const CSM = `xmlns="${CSM_NAMESPACE}"`;
@@ -918,7 +919,7 @@ describe("writing resource metadata", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/metadata.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/metadata.md", import.meta.url), "utf8");
     const asi = await import("../src/asi/index.js");
     const metadata = await import("../src/metadata/index.js");
     const modules = { "@assesskit/runtime/asi": asi, "@assesskit/runtime/metadata": metadata };

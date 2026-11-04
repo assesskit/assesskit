@@ -12,10 +12,10 @@ import { buildContainer, buildRecord, buildSingle, readWireValue, type Value } f
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import scoringGuide from "../../../docs/player/scoring.md?raw";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { checkSubmission, type OfficialResult, type Submission } from "../src/protocol/index.js";
 import { markOfficial } from "../src/protocol/internal.js";
 import { buildSessionScore, buildSubmission, buildSupplyScores } from "../src/scoring/index.js";
-import { runGuideSamples } from "./guide-samples.js";
 import {
   accepted,
   act,

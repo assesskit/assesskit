@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
   DOCUMENT_ELEMENTS,
   ELEMENT_TYPES,
@@ -65,7 +67,6 @@ import {
 import { DOCUMENT_ARBITRARIES, modelArbitrary, SCORING_RUBRICS } from "./arbitraries/asi.js";
 import { PLACES, VOCABULARIES, vocabularyOf } from "./asi-vocabularies.js";
 import { fuzzReader } from "./fuzz.js";
-import { runGuideSamples } from "./guide-samples.js";
 import { criterionMarkup, ESSAY, ESSAY_MARKUP, KIND_EXAMPLES, rubricMarkup } from "./scoring-rubrics.js";
 
 const NAMESPACE = `xmlns="${ASI_NAMESPACE}"`;
@@ -4527,13 +4528,13 @@ describe("the element table", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/asi.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/asi.md", import.meta.url), "utf8");
     const asi = await import("../src/asi/index.js");
     expect(await runGuideSamples(guide, { "@assesskit/runtime/asi": asi })).toBeGreaterThan(0);
   });
 
   it("shows the results that the samples of the conventions give", async () => {
-    const guide = new URL("../../../docs/runtime/conventions.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/conventions.md", import.meta.url), "utf8");
     const asi = await import("../src/asi/index.js");
     expect(await runGuideSamples(guide, { "@assesskit/runtime/asi": asi })).toBe(6);
   });

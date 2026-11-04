@@ -36,20 +36,9 @@ flowchart LR
 The types are `PciJson`, `PciFileLoader`, `PciFileStore`, `ModuleResolution`, `ModuleConfigurationPaths`, `PciModule` and
 `PciModuleConfiguration`.
 
-## The JSON of variables
+## Quick start
 
-`encodePciValue` and `decodePciValue` read and write the plain binding of the best practices guide: `{ "base": ... }` for a
-single value, `{ "list": ... }` for `multiple` and `ordered`, `{ "record": ... }` for a record, and `null` inside each for NULL. A
-PCI receives its template variables, its context variables and its response in this form, and gives its response back in it.
-The binding is `writeJsonValue` and `readJsonValue` of `values`, with these forms:
-
-| Case                       | Form                                                                                                            |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| File                       | `{ "data": <base64>, "mime", "name"? }`; a file value holds a reference, so the host's callbacks move the bytes |
-| Duration                   | `PT<seconds>S`; one with years or months is a `DataError`                                                       |
-| `intOrIdentifier`          | The declared base type; in a record an integer for a number and an identifier for a string                      |
-| NULL field of a record     | Left out of the record                                                                                          |
-| `NaN`, `INF`, `-INF`, `-0` | The string with that spelling                                                                                   |
+Write a value as the JSON that a module receives, and read the JSON that it gives back:
 
 ```ts
 import { decodePciValue, encodePciValue } from "@assesskit/runtime/pci";
@@ -64,6 +53,21 @@ decodePciValue(
 );
 // => { cardinality: "single", baseType: "file", value: { reference: "file-1", mimeType: "text/plain", fileName: "helloworld.txt" } }
 ```
+
+## The JSON of variables
+
+`encodePciValue` and `decodePciValue` read and write the plain binding of the best practices guide: `{ "base": ... }` for a
+single value, `{ "list": ... }` for `multiple` and `ordered`, `{ "record": ... }` for a record, and `null` inside each for NULL. A
+PCI receives its template variables, its context variables and its response in this form, and gives its response back in it.
+The binding is `writeJsonValue` and `readJsonValue` of `values`, with these forms:
+
+| Case                       | Form                                                                                                            |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| File                       | `{ "data": <base64>, "mime", "name"? }`; a file value holds a reference, so the host's callbacks move the bytes |
+| Duration                   | `PT<seconds>S`; one with years or months is a `DataError`                                                       |
+| `intOrIdentifier`          | The declared base type; in a record an integer for a number and an identifier for a string                      |
+| NULL field of a record     | Left out of the record                                                                                          |
+| `NaN`, `INF`, `-INF`, `-0` | The string with that spelling                                                                                   |
 
 `files.load(reference)` returns the bytes as base64 for each file that `encodePciValue` writes, and
 `files.store(data, mimeType, fileName?)` returns the reference of each file that `decodePciValue` reads. Both callbacks are
@@ -168,6 +172,15 @@ QTI's own and are not properties.
 | Loading and running the module: the AMD loader, timeouts, fallback and sandbox | They need a browser, so they belong to the player's PCI frame             |
 | Asynchronous file callbacks                                                    | The engine is synchronous; the host moves the bytes around the call       |
 | The text of the Portable Custom Interactions 1.0 specification                 | It is not retrievable; the best practices guide restates its requirements |
+
+## Differences from the references
+
+| Case                                                                                            | Resolution                                                                                                                   |
+| ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| A duration with years or months, as in the example of the best practices guide                  | A `DataError` where it is decoded; durations are written as `PT<seconds>S` ([G14, G39](spec-gaps.md))                        |
+| The fields of a JSON record may be `"base": null`, but the fields of a record are single values | A NULL field is left out of the record ([G37](spec-gaps.md))                                                                 |
+| The mapping of the type `intOrIdentifier` to a value                                            | By JSON type: a number is an integer, a string an identifier; in a variable, by its declared base type ([G38](spec-gaps.md)) |
+| The lexical form of a `file` value                                                              | A reference everywhere; the bytes go through the host's callbacks ([G10](spec-gaps.md))                                      |
 
 ## Files
 

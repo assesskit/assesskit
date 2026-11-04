@@ -39,6 +39,37 @@ flowchart LR
 `HAZARD_TERMS` maps a DRD hazard term to the PNP term, and `VIEWS` lists the six views. The types are `ContentVariables`, `View`,
 `TestPosition`, `CardContent`, `HazardExposure`, `DrdHazardTerm`, `PnpHazardTerm` and `ResolveContentOptions`.
 
+## Quick start
+
+Resolve the content of an item for a view: the score and the number are printed, and the feedback that the outcome shows stays:
+
+```ts
+import { readAsi } from "@assesskit/runtime/asi";
+import { resolveContent } from "@assesskit/runtime/content";
+import { createItemVariables } from "@assesskit/runtime/processing";
+import { buildSingle } from "@assesskit/runtime/values";
+
+const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+    identifier="result" title="Result" time-dependent="false">
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
+  <qti-outcome-declaration identifier="FEEDBACK" cardinality="single" base-type="identifier"/>
+  <qti-template-declaration identifier="N" cardinality="single" base-type="integer"/>
+  <qti-item-body>
+    <p>Score <qti-printed-variable identifier="SCORE" format="%.1f"/> out of <qti-printed-variable identifier="N"/>.</p>
+    <qti-feedback-block outcome-identifier="FEEDBACK" identifier="right" show-hide="show">
+      <qti-content-body><p>Well done.</p></qti-content-body>
+    </qti-feedback-block>
+  </qti-item-body>
+</qti-assessment-item>`);
+const variables = createItemVariables(item);
+const outcomes = new Map(variables.outcomes)
+  .set("SCORE", buildSingle("float", 0.7))
+  .set("FEEDBACK", buildSingle("identifier", "right"));
+const templates = new Map(variables.templates).set("N", buildSingle("integer", 4));
+const resolved = resolveContent(item.body.children, { outcomes, templates }, item, { view: "candidate" });
+resolved.map(({ kind }) => kind); // => ["p", "feedback-block"]
+```
+
 ## Visibility
 
 `isShown` decides whether content is visible given the variable that controls it. The same rule governs feedback (an outcome),
@@ -86,33 +117,6 @@ isShown("show", "right", null); // => false
 Kept elements keep their order and get their content resolved in turn. The input is not changed. A substituted value is written
 as an identifier, string or uri as it is, an integer by `%i`, a float or duration by `%G`, a boolean as `true` or `false`, a point
 as `x y` and a pair as `a b`; a NULL variable, a container or a file leaves the parameter or the MathML identifier as authored.
-
-```ts
-import { readAsi } from "@assesskit/runtime/asi";
-import { resolveContent } from "@assesskit/runtime/content";
-import { createItemVariables } from "@assesskit/runtime/processing";
-import { buildSingle } from "@assesskit/runtime/values";
-
-const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
-    identifier="result" title="Result" time-dependent="false">
-  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
-  <qti-outcome-declaration identifier="FEEDBACK" cardinality="single" base-type="identifier"/>
-  <qti-template-declaration identifier="N" cardinality="single" base-type="integer"/>
-  <qti-item-body>
-    <p>Score <qti-printed-variable identifier="SCORE" format="%.1f"/> out of <qti-printed-variable identifier="N"/>.</p>
-    <qti-feedback-block outcome-identifier="FEEDBACK" identifier="right" show-hide="show">
-      <qti-content-body><p>Well done.</p></qti-content-body>
-    </qti-feedback-block>
-  </qti-item-body>
-</qti-assessment-item>`);
-const variables = createItemVariables(item);
-const outcomes = new Map(variables.outcomes)
-  .set("SCORE", buildSingle("float", 0.7))
-  .set("FEEDBACK", buildSingle("identifier", "right"));
-const templates = new Map(variables.templates).set("N", buildSingle("integer", 4));
-const resolved = resolveContent(item.body.children, { outcomes, templates }, item, { view: "candidate" });
-resolved.map(({ kind }) => kind); // => ["p", "feedback-block"]
-```
 
 ## Printed variables
 
@@ -233,6 +237,13 @@ deriveHazardExposure(["flashing", "olfactoryHazard"]);
 | Rendering                                               | The player draws the nodes and the text that `content` returns                    |
 | Deciding when feedback is visible                       | The delivery engine decides which outcomes are given and when                     |
 | `printf` conversions other than `E e f G g r R i o X x` | QTI defines these; `%d` and `%s` are not part of the format of a printed variable |
+
+## Differences from the references
+
+| Case                                                                                                                      | Resolution                                                                                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The best practices guide names the grade `braille-grade`, though the PNP names it `grade`, and says nothing of the choice | `selectCard` reads `data-braille-type`, `data-math-type` and `data-braille-grade` or `data-grade`, and chooses by the braille settings ([G52](spec-gaps.md)) |
+| A `format` of a printed variable that is not one conversion of QTI, such as `%d` or `%s`                                  | The default format is used: the specification defines `E e f G g r R i o X x` and no other                                                                   |
 
 ## Files
 

@@ -18,6 +18,7 @@ import fc from "fast-check";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import assetGateGuide from "../../../docs/player/asset-gate.md?raw";
 import serverGuide from "../../../docs/player/server.md?raw";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { AccessError, ServiceError } from "../src/index.js";
 import { type HostApplyOptions, isOfficialResult, type ViewEnvelope } from "../src/protocol/index.js";
 import {
@@ -62,7 +63,6 @@ import {
   recordingScheduler,
 } from "./exam-fixture.js";
 import { fuzzJson } from "./fuzz.js";
-import { runGuideSamples } from "./guide-samples.js";
 import { RUBRIC_WORD, rubricMarkup } from "./scoring-fixture.js";
 
 const SECOND = 1000;

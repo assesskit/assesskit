@@ -171,6 +171,118 @@ export function checkDiagrams(files: Files): Violation[] {
     }));
 }
 
+/** The titles of the `##` headings of a Markdown file outside fenced code, with the 1-based line of each. */
+function sectionTitles(text: string): [number, string][] {
+  const titles: [number, string][] = [];
+  let fenced = false;
+  linesOf(text).forEach((line, index) => {
+    if (/^\s*```/.test(line)) fenced = !fenced;
+    else if (!fenced && line.startsWith("## ")) titles.push([index + 1, line.slice(3).trim()]);
+  });
+  return titles;
+}
+
+/** The documents of `docs/<package>/` that are not the guide of one module, so that they have no skeleton of a guide. */
+const NOT_GUIDES = new Set([
+  "architecture",
+  "baseline",
+  "conformance",
+  "conventions",
+  "evidence",
+  "performance",
+  "size",
+  "spec-gaps",
+  "supported",
+]);
+
+/** The sections of every guide, each with what it holds. */
+const GUIDE_SECTIONS: readonly (readonly [string, string])[] = [
+  ["Quick start", "a minimal example that runs, so that the guide's first sample shows the main call"],
+  ["Errors", "what a user can meet and what to do about it, or None where the module throws nothing"],
+  ["Not included", "a table of `| Not included | Why |`, or None"],
+  ["Differences from the references", "where the module departs from the specifications or the references, or None"],
+];
+
+/** Whether a file is the guide of a module: a document of `docs/<package>/` other than the cross-cutting ones. */
+function isGuide(file: string): boolean {
+  const name = /^docs\/[^/]+\/([^/]+)\.md$/.exec(file)?.[1];
+  return name !== undefined && !NOT_GUIDES.has(name);
+}
+
+/** Every guide has the sections of the skeleton: a quick start, errors, what is not included and the differences from the references. */
+export function checkGuideSections(files: Files): Violation[] {
+  return [...files].flatMap(([file, text]) => {
+    if (!isGuide(file)) return [];
+    const present = new Set(sectionTitles(text).map(([, title]) => title));
+    return GUIDE_SECTIONS.filter(([title]) => !present.has(title)).map(([title, holds]) => ({
+      file,
+      line: 0,
+      rule: "guide-sections",
+      message: `The guide has no "## ${title}" section: ${holds}.`,
+    }));
+  });
+}
+
+/** The cells of a row of a Markdown table. */
+function cellsOf(row: string): string[] {
+  return row
+    .trim()
+    .replace(/^\||\|$/g, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+/** The header that the table of a "Not included" section has: what is left out and why. */
+const NOT_INCLUDED_HEADER = ["Not included", "Why"];
+
+/** The "Not included" section of every document of `docs/<package>/` is one table, `| Not included | Why |`, so that a reader finds the answer in one form. */
+export function checkNotIncluded(files: Files): Violation[] {
+  const found: Violation[] = [];
+  for (const [file, text] of files) {
+    if (!/^docs\/[^/]+\/[^/]+\.md$/.test(file)) continue;
+    const lines = linesOf(text);
+    const start = sectionTitles(text).find(([, title]) => title === "Not included")?.[0];
+    if (start === undefined) continue;
+    const end = lines.findIndex((line, index) => index >= start && line.startsWith("## "));
+    const section = lines.slice(start, end === -1 ? undefined : end);
+    const header = section.findIndex((line) => line.startsWith("|"));
+    const cells = header === -1 ? [] : cellsOf(section[header] ?? "");
+    if (cells.length !== NOT_INCLUDED_HEADER.length || cells.some((cell, index) => cell !== NOT_INCLUDED_HEADER[index]))
+      found.push({
+        file,
+        line: start + 1 + Math.max(header, 0),
+        rule: "not-included",
+        message: `The "Not included" section is a table headed | ${NOT_INCLUDED_HEADER.join(" | ")} |.`,
+      });
+  }
+  return found;
+}
+
+/** The sections of the README of the repository and of each package. */
+const ROOT_README_SECTIONS = ["Which package", "Documentation", "Development", "Layout", "License"];
+const PACKAGE_README_SECTIONS = ["Quick start", "API", "Supported", "Documentation", "License"];
+
+/** The README of the repository and of each package have the sections of their skeleton, so that a reader finds the same answers in the same places. */
+export function checkReadmeSections(files: Files): Violation[] {
+  return [...files].flatMap(([file, text]) => {
+    const required =
+      file === "README.md"
+        ? ROOT_README_SECTIONS
+        : /^packages\/[^/]+\/README\.md$/.test(file)
+          ? PACKAGE_README_SECTIONS
+          : [];
+    const present = new Set(sectionTitles(text).map(([, title]) => title));
+    return required
+      .filter((title) => !present.has(title))
+      .map((title) => ({
+        file,
+        line: 0,
+        rule: "readme-sections",
+        message: `The README has no "## ${title}" section; its sections are ${required.join(", ")}.`,
+      }));
+  });
+}
+
 /** The brand's error is the base class; a package that has an error class of its own breaks the rule of one family of errors. */
 export function checkErrorNames(files: Files): Violation[] {
   const packages = new Set(
@@ -287,6 +399,9 @@ export const CHECKS: readonly ((files: Files) => Violation[])[] = [
   checkHistory,
   checkFileNames,
   checkDiagrams,
+  checkGuideSections,
+  checkNotIncluded,
+  checkReadmeSections,
   checkErrorNames,
   checkFamilies,
   checkEntries,

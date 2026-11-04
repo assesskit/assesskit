@@ -1,6 +1,8 @@
 // cspell:ignore Shell İSTANBUL i̇stanbul ΣΊΣΥΦΟΣ σίσυφος Kleene
+import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
   ASI_NAMESPACE,
   type AssessmentItem,
@@ -56,7 +58,6 @@ import { expressions } from "./arbitraries/processing.js";
 import { expressionKinds } from "./asi-elements.js";
 import { type RoundingFixture, readFixture } from "./fixtures.js";
 import { FUZZ } from "./fuzz.js";
-import { runGuideSamples } from "./guide-samples.js";
 
 const rounding = readFixture<RoundingFixture>("rounding.json");
 
@@ -2257,7 +2258,7 @@ describe("what the static checks of validate read", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/processing.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/processing.md", import.meta.url), "utf8");
     const modules = {
       "@assesskit/runtime": await import("../src/index.js"),
       "@assesskit/runtime/asi": await import("../src/asi/index.js"),

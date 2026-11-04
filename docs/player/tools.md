@@ -28,21 +28,9 @@ flowchart LR
 | Answer eliminator                                                                                            | `ext:eliminator`                         | yes      |
 | Dictionary, thesaurus, homophone checker, notes, visual organizer, outliner, peer interaction, spell checker | `*-on-screen` supports                   | host     |
 
-## In the player
+## Quick start
 
-`mountDelivery` ([delivery](delivery.md)) mounts the tools of the item presented and of the profile. The toolbar and the
-panels go above the content, in the chrome; what lies over the item goes into the stage of the content root
-(`ContentRoot.stage`, [content](content.md#the-stage)), which holds the item and stays when the item changes. With every view
-that has another item or other supports, and with every view whose content was drawn again, the shell gives `update` the
-`companionMaterials` of the item, the `supports` of the view and the names of the content, once the content is shown. A tool that stays in force stays open where the candidate put it when the next item
-comes, and the others close; with no item presented there are no tools. A button for a tool of the profile that is an
-option sends the `support` action, and the tool opens when the next view says it is on. The tools of the host come from
-`hooks.tools`. A host that draws its own chrome (`chrome: false`) gets no tools from the shell and mounts `mountTools` itself.
-
-The stage takes only the stylesheet of what lies over the item (the layer, the line reader, the marks and the masks); the toolbar and
-the panels have another, adopted into the chrome, so that their classes do not restyle the interactions of the item.
-
-## Mounting
+Mount the tools that the profile puts on the screen, press the button of one and see the request that the host gets:
 
 ```ts
 import { selectMessages } from "@assesskit/player";
@@ -84,6 +72,22 @@ toolbar.querySelector("button")?.click();
 requests; // => [["line-reader", true]]
 tools.destroy();
 ```
+
+## In the player
+
+`mountDelivery` ([delivery](delivery.md)) mounts the tools of the item presented and of the profile. The toolbar and the
+panels go above the content, in the chrome; what lies over the item goes into the stage of the content root
+(`ContentRoot.stage`, [content](content.md#the-stage)), which holds the item and stays when the item changes. With every view
+that has another item or other supports, and with every view whose content was drawn again, the shell gives `update` the
+`companionMaterials` of the item, the `supports` of the view and the names of the content, once the content is shown. A tool that stays in force stays open where the candidate put it when the next item
+comes, and the others close; with no item presented there are no tools. A button for a tool of the profile that is an
+option sends the `support` action, and the tool opens when the next view says it is on. The tools of the host come from
+`hooks.tools`. A host that draws its own chrome (`chrome: false`) gets no tools from the shell and mounts `mountTools` itself.
+
+The stage takes only the stylesheet of what lies over the item (the layer, the line reader, the marks and the masks); the toolbar and
+the panels have another, adopted into the chrome, so that their classes do not restyle the interactions of the item.
+
+## Mounting
 
 `mountTools(host, options)` puts a region named Tools into `host`: a toolbar with a button for each tool, the physical
 materials, and a tray with the panel of each open tool. The tools that lie over the item go into a layer that the mount
@@ -329,16 +333,18 @@ available. Host tools are not built in: the player does not test them.
 
 The stylesheet uses system colors, so that the tools follow the color scheme and the forced colors of the browser.
 
-## Reading of the specifications
+## Differences from the references
 
-- A rule is exactly `minimumLength` long, in the unit of the major increment.
-- The numbers of a rule and a protractor are in the unit of the major increment; the unit symbols are not translated.
-- A protractor measures 180 degrees.
-- `qti-calculator-info` is content for the candidate: the information model says that the calculator is available at the location it names, and that the file is information "to be made available to the learner". The player builds the basic, standard and scientific calculators in and takes the graphing one from the host, so it shows the file and gives it to the host's tool, and never runs it. It is not metadata, and it does not change the type of calculator.
-- QTI names no highlighter and no answer eliminator: they are custom supports, `ext:highlighter` and `ext:eliminator`, which `universalSupports` of the engine can give every candidate of a form as an option.
-- Only `qti-choice-interaction` is masked: the best practices guide requires masks for choice interactions only.
-- A digital material that is an LTI resource is a file here; the launch belongs to the host ([LTI items](lti-items.md)).
-- The display of a calculator uses a decimal point in every language.
+| Case                                                            | Resolution                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The length of a rule                                            | A rule is exactly `minimumLength` long, in the unit of the major increment                                                                                                                                                                                                                                                                                                                                                                        |
+| The unit of the numbers of a rule and a protractor              | The unit of the major increment; the unit symbols are not translated                                                                                                                                                                                                                                                                                                                                                                              |
+| The extent of a protractor                                      | 180 degrees                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `qti-calculator-info`                                           | Content for the candidate: the information model says that the calculator is available at the location it names, and that the file is information "to be made available to the learner". The player builds the basic, standard and scientific calculators in and takes the graphing one from the host, so it shows the file and gives it to the host's tool, and never runs it. It is not metadata, and it does not change the type of calculator |
+| A highlighter and an answer eliminator, which QTI does not name | Custom supports, `ext:highlighter` and `ext:eliminator`, which `universalSupports` of the engine can give every candidate of a form as an option                                                                                                                                                                                                                                                                                                  |
+| Masks                                                           | Only `qti-choice-interaction` is masked: the best practices guide requires masks for choice interactions only                                                                                                                                                                                                                                                                                                                                     |
+| A digital material that is an LTI resource                      | A file here; the launch belongs to the host ([LTI items](lti-items.md))                                                                                                                                                                                                                                                                                                                                                                           |
+| The decimal separator of the display of a calculator            | A decimal point in every language                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
 ## Errors
 

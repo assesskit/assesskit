@@ -1,8 +1,9 @@
+import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { createRandom, DataError, type Random, restoreRandom } from "../src/index.js";
 import { drawIndex, drawUniform, shuffle } from "../src/random.js";
-import { runGuideSamples } from "./guide-samples.js";
 
 const draws = (random: Random, count: number): number[] => Array.from({ length: count }, () => random.uniform());
 
@@ -202,7 +203,7 @@ describe("shuffle", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/architecture.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/architecture.md", import.meta.url), "utf8");
     const runtime = await import("../src/index.js");
     expect(await runGuideSamples(guide, { "@assesskit/runtime": runtime })).toBe(4);
   });

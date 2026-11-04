@@ -33,7 +33,7 @@ flowchart LR
 | `REPLACING_SUPPORTS`, `LANGUAGE_SUPPORTS`, `TOOL_SUPPORTS`, `OTHER_SUPPORTS`                                                                                                                                                                                                                              | The names of the supports by shape.                                                                               |
 | `PNP_ACCESS_MODES`, `PNP_HAZARDS`, `PNP_INPUT_REQUIREMENTS`, `PNP_READING_TYPES`, `PNP_RESTRICTION_TYPES`, `PNP_LINK_INDICATIONS`, `PNP_TYPING_ECHOES`, `PNP_BRAILLE_DELIVERY_MODES`, `PNP_BRAILLE_TYPES`, `PNP_BRAILLE_MATH_TYPES`, `PNP_GENERIC_FONT_FACES`, `PNP_CALCULATOR_TYPES`, `PNP_COLOR_THEMES` | The terms of the vocabularies; the type of the same meaning has no prefix, such as `HazardTerm` and `ColorTheme`. |
 
-## Example
+## Quick start
 
 ```ts
 import { readPnp, resolveSupports, writePnp } from "@assesskit/runtime/pnp";
@@ -178,6 +178,15 @@ Input that is not text, bytes or an element is a `DataError`, and text or bytes 
 | Extension terms with a hyphen                 | The schema's pattern for an extension term does not allow one; an extension of `color-theme`, which the schema lacks, takes one |
 | Writing `color-theme`                         | The schema has no such element, and the output of `writePnp` passes the schema                                                  |
 | Elements of other namespaces inside a support | The schema allows custom supports only as children of the profile                                                               |
+
+## Differences from the references
+
+| Case                                                                                                        | Resolution                                                                                                                                                                                                                                     |
+| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The namespaces in the samples of the specifications differ from those of the schemas                        | The schemas decide. `readPnp` also reads the two namespaces that 1EdTech's own documents use, `writePnp` writes the schema's, and `validate` reports the others as errors ([G12](spec-gaps.md))                                                |
+| The best practices guide lists `color-theme` under `text-appearance`; the PNP schema has no such element    | `readPnp` reads it into `colorTheme`, `writePnp` never writes it, and `validatePnp` warns ([G49](spec-gaps.md))                                                                                                                                |
+| The guide requests a preference with an empty element, such as `<font-size/>`; the schema gives it a number | The schema decides: an empty element of a type is a `ReadError`; `<text-appearance/>` asks for the changes in general ([G50](spec-gaps.md))                                                                                                    |
+| The time of a test under `fixed-minutes` and `unlimited`, with nested time limits                           | The engine applies it, not this module: a multiplier applies to every maximum, fixed minutes extend the outermost maximum, and `unlimited` removes the maximums ([G41](spec-gaps.md), [delivery](delivery.md#differences-from-the-references)) |
 
 ## Files
 

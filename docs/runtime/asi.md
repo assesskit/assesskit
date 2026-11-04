@@ -46,7 +46,7 @@ flowchart LR
 | `SCORING_RUBRIC_CLASS`, `ScoringRubricBlock`, `RubricContent`, `RubricNotes`, `RubricBlockOptions`  | The class token that marks a rubric block; the block that fits an item body and a test; the content that both accept; the notes and the options of the two builders. |
 | `walkDocument(document, visit)`, `ElementVisit`                                                     | Visits each element of a document with its name, model, attribute definitions and parent.                                                                            |
 
-## Example
+## Quick start
 
 ```ts
 import { readAsi, writeAsi } from "@assesskit/runtime/asi";
@@ -388,6 +388,15 @@ required `use` of a rubric block, and one has an attribute `qti-interaction-modu
 | MathML and SSML as typed models                       | The model keeps them as XML, where the schema lets them occur                                  |
 | Resolving `xi:include`                                | `resolveIncludes` of [xml](xml.md) does it before the document is read                         |
 | Comments and processing instructions                  | The model carries none, so a written document has none of the source                           |
+
+## Differences from the references
+
+| Case                                                                                                                          | Resolution                                                                                                                                |
+| ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| The 3.0.1 schema gives `normal-minimum` the default 0.0                                                                       | An absent `normal-minimum` stays absent: the information model is normative, and a schema default is binding detail ([G11](spec-gaps.md)) |
+| The schema types the target value of a match table entry as a base type name                                                  | The runtime follows the schema; a numeric table is an interpolation table ([G53](spec-gaps.md))                                           |
+| The namespaces in the samples of the specifications differ from those of the schemas                                          | The schemas decide, and the namespace of an assessment document is strict ([G12](spec-gaps.md))                                           |
+| Two 1EdTech examples that the schema rejects: a rubric block without `use`, an attribute that `qti-interaction-modules` lacks | Not read, as the schema refuses them                                                                                                      |
 
 ## Files
 

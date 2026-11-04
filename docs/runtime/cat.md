@@ -42,6 +42,28 @@ sequenceDiagram
 | `SectionFiles`, `CatPoolItem`, `CatMetadataFile`, `BuildCatMetadataOptions`                      | The arguments of `buildSectionData` and `buildCatMetadata`                           |
 | `CatMetadata`, `CatItemMetadata`, `CatExternalMetadata`                                          | The metadata JSON                                                                    |
 
+## Quick start
+
+Build the data of a section from the files that its selection names, and compare the section with the engine's pool:
+
+```ts
+import { readAsi } from "@assesskit/runtime/asi";
+import { validatePool, buildSectionData } from "@assesskit/runtime/cat";
+
+const { section } = readAsi(`<qti-assessment-section xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+    identifier="sec" title="Adaptive" visible="true">
+  <qti-adaptive-selection>
+    <qti-adaptive-engine-ref identifier="engine" href="http://example.org/engine"/>
+    <qti-adaptive-settings-ref identifier="settings" href="settings.data"/>
+  </qti-adaptive-selection>
+  <qti-assessment-item-ref identifier="item434" href="item434.xml"/>
+  <qti-assessment-item-ref identifier="item065" href="item065.xml"/>
+</qti-assessment-section>`);
+buildSectionData(section.adaptiveSelection, { settings: new TextEncoder().encode("{}") }); // => { sectionConfiguration: "e30=" }
+validatePool(section, { itemIdentifiers: ["item434", "item999"] }).map(({ rule }) => rule);
+// => ["assesskit/cat/item-not-in-pool", "assesskit/cat/item-not-in-section"]
+```
+
 ## The port
 
 `CatPort` has one method for each endpoint of CAT. Every method takes `prefix` first: the URL prefix that `qti-adaptive-engine-ref`
@@ -86,24 +108,6 @@ metadata file above ([spec-gaps](spec-gaps.md)). A `PriorDataEntry` has an optio
 The files are bytes, which the host reads from the package or from wherever each `href` points. The usage data is the XML of
 [usage](usage.md) (`writeUsageData`), whose statistics the engine may use as its item parameters. The metadata is the JSON of
 `buildCatMetadata`. A file that the selection does not reference, or a referenced file that is missing, is a `DataError`.
-
-```ts
-import { readAsi } from "@assesskit/runtime/asi";
-import { validatePool, buildSectionData } from "@assesskit/runtime/cat";
-
-const { section } = readAsi(`<qti-assessment-section xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
-    identifier="sec" title="Adaptive" visible="true">
-  <qti-adaptive-selection>
-    <qti-adaptive-engine-ref identifier="engine" href="http://example.org/engine"/>
-    <qti-adaptive-settings-ref identifier="settings" href="settings.data"/>
-  </qti-adaptive-selection>
-  <qti-assessment-item-ref identifier="item434" href="item434.xml"/>
-  <qti-assessment-item-ref identifier="item065" href="item065.xml"/>
-</qti-assessment-section>`);
-buildSectionData(section.adaptiveSelection, { settings: new TextEncoder().encode("{}") }); // => { sectionConfiguration: "e30=" }
-validatePool(section, { itemIdentifiers: ["item434", "item999"] }).map(({ rule }) => rule);
-// => ["assesskit/cat/item-not-in-pool", "assesskit/cat/item-not-in-section"]
-```
 
 ## Item stages
 
@@ -246,12 +250,20 @@ JSON.stringify(metadata);
 
 ## Not included
 
-| Not included                                                                                              | Owner                                            |
-| --------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| The delivery of a session: when each request is made, the merge of the engine's outcomes into the results | `delivery`                                       |
-| The HTTP client of the REST binding, access tokens, OAuth, HTTPS                                          | The adapter in the player                        |
-| `adaptiveItemSelection` inside the `selection` of QTI 2.x                                                 | QTI 2.x content, which the runtime does not read |
-| The algorithm that selects items                                                                          | The CAT engine                                   |
+| Not included                                                                                              | Why                                                                     |
+| --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| The delivery of a session: when each request is made, the merge of the engine's outcomes into the results | [delivery](delivery.md) owns it, because it owns the session            |
+| The HTTP client of the REST binding, access tokens, OAuth, HTTPS                                          | The adapter in the player owns it; the runtime makes no network request |
+| `adaptiveItemSelection` inside the `selection` of QTI 2.x                                                 | QTI 2.x content, which the runtime does not read                        |
+| The algorithm that selects items                                                                          | The CAT engine implements it, behind `CatPort`                          |
+
+## Differences from the references
+
+| Case                                                                                                   | Resolution                                                                                                             |
+| ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| The OpenAPI file that defines the field names of the assessment result is named by addresses that fail | The listing in the appendix of the binding is the source ([G21](spec-gaps.md))                                         |
+| `qtiMetadata` of a section is a file in the implementation guide and one record in the REST binding    | Both are in the model: `SectionData.qtiMetadata` is the file, and `qtiMetadataRecord` the record ([G44](spec-gaps.md)) |
+| The code minor of a busy engine is `server_busy` in the binding and `serverbusy` in the service        | The wire follows the enumeration of the JSON schema, `server_busy` ([G45](spec-gaps.md))                               |
 
 ## Files
 

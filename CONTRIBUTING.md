@@ -79,7 +79,7 @@ A change to semantics cites the specification section in the pull request and ad
   when none is pending ([AGENTS.md](AGENTS.md#releases)).
 - A change to behavior also changes the TSDoc of what it touches and the guide of the module in `docs/`. A change to what is
   supported also changes `supported.md` of the package.
-- The Example of `packages/runtime/README.md` is the file `packages/runtime/test/readme-example.ts`; change the README and the
+- The Quick start of `packages/runtime/README.md` is the file `packages/runtime/test/readme-example.ts`; change the README and the
   file together, and `pnpm test` fails until they agree.
 - The pre-commit hook formats staged code, JSON, Markdown and YAML with Biome; the pre-push hook runs the type check, the tests
   and Knip.

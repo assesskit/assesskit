@@ -39,6 +39,10 @@ The rating form is the player's ([rating](rating.md)): it shows the `scoringRubr
 their score. The rating workflow, such as assignment and double scoring, is the host's. A submission holds the correct
 responses of the items, so the host gives it only to authorized raters.
 
+## Quick start
+
+Build the submission that a rater sees, and the action that supplies the score to the engine:
+
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
 import { createEngine } from "@assesskit/runtime/delivery";
@@ -262,3 +266,7 @@ Raters have their own tools. The display adds no controls: the [rating form](rat
 | -------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | A rating form, assignment and double scoring | They are the workflow of the host, which differs for each                                   |
 | A machine scorer                             | A scoring service reads the submission and answers with a score through `buildSupplyScores` |
+
+## Differences from the references
+
+None. QTI defines no submission for a rater: the submission and the action that supplies the score follow the covers and the scoring rubrics of the runtime ([conventions](../runtime/conventions.md)), and a value is the JSON of Appendix C of the best practices guide.

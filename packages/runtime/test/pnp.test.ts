@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
   DataError,
   deriveExtensionName,
@@ -22,7 +24,6 @@ import {
 import { asProfile, personalNeedsProfile, pnpRecords } from "./arbitraries/pnp.js";
 import { withoutPositions } from "./arbitraries/xml.js";
 import { fuzzReader } from "./fuzz.js";
-import { runGuideSamples } from "./guide-samples.js";
 import { issueOf } from "./read-failure.js";
 
 const SCHEMA_LOCATION = `${PNP_NAMESPACE} https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqtiv3p0_afa3p0pnp_v1p0.xsd`;
@@ -1027,7 +1028,7 @@ describe("errors", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/pnp.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/pnp.md", import.meta.url), "utf8");
     const pnp = await import("../src/pnp/index.js");
     expect(await runGuideSamples(guide, { "@assesskit/runtime/pnp": pnp })).toBeGreaterThan(0);
   });

@@ -34,7 +34,7 @@ flowchart LR
 | `DEFAULT_ZIP_LIMITS`, `ZipLimits`                   | The limits on archives and directories.                                          |
 | `RESOURCE_TYPES`, `MANIFEST_SCHEMAS`                | The vocabularies of the manifest.                                                |
 
-## Example
+## Quick start
 
 ```ts
 import {
@@ -284,6 +284,15 @@ platform that launches it.
 | ZIP64 when writing                                       | `writePackage` writes the classic format, which holds 65,534 files and 4 GiB; the reader accepts larger packages up to its limits     |
 | Choosing a variant                                       | The resolvers return the variants; the delivery engine chooses                                                                        |
 | Launching an LTI tool                                    | Launching belongs to the host, through the player's `LtiLogin`; `readLtiLink` reads the document and `resolveLaunchUrl` names the URL |
+
+## Differences from the references
+
+| Case                                                                                                             | Resolution                                                                                                                    |
+| ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| The namespace of IMS Content Packaging 1.1 in the samples of the specifications and two 1EdTech example archives | The schemas decide: the manifest is in the namespace of the QTI profile, and any other is a `ReadError` ([G12](spec-gaps.md)) |
+| The root of an LTI link in a relative namespace, `/xsd/imslticc_v1p0`, which the 1EdTech examples declare        | Accepted, besides `http://www.imsglobal.org/xsd/imslticc_v1p0`                                                                |
+| `organizations` and `schemaversion` of the manifest                                                              | Not kept: the QTI profile prohibits organizations, and `schemaversion` is always `3.0.0`                                      |
+| A link that names only a vendor                                                                                  | `resolveLaunchUrl` throws: a platform could only look the tool up, which no QTI rule describes                                |
 
 ## Files
 

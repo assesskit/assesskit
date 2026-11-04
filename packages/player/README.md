@@ -31,6 +31,14 @@ flowchart LR
   client -.->|"delivery/wire: readView, writeCandidateAction"| runtime
 ```
 
+```bash
+npm install @assesskit/player
+```
+
+The player depends on [`@assesskit/runtime`](../runtime/README.md), which npm installs with it, and on two other packages, pinned to
+exact versions: `jose` signs the tokens of the asset gate, and `valibot` reads untrusted JSON
+([SECURITY](../../SECURITY.md#runtime-dependencies)).
+
 ## Quick start
 
 ```ts
@@ -47,13 +55,6 @@ envelope.seq; // => 3
 
 [Client](https://github.com/assesskit/assesskit/blob/main/docs/player/client.md) and
 [Server](https://github.com/assesskit/assesskit/blob/main/docs/player/server.md) have the samples that mount a session.
-
-## What is supported
-
-The player is not certified by 1EdTech. [Supported](https://github.com/assesskit/assesskit/blob/main/docs/player/supported.md)
-says what it draws and operates, how WCAG 2.2 levels A and AA are checked, and what it does not support. The browser code runs
-in Chromium 111, Firefox 115 and Safari 16.4, and later versions; [Baseline](https://github.com/assesskit/assesskit/blob/main/docs/player/baseline.md)
-lists what that allows and how it is tested.
 
 ## API
 
@@ -79,6 +80,13 @@ lists what that allows and how it is tested.
 | `@assesskit/player/player.css`          | The stylesheet of a content root: themes, the QTI 3 shared vocabulary and the PNP presentation                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `@assesskit/player/pci-frame/*`         | The static files of the frame: `frame.html`, `require.js` and `bridge.js`                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `@assesskit/player/recorder-worklet.js` | The program of the audio worklet of a WAV recording                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+
+## Supported
+
+The player is not certified by 1EdTech. [Supported](https://github.com/assesskit/assesskit/blob/main/docs/player/supported.md)
+says what it draws and operates, how WCAG 2.2 levels A and AA are checked, and what it does not support. The browser code runs
+in Chromium 111, Firefox 115 and Safari 16.4, and later versions; [Baseline](https://github.com/assesskit/assesskit/blob/main/docs/player/baseline.md)
+lists what that allows and how it is tested.
 
 ## Documentation
 
@@ -108,3 +116,7 @@ lists what that allows and how it is tested.
 | [Supported](https://github.com/assesskit/assesskit/blob/main/docs/player/supported.md)              | What the player supports and what it does not, the browsers and WCAG 2.2                                   |
 | [Evidence](https://github.com/assesskit/assesskit/blob/main/docs/player/evidence.md)                | How the player is tested                                                                                   |
 | [Conformance](https://github.com/assesskit/assesskit/blob/main/docs/runtime/conformance.md)         | Every feature ID of the 1EdTech conformance document, with its guide and its test                          |
+
+## License
+
+[Apache-2.0](LICENSE). Copyright Fariz Wakan.

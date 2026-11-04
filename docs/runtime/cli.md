@@ -24,6 +24,10 @@ flowchart LR
 | `assesskit schemas fetch [--dir <dir>]`                             | Downloads the schemas of `SCHEMA_FILES` and checks their SHA-256. |
 | `assesskit --help`                                                  | Prints the commands to the standard output, and exits with 0.     |
 
+## Quick start
+
+Install the runtime, download the schemas once, and validate a document or a package:
+
 ```bash
 npm install @assesskit/runtime
 npx assesskit schemas fetch
@@ -206,6 +210,18 @@ errors[0]?.startsWith("assesskit: The command validate takes one path."); // => 
 
 It throws a `DataError` when an argument or an option has the wrong type. Every other failure is an exit code.
 
+## Errors
+
+| Situation                                                                         | Result                                                             | What to do                                                                                                        |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `validate` finds an issue with the severity `error`                               | Exit code 1 and the report                                         | Fix the document where the issue says: its `location` has the path, line, column and element path                 |
+| The command line is wrong: a missing path, an unknown command or option           | Exit code 2; the message and the commands go to the standard error | Run `assesskit --help`                                                                                            |
+| The path cannot be read                                                           | Exit code 2                                                        | Check the path and the permissions                                                                                |
+| The schemas are missing, or a file is not the pinned one                          | Exit code 2; the message names the command that downloads them     | Run `assesskit schemas fetch`, or pass the directory that holds them                                              |
+| A package breaks a rule of the security model, or an XML file is above `maxBytes` | Exit code 2, before any content is checked                         | Do not validate it with the command; a file that you trust is read with the library, whose `limits` you can raise |
+| A download of `schemas fetch` fails after its three tries                         | The other files are written, the failures are listed, exit code 2  | Run the command again: it downloads the rest                                                                      |
+| `runCli` is given an argument or an option of the wrong type                      | `DataError` that says what is wrong and what is expected           | Pass strings for the arguments and the functions and directory that the options table names                       |
+
 ## Not included
 
 | Not included                        | Why                                                                                          |
@@ -214,6 +230,10 @@ It throws a `DataError` when an argument or an option has the wrong type. Every 
 | Fixing the issues it reports        | The command reports; the author or the generating program fixes                              |
 | Validating several paths in one run | A shell loop does it, and each report names its path                                         |
 | Colors and progress output          | The text format is one line for each issue, which other programs read                        |
+
+## Differences from the references
+
+None. No specification defines this command line. What it checks is defined elsewhere: the schema check by the official schemas ([node](node.md#choosing-the-schema)) and the semantic checks by [validate](validate.md), each of which lists its differences from the references.
 
 ## Files
 

@@ -30,6 +30,10 @@ flowchart TD
 | `AssetGate`, `AssetGateOptions`, `GateResponse`     | The gate, its options and its answer.                                           |
 | `DEFAULT_TTL_SECONDS`, `DEFAULT_UPLOAD_TTL_SECONDS` | The default lifetimes of a token for a prefix and for a file: `3600` and `300`. |
 
+## Quick start
+
+Sign the prefix of an item for a session, serve one of its files through the gate, and see the gate refuse a document and an expired token:
+
 ```ts
 import { openPackage } from "@assesskit/runtime/package";
 import { createAssetGate } from "@assesskit/player/server";
@@ -209,3 +213,6 @@ The gate throws `DataError` for a call that is wrong and answers a request with 
 | A file store                                   | `FileStore` is the port: the host chooses S3-compatible storage or a disk                                 |
 | Serving the static files of the player         | `pci-frame/*` and `player.css` come from the same origin, outside the gate                                |
 | A clock                                        | The caller passes `now` to `sign`, `signFile` and `serve`                                                 |
+## Differences from the references
+
+None. No specification defines the gate: a token for a prefix, the files it serves and the headers follow from the security model ([SECURITY.md](../../SECURITY.md)), and [Evidence](evidence.md) lists the tests that hold them.

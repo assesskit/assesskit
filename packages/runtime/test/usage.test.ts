@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
   DataError,
   DISTRACTOR_STATISTICS,
@@ -13,7 +15,6 @@ import {
 } from "../src/index.js";
 import { usageData } from "./arbitraries/usage.js";
 import { fuzzReader } from "./fuzz.js";
-import { runGuideSamples } from "./guide-samples.js";
 import { issueOf } from "./read-failure.js";
 
 const SCHEMA_LOCATION = `${USAGE_NAMESPACE} https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_usagedatav3p0_v1p0.xsd`;
@@ -403,7 +404,7 @@ describe("errors", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/usage.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/usage.md", import.meta.url), "utf8");
     const usage = await import("../src/usage/index.js");
     expect(await runGuideSamples(guide, { "@assesskit/runtime/usage": usage })).toBeGreaterThan(0);
   });

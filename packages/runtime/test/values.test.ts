@@ -1,7 +1,10 @@
 // cspell:ignore directedpair xabc Marksfor ffffd fffd ffffe Isbasic letrec Approximative
+
 import { Buffer } from "node:buffer";
+import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { DataError } from "../src/index.js";
 import {
   BASE_TYPES,
@@ -43,7 +46,6 @@ import {
 } from "../src/values/index.js";
 import { mutateText, mutationsOf } from "./arbitraries/xml.js";
 import { FUZZ, fuzzJson } from "./fuzz.js";
-import { runGuideSamples } from "./guide-samples.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {
@@ -1835,7 +1837,7 @@ describe("regular expressions", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/values.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/values.md", import.meta.url), "utf8");
     const values = await import("../src/values/index.js");
     expect(await runGuideSamples(guide, { "@assesskit/runtime/values": values })).toBeGreaterThan(0);
   });

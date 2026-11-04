@@ -5,6 +5,7 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import fc from "fast-check";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { runCli } from "../src/cli/index.js";
 import {
   buildReport,
@@ -26,7 +27,6 @@ import {
 import { DataError, type Issue } from "../src/index.js";
 import { SCHEMA_FILES, type SchemaFile } from "../src/node/index.js";
 import { FUZZ } from "./fuzz.js";
-import { runGuideSamples } from "./guide-samples.js";
 
 /** The SHA-256 of "abc" is the vector of FIPS 180-4 B.1; the others come from `shasum -a 256`. */
 const ABC = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
@@ -550,7 +550,7 @@ describe("the default schema directory", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/cli.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/cli.md", import.meta.url), "utf8");
     const cli = await import("../src/cli/index.js");
     expect(await runGuideSamples(guide, { "@assesskit/runtime/cli": cli })).toBeGreaterThan(0);
   });

@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
   type AssessmentResult,
   buildContainer,
@@ -15,7 +17,6 @@ import {
 import { assessmentResult } from "./arbitraries/results.js";
 import { withoutPositions } from "./arbitraries/xml.js";
 import { fuzzReader } from "./fuzz.js";
-import { runGuideSamples } from "./guide-samples.js";
 import { issueOf } from "./read-failure.js";
 
 const SCHEMA_LOCATION = `${RESULTS_NAMESPACE} https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_resultv3p0_v1p0.xsd`;
@@ -927,7 +928,7 @@ describe("errors", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/results.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/results.md", import.meta.url), "utf8");
     const results = await import("../src/results/index.js");
     expect(await runGuideSamples(guide, { "@assesskit/runtime/results": results })).toBeGreaterThan(0);
   });

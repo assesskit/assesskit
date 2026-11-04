@@ -39,7 +39,7 @@ flowchart LR
 | `BUILT_IN_RESPONSES`, `BUILT_IN_OUTCOMES`, `BUILT_IN_CONTEXTS` | The built-in variables with their types; `NUM_ATTEMPTS`, `DURATION`, `COMPLETION_STATUS`, `COMPLETION_STATUSES` and `QTI_CONTEXT` name them. |
 | `DEFAULT_RANDOM_MIN`, `DEFAULT_RANDOM_STEP`                    | 0 and 1: the `min` and `step` of the random expressions when absent.                                                                         |
 
-## Example
+## Quick start
 
 ```ts
 import { createRandom } from "@assesskit/runtime";
@@ -215,7 +215,7 @@ Correct and incorrect counts leave out items without response variables and item
 
 Where the specifications are silent or contradict themselves, [spec gaps](spec-gaps.md) gives the reasons.
 
-| Case                                                                                   | Runtime                                                            |
+| Case                                                                                   | Resolution                                                         |
 | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | `qti-round`, `qti-truncate`, `floor` and `ceil` of ±INF                                | NULL                                                               |
 | Assigning an integer to a float or duration variable                                   | The integer is promoted; any other mismatch is a `ProcessingError` |

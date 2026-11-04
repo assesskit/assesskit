@@ -36,6 +36,10 @@ flowchart LR
 The types are `InteractionKind` (the 22 kinds of interaction, such as `"choice-interaction"`), `Binding`, `ChoiceDescriptor`,
 `InteractionConstraints`, `InteractionDescriptor`, `ResponseCheck`, `ResponseStatus` and `ResponseViolation`.
 
+## Quick start
+
+Describe the interactions of an item, draw the order of the choices, and judge responses:
+
 ```ts
 import { createRandom } from "@assesskit/runtime";
 import { readAsi } from "@assesskit/runtime/asi";
@@ -253,6 +257,14 @@ readNumericRecord(""); // => null
 | Rendering an interaction, and the content of its choices | The player draws; the content stays in the body of the item |
 | The status `notpresented`                                | Only the engine knows that an item was never shown          |
 | Evaluating a response against the correct response       | Response processing does, in `processing`                   |
+
+## Differences from the references
+
+| Case                                                                                                             | Resolution                                                                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shuffling when a template variable hides choices                                                                 | All choices are shuffled, then the hidden ones are dropped; the positions of fixed choices hold ([G19](spec-gaps.md))                           |
+| A text entry binds a response of cardinality single or record, and rule 1Bb of the XML binding names a base type | The information model decides: a record is allowed, and the base-type rule applies to the other cardinalities ([G46](spec-gaps.md))             |
+| The integer value of a number typed with a point and no digits after it, such as `5.`                            | The information model gives it, and `readNumericRecord` follows it; Longsight `qti3-core` does not ([evidence](evidence.md#differential-tests)) |
 
 ## Files
 

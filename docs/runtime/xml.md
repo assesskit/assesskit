@@ -35,7 +35,7 @@ flowchart LR
 | `XML_NAMESPACE`, `XMLNS_NAMESPACE`, `XSI_NAMESPACE`, `XINCLUDE_NAMESPACE`                      | Namespace URIs the reader and writer treat specially.                      |
 | `XmlElement`, `XmlAttribute`, `XmlNode`, `XmlCharacterData`, `XmlInstruction`                  | The tree.                                                                  |
 
-## Example
+## Quick start
 
 ```ts
 import { parseXml, resolveIncludes, serializeXml } from "@assesskit/runtime/xml";
@@ -268,6 +268,15 @@ argument and what was found.
 | Canonical XML, pretty printing                         | `serializeXml` adds no white space and keeps the tree as it is                      |
 | Schema validation                                      | [node](node.md) validates files against the official XSDs                           |
 | Streaming                                              | A tree is the form every reader needs, and the limits bound its size                |
+
+## Differences from the references
+
+| Case                                                                                    | Resolution                                                                                                                                          |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| XML 1.0 allows a DOCTYPE, and the entities that it declares                             | Any DOCTYPE is a `SecurityError`, so that no entity is declared, expanded or read; only the five predefined entities and character references exist |
+| A lone surrogate in a string, and a qualified name such as `p:1`                        | A `ReadError`: the parser lets them through, and a tree could not keep or write them                                                                |
+| A namespace declaration with white space at its start or end                            | A `ReadError`: the parser strips it from the namespace of the elements and keeps it in the declaration                                              |
+| XInclude with `parse="text"`, an `xpointer`, and the fixup of `xml:base` and `xml:lang` | Refused or not done, as QTI forbids them or XInclude makes them optional                                                                            |
 
 ## Files
 

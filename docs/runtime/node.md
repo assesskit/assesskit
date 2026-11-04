@@ -31,7 +31,7 @@ flowchart LR
 | `readPackageFile(path, options?)`            | Reads a package from a ZIP file or an unpacked directory.                                                                               |
 | `writePackageFile(path, manifest, files)`    | Writes a package as a ZIP file.                                                                                                         |
 
-## Example
+## Quick start
 
 ```ts
 import { readFile } from "node:fs/promises";
@@ -175,6 +175,20 @@ is process-wide. Both are covered by the tests, which compile each primary schem
 | `packaging/simple/imsmanifest.xml`                                                                                                      | valid under the content package schema                              |
 | An item with `xi:include` and `xi:fallback`                                                                                             | valid; an include with `parse="binary"` is rejected                 |
 
+## Errors
+
+| Situation                                                                              | Result                                                        | What to do                                                                         |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `loadSchemaSet` meets a file that is missing, unreadable or has another hash           | `DataError` that lists every such file                        | Download the schemas again with `assesskit schemas fetch`                          |
+| A schema file changes after the set is loaded and before it is compiled                | `DataError`: a compilation checks each file again             | Restore the file, or load the set again                                            |
+| libxml2-wasm has no room for another input provider                                    | `AssesskitError`                                              | Remove the providers that your program registered                                  |
+| An argument of the wrong type, a set that `loadSchemaSet` did not return, a closed set | `DataError` that says what is wrong and what is expected      | Pass the set that `loadSchemaSet` returned, and call `close()` only when done      |
+| A document is not well-formed, has a DOCTYPE or is over a limit of `parseXml`          | An `Issue` in the result of `validateXmlFiles`, never a throw | Fix the document where the issue says, or raise the limit for a document you trust |
+| `readPackageFile` cannot read the path                                                 | `DataError` that names the path and the reason                | Check the path and the permissions                                                 |
+| A package or a directory breaks a rule of the security model                           | `SecurityError`, `limit` names the limit or the rule          | Do not read it; for a package you trust, raise the option `limits`                 |
+| The archive or the manifest cannot be read as a package                                | `ReadError` as `readPackage` gives it                         | See the [errors of package](package.md#errors)                                     |
+| `writePackageFile` cannot write the file                                               | `DataError` that names the path and the reason                | Check the path and the permissions                                                 |
+
 ## Not included
 
 | Not included                                                 | Why                                                                                                                  |
@@ -184,6 +198,10 @@ is process-wide. Both are covered by the tests, which compile each primary schem
 | Protection against a directory that changes while it is read | A race between the check and the read needs the host to keep the directory private                                   |
 | Validation in a browser                                      | The compiled libxml2 and the schema files are Node.js concerns; the runtime core validates the model with `validate` |
 | Business rules                                               | XSD checks structure; [validate](validate.md) checks what the schemas cannot express                                 |
+
+## Differences from the references
+
+None. The schemas of 1EdTech and W3C are the reference, and libxml2 applies them: the module changes no verdict of a schema, except that a document goes through `parseXml` first, so that a DOCTYPE or a document over a limit is refused whatever the schema says ([xml](xml.md#security)). What the schemas cannot express is the work of [validate](validate.md), which lists its own differences.
 
 ## Files
 

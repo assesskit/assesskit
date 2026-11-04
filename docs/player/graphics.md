@@ -20,6 +20,70 @@ flowchart LR
   pick --> response["Response in the units of the image,<br/>sent as ak-response"]
 ```
 
+## Quick start
+
+Draw a hotspot interaction in a content root, choose the hotspot of Glasgow and read the response that the element reports:
+
+```ts
+import { readAsi } from "@assesskit/runtime/asi";
+import { describeInteractions } from "@assesskit/runtime/interactions";
+import { selectMessages } from "@assesskit/player";
+import { createContentRoot, createInteractionRenderers, InteractionElement } from "@assesskit/player/player";
+import css from "@assesskit/player/player.css?inline"; // any bundler that imports a file as text
+
+const parsed = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+    identifier="map" title="Map" adaptive="false" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"/>
+  <qti-item-body>
+    <qti-hotspot-interaction response-identifier="RESPONSE" max-choices="1">
+      <qti-prompt>Which one is Glasgow?</qti-prompt>
+      <object type="image/png" width="200" height="100" data="images/map.png">A map of Britain</object>
+      <qti-hotspot-choice shape="circle" coords="40,50,20" identifier="A" hotspot-label="London"/>
+      <qti-hotspot-choice shape="rect" coords="100,20,160,80" identifier="B" hotspot-label="Glasgow"/>
+    </qti-hotspot-interaction>
+  </qti-item-body>
+</qti-assessment-item>`);
+if (parsed.kind !== "item" || parsed.item.body === undefined) throw new Error("The document is not an item.");
+
+const messages = selectMessages("en");
+const player = new CSSStyleSheet();
+player.replaceSync(css);
+const host = document.createElement("div");
+document.body.append(host);
+const root = createContentRoot(host, {
+  messages,
+  assets: (path) => `https://assets.example/g/token/${path}`,
+  fetch: (url, request) => fetch(url, request),
+  stylesheet: player,
+  interactions: createInteractionRenderers({
+    messages,
+    files: {
+      upload: async () => {
+        throw new Error("This item has no drawing.");
+      },
+      url: () => "",
+    },
+    staticUrl: "https://assets.example/static/",
+    record: false,
+  }),
+});
+await root.show({ body: { nodes: parsed.item.body.children, base: "items/map/item.xml" } });
+
+// The host gives each element the descriptor of its interaction, as it does for each view.
+const descriptors = new Map(describeInteractions(parsed.item).map((d) => [d.responseIdentifier, d]));
+for (const element of root.root.querySelectorAll("*")) {
+  const descriptor = element instanceof InteractionElement ? descriptors.get(element.responseIdentifier) : undefined;
+  if (element instanceof InteractionElement && descriptor !== undefined) element.descriptor = descriptor;
+}
+
+const responses = [];
+root.root.addEventListener("ak-response", (event) => responses.push(event.detail));
+root.root.querySelectorAll('input[type="radio"]')[1].click();
+responses.length; // => 1
+responses[0].responseIdentifier; // => "RESPONSE"
+responses[0].value.value; // => "B"
+```
+
 ## The interactions
 
 | Kind              | Response                       | Pointer                                                                                                                                                 | Keyboard                                                                                                           |
@@ -32,7 +96,7 @@ flowchart LR
 | Position object   | Point, single or multiple      | Drag the object from the tray onto the image with a mouse or a pen, or choose it and click or tap the image. Choosing a placed object takes it away.    | Choose the object, which moves the focus to the image; arrow keys and Enter place it. Escape gives it up.          |
 | Drawing           | File                           | The pen and the eraser follow the pointer. A line, a rectangle and an ellipse take two clicks, a fill one.                                              | Choose a tool that takes points, then use the crosshair as in select point. The pen and the eraser need a pointer. |
 
-A hotspot with a maximum of one choice is the one exception to [the radio button that cannot be cleared](interactions.md#where-the-sources-differ):
+A hotspot with a maximum of one choice is the one exception to [the radio button that cannot be cleared](interactions.md#differences-from-the-references):
 the candidate returns to no answer by choosing the hotspot again.
 
 ### Limits
@@ -136,9 +200,9 @@ The graphic interactions follow the errors of [interactions](interactions.md#err
 | Editing of an image                                    | The drawing keeps what the candidate drew over the picture; it is no editor                                                        |
 | A coordinate unit that the specification does not give | Points are in the pixels of the size the author declared, the one reading the sources allow (see below)                            |
 
-## Where the sources differ
+## Differences from the references
 
-| Case                                                                                                      | Reading                                                                                                                                     |
+| Case                                                                                                      | Resolution                                                                                                                                  |
 | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | The information model gives no unit for the points of a response and none for the size of a stage         | Points are in the pixels of the size the author declared; the natural size of the file where none is declared.                              |
 | The graphic gap match wants a placed choice wholly inside its gap; WCAG 2.5.8 wants a target of 24 pixels | A placed text shrinks to fit the gap, but the button around it keeps its 24 pixels, so that a small gap can be overrun.                     |

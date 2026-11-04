@@ -3,12 +3,12 @@ import { join, resolve } from "node:path";
 import { XsdValidator } from "libxml2-wasm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { requireSchemas } from "../../../scripts/schemas.js";
 import { DataError } from "../src/index.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles, type XmlFile } from "../src/node/index.js";
 import { PRIMARY_SCHEMAS } from "../src/node/internal.js";
 import { parseXml } from "../src/xml/index.js";
-import { runGuideSamples } from "./guide-samples.js";
 import { SCHEMA_LIMITS } from "./schema-declarations.js";
 
 const root = resolve(import.meta.dirname, "../../..");
@@ -267,7 +267,7 @@ describe("validating documents", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/node.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/node.md", import.meta.url), "utf8");
     const node = await import("../src/node/index.js");
     // The sample reads ./schemas and items/capital.xml; the test serves the schema directory and an item without time-dependent.
     const modules = {

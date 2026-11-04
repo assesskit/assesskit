@@ -19,6 +19,7 @@ import { buildSingle } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import protocolGuide from "../../../docs/player/protocol.md?raw";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import readme from "../README.md?raw";
 import { createLocalSession } from "../src/client/local/index.js";
 import { ServiceError } from "../src/index.js";
@@ -50,7 +51,6 @@ import {
 import { CANDIDATE_ACTION_TYPES } from "../src/server/index.js";
 import { examDefinition, examFiles, examHost, packageOf, ratedFiles } from "./exam-fixture.js";
 import { fuzzJson } from "./fuzz.js";
-import { runGuideSamples } from "./guide-samples.js";
 import { localOptions } from "./local-fixture.js";
 
 /** Parses JSON text, so that a test passes input as JavaScript or JSON delivers it. */

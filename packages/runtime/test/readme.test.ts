@@ -16,7 +16,7 @@ describe("README", () => {
     vi.restoreAllMocks();
   });
 
-  it("the Example is the code of readme-example.ts and prints the output shown", async () => {
+  it("the Quick start is the code of readme-example.ts and prints the output shown", async () => {
     const lines: string[] = [];
     vi.spyOn(console, "log").mockImplementation((...values: unknown[]) => {
       lines.push(values.map(String).join(" "));
@@ -27,7 +27,7 @@ describe("README", () => {
       /from "\.\.\/src\/([a-z]+)\/index\.js"/g,
       'from "@assesskit/runtime/$1"',
     );
-    expect(blockAfter("## Example", "ts")).toBe(source);
-    expect(blockAfter("## Example", "text")).toBe(`${lines.join("\n")}\n`);
+    expect(blockAfter("## Quick start", "ts")).toBe(source);
+    expect(blockAfter("## Quick start", "text")).toBe(`${lines.join("\n")}\n`);
   });
 });

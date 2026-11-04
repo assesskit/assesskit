@@ -1,6 +1,8 @@
 // biome-ignore-all lint/style/useNamingConvention: the names of LTI messages are snake_case.
+import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { answerCapabilities } from "../src/player/lti-frame/internal.js";
 
 describe("answerCapabilities", () => {
@@ -38,5 +40,13 @@ describe("answerCapabilities", () => {
         });
       }),
     );
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const guide = readFileSync(new URL("../../../docs/player/lti-items.md", import.meta.url), "utf8");
+    const modules = { "@assesskit/runtime/package": await import("@assesskit/runtime/package") };
+    expect(await runGuideSamples(guide, modules)).toBe(2);
   });
 });

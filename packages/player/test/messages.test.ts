@@ -1,10 +1,10 @@
 import { DataError } from "@assesskit/runtime/errors";
 import { describe, expect, it } from "vitest";
 import messagesGuide from "../../../docs/player/messages.md?raw";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { EN_MESSAGES, type Messages, selectMessages } from "../src/index.js";
 import { ID_MESSAGES } from "../src/messages/id/index.js";
 import { fuzzJson } from "./fuzz.js";
-import { runGuideSamples } from "./guide-samples.js";
 
 /** Passes catalogs to `selectMessages` as JSON delivers them, which TypeScript does not check. */
 const select = (language: string, catalogs: unknown = {}): Messages =>

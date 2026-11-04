@@ -6,7 +6,10 @@ import {
   checkErrorNames,
   checkFamilies,
   checkFileNames,
+  checkGuideSections,
   checkHistory,
+  checkNotIncluded,
+  checkReadmeSections,
   checkSectionSigns,
   checkStandards,
   checkTestTitles,
@@ -122,6 +125,86 @@ describe("diagrams", () => {
   });
 });
 
+describe("guide sections", () => {
+  const Skeleton =
+    "## Quick start\n\n## Errors\n\n## Not included\n\n| Not included | Why |\n| --- | --- |\n\n## Differences from the references\n";
+
+  it("reports each section of the skeleton that a guide lacks, with what it holds", () => {
+    const files = repository({
+      "docs/a/guide.md": `# Guide\n\n${DIAGRAM}\n## Quick start\n\n## Errors\n`,
+      "docs/a/complete.md": `# Guide\n\n${DIAGRAM}\n${Skeleton}`,
+    });
+    const found = checkGuideSections(files);
+    expect(found.map(({ file }) => file)).toStrictEqual(["docs/a/guide.md", "docs/a/guide.md"]);
+    expect(found.map(({ message }) => message.split(":")[0])).toStrictEqual([
+      'The guide has no "## Not included" section',
+      'The guide has no "## Differences from the references" section',
+    ]);
+  });
+
+  it("does not take a heading in a fence or one of another level for a section", () => {
+    const files = repository({
+      "docs/a/guide.md": "# Guide\n\n```md\n## Quick start\n## Errors\n```\n\n### Not included\n",
+    });
+    expect(checkGuideSections(files)).toHaveLength(4);
+  });
+
+  it("leaves out the documents that are not the guide of a module, and files outside docs", () => {
+    const files = repository({
+      "docs/a/evidence.md": "# Evidence\n",
+      "docs/a/architecture.md": "# Architecture\n",
+      "docs/a/supported.md": "# Supported\n",
+      "docs/a/spec-gaps.md": "# Gaps\n",
+      "docs/a/performance.md": "# Performance\n",
+      "docs/a/sub/guide.md": "# Guide\n",
+      "README.md": "# A\n",
+    });
+    expect(checkGuideSections(files)).toStrictEqual([]);
+  });
+});
+
+describe("not included", () => {
+  it("reports a table that is headed in another way, with the line of its header", () => {
+    const files = repository({
+      "docs/a/one.md": "# One\n\n## Not included\n\nText first.\n\n| What | Why |\n| --- | --- |\n",
+      "docs/a/two.md": "# Two\n\n## Not included\n\n| Not included | Reason |\n| --- | --- |\n",
+      "docs/a/three.md": "# Three\n\n## Not included\n\n- A bullet\n\n## Files\n\n| Not included | Why |\n",
+      "docs/a/four.md": "# Four\n\n## Not included\n\n| Not included | Why | Owner |\n",
+    });
+    expect(checkNotIncluded(files).map(({ file, line }) => [file, line])).toStrictEqual([
+      ["docs/a/one.md", 7],
+      ["docs/a/two.md", 5],
+      ["docs/a/three.md", 4],
+      ["docs/a/four.md", 5],
+    ]);
+  });
+
+  it("accepts the table of the form, and a document that has no such section", () => {
+    const files = repository({
+      "docs/a/guide.md": "# Guide\n\n## Not included\n\n| Not included | Why |\n| --- | --- |\n| A | B |\n\n## Files\n",
+      "docs/a/other.md": "# Other\n",
+      "README.md": "# A\n\n## Not included\n\n- A bullet\n",
+    });
+    expect(checkNotIncluded(files)).toStrictEqual([]);
+  });
+});
+
+describe("README sections", () => {
+  it("reports the sections that the README of the repository and of a package lack", () => {
+    const files = repository({
+      "README.md": "# A\n\n## Which package\n\n## License\n",
+      "packages/a/README.md": "# A\n\n## Quick start\n\n## API\n\n## Supported\n\n## Documentation\n",
+      "packages/a/docs/README.md": "# Not a package README\n",
+    });
+    expect(checkReadmeSections(files).map(({ file, message }) => [file, message.split(";")[0]])).toStrictEqual([
+      ["README.md", 'The README has no "## Documentation" section'],
+      ["README.md", 'The README has no "## Development" section'],
+      ["README.md", 'The README has no "## Layout" section'],
+      ["packages/a/README.md", 'The README has no "## License" section'],
+    ]);
+  });
+});
+
 describe("error names", () => {
   it("reports an error class that carries the name of a package", () => {
     const files = repository({
@@ -219,7 +302,7 @@ describe("console", () => {
 describe("all checks", () => {
   it("reports nothing for a repository that holds the standards", () => {
     const files = repository({
-      "README.md": `# A\n\n${DIAGRAM}`,
+      "README.md": `# A\n\n${DIAGRAM}\n${["Which package", "Documentation", "Development", "Layout", "License"].map((title) => `## ${title}\n`).join("\n")}`,
       "packages/a/src/index.ts": "export const A = 1;\n",
       "packages/a/test/a.test.ts": 'it("returns one", () => {});\n',
     });

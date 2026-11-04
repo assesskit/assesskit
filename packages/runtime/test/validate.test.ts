@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
   ASI_NAMESPACE,
   type AsiDocument,
@@ -39,7 +41,6 @@ import {
 import { type BindContext, BindRuleSets, DocumentChecks, Findings } from "../src/validate/internal.js";
 import { createReadError } from "../src/xml/index.js";
 import { FUZZ } from "./fuzz.js";
-import { runGuideSamples } from "./guide-samples.js";
 import { criterionMarkup, rubricMarkup } from "./scoring-rubrics.js";
 import {
   ATTRIBUTE_RULES,
@@ -2613,7 +2614,7 @@ describe("the entry points", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/validate.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/validate.md", import.meta.url), "utf8");
     const modules = {
       "@assesskit/runtime/asi": await import("../src/asi/index.js"),
       "@assesskit/runtime/validate": await import("../src/validate/index.js"),

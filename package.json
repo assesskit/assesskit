@@ -41,7 +41,7 @@
     "asi-table": "node scripts/asi-table.ts",
     "changeset": "changeset",
     "release": "pnpm build && changeset publish",
-    "prepare": "lefthook install"
+    "prepare": "node scripts/prepare.ts"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",

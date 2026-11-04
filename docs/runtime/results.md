@@ -29,7 +29,7 @@ flowchart LR
 | `ResultVariable`, `ResponseVariable`, `OutcomeVariable`, `TemplateVariable`, `ContextVariable`, `ResultCorrectResponse` | The variables.                                                                                                                                            |
 | `SessionStatus`, `AnsweredStatus`, `ScoreStatus`, `SupportAssignment`, `OutcomeView`, `OutcomeScorer`                   | The vocabularies, with the lists `SESSION_STATUSES`, `ANSWERED_STATUSES`, `SCORE_STATUSES`, `SUPPORT_ASSIGNMENTS`, `OUTCOME_VIEWS` and `OUTCOME_SCORERS`. |
 
-## Example
+## Quick start
 
 ```ts
 import { readResults, writeResults } from "@assesskit/runtime/results";
@@ -132,6 +132,17 @@ text, bytes or an element is a `DataError`, and text or bytes that break a limit
 | The bytes of a `file` value                     | The XML form of a file is its reference, and the host stores the bytes                                    |
 | Years and months in a duration                  | They have no length in seconds                                                                            |
 | Elements of other namespaces outside two places | The schema allows them only after the candidate response and in `outcomeInformation`                      |
+
+## Differences from the references
+
+| Case                                                                                                   | Resolution                                                                                        |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| The lexical form of a `file` value                                                                     | The reference alone, read with the content type `application/octet-stream` ([G10](spec-gaps.md))  |
+| A duration with years or months, which `conformance-use-case-1.xml` of 1EdTech writes                  | Read as an ISO 8601 duration without years and months, written as seconds ([G14](spec-gaps.md))   |
+| A `value` is an `xs:normalizedString`, which loses the newlines of an essay in a schema-aware consumer | Written as given: the exact string travels in scoring requests and in state ([G36](spec-gaps.md)) |
+| The base type integer is unbounded                                                                     | An integer outside the safe integers is a `ReadError` ([G2](spec-gaps.md))                        |
+| The namespaces in the samples differ from the schema's                                                 | The schema decides: a root in another namespace is a `ReadError` ([G12](spec-gaps.md))            |
+| Nothing says the order of the item results of a report                                                 | Plan order, with `sequenceIndex` as the specification defines it ([G48](spec-gaps.md))            |
 
 ## Files
 

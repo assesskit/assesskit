@@ -94,7 +94,9 @@ sequenceDiagram
 | `ItemSessionContext`, `ItemAction`, `ItemStep`                        | What a step reads besides the session, the actions of the candidate, and the result of a step.             |
 | `Refusal`, `RefusalReason`, `DeliveryEvent`, …                        | Why a step is refused, and what an accepted step reports.                                                  |
 
-## Engine
+## Quick start
+
+Plan a test of two items, start a session, answer, move on, and keep and restore the state until the clock ends the test:
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
@@ -170,6 +172,8 @@ engine.apply(moved.state, { type: "move", to: "previous", at: 10_000 }).refusal.
 const restored = deserializeState(serializeState(moved.state));
 engine.apply(restored, { type: "time", at: 601_000 }).state.status; // => "ended"
 ```
+
+## Engine
 
 The engine is a pure reducer. `start` gives the first state, `apply(state, action)` the next state and its events or
 a refusal, and `deadlines(state)` the times at which the host sends `{ type: "time", at }`. A step never changes the state
@@ -1156,11 +1160,11 @@ item or the outcomes of the earlier attempt of an adaptive one. The attempt stil
 session control, except that `show-feedback` and `allow-review` are true, with the attributes of the control given in
 their place. `max-attempts` stays with the item when no control sets it.
 
-## Rules that the specifications leave open
+## Differences from the references
 
 Where the specifications are silent or contradict themselves, the engine follows these rules; [spec gaps](spec-gaps.md) gives the reasons.
 
-| Topic                            | Rule                                                                                                                                                                                                                                               |
+| Case                             | Resolution                                                                                                                                                                                                                                         |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Selection                        | Without replacement, a uniform subset of the children that are not required, plus the required ones. With replacement, the required ones once and the other draws uniform over all children. Ordering follows.                                     |
 | Extra time                       | A multiplier on every maximum, the fixed minutes on the outermost maximum, `unlimited` removes the maximums, minimums unchanged.                                                                                                                   |
@@ -1196,7 +1200,7 @@ Where the specifications are silent or contradict themselves, the engine follows
 
 ### Pending work
 
-| Topic                                 | Rule                                                                                                                                                                                                             |
+| Case                                  | Resolution                                                                                                                                                                                                       |
 | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Scoring requests                      | A test outcome is requested when its covers are presented and over, or the test ended; with no covers, at the end. An item outcome, when its session is over. A request is made once.                            |
 | Supplied test scores                  | A supplied value of a test outcome is its starting value for every later outcome processing, a failed run included. A supply is accepted after the test ended.                                                   |

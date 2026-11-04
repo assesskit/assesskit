@@ -2,6 +2,7 @@ import { describe, expect, inject, it } from "vitest";
 import clientGuide from "../../../docs/player/client.md?raw";
 import contentGuide from "../../../docs/player/content.md?raw";
 import deliveryGuide from "../../../docs/player/delivery.md?raw";
+import graphicsGuide from "../../../docs/player/graphics.md?raw";
 import interactionsGuide from "../../../docs/player/interactions.md?raw";
 import mathGuide from "../../../docs/player/math.md?raw";
 import pciGuide from "../../../docs/player/pci.md?raw";
@@ -10,8 +11,8 @@ import speechGuide from "../../../docs/player/speech.md?raw";
 import stylingGuide from "../../../docs/player/styling.md?raw";
 import supportsGuide from "../../../docs/player/supports.md?raw";
 import toolsGuide from "../../../docs/player/tools.md?raw";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { PLAYER_CSS } from "./css-fixture.js";
-import { runGuideSamples } from "./guide-samples.js";
 
 /** The modules that the samples of the guides import, by address. */
 async function modules(): Promise<Record<string, object>> {
@@ -41,8 +42,13 @@ describe("the guides", () => {
   it("shows the results that the guide to content gives", async () => {
     expect(await runGuideSamples(contentGuide, await modules())).toBeGreaterThan(0);
   });
+
   it("shows the results that the guide to delivery gives", async () => {
     expect(await runGuideSamples(deliveryGuide, await modules())).toBeGreaterThan(0);
+  });
+
+  it("shows the results that the guide to graphic interactions gives", async () => {
+    expect(await runGuideSamples(graphicsGuide, await modules())).toBeGreaterThan(0);
   });
 
   it("shows the results that the guide to interactions gives", async () => {

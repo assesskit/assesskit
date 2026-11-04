@@ -29,7 +29,7 @@ flowchart LR
 | `TargetObject`, `StatisticValue`, `StatisticMapping`, `StatisticMapEntry`                      | The parts of a statistic.                                                 |
 | `ObjectType`, `STATISTIC_OBJECT_TYPES`                                                         | The kinds of object a statistic may be about, with the list of them.      |
 
-## Example
+## Quick start
 
 ```ts
 import { readUsageData, writeUsageData } from "@assesskit/runtime/usage";
@@ -103,6 +103,14 @@ The rules are those of [results](results.md#errors) with the module `usage`:
 | Computing the statistics            | A psychometrics library does that; `usage` carries the results as data       |
 | Applying a mapping to a value       | A mapping is data about categories; processing owns the mapping of responses |
 | Reading the usage data of a package | The 1EdTech packages use the namespace of QTI 2.2, which the reader refuses  |
+
+## Differences from the references
+
+| Case                                                                                  | Resolution                                                                                          |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| The usage data of the packages of the 1EdTech examples is in the namespace of QTI 2.2 | The schema decides, and the namespace is strict: `readUsageData` refuses them ([G12](spec-gaps.md)) |
+| The schema gives `defaultValue` the default `0`                                       | An absent `defaultValue` stays absent: a document that gives none has none                          |
+| An ordinary statistic whose `value` has no base type                                  | Read as a `float`, since an ordinary statistic is a numeric value                                   |
 
 ## Files
 

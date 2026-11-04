@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
   ASI_NAMESPACE,
   type AssessmentItem,
@@ -30,7 +32,6 @@ import {
 } from "../src/index.js";
 import { shufflingDescriptor } from "./arbitraries/interactions.js";
 import { interactionKinds } from "./asi-elements.js";
-import { runGuideSamples } from "./guide-samples.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {
@@ -1176,7 +1177,7 @@ describe("the numeric record of a text entry", () => {
 
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
-    const guide = new URL("../../../docs/runtime/interactions.md", import.meta.url);
+    const guide = readFileSync(new URL("../../../docs/runtime/interactions.md", import.meta.url), "utf8");
     const modules = {
       "@assesskit/runtime": await import("../src/index.js"),
       "@assesskit/runtime/asi": await import("../src/asi/index.js"),

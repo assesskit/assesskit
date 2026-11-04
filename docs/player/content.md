@@ -17,6 +17,10 @@ flowchart LR
   root --> math["MathJax, when<br/>the page has it"]
 ```
 
+## Quick start
+
+Show the body of an item in a content root:
+
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
 import { selectMessages } from "@assesskit/player";
@@ -376,9 +380,9 @@ Test feedback is a field of `show`: the entries from the runtime's `selectTestFe
 | Typesetting of MathML                                           | [MathJax](math.md) does it, when the page has it                                                                               |
 | Authoring and editing of content                                | The player shows content; it has no editor                                                                                     |
 
-## Where the sources differ
+## Differences from the references
 
-| Case                                                              | Reading                                                                                                                    |
+| Case                                                              | Resolution                                                                                                                 |
 | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | A constructed sheet has a `baseURL` for the `url()`s of its rules | Chromium ignores it for `url()`; the sanitizer writes the URLs as absolute ones.                                           |
 | The schema lets any element carry `style`                         | `style` is not kept. A class of the shared vocabulary does what an author needs, and an inline style could cover the page. |

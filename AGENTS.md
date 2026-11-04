@@ -34,16 +34,16 @@ Use these words with these meanings in code, comments and docs.
 
 ## Layout
 
-| Path                                                             | Holds                                                                                                                                                                                                      |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/runtime/src/<module>/`                                 | One folder per module: `index.ts`, `internal.ts` where other modules or the tests need more, a file per concept                                                                                            |
-| `packages/runtime/src/{errors,checks,checks-internal,random}.ts` | The errors, the checks of one value, the checks that only the runtime uses, the random number generator; the subpaths `errors` and `checks` serve the player                                               |
-| `packages/runtime/test/`                                         | `<module>.test.ts` for each source folder; `fixtures/` (oracle output, stored states); `differential/` (the harness against Longsight `qti3-core` and Amp-up `qti3-item-player`)                           |
-| `packages/player/src/`                                           | `errors.ts`, `checks.ts`, `messages/`, `protocol/`, `player/`, `client/`, `server/`, `scoring/`, `cat/`, `cat-rest/`                                                                                       |
-| `packages/player/{player.css,scripts/,test/}`                    | The stylesheet of a content root; `build-static.ts` (the PCI frame and the recording worklet); `<folder>.test.ts`, `fixtures/` (servers and commands of the browser tests)                                 |
-| `examples/<package>/<name>/`                                     | A runnable example, a package of its own; its `test/` runs it                                                                                                                                              |
-| `docs/<package>/`                                                | The guides of a package, one per module, with architecture, evidence and supported; TypeDoc publishes them                                                                                                 |
-| `compat/`, `scripts/`, `validation/`, `biome/`                   | The browser baseline (`compat/`) and the runtimes (`compat/runtimes/`); downloads, generators, CI checks (`check-*.ts`, `rules/`) and the peak-memory harness; fixture scripts (Python); GritQL lint rules |
+| Path                                                             | Holds                                                                                                                                                                                                                                                             |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/runtime/src/<module>/`                                 | One folder per module: `index.ts`, `internal.ts` where other modules or the tests need more, a file per concept                                                                                                                                                   |
+| `packages/runtime/src/{errors,checks,checks-internal,random}.ts` | The errors, the checks of one value, the checks that only the runtime uses, the random number generator; the subpaths `errors` and `checks` serve the player                                                                                                      |
+| `packages/runtime/test/`                                         | `<module>.test.ts` for each source folder; `fixtures/` (oracle output, stored states); `differential/` (the harness against Longsight `qti3-core` and Amp-up `qti3-item-player`)                                                                                  |
+| `packages/player/src/`                                           | `errors.ts`, `checks.ts`, `messages/`, `protocol/`, `player/`, `client/`, `server/`, `scoring/`, `cat/`, `cat-rest/`                                                                                                                                              |
+| `packages/player/{player.css,scripts/,test/}`                    | The stylesheet of a content root; `build-static.ts` (the PCI frame and the recording worklet); `<folder>.test.ts`, `fixtures/` (servers and commands of the browser tests)                                                                                        |
+| `examples/<package>/<name>/`                                     | A runnable example, a package of its own; its `test/` runs it                                                                                                                                                                                                     |
+| `docs/<package>/`                                                | The guides of a package, one per module, with architecture, evidence and supported; TypeDoc publishes them                                                                                                                                                        |
+| `compat/`, `scripts/`, `validation/`, `biome/`                   | The browser baseline (`compat/`) and the runtimes (`compat/runtimes/`); downloads, generators, CI checks (`check-*.ts`, `rules/`), the peak-memory harness, the runner of the samples of the guides and `prepare.ts`; fixture scripts (Python); GritQL lint rules |
 
 [Layers](docs/runtime/architecture.md#layers) and [player layers](docs/player/architecture.md#layers) are rows of tables that
 Biome enforces, folder by folder.
@@ -52,9 +52,9 @@ Biome enforces, folder by folder.
 
 | Command                          | Does                                                                                                                                                                                                                                                                 |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm install`                   | Installs the dependencies and the git hooks                                                                                                                                                                                                                          |
-| `pnpm lint`, `pnpm format`       | Biome and cspell; `format` fixes formatting                                                                                                                                                                                                                          |
-| `pnpm check:standards`           | The standards that a tool can check; `node scripts/check-standards.ts <path>...` reports the files below the paths                                                                                                                                                   |
+| `pnpm install`                   | Installs the dependencies and, in a clone or a worktree, the git hooks (`scripts/prepare.ts`)                                                                                                                                                                        |
+| `pnpm lint`, `pnpm format`       | Biome, and cspell over the sources, tests, guides, READMEs, scripts, changesets and the Markdown at the root; `format` fixes formatting                                                                                                                              |
+| `pnpm check:standards`           | The standards that a tool can check, the sections of the guides and READMEs among them; `node scripts/check-standards.ts <path>...` reports the files below the paths                                                                                                |
 | `pnpm check:duplication`         | jscpd over `packages/*/src`; fails on a repeat that [the table below](#repeats-left-on-purpose) does not list                                                                                                                                                        |
 | `pnpm typecheck`                 | `tsc` over every package, example and the tooling                                                                                                                                                                                                                    |
 | `pnpm knip`                      | Unused files, exports and dependencies                                                                                                                                                                                                                               |
@@ -146,7 +146,7 @@ that the player needs and the runtime lacks is a change in the runtime, with its
 - The JSON of the bodies of the CAT REST binding is written once, in `packages/player/src/cat-rest/binding.ts`, and the client
   and the handler both use it.
 
-## Deviations from the engineering standards
+## Deviations from the standards
 
 | Standard                                                            | What the repository does                                                                                                                                     | Reason                                                                                                                                                                                     |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -252,9 +252,15 @@ tests of every engine, and waits for the next change to that part.
 - A TSDoc comment starts with one sentence: a noun phrase for a type or a constant, a third-person verb phrase for a function
   ("Returns ..."), a short phrase for a property.
 - A code sample in a guide is complete: it shows its imports and holds no TypeScript syntax, so that it runs as it is. It gives its
-  result as `// => result`, and `runGuideSamples` of `test/guide-samples.ts` runs the samples in the test file of the module and
-  fails on a result that differs. The guides of the player are imported with `?raw`, and a guide whose samples need a page runs in
+  result as `// => result`, and `runGuideSamples` of `scripts/guide-samples.ts`, the one runner of both packages, runs the samples in
+  the test file of the module and fails on a result that differs, or on a result that no statement picked up. It takes the text of
+  the guide: a test in Node reads the file, and the guides of the player that run in a page are imported with `?raw`, in
   `guides.browser.test.ts`.
+- Each guide has the diagram, a Quick start that runs, the options with their defaults, the limits with their values, the errors
+  with what to do about them, what is not included and why, and the differences from the references, or `None` and the reason.
+  Not included is the table `| Not included | Why |`. `pnpm check:standards` fails on a guide without these sections; the documents of
+  `docs/<package>/` that are not the guide of a module (architecture, baseline, conformance, conventions, evidence, performance, size,
+  spec gaps and supported) are listed in `NOT_GUIDES` of `scripts/check-standards.ts`.
 - What a call throws goes into a table of errors, not into a sample.
 - The Quick start of `packages/player/README.md` runs in `protocol.test.ts`.
 - One purpose for each document: `README.md` for users, `docs/<package>/` for guides, `CONTRIBUTING.md` for the process,

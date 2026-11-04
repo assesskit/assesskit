@@ -18,6 +18,10 @@ The form is the player's part of rating, and the workflow is the host's: assignm
 stay outside it. A host that shows a submission to a rater puts the form beside `mountSubmission` ([scoring](scoring.md)); a
 host with a machine rater uses the same rubric and `rubricScore` without a page.
 
+## Quick start
+
+Mount the rating form of an analytic rubric, give the ratings and read the score:
+
 ```ts
 import { mountRatingForm } from "@assesskit/player/player";
 import css from "@assesskit/player/player.css?inline"; // any bundler that imports a file as text
@@ -154,9 +158,13 @@ A host stays without a shadow root when the form is refused. A form that `update
 
 ## Not included
 
-| Not included                            | Reason                                                                             |
+| Not included                            | Why                                                                                |
 | --------------------------------------- | ---------------------------------------------------------------------------------- |
 | Comments of the rater                   | Part of the host's rating workflow, not of the score                               |
 | Submitting the ratings                  | The host decides what to send and where: `onChange` and `ratings` give it the data |
 | Assignment, double rating, adjudication | The host's workflow, which differs by program                                      |
 | Showing the response being rated        | `mountSubmission` shows the submission; the form shows only what it rates          |
+
+## Differences from the references
+
+None. QTI defines no rating form: a scoring rubric is a convention of the runtime ([conventions](../runtime/conventions.md)), and the form follows its criteria and levels.

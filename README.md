@@ -27,15 +27,15 @@ flowchart LR
 | [`@assesskit/runtime`](packages/runtime/README.md) | Reads, writes, validates and executes everything in QTI 3.0 that is not presentation or platform, with a headless delivery engine that serves exams on a server and practice on a device.                                                                   |
 | [`@assesskit/player`](packages/player/README.md)   | Rendering, the host of portable custom interactions, accessibility applied in the interface, and the server-side session host and integrations. It uses the runtime only through its published subpaths. Its README says what the current version contains. |
 
-To read, validate, process or run QTI content in your own code or pipeline, use the runtime. To deliver tests to candidates in a
-browser, use the player, which depends on the runtime.
-
 assesskit is not certified by 1EdTech. What each package supports, and what it does not, is in
 [Supported](docs/runtime/supported.md) for the runtime and [Supported](docs/player/supported.md) for the player, and
 [Conformance](docs/runtime/conformance.md) takes every feature ID of the 1EdTech conformance document to its guide and its test.
 The claim is scoped: items differentially tested; test sessions specification-tested.
 
-## How the two packages split
+## Which package
+
+To read, validate, process or run QTI content in your own code or pipeline, use the runtime. To deliver tests to candidates in a
+browser, use the player, which depends on the runtime.
 
 The runtime owns what QTI defines that is not presentation or platform. The player owns presentation and the platform. The player
 never evaluates an expression, decides what is visible or valid, chooses a variant, or holds an answer key outside the runtime's
@@ -57,6 +57,16 @@ The two meet in JSON: views, actions and state, with values in a self-describing
 decoded. On a server, the player hosts the runtime's engine: clients hold only views and send actions, and the answer keys and the
 seed never leave. For practice, the engine runs in the browser. [Architecture](docs/runtime/architecture.md#boundary-with-the-player)
 has the full list of who owns what, and [Delivery](docs/runtime/delivery.md#modes) the two modes.
+
+## Documentation
+
+| Where                                                                               | What it holds                                                                                          |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [Runtime guides](packages/runtime/README.md#documentation)                          | One guide for each module of the runtime, with its architecture, performance, evidence and conformance |
+| [Player guides](packages/player/README.md#documentation)                            | One guide for each part of the player, with its architecture, size, evidence and the browser baseline  |
+| [Supported: runtime](docs/runtime/supported.md), [player](docs/player/supported.md) | What each package supports, and what it does not                                                       |
+| [Conformance](docs/runtime/conformance.md)                                          | Every feature ID of the 1EdTech conformance document, with its guide and its test                      |
+| [Spec gaps](docs/runtime/spec-gaps.md)                                              | Where the specifications contradict themselves or are silent, and what the runtime does                |
 
 ## Development
 

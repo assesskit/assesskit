@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { expect } from "vitest";
 
 /** The text of the fenced blocks of a language in a Markdown file, in order. */
@@ -17,6 +16,7 @@ interface Statement {
 
 const RESULT = /^(.*;)\s*\/\/ => (.+)$/;
 const RESULT_LINE = /^\s*\/\/ => (.+)$/;
+const COMMENT = /\s+\/\/ (?!=>).*$/;
 
 /** Splits a sample into statements: lines up to one that ends with a semicolon, with the result that follows it. */
 function statementsOf(sample: string): Statement[] {
@@ -27,8 +27,10 @@ function statementsOf(sample: string): Statement[] {
     const line = lines[index] ?? "";
     if (pending.length === 0 && (line.trim() === "" || line.trim().startsWith("//"))) continue;
     const inline = RESULT.exec(line);
-    const complete = inline !== null || line.trimEnd().endsWith(";");
-    pending.push(inline?.[1] ?? line);
+    // A comment after a statement, such as the note on an import, does not end the line of code.
+    const code = line.replace(COMMENT, "");
+    const complete = inline !== null || code.trimEnd().endsWith(";");
+    pending.push(inline?.[1] ?? code);
     if (!complete) continue;
     const next = RESULT_LINE.exec(lines[index + 1] ?? "");
     statements.push({ code: pending.join("\n"), expected: inline?.[2] ?? next?.[1] });
@@ -37,13 +39,17 @@ function statementsOf(sample: string): Statement[] {
   return statements;
 }
 
-const IMPORT = /^import\s*\{([^}]*)\}\s*from\s*"([^"]+)";$/;
+const IMPORT = /^import\s*\{([^}]*)\}\s*from\s*"([^"]+)";(?:\s*\/\/.*)?$/;
+const DEFAULT_IMPORT = /^import\s+([A-Za-z_$][\w$]*)\s+from\s*"([^"]+)";(?:\s*\/\/.*)?$/;
 const DECLARATION = /^(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=/;
 
 /** Turns a statement into code that runs: an import reads the module it names, and a shown result becomes a check. */
 function compile({ code, expected }: Statement): string {
   const imported = IMPORT.exec(code);
   if (imported !== null) return `const {${imported[1]}} = modules[${JSON.stringify(imported[2])}];`;
+  const importedDefault = DEFAULT_IMPORT.exec(code);
+  if (importedDefault !== null)
+    return `const ${importedDefault[1]} = modules[${JSON.stringify(importedDefault[2])}].default;`;
   if (expected === undefined) return code;
   const declared = DECLARATION.exec(code)?.[1];
   return declared === undefined
@@ -61,20 +67,20 @@ const AsyncFunction = Object.getPrototypeOf(async () => undefined).constructor a
  *
  * A sample is a block of statements. A statement that is followed by `// => result`, on its line or on the next one, must
  * give that result, which is an expression compared with `toStrictEqual`; a `const` declaration is checked by the value it
- * declares. An `import` reads the module that the caller gives for its address. The samples hold no syntax of TypeScript,
- * so that they run as they are.
+ * declares. An `import` reads the module that the caller gives for its address, and a default import its `default`. The
+ * samples hold no syntax of TypeScript, so that they run as they are, in Node and in a browser.
  *
- * @param path - The Markdown file.
+ * @param markdown - The text of the guide: a test in Node reads the file, and a test in a browser imports it with `?raw`, so
+ * that this file imports no module of Node.
  * @param modules - The modules that the samples import, by address.
- * @returns The number of results that were checked, which is the number of results that the file shows.
+ * @returns The number of results that were checked, which is the number of results that the guide shows.
  */
-export async function runGuideSamples(path: URL, modules: Readonly<Record<string, object>>): Promise<number> {
+export async function runGuideSamples(markdown: string, modules: Readonly<Record<string, object>>): Promise<number> {
   let checked = 0;
   const check = (actual: unknown, expected: unknown): void => {
     checked += 1;
     expect(actual).toStrictEqual(expected);
   };
-  const markdown = readFileSync(path, "utf8");
   for (const sample of codeBlocks(markdown, "ts")) {
     const code = statementsOf(sample).map(compile).join("\n");
     await new AsyncFunction("modules", "check", code)(modules, check);

@@ -38,12 +38,9 @@ flowchart LR
 | `ordered`   | A sequence                                                                                                  | `{ "list": { "<base type>": [...] } }`         |
 | `record`    | A `Map` from field identifier to a single value, each field with its own base type; insertion order is kept | `{ "record": [{ "name": ..., "base": ... }] }` |
 
-## The model
+## Quick start
 
-A value is a `SingleValue`, a `ContainerValue` (cardinality `multiple` or `ordered`) or a `RecordValue`. NULL, the absence
-of a value, is `null`: no `Value` is empty. Build values with `buildSingle`, `buildContainer` and `buildRecord`. They check their
-arguments, copy them, and return `null` for what is NULL: the empty string, a container with no values and a record with no
-fields.
+Build two `multiple` containers that hold the same values in another order, match them, and see that an empty string is NULL:
 
 ```ts
 import { buildContainer, matchValues, buildSingle } from "@assesskit/runtime/values";
@@ -53,6 +50,13 @@ const b = buildContainer("multiple", "identifier", ["B", "A", "B"]);
 a !== null && b !== null && matchValues(a, b); // => true
 buildSingle("string", ""); // => null
 ```
+
+## The model
+
+A value is a `SingleValue`, a `ContainerValue` (cardinality `multiple` or `ordered`) or a `RecordValue`. NULL, the absence
+of a value, is `null`: no `Value` is empty. Build values with `buildSingle`, `buildContainer` and `buildRecord`. They check their
+arguments, copy them, and return `null` for what is NULL: the empty string, a container with no values and a record with no
+fields.
 
 | Function                           | Does                                                                                                               |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -276,6 +280,14 @@ the model, but `writeWireValue` without a declaration: a NULL has no type of its
 | Unicode blocks after Unicode 3.1                                 | XML Schema names the blocks of Unicode 3.1                                 |
 | The length of 32 characters and the period of an identifier      | They are style rules, which `isIdentifier` does not check                  |
 | A date as a value                                                | QTI has no date base type; only the two forms of documents are checked     |
+
+## Differences from the references
+
+| Case                                                           | Resolution                                                                                                                             |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| The base type integer maps to `xs:integer`, which is unbounded | Safe integers; a larger integer in text is a `DataError` ([G2](spec-gaps.md), decision D3)                                             |
+| A duration with years or months has no length in seconds       | A `DataError` wherever such a duration is decoded; durations are written as `PT<seconds>S` ([G14](spec-gaps.md))                       |
+| The lexical form of a `file` value in XML                      | A reference everywhere, written as the reference alone and read with the content type `application/octet-stream` ([G10](spec-gaps.md)) |
 
 ## Files
 
