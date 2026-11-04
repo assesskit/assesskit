@@ -187,6 +187,7 @@ function sectionTitles(text: string): [number, string][] {
 const NOT_GUIDES = new Set([
   "architecture",
   "baseline",
+  "choosing",
   "conformance",
   "conventions",
   "evidence",

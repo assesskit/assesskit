@@ -90,32 +90,33 @@ lists what that allows and how it is tested.
 
 ## Documentation
 
-| Guide                                                                              | Covers                                                                                                     |
-| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| [Architecture](https://assesskit.wakan.dev/_assesskit/player/architecture/)        | Principles, layers and errors                                                                              |
-| [Baseline](https://assesskit.wakan.dev/_assesskit/player/baseline/)                | The browser baseline and how it is tested                                                                  |
-| [Content](https://assesskit.wakan.dev/_assesskit/player/content/)                  | The renderer, the content root, references, stylesheets, cards and feedback                                |
-| [Portable custom interactions](https://assesskit.wakan.dev/_assesskit/player/pci/) | The frame, its policy, loading, events and serving the files                                               |
-| [Mathematics](https://assesskit.wakan.dev/_assesskit/player/math/)                 | MathJax by URL, shadow roots, elementary math and braille                                                  |
-| [Speech](https://assesskit.wakan.dev/_assesskit/player/speech/)                    | The speech request, SSML, `data-ssml`, lexicons, restriction types, voices and the typing echo             |
-| [Delivery](https://assesskit.wakan.dev/_assesskit/player/delivery/)                | `mountDelivery`, `mountItem`, the chrome, the confirmations, the timers, the status messages and the focus |
-| [Client](https://assesskit.wakan.dev/_assesskit/player/client/)                    | The remote session with autosave, and the local session of practice                                        |
-| [Server](https://assesskit.wakan.dev/_assesskit/player/server/)                    | The session host, the client-action policy, the proctor, the scheduler and the stores                      |
-| [Asset gate](https://assesskit.wakan.dev/_assesskit/player/asset-gate/)            | Tokens in the path, prefixes, what is never served, and the tokens of the candidate's files                |
-| [Protocol](https://assesskit.wakan.dev/_assesskit/player/protocol/)                | The caller, the envelopes, the session client, the branded result and the submission                       |
-| [Rating form](https://assesskit.wakan.dev/_assesskit/player/rating/)               | The accessible form that turns a rater's choices into the score of a scoring rubric                        |
-| [Scoring](https://assesskit.wakan.dev/_assesskit/player/scoring/)                  | The submission of a scoring request, the action that supplies its score, and the display for raters        |
-| [LTI items](https://assesskit.wakan.dev/_assesskit/player/lti-items/)              | The ports that wire a tool, a gradebook and an analytics sink to a session, and the example that does it   |
-| [CAT](https://assesskit.wakan.dev/_assesskit/player/cat/)                          | The client of the REST binding, any other engine behind `CatPort`, and the deployment of a package         |
-| [Interactions](https://assesskit.wakan.dev/_assesskit/player/interactions/)        | The elements of the interactions, their responses, hints and keys, the board, media, upload and recording  |
-| [Graphic interactions](https://assesskit.wakan.dev/_assesskit/player/graphics/)    | The interactions that work on an image: shapes and coordinates, limits, targets, and the drawing           |
-| [Messages](https://assesskit.wakan.dev/_assesskit/player/messages/)                | The interface text and the choice of a catalog by language                                                 |
-| [Styling](https://assesskit.wakan.dev/_assesskit/player/styling/)                  | `player.css`, its themes, the PNP properties, the parts and the vocabulary                                 |
-| [Supports](https://assesskit.wakan.dev/_assesskit/player/supports/)                | The look of the PNP, the panel of options, cards and popups, captions, reading aloud and the variant       |
-| [Tools](https://assesskit.wakan.dev/_assesskit/player/tools/)                      | The tools of an item, how they are shown and operated                                                      |
-| [Supported](https://assesskit.wakan.dev/_assesskit/player/supported/)              | What the player supports and what it does not, the browsers and WCAG 2.2                                   |
-| [Evidence](https://assesskit.wakan.dev/_assesskit/player/evidence/)                | How the player is tested                                                                                   |
-| [Conformance](https://assesskit.wakan.dev/_assesskit/runtime/conformance/)         | Every feature ID of the 1EdTech conformance document, with its guide and its test                          |
+| Guide                                                                              | Covers                                                                                                                |
+| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| [Architecture](https://assesskit.wakan.dev/_assesskit/player/architecture/)        | Principles, layers and errors                                                                                         |
+| [Baseline](https://assesskit.wakan.dev/_assesskit/player/baseline/)                | The browser baseline and how it is tested                                                                             |
+| [Content](https://assesskit.wakan.dev/_assesskit/player/content/)                  | The renderer, the content root, references, stylesheets, cards and feedback                                           |
+| [Portable custom interactions](https://assesskit.wakan.dev/_assesskit/player/pci/) | The frame, its policy, loading, events and serving the files                                                          |
+| [Mathematics](https://assesskit.wakan.dev/_assesskit/player/math/)                 | MathJax by URL, shadow roots, elementary math and braille                                                             |
+| [Speech](https://assesskit.wakan.dev/_assesskit/player/speech/)                    | The speech request, SSML, `data-ssml`, lexicons, restriction types, voices and the typing echo                        |
+| [Delivery](https://assesskit.wakan.dev/_assesskit/player/delivery/)                | `mountDelivery`, `mountItem`, the chrome, the confirmations, the timers, the status messages and the focus            |
+| [Client](https://assesskit.wakan.dev/_assesskit/player/client/)                    | The remote session with autosave, and the local session of practice                                                   |
+| [Server](https://assesskit.wakan.dev/_assesskit/player/server/)                    | The session host, the client-action policy, the proctor, the scheduler and the stores                                 |
+| [Asset gate](https://assesskit.wakan.dev/_assesskit/player/asset-gate/)            | Tokens in the path, prefixes, what is never served, and the tokens of the candidate's files                           |
+| [Protocol](https://assesskit.wakan.dev/_assesskit/player/protocol/)                | The caller, the envelopes, the session client, the branded result and the submission                                  |
+| [Rating form](https://assesskit.wakan.dev/_assesskit/player/rating/)               | The accessible form that turns a rater's choices into the score of a scoring rubric                                   |
+| [Scoring](https://assesskit.wakan.dev/_assesskit/player/scoring/)                  | The submission of a scoring request, the action that supplies its score, and the display for raters                   |
+| [LTI items](https://assesskit.wakan.dev/_assesskit/player/lti-items/)              | The ports that wire a tool, a gradebook and an analytics sink to a session, and the example that does it              |
+| [CAT](https://assesskit.wakan.dev/_assesskit/player/cat/)                          | The client of the REST binding, any other engine behind `CatPort`, and the deployment of a package                    |
+| [Interactions](https://assesskit.wakan.dev/_assesskit/player/interactions/)        | The elements of the interactions, their responses, hints and keys, the board, media, upload and recording             |
+| [Graphic interactions](https://assesskit.wakan.dev/_assesskit/player/graphics/)    | The interactions that work on an image: shapes and coordinates, limits, targets, and the drawing                      |
+| [Messages](https://assesskit.wakan.dev/_assesskit/player/messages/)                | The interface text and the choice of a catalog by language                                                            |
+| [Styling](https://assesskit.wakan.dev/_assesskit/player/styling/)                  | `player.css`, its themes, the PNP properties, the parts and the vocabulary                                            |
+| [Supports](https://assesskit.wakan.dev/_assesskit/player/supports/)                | The look of the PNP, the panel of options, cards and popups, captions, reading aloud and the variant                  |
+| [Tools](https://assesskit.wakan.dev/_assesskit/player/tools/)                      | The tools of an item, how they are shown and operated                                                                 |
+| [Supported](https://assesskit.wakan.dev/_assesskit/player/supported/)              | What the player supports and what it does not, the browsers and WCAG 2.2                                              |
+| [Choosing](https://assesskit.wakan.dev/_assesskit/player/choosing/)                | When the player fits, and what Amp-up, Citolab, Longsight, TAO, Learnosity and Inspera have that it lacks, with dates |
+| [Evidence](https://assesskit.wakan.dev/_assesskit/player/evidence/)                | How the player is tested                                                                                              |
+| [Conformance](https://assesskit.wakan.dev/_assesskit/runtime/conformance/)         | Every feature ID of the 1EdTech conformance document, with its guide and its test                                     |
 
 ## License
 

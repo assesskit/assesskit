@@ -35,6 +35,8 @@ export function familyFiles(): Record<string, string> {
     files[`packages/${folder}/README.md`] = withLines(
       `# ${name}\n\n${description}\n\n## Quick start\n## Architecture\n\n${DIAGRAM}\n## API\n## Supported\n## Documentation\n## License\n`,
     );
+    for (const page of ["supported", "evidence", "choosing"])
+      files[`docs/${folder}/${page}.md`] = `# ${page}\n\n${DIAGRAM}`;
     files[`packages/${folder}/NOTICE`] = withLines(`${name}\nCopyright ${FAMILY.author}\n\n${description}\n`);
   }
   return files;

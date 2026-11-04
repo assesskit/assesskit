@@ -24,6 +24,22 @@ flowchart LR
 | `smoke.ts`                 | Chromium 111, Firefox 115 and WebKit 16.4 | `pnpm compat:engines` | The browser baseline in the oldest engines, in Docker                                            |
 | The guides                 | Node and the browsers                     | with the suites above | Every sample of a guide runs and gives the result that it shows                                  |
 
+## Results
+
+The counts are those of the repository at `1647c74`, run on 2026-11-05: every test below passed, and none failed or was skipped. The
+tests in Node ran on Node.js 22.23.4, and the tests in a browser in Chromium; Firefox and WebKit run the same files in the job
+`browsers` of `.github/workflows/ci.yml`, and their results are not counted here.
+
+| Layer                                 | Count                                               | Where                                                                                                                                   |
+| ------------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Tests in Node, offline                | 871 tests in 23 files                               | `pnpm test`, project `player`                                                                                                           |
+| Tests in a browser                    | 1,195 tests in 27 files, in Chromium                | `pnpm test:browser`, project `player-browser`                                                                                           |
+| Of these, tests that name axe or WCAG | 88                                                  | the titles of the tests of `*.browser.test.ts`, which say the rule or the success criterion that they hold                              |
+| Tests over the 1EdTech examples       | 49 tests in Node and 8 tests in 4 files in Chromium | `pnpm test:corpus`, projects `player-corpus-node` and `player-corpus`; `qti-examples` at commit `0a92fbb` of `scripts/corpus.lock.json` |
+| Tests against the published schemas   | 4 tests                                             | `pnpm test:xsd`, project `player-xsd`: the HTML elements of the ASI schema                                                              |
+| Fixtures                              | 32 files                                            | `packages/player/test/fixtures/`                                                                                                        |
+| The oldest browsers                   | Chromium 111, Firefox 115 and WebKit 16.4           | `compat/engines`, `pnpm compat:engines`; [baseline](baseline.md)                                                                        |
+| Entry points held to a budget         | one budget for each                                 | `packages/player/test/size-budgets.ts`; [size](size.md)                                                                                 |
 ## Completeness
 
 What must be covered is derived from the specifications and from the runtime, not from a list that the repository keeps.

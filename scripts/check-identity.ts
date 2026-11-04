@@ -258,3 +258,18 @@ export function checkReadmeLinks(files: Files): Violation[] {
   }
   return found;
 }
+
+/** The pages that every package has beside the guides of its modules (STANDARDS.md section 8, "Evidence pages"). */
+const EVIDENCE_PAGES = ["supported", "evidence", "choosing"];
+
+/**
+ * Every package has a Supported, an Evidence and a Choosing page in `docs/<package>/`: what it includes and leaves out, what
+ * shows it right with dated counts, and when another library fits better.
+ */
+export function checkEvidencePages(files: Files): Violation[] {
+  return PACKAGES.flatMap(({ name }) =>
+    EVIDENCE_PAGES.filter((page) => !files.has(`docs/${folderOf(name)}/${page}.md`)).map((page) =>
+      violation(`docs/${folderOf(name)}/${page}.md`, 0, "evidence-page", `Write the ${page} page of ${name}.`),
+    ),
+  );
+}

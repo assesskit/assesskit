@@ -276,9 +276,14 @@ tests of every engine, and waits for the next change to that part.
 - Each guide has the diagram, a Quick start that runs, the options with their defaults, the limits with their values, the errors
   with what to do about them, what is not included and why, and the differences from the references, or `None` and the reason.
   Not included is the table `| Not included | Why |`. `pnpm check:standards` fails on a guide without these sections; the documents of
-  `docs/<package>/` that are not the guide of a module (architecture, baseline, conformance, conventions, evidence, performance, size,
-  spec gaps and supported) are listed in `NOT_GUIDES` of `scripts/check-standards.ts`.
+  `docs/<package>/` that are not the guide of a module (architecture, baseline, choosing, conformance, conventions, evidence, performance,
+  size, spec gaps and supported) are listed in `NOT_GUIDES` of `scripts/check-standards.ts`.
 - What a call throws goes into a table of errors, not into a sample.
+- Every package has a Supported, an Evidence and a Choosing page in `docs/<package>/` (`evidence-page`). A count on them is a number of
+  a file of the repository or of `pnpm exec vitest list`, stated with the commit and the date of the count, and a statement of
+  what another library has is dated and linked, with what the package lacks of it. The Choosing pages are written from
+  `assesskit-comparators.md` of the workspace, re-checked against the guides: a comparator's status is its own text of that
+  date, never a test result of ours, and a claim word is never used for a certification, which only 1EdTech grants.
 - The Quick start of `packages/player/README.md` runs in `protocol.test.ts`.
 - One purpose for each document: `README.md` for users, `docs/<package>/` for guides, `CONTRIBUTING.md` for the process,
   `AGENTS.md` for conventions, `SECURITY.md` for deployment security, `validation/README.md` for the fixture scripts.

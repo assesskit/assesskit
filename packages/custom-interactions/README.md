@@ -57,10 +57,14 @@ frame in the current Chromium, Firefox and WebKit.
 
 ## Documentation
 
-| Guide                                                                                    | Covers                                                                                   |
-| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [Architecture](https://assesskit.wakan.dev/_assesskit/custom-interactions/architecture/) | Why a package of its own, the build of a module, sizes, dependencies, security and tests |
-| [Math entry](https://assesskit.wakan.dev/_assesskit/custom-interactions/math-entry/)     | The item, its properties, what the field writes, worked steps and accessibility          |
+| Guide                                                                                        | Covers                                                                                   |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| [Architecture](https://assesskit.wakan.dev/_assesskit/custom-interactions/architecture/)     | Why a package of its own, the build of a module, sizes, dependencies, security and tests |
+| [Math entry](https://assesskit.wakan.dev/_assesskit/custom-interactions/math-entry/)         | The item, its properties, what the field writes, worked steps and accessibility          |
+| [Stroke writing](https://assesskit.wakan.dev/_assesskit/custom-interactions/stroke-writing/) | The item, its properties, scoring a record, the reference strokes and accessibility      |
+| [Supported](https://assesskit.wakan.dev/_assesskit/custom-interactions/supported/)           | What each interaction responds with and how it is scored, and what is left out           |
+| [Evidence](https://assesskit.wakan.dev/_assesskit/custom-interactions/evidence/)             | The tests of the modules in Node and in the player's frame, and their sizes              |
+| [Choosing](https://assesskit.wakan.dev/_assesskit/custom-interactions/choosing/)             | When the interactions fit, and what other ways to answer have that they lack             |
 
 ## License
 

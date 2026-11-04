@@ -286,6 +286,7 @@ contradict themselves or are silent, and what the runtime does.
 - [Supported](https://assesskit.wakan.dev/_assesskit/runtime/supported/): what the runtime supports and what it does not, and the scope of the claim.
 - [Evidence](https://assesskit.wakan.dev/_assesskit/runtime/evidence/): how the runtime is tested, and how to refresh the corpus and the fixtures.
 - [Conformance](https://assesskit.wakan.dev/_assesskit/runtime/conformance/): every feature ID of the 1EdTech conformance document, with its guide and its test.
+- [Choosing](https://assesskit.wakan.dev/_assesskit/runtime/choosing/): when the runtime fits, and what Longsight, Amp-up, Citolab, TAO and the PHP libraries have that it lacks, with dates.
 
 [SECURITY](https://github.com/assesskit/assesskit/blob/main/SECURITY.md) lists the threat model, every default limit and how to report a vulnerability.
 [CONTRIBUTING](https://github.com/assesskit/assesskit/blob/main/CONTRIBUTING.md) describes how to contribute.

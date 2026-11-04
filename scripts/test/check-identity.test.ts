@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { checkClaimWords, checkIdentity, checkReadmeLinks, checkTrademarks } from "../check-identity.ts";
+import {
+  checkClaimWords,
+  checkEvidencePages,
+  checkIdentity,
+  checkReadmeLinks,
+  checkTrademarks,
+} from "../check-identity.ts";
 import type { Files } from "../check-standards.ts";
 import { FAMILY, HOLDERS, MARKS, PACKAGES, REPOSITORY, SITE } from "../family.ts";
 import { folderOf, linesFor, markLineOf, notAffiliatedLine, packageUrl } from "../identity.ts";
@@ -193,5 +199,16 @@ describe("README links", () => {
     ].join("\n");
     expect(checkReadmeLinks(repository({ [README]: readme, "examples/a/README.md": "[x](y.md)\n" }))).toStrictEqual([]);
     expect(SITE.endsWith("/")).toBe(true);
+  });
+});
+
+describe("evidence pages", () => {
+  it("asks every package for its Supported, Evidence and Choosing pages", () => {
+    expect(checkEvidencePages(repository())).toStrictEqual([]);
+    const files = familyFiles();
+    delete files[`docs/${FOLDER}/choosing.md`];
+    expect(checkEvidencePages(new Map(Object.entries(files))).map(({ file }) => file)).toStrictEqual([
+      `docs/${FOLDER}/choosing.md`,
+    ]);
   });
 });
