@@ -566,7 +566,7 @@ in the host, so another host of the same exam has no such rule: the compile of t
 
 ## Errors
 
-The host throws the runtime's `DataError` for a request it refuses and the player's `AccessError` and `ServiceError` for the rest; the route of the host maps them to statuses.
+The host throws the runtime's `DataError` for a request it refuses and the player's `AccessError` and the runtime's `ServiceError` for the rest; the route of the host maps them to statuses.
 
 | Error                                             | When                                                                                                                                   | What to do                                                                                                                                                                                                                                                                            |
 | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -23,33 +23,3 @@ export class AccessError extends AssesskitError {
     this.reason = reason;
   }
 }
-
-/**
- * The error for a call to a service that fails, such as the endpoints of a CAT engine, and for a store conflict that
- * outlasts its retries.
- *
- * @remarks
- * A `CatPort` that `createCatRestHandler` serves also throws it to refuse a request: the status 400 for data of the request
- * that the engine finds invalid, 404 for an object that is unknown, and 429 or 503 for an engine that is busy. The handler
- * answers with that status and a fixed text, and never shows the message.
- */
-export class ServiceError extends AssesskitError {
-  /** Error class name. */
-  override name = "ServiceError";
-  /** The HTTP status of the failed call; `409` for a store conflict, and `0` when the call got no answer. */
-  readonly status: number;
-  /** The body of the response, or the empty string when the call had none. */
-  readonly body: string;
-
-  /**
-   * @param message - Says which call failed.
-   * @param status - The HTTP status of the failed call.
-   * @param body - The body of the response.
-   * @param options - The `cause`: the error that this one reports.
-   */
-  constructor(message: string, status: number, body: string, options?: ErrorOptions) {
-    super(message, options);
-    this.status = status;
-    this.body = body;
-  }
-}

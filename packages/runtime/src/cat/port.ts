@@ -1,4 +1,5 @@
 import type { CallOptions } from "../checks.js";
+import type { ServiceError } from "../errors.js";
 import type {
   CreateSectionResponse,
   CreateSessionRequest,
@@ -18,6 +19,8 @@ import type {
  * checks it against the engines it trusts before it sends a candidate's results there. The deployment of a section
  * (`createSection`, `getSection`, `endSection`) is the host's concern; the delivery of a session (`createSession`,
  * `submitResults`, `endSession`) is the delivery engine's. Each method takes the {@link CallOptions} of its caller last.
+ * A method refuses a request by throwing {@link ServiceError}: the status 400 for data that the engine finds invalid, 404
+ * for an object that is unknown, and 429 or 503 for an engine that is busy.
  *
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, requests}
  */

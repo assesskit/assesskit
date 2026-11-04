@@ -1,8 +1,8 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers and OAuth parameters are those of their specifications.
 
-import { ServiceError } from "@assesskit/player";
 import { type CatFetch, createRestCatPort, type OAuthClientCredentials } from "@assesskit/player/cat-rest";
 import type { CatPort } from "@assesskit/runtime/cat";
+import { ServiceError } from "@assesskit/runtime/errors";
 import { describe, expect, it, vi } from "vitest";
 import { administer, answersEasyItems, fetchFrom } from "../scenario.ts";
 import { DEMO_CREDENTIALS, demoServer } from "../src/demo-server.ts";

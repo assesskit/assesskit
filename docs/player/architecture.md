@@ -149,17 +149,16 @@ Four configurations check the package, each with the libraries of its side:
 
 ## Errors
 
-The errors of the player extend `AssesskitError` of the runtime, and the player throws the runtime's `DataError`: both come from
-`@assesskit/runtime/errors`, which loads no other module, so that browser folders can import it. The messages are full sentences
-that say what is wrong and what is expected. The runtime's errors pass through the player unchanged. Every class takes
-`ErrorOptions` last, and an error that reports another holds it as `cause`, such as the `ServiceError` of a CAT request whose
-port failed.
+The error of the player extends `AssesskitError` of the runtime, and the player throws the runtime's `DataError` and `ServiceError`:
+all three come from `@assesskit/runtime/errors`, which loads no other module, so that browser folders can import it, and so that a
+CAT engine refuses a request without the player. The messages are full sentences that say what is wrong and what is expected. The
+runtime's errors pass through the player unchanged. Every class takes `ErrorOptions` last, and an error that reports another holds
+it as `cause`, such as the `ServiceError` of a CAT request whose port failed.
 
-| Class          | Thrown when                                                                    | Carries             |
-| -------------- | ------------------------------------------------------------------------------ | ------------------- |
-| `AccessError`  | A caller acts on a session it is not bound to, or starts a session that exists | `reason`            |
-| `ServiceError` | A call to a CAT engine fails, or a store conflict outlasts its retries         | `status` and `body` |
+| Class         | Thrown when                                                                    | Carries  |
+| ------------- | ------------------------------------------------------------------------------ | -------- |
+| `AccessError` | A caller acts on a session it is not bound to, or starts a session that exists | `reason` |
 
-`DataError` of the runtime is thrown when an argument has the wrong type or is out of range, or untrusted input is not what it should be, such as an
-envelope. `reason` is one of the exported union `AccessErrorReason`: `not-bound` or `session-exists`. A host maps `AccessError` to 403. `status` is `0` when a service did
-not answer.
+The runtime throws `DataError` when an argument has the wrong type or is out of range, or untrusted input is not what it should be, such as an
+envelope, and `ServiceError` when a call to a CAT engine fails or a store conflict outlasts its retries; its `status` is `0` when a service did
+not answer. `reason` is one of the exported union `AccessErrorReason`: `not-bound` or `session-exists`. A host maps `AccessError` to 403.

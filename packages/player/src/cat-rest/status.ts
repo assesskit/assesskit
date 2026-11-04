@@ -1,7 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers and of the status fields are those of the binding.
 
-import { DataError, SecurityError } from "@assesskit/runtime/errors";
-import { ServiceError } from "../errors.js";
+import { DataError, SecurityError, ServiceError } from "@assesskit/runtime/errors";
 import { TokenEndpointError } from "./rest-client.js";
 import type { CatOperation } from "./route.js";
 

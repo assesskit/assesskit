@@ -1,6 +1,5 @@
-import { ServiceError } from "@assesskit/player";
 import type { SectionData } from "@assesskit/runtime/cat";
-import { DataError } from "@assesskit/runtime/errors";
+import { DataError, ServiceError } from "@assesskit/runtime/errors";
 import { checkRecord, describe, guardSchema, isRecord, type Schema } from "./checks.ts";
 
 /**

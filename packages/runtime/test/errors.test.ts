@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { AssesskitError, DataError, type Issue, ProcessingError, ReadError, SecurityError } from "../src/errors.js";
+import {
+  AssesskitError,
+  DataError,
+  type Issue,
+  ProcessingError,
+  ReadError,
+  SecurityError,
+  ServiceError,
+} from "../src/errors.js";
 
 const issue: Issue = {
   severity: "error",
@@ -77,5 +85,19 @@ describe("ProcessingError", () => {
 
   it("carries the error it reports as its cause", () => {
     expect(new ProcessingError("The custom operator threw.", "op", { cause }).cause).toBe(cause);
+  });
+});
+
+describe("ServiceError", () => {
+  it("carries the status and the body of the failed call", () => {
+    const error = new ServiceError("The CAT service answered 503.", 503, "unavailable");
+    expect(error).toBeInstanceOf(AssesskitError);
+    expect(error.name).toBe("ServiceError");
+    expect(error.status).toBe(503);
+    expect(error.body).toBe("unavailable");
+  });
+
+  it("carries the error it reports as its cause", () => {
+    expect(new ServiceError("The CAT service did not answer.", 0, "", { cause }).cause).toBe(cause);
   });
 });

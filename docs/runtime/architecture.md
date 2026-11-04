@@ -92,12 +92,13 @@ itself, is an `AssesskitError`.
 | `ReadError`       | A document is not well-formed, not in the expected namespace, or cannot be mapped to the model                            | `issues`              |
 | `SecurityError`   | Input breaks a security rule or a limit: a DOCTYPE, a path escape, a size, depth or ratio above its limit                 | `limit` and `maximum` |
 | `ProcessingError` | Processing meets a condition the specification does not define as NULL                                                    | `identifier`          |
+| `ServiceError`    | A call to a service fails, a store conflict outlasts its retries, or a `CatPort` refuses a request                        | `status` and `body`   |
 
 `limit` names the option that sets the limit, such as `maxBytes`, or the rule, such as `doctype`; `maximum` is the value of the
 limit, `0` for a rule that allows none.
 
 The subpath `errors` exports the errors and the types `Issue` and `IssueLocation` without any other module. The player imports
-`AssesskitError` and `DataError` from it.
+`AssesskitError`, `DataError` and `ServiceError` from it, and a CAT engine imports `ServiceError` without the player.
 
 Validation does not throw. It returns `Issue`s: a severity, the `rule` it breaks (`assesskit/<module>/<name>`, or the identifier of a rule
 set in BIND section 5), a message and, when known, a location with the file path, line, column and element path.

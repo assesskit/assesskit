@@ -74,6 +74,10 @@ method takes `options?` last, the `CallOptions` of `@assesskit/runtime/checks`: 
 port that sends a request passes it on, so that the request stops too. `drainCat`, `sendCatRequest`, `deployCatSections` and
 the REST handler pass the signal of their caller.
 
+A port refuses a request by throwing `ServiceError` of `@assesskit/runtime/errors`: its `status` is 400 for data of the request that
+the engine finds invalid, 404 for an object that is unknown, and 429 or 503 for an engine that is busy. A handler that serves the
+port, such as `createCatRestHandler` of the player, answers with that status and never shows the message.
+
 | Method                                                                           | Request                                | Made by                       |
 | -------------------------------------------------------------------------------- | -------------------------------------- | ----------------------------- |
 | `createSection(prefix, data, options?)`                                          | `POST {prefix}/sections`               | The host, once, at deployment |

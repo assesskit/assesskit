@@ -13,7 +13,7 @@ import {
   writeCandidateAction,
   writeView,
 } from "@assesskit/runtime/delivery/wire";
-import { DataError } from "@assesskit/runtime/errors";
+import { DataError, ServiceError } from "@assesskit/runtime/errors";
 import { type PersonalNeedsProfile, PNP_NAMESPACE, readPnp } from "@assesskit/runtime/pnp";
 import { buildSingle } from "@assesskit/runtime/values";
 import fc from "fast-check";
@@ -21,7 +21,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import assetGateGuide from "../../../docs/player/asset-gate.md?raw";
 import serverGuide from "../../../docs/player/server.md?raw";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
-import { AccessError, ServiceError } from "../src/index.js";
+import { AccessError } from "../src/index.js";
 import { type HostApplyOptions, isOfficialResult, type ViewEnvelope } from "../src/protocol/index.js";
 import {
   type AssetGate,

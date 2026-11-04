@@ -10,7 +10,7 @@ import {
   type SubmitResultsResponse,
   writeResultsJson,
 } from "@assesskit/runtime/cat";
-import { DataError, ReadError, SecurityError } from "@assesskit/runtime/errors";
+import { DataError, ReadError, SecurityError, ServiceError } from "@assesskit/runtime/errors";
 import type { QtiMetadata } from "@assesskit/runtime/metadata";
 import { buildSingle } from "@assesskit/runtime/values";
 import fc from "fast-check";
@@ -30,7 +30,6 @@ import {
   type RestCatPortOptions,
 } from "../src/cat-rest/index.js";
 import { readCreateSessionBody, readResultsBody, readSectionBody, readSectionData } from "../src/cat-rest/internal.js";
-import { ServiceError } from "../src/index.js";
 import { base64, json, PREFIX, rejection, resultsOf } from "./cat-fixture.js";
 import { fuzzJson } from "./fuzz.js";
 import { waitFor } from "./wait.js";

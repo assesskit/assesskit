@@ -11,7 +11,7 @@ import {
   stamp,
 } from "@assesskit/runtime/delivery";
 import { type CandidateAction, type CandidateView, writeCandidateAction } from "@assesskit/runtime/delivery/wire";
-import { DataError } from "@assesskit/runtime/errors";
+import { DataError, ServiceError } from "@assesskit/runtime/errors";
 import type { AssessmentResult } from "@assesskit/runtime/results";
 import { buildSingle } from "@assesskit/runtime/values";
 import fc from "fast-check";
@@ -20,7 +20,6 @@ import protocolGuide from "../../../docs/player/protocol.md?raw";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import readme from "../README.md?raw";
 import { createLocalSession } from "../src/client/local/index.js";
-import { ServiceError } from "../src/index.js";
 import {
   checkActionEnvelope,
   checkAllowList,

@@ -1,9 +1,9 @@
-import { DataError } from "@assesskit/runtime/errors";
+import { DataError, ServiceError } from "@assesskit/runtime/errors";
 import { buildSingle } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it } from "vitest";
 import { commands } from "vitest/browser";
 import { createRemoteSession, type Transport } from "../src/client/index.js";
-import { AccessError, ServiceError } from "../src/index.js";
+import { AccessError } from "../src/index.js";
 import { mountDelivery } from "../src/player/index.js";
 import type { SessionClient, ViewEnvelope } from "../src/protocol/index.js";
 import { isViewRequest } from "../src/protocol/internal.js";

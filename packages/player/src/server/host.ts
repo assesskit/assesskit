@@ -33,10 +33,10 @@ import {
   writeCandidateAction,
   writeView,
 } from "@assesskit/runtime/delivery/wire";
-import { DataError } from "@assesskit/runtime/errors";
+import { DataError, ServiceError } from "@assesskit/runtime/errors";
 import type { QtiPackage } from "@assesskit/runtime/package";
 import * as v from "valibot";
-import { AccessError, ServiceError } from "../errors.js";
+import { AccessError } from "../errors.js";
 import {
   type ActionEnvelope,
   type Caller,

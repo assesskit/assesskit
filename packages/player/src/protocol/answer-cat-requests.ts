@@ -1,7 +1,6 @@
 import type { CatResponse } from "@assesskit/runtime/cat";
 import type { CatRequest } from "@assesskit/runtime/delivery";
-import { DataError } from "@assesskit/runtime/errors";
-import { ServiceError } from "../errors.js";
+import { DataError, ServiceError } from "@assesskit/runtime/errors";
 import type { CatFailure, HostStep } from "./host-session.js";
 
 /** What a session gives the answer loop: the requests that wait, the port, and the way to apply and save an answer. */

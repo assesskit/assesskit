@@ -412,7 +412,7 @@ a path that returns `true` by mistake reaches no section. An object of another c
 404), which also hides that it exists. [The example](../../examples/player/cat-with-measurekit/README.md) does exactly this.
 
 ```ts
-import { ServiceError } from "@assesskit/player";
+import { ServiceError } from "@assesskit/runtime/errors";
 
 const owners = new Map(); // section identifier -> client
 const unknown = () => new ServiceError("The section is unknown.", 404, "");
