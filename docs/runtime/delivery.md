@@ -399,7 +399,8 @@ supports, expiries and marks for review, the test outcomes, the context values, 
 what the engine takes from the profile, the scoring requests with their supplied values, the sessions of adaptive sections,
 and the context of the results. `serializeState` writes it as JSON with values as `WireValue`s and maps as arrays
 of entries; `deserializeState` reads it back equal. Replaying the actions from the seed reproduces a state and its events
-exactly.
+exactly. `deserializeState` reads the state that the host's own store holds, which the engine wrote: it checks the form strictly
+and sets no limit of size, so never pass it a text that a client sent ([SECURITY.md](../../SECURITY.md)).
 
 #### State across releases
 
@@ -620,12 +621,12 @@ with NULL as `null`, durations as `PT<seconds>S`, and files as references. Maps 
 so an identifier such as `__proto__` stays data. They decode without declarations and lose nothing: `multiple` stays apart
 from `ordered`, and the NULL of one type from that of another.
 
-| Function                              | Does                                                                                                                                                         |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `writeView(view)`                     | Builds the JSON form property by property, reads it back with `readView` and returns it. The content nodes are shared with the view.                         |
-| `readView(json)`                      | Checks every property of the form and no other, the type of each field, the values, and the content as plain JSON of at most 256 levels with finite numbers. |
-| `writeCandidateAction(action)`        | Writes the properties of the action's type and no other: the time `at` is not written.                                                                       |
-| `readCandidateAction(json, options?)` | Reads an action of the candidate, checks its type, its properties and its limits, and refuses an action of the host and any property `at`.                   |
+| Function                              | Does                                                                                                                                                                                                                                                              |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `writeView(view)`                     | Builds the JSON form property by property, reads it back with `readView` and returns it. The content nodes are shared with the view.                                                                                                                              |
+| `readView(json)`                      | Checks every property of the form and no other, the type of each field, the values, and the content as plain JSON of at most 256 levels with finite numbers. It reads the view of the host's server and sets no limit of size ([SECURITY.md](../../SECURITY.md)). |
+| `writeCandidateAction(action)`        | Writes the properties of the action's type and no other: the time `at` is not written.                                                                                                                                                                            |
+| `readCandidateAction(json, options?)` | Reads an action of the candidate, checks its type, its properties and its limits, and refuses an action of the host and any property `at`.                                                                                                                        |
 
 | Limit                  | Default   | Bounds                                                                                                     |
 | ---------------------- | --------- | ---------------------------------------------------------------------------------------------------------- |

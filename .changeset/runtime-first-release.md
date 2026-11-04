@@ -32,7 +32,10 @@ A validation lists at most `maxFindings` issues, 1,000 by default, and ends a lo
 `readModuleResolution` refuses a file longer than 65,536 characters before it parses it.
 The default limits keep the worst input of every reader within a budget of 256 MiB of heap, measured and pinned by a test: an XML
 document has at most 10 MiB (`maxBytes`) and 300,000 nodes (`maxNodes`), and a file of a package at most 64 MiB (`maxEntryBytes`);
-SECURITY.md has the peak of each reader and what raising a limit costs.
+SECURITY.md has the peak of each reader and what raising a limit costs. `readResultsJson(json, { limits })` refuses the JSON of a
+result above `maxResultSize`, 8,388,608 by default, with a `SecurityError`, as `readCandidateAction` refuses an action above
+`maxActionSize`; `deserializeState` and `readView` read what the engine wrote, from the host's own store and server, and have no limit
+of size.
 
 `readItemVariables` and `readTestInputs` of `@assesskit/runtime/delivery` read a stored results report back into the inputs of
 `runResponseProcessing` and `runOutcomeProcessing`, so that a host can score a fixed item again; the guide has the recipe. For that, a

@@ -18,6 +18,7 @@ import {
   type CreateSessionRequest,
   type CreateSessionResponse,
   DataError,
+  DEFAULT_RESULTS_JSON_LIMITS,
   type GetSectionResponse,
   isSessionEnd,
   type QtiMetadata,
@@ -26,6 +27,7 @@ import {
   readResults,
   readResultsJson,
   type SectionData,
+  SecurityError,
   type SubmitResultsRequest,
   type SubmitResultsResponse,
   validatePool,
@@ -896,6 +898,42 @@ describe("the JSON of results and stages", () => {
     );
     expect(() => writeResultsJson(json("null"))).toThrow(DataError);
     expect(() => writeResultsJson(json('{"context":{},"itemResults":"x"}'))).toThrow(DataError);
+  });
+
+  it("refuses an assessment result larger than the limit maxResultSize, which counts values, names and strings", () => {
+    expect(DEFAULT_RESULTS_JSON_LIMITS).toEqual({ maxResultSize: 8_388_608 });
+    // The result is 82: the root object (1) with the names context (7) and itemResult (10); the context (1) with the name
+    // sessionIdentifiers (18) and its empty list (1); the list of item results (1) and its object (1) with the names identifier
+    // (10), datestamp (9) and sessionStatus (13); and the strings "q" (2), "d" (2) and "final" (6).
+    const result = {
+      context: { sessionIdentifiers: [] },
+      itemResult: [{ identifier: "q", datestamp: "d", sessionStatus: "final" }],
+    };
+    const size = 82;
+    expect(readResultsJson(result, { limits: { maxResultSize: 200 } }).itemResults).toHaveLength(1);
+    expect(readResultsJson(result, { limits: { maxResultSize: size } }).itemResults).toHaveLength(1);
+    expect(() => readResultsJson(result, { limits: { maxResultSize: size - 1 } })).toThrow(
+      `The assessmentResult is larger than the limit maxResultSize of ${size - 1}.`,
+    );
+    expect(() => readResultsJson(result, { limits: { maxResultSize: 20 } })).toThrow(
+      expect.objectContaining({ name: "SecurityError", limit: "maxResultSize", maximum: 20 }),
+    );
+    const many = { itemResult: Array.from({ length: 1_000 }, () => ({})) };
+    expect(() => readResultsJson(many, { limits: { maxResultSize: 1_000 } })).toThrow(SecurityError);
+    const long = { context: { sourcedId: "x".repeat(DEFAULT_RESULTS_JSON_LIMITS.maxResultSize) } };
+    expect(() => readResultsJson(long)).toThrow(`larger than the limit maxResultSize of 8388608.`);
+  });
+
+  it("refuses options of the wrong type when it reads an assessment result", () => {
+    expect(() => readResultsJson({}, json("null"))).toThrow("The options must be an object");
+    expect(() => readResultsJson({}, json('{"limits": null}'))).toThrow("The option limits must be an object");
+    expect(() => readResultsJson({}, json('{"limits": {"maxResultSize": "5"}}'))).toThrow(
+      'The limit maxResultSize must be a positive integer, found "5".',
+    );
+    expect(() => readResultsJson({}, json('{"limits": {"maxResultSize": null}}'))).toThrow(
+      "The limit maxResultSize must be a positive integer, found null.",
+    );
+    expect(() => readResultsJson({}, { limits: { maxResultSize: 0 } })).toThrow(DataError);
   });
 
   it("reads an item stage with absent or null fields as the stage that ends the session", () => {

@@ -154,7 +154,9 @@ const stateSchema: Schema<DeliveryState> = v.object({
  *
  * @remarks
  * A state of a later version of the format is refused. A key that this version does not know is dropped, so that a
- * state read and written again loses the fields of a later minor release.
+ * state read and written again loses the fields of a later minor release. The text comes from the host's own store, and the
+ * engine built the state from actions that passed the limits of `readCandidateAction`, so the reader sets no limit of size.
+ * Do not pass it a text that a client sent.
  *
  * @param text - The JSON text that `serializeState` wrote.
  * @returns The state.

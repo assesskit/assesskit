@@ -8,7 +8,7 @@ import {
   parseWith,
   type Schema,
 } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import { checkJsonSize, checkOptions } from "../checks-internal.js";
 import { DataError, SecurityError } from "../errors.js";
 import type { CandidateAction } from "./action.js";
 import { CANDIDATE_ACTION_TYPES, checkResponseMaps } from "./candidate-actions.js";
@@ -76,30 +76,6 @@ function readLimits(limits: Partial<ActionLimits>): ActionLimits {
   return { maxActionSize, maxPciStateLength, maxSettingListLength };
 }
 
-/**
- * Checks that JSON is not larger than the limit. It counts without recursion and stops once the limit is passed, so
- * that the check costs no more than the limit, whatever the input.
- */
-function checkSize(json: unknown, limit: number): void {
-  const pending: unknown[] = [json];
-  let size = 0;
-  while (pending.length > 0 && size <= limit) {
-    const value = pending.pop();
-    size += 1;
-    if (typeof value === "string") size += value.length;
-    else if (Array.isArray(value)) for (const member of value) pending.push(member);
-    else if (isRecord(value)) {
-      for (const [name, member] of Object.entries(value)) {
-        size += name.length;
-        pending.push(member);
-      }
-    }
-  }
-  if (size > limit) {
-    throw new SecurityError(`The action is larger than the limit maxActionSize of ${limit}.`, "maxActionSize", limit);
-  }
-}
-
 const itemSchema = { item: itemKeySchema };
 
 const actionSchema: Schema<CandidateAction> = v.variant("type", [
@@ -140,7 +116,7 @@ const membersOf = (value: unknown): readonly unknown[] =>
 
 /**
  * Checks every list in the settings of a `support-settings` action against the limit, nested lists included, before the
- * settings are read. It walks without recursion a value that {@link checkSize} has bounded.
+ * settings are read. It walks without recursion a value that {@link checkJsonSize} has bounded.
  */
 function checkSettingLists(json: unknown, limit: number): void {
   if (!isRecord(json) || json.type !== "support-settings") return;
@@ -191,7 +167,7 @@ export function readCandidateAction(json: unknown, options: ReadCandidateActionO
   checkOptions(options);
   const { limits = {} } = options;
   const { maxActionSize, maxPciStateLength, maxSettingListLength } = readLimits(limits);
-  checkSize(json, maxActionSize);
+  checkJsonSize(json, maxActionSize, "The action", "maxActionSize");
   refuseHostAction(json);
   checkSettingLists(json, maxSettingListLength);
   const action = parseWith(actionSchema, json, "The action");

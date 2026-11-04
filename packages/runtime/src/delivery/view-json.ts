@@ -145,7 +145,9 @@ const viewSchema: Schema<CandidateView> = v.strictObject({
  * every field, the values as wire values, and the content as plain JSON nodes.
  *
  * @remarks
- * A view that `writeView` wrote reads back equal.
+ * A view that `writeView` wrote reads back equal. The view comes from the host's own server, which built it from content that
+ * passed the limits of the XML reader, so the reader sets no limit of size; it limits the depth of the content to 256 levels.
+ * Do not pass it a view that a user sent.
  *
  * @param json - The parsed JSON.
  * @returns The view.

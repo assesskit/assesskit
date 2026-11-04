@@ -5,6 +5,7 @@ import {
   AssesskitError,
   compileXsdRegex,
   createRandom,
+  DEFAULT_RESULTS_JSON_LIMITS,
   DEFAULT_XML_LIMITS,
   DEFAULT_ZIP_LIMITS,
   parseXml,
@@ -16,6 +17,7 @@ import {
   readModuleResolution,
   readPackage,
   readResults,
+  readResultsJson,
   readUsageData,
   resolveStructure,
   SecurityError,
@@ -330,6 +332,40 @@ export const READINGS = {
         4,
       ).bytes,
     read: (xml: Uint8Array) => `${readResults(xml).itemResults.length} item results`,
+  },
+  /**
+   * The JSON of a result, parsed, of the most size that its limit allows, in its heaviest form for its size: one variable
+   * with as many values as fit, each of 8 units (an object, the name `value`, a string and its length). The forms that were
+   * tried are the values, the item results with an outcome, the item results with a response and an outcome, and bare item
+   * results; the values take about twice the memory of the others for their size.
+   */
+  resultsJson: {
+    input: () => {
+      const values = Math.floor((DEFAULT_RESULTS_JSON_LIMITS.maxResultSize - 200) / 8);
+      return {
+        context: { sessionIdentifiers: [] },
+        itemResult: [
+          {
+            identifier: "q",
+            datestamp: "2020-08-25T18:19:20",
+            sessionStatus: "final",
+            outcomeVariables: [
+              {
+                identifier: "SCORE",
+                cardinality: "multiple",
+                baseType: "integer",
+                value: Array.from({ length: values }, () => ({ value: "1" })),
+              },
+            ],
+          },
+        ],
+      };
+    },
+    read: (json: unknown) => {
+      const variable = readResultsJson(json).itemResults[0]?.variables[0];
+      const value = variable?.kind === "outcome" ? variable.value : null;
+      return `${value !== null && "values" in value ? value.values.length : 0} values`;
+    },
   },
   /** Usage data with as many statistics as the limits hold. */
   usageStatistics: {

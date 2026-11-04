@@ -1,6 +1,8 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of the JSON fields are those of the binding.
 import * as v from "valibot";
 import {
+  checkPositiveInteger,
+  checkRecord,
   describe,
   finiteSchema,
   nonEmptyStringSchema,
@@ -10,6 +12,7 @@ import {
   type Schema,
   transformWith,
 } from "../checks.js";
+import { checkJsonSize, checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import {
   type AssessmentResult,
@@ -239,19 +242,59 @@ const assessmentResultSchema: Schema<AssessmentResult> = v.pipe(
   })),
 );
 
+/** The limits of {@link readResultsJson}, which keep a result from another system from being too large to read. */
+export interface ResultsJsonLimits {
+  /**
+   * The size of the JSON of an assessment result: each string, number, boolean, `null`, array and object counts 1, and each
+   * string and property name adds its length in code units.
+   *
+   * @defaultValue `8388608`
+   */
+  readonly maxResultSize: number;
+}
+
+/** The options of {@link readResultsJson}. */
+export interface ReadResultsJsonOptions {
+  /**
+   * Limits that replace those of {@link DEFAULT_RESULTS_JSON_LIMITS}, field by field.
+   *
+   * @defaultValue {@link DEFAULT_RESULTS_JSON_LIMITS}
+   */
+  readonly limits?: Partial<ResultsJsonLimits>;
+}
+
 /**
- * Reads an assessment result that a CAT engine returned in the JSON of the binding.
+ * The default limits of {@link readResultsJson}.
+ *
+ * @remarks
+ * `maxResultSize` holds about 58,000 item results with an outcome variable, as many as the XML reader holds (50,709). The worst
+ * result of that size, one variable of a million values, keeps 136 MiB of heap alive while it is read, under the budget of
+ * 256 MiB; each million of size costs up to 17 MiB.
+ */
+export const DEFAULT_RESULTS_JSON_LIMITS: ResultsJsonLimits = { maxResultSize: 8_388_608 };
+
+/**
+ * Reads an assessment result that a CAT engine returned in the JSON of the binding, or that a host sent to a CAT engine.
  *
  * @remarks
  * The three lists of variables of a result are joined in the order responses, templates, outcomes. An engine may leave
  * out the context, which the model requires: the result then has no session identifiers.
  *
- * @param json - The parsed JSON, which is untrusted.
+ * @param json - The parsed JSON, which is untrusted. Whoever parses the text bounds it first, because the memory of
+ * `JSON.parse` follows the tokens.
+ * @param options - See {@link ReadResultsJsonOptions}.
  * @returns The assessment result.
- * @throws `DataError` when the JSON is not an assessment result of the binding, or a value is not in the lexical form
- * of its base type. see
- * {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, JSON binding of the assessment result}
+ * @throws `DataError` when the JSON is not an assessment result of the binding, a value is not in the lexical form
+ * of its base type, or an option has the wrong type.
+ * @throws `SecurityError` when the JSON is larger than `maxResultSize`.
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, JSON binding of the assessment result}
  */
-export function readResultsJson(json: unknown): AssessmentResult {
+export function readResultsJson(json: unknown, options: ReadResultsJsonOptions = {}): AssessmentResult {
+  checkOptions(options);
+  const { limits = {} } = options;
+  checkRecord(limits, "The option limits must be an object");
+  const { maxResultSize = DEFAULT_RESULTS_JSON_LIMITS.maxResultSize } = limits;
+  checkPositiveInteger(maxResultSize, "The limit maxResultSize");
+  checkJsonSize(json, maxResultSize, "The assessmentResult", "maxResultSize");
   return parseWith(assessmentResultSchema, json, "The assessmentResult");
 }

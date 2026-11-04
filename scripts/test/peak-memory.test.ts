@@ -88,6 +88,12 @@ const READINGS: readonly {
     outcome: "50709 item results",
   },
   {
+    title: "reads the JSON of a result of the most size its limit allows, in one variable of as many values as fit",
+    name: "resultsJson",
+    heapMiB: 272,
+    outcome: "1048551 values",
+  },
+  {
     title: "reads usage data with as many statistics as the limits hold",
     name: "usageStatistics",
     heapMiB: 256,

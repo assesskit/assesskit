@@ -22,14 +22,14 @@ sequenceDiagram
   Host->>CAT: endSection
 ```
 
-| Function                                            | Does                                                                                       |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `buildSectionData(selection, files)`                | Builds the `SectionData` of Create Section from the files of an adaptive section           |
-| `isSessionEnd(stage)`                               | Tells whether a stage, or a missing one, ends the session                                  |
-| `validatePool(section, pool)`                       | Compares the item references of an adaptive section with the pool that Get Section returns |
-| `buildCatMetadata(items, options?)`                 | Builds the metadata JSON from the QTI metadata of the items                                |
-| `writeResultsJson(result)`, `readResultsJson(json)` | Write and read an assessment result in the JSON of the public binding                      |
-| `readItemStage(json, noun)`                         | Reads an item stage of the binding                                                         |
+| Function                                                      | Does                                                                                            |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `buildSectionData(selection, files)`                          | Builds the `SectionData` of Create Section from the files of an adaptive section                |
+| `isSessionEnd(stage)`                                         | Tells whether a stage, or a missing one, ends the session                                       |
+| `validatePool(section, pool)`                                 | Compares the item references of an adaptive section with the pool that Get Section returns      |
+| `buildCatMetadata(items, options?)`                           | Builds the metadata JSON from the QTI metadata of the items                                     |
+| `writeResultsJson(result)`, `readResultsJson(json, options?)` | Write and read an assessment result in the JSON of the public binding, the reader within limits |
+| `readItemStage(json, noun)`                                   | Reads an item stage of the binding                                                              |
 
 | Type                                                                                             | Is                                                                                   |
 | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
@@ -138,8 +138,13 @@ includes resolved, as `QtiPackage.document` has. An identifier counts once howev
 
 ## JSON binding
 
-`writeResultsJson(result)` and `readResultsJson(json)` convert an assessment result to and from the JSON of the
+`writeResultsJson(result)` and `readResultsJson(json, options?)` convert an assessment result to and from the JSON of the
 public REST binding of CAT 1.0. The OpenAPI files that the binding names do not serve, so the field names come from its listing.
+A result comes from another system, so the reader has a limit of size, `maxResultSize` of `DEFAULT_RESULTS_JSON_LIMITS` (the option
+`limits` replaces it): each value of the parsed JSON counts 1, and each string and property name adds its length. The default,
+8,388,608, holds about 58,000 item results with an outcome variable, and the worst result of that size keeps 136 MiB of heap alive
+([SECURITY.md](../../SECURITY.md#peak-memory)). Whoever parses the text bounds its bytes and tokens first, because the memory of
+`JSON.parse` follows the tokens; the REST handler and port of the player do.
 `readItemStage(json, noun)` reads an item stage; `noun` names it in the error message, such as `nextItems of the answer`. The
 functions make no request: the adapter that talks to the engine owns the transport.
 
@@ -233,6 +238,7 @@ JSON.stringify(metadata);
 | ---------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | An argument of the wrong type, as plain JavaScript or JSON passes it   | `DataError` that says what is wrong and what is expected          |
 | JSON that is not the binding's, or a value not in the form of its type | `DataError` that names the path of the first problem              |
+| A result larger than `maxResultSize`                                   | `SecurityError`, `limit` `"maxResultSize"`                        |
 | A stage that is not an item stage                                      | `DataError`                                                       |
 | A file that nothing references, or a referenced file that is missing   | `DataError`                                                       |
 | A repeated item identifier in the metadata                             | `DataError`                                                       |

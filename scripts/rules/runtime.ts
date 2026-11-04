@@ -7,6 +7,8 @@ const PARSE = "packages/runtime/src/xml/parse.ts";
 const TREE = "packages/runtime/src/xml/tree-builder.ts";
 const INCLUDE = "packages/runtime/src/xml/include.ts";
 const ACTION = "packages/runtime/src/delivery/action-json.ts";
+const CHECKS_INTERNAL = "packages/runtime/src/checks-internal.ts";
+const RESULT_JSON = "packages/runtime/src/cat/result-json-read.ts";
 const PLAN = "packages/runtime/src/delivery/plan.ts";
 const SESSION_STEP = "packages/runtime/src/delivery/step-session.ts";
 const SUPPORT_JSON = "packages/runtime/src/delivery/support-json.ts";
@@ -14,6 +16,7 @@ const PACKAGE_TEST = "packages/runtime/test/package.test.ts";
 const XML_TEST = "packages/runtime/test/xml.test.ts";
 const NODE_TEST = "packages/runtime/test/node.test.ts";
 const DELIVERY_TEST = "packages/runtime/test/delivery.test.ts";
+const CAT_TEST = "packages/runtime/test/cat.test.ts";
 
 /** The limits and the security checks of the runtime, which SECURITY.md lists, each with the test that guards it. */
 export const RUNTIME_RULES: readonly Rule[] = [
@@ -242,11 +245,25 @@ export const RUNTIME_RULES: readonly Rule[] = [
     test: "packages/runtime/test/processing.test.ts",
   },
   {
+    rule: "JSON larger than the limit that is given to checkJsonSize is refused.",
+    file: CHECKS_INTERNAL,
+    find: "if (size > limit) throw new SecurityError(",
+    replace: "if (false) throw new SecurityError(",
+    test: DELIVERY_TEST,
+  },
+  {
     rule: "An action of a client larger than maxActionSize is refused.",
     file: ACTION,
-    find: 'throw new SecurityError(`The action is larger than the limit maxActionSize of ${limit}.`, "maxActionSize", limit);',
-    replace: "return;",
+    find: 'checkJsonSize(json, maxActionSize, "The action", "maxActionSize");',
+    replace: "void maxActionSize;",
     test: DELIVERY_TEST,
+  },
+  {
+    rule: "An assessment result in JSON larger than maxResultSize is refused.",
+    file: RESULT_JSON,
+    find: 'checkJsonSize(json, maxResultSize, "The assessmentResult", "maxResultSize");',
+    replace: "void maxResultSize;",
+    test: CAT_TEST,
   },
   {
     rule: "A PCI state of a client longer than maxPciStateLength is refused.",

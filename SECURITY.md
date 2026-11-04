@@ -82,6 +82,14 @@ Points to be aware of when deploying the runtime:
   settings hold the parameters of the support and no other property. The engine does not decide which candidate actions a client may send: it
   applies `suspend` and `resume`, which stop the clock, from whoever sends them, so a deployment that must not let candidates
   pause filters them before it applies them (the exam default of the player does).
+- **Readers of trusted input.** `deserializeState` and `readView` have no limit of size, because what they read is not input of
+  a client: the first reads the state that `serializeState` wrote, from the host's own store, and the second the view that the
+  host's server built with `writeView`. Both check the form strictly (the version and the type of every field, and the depth of
+  the content of a view), and the engine built what they read from actions that passed `readCandidateAction` and from documents
+  that passed the XML limits. A host never passes them a state or a view that a user or a client sent, and keeps its store as
+  private as the seed it holds. A practice session whose state sits in the browser of the candidate reads a state that the
+  candidate can change, which matters for nothing but their own practice. A host that must read a state or a view of unknown
+  origin parses its text with a limit of its own first, because the memory of `JSON.parse` follows the tokens.
 - **Resolvers and callbacks.** The functions a host passes in (`resolvers`, `resolveTemplate`, `customOperators`, the file
   callbacks of PCI values, `CatPort`) are the host's code and run with its authority. What they return is data and is checked
   where it is used. A resolver returns its value synchronously.
@@ -334,6 +342,13 @@ Test plans (`PlanLimits`; option `limits` of `planTest` and of `createEngine`, w
 | -------------- | ------- | ----- | --------------- | -------------------------------------------------------------------------------------------------- |
 | `maxPlanNodes` | 10,000  | nodes | 24              | The sections and items of a test plan, so that a selection with replacement cannot exhaust memory. |
 
+Results (`ResultsJsonLimits`; option `limits` of `readResultsJson`, which reads the JSON of an assessment result that a CAT engine
+or a host sent):
+
+| Limit           | Default   | Unit       | Largest example | Applies to                                                                                                                                    |
+| --------------- | --------- | ---------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `maxResultSize` | 8,388,608 | JSON nodes | none            | One result: each string, number, boolean, `null`, array and object counts 1, and each string and property name adds its length in code units. |
+
 Actions of a client (`ActionLimits`; option `limits` of `readCandidateAction`):
 
 | Limit                  | Default   | Unit       | Largest example | Applies to                                                                                                                                                                                                                                            |
@@ -385,6 +400,7 @@ and no reader peaks above 200.
 | `readPackage`          | A manifest of 10 MiB deflated at the ratio the limit allows                             |              200 |
 | `file` of a package    | A file of 64 MiB deflated at the ratio the limit allows                                 |               16 |
 | `planTest`             | A selection with replacement of 9,999 items                                             |               16 |
+| `readResultsJson`      | One variable of a million values, the most that `maxResultSize` holds                   |              136 |
 | `readCandidateAction`  | The most response entries, or the most integers of one response, that fit               |       144 to 152 |
 | `readCandidateAction`  | A settings list of a million names, refused                                             |               24 |
 | `compileXsdRegex`      | 100,000 states, matched against 100,000 characters                                      |               64 |
@@ -405,6 +421,7 @@ Without `maxSettingListLength`, the settings list needs 240 MiB. A host with mor
 | `maxActionSize`             | About 32 MiB for every million nodes.                                                                                        |
 | `maxSettingListLength`      | About 0.2 MiB for every 1,000 names.                                                                                         |
 | `maxStates`                 | About 0.6 MiB for every 1,000 states.                                                                                        |
+| `maxResultSize`             | About 17 MiB for every million of size.                                                                                      |
 | `maxBodyBytes`, `maxTokens` | The memory of a parse follows the tokens: 32 MiB of empty objects took 850 MiB without the count.                            |
 
 An archive or a container at the limits is bounded by its size: an entry is inflated in steps of 8 KiB of input and
