@@ -22,6 +22,7 @@ export { isBodyNode, isModelNode, listChildNodes, listDescendantNodes, type Mode
 export { type RubricRating, type RubricScoreRange, rubricScore, rubricScoreRange } from "./rubric-ratings.js";
 export {
   checkScoringRubric,
+  RUBRIC_KINDS,
   type RubricCriterion,
   type RubricKind,
   type RubricLevel,

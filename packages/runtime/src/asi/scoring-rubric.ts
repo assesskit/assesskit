@@ -7,11 +7,11 @@ import { isIdentifier } from "../values/index.js";
 /** The class token that marks a rubric block as the scoring rubric of an outcome (a convention of the runtime). */
 export const SCORING_RUBRIC_CLASS = "external-scoring-rubric";
 
-/** How the criteria and levels of a scoring rubric are shaped. */
-export type RubricKind = "analytic" | "holistic" | "checklist" | "single-point";
-
 /** The kinds of scoring rubric, which constrain the shape of the criteria and levels. */
-export const RUBRIC_KINDS: readonly RubricKind[] = ["analytic", "holistic", "checklist", "single-point"];
+export const RUBRIC_KINDS = ["analytic", "holistic", "checklist", "single-point"] as const;
+
+/** How the criteria and levels of a scoring rubric are shaped: analytic, holistic, checklist or single-point. */
+export type RubricKind = (typeof RUBRIC_KINDS)[number];
 
 /** A level of performance on a criterion. */
 export interface RubricLevel {
