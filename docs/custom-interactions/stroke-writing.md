@@ -10,7 +10,7 @@ interaction, which reaches no network.
 ```mermaid
 flowchart LR
   data["Reference strokes<br/>content of the bank, with license"] -- "writeCharacterModule" --> char["modules/characters/5341.js<br/>stroke-writing-character"]
-  item["Item: qti-portable-custom-interaction<br/>type urn:uuid:36366dbf-…"] --> frame["The player's frame<br/>loads modules/stroke-writing.js"]
+  item["Item: qti-portable-custom-interaction<br/>type urn:fdc:assesskit.wakan.dev:2026:stroke-writing"] --> frame["The player's frame<br/>loads modules/stroke-writing.js"]
   char --> frame
   frame --> quiz["Hanzi Writer's quiz<br/>a stroke at a time"]
   quiz -- "record: strokes, mistakes" --> rp["Response processing<br/>SCORE from mistakes"]
@@ -18,7 +18,7 @@ flowchart LR
 
 | Export                                                   | Does                                                                                                |
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `INTERACTION_TYPES["stroke-writing"]`                    | The `custom-interaction-type-identifier`, `urn:uuid:36366dbf-22d7-4942-85e7-f334a950edfc`.          |
+| `INTERACTION_TYPES["stroke-writing"]`                    | The `custom-interaction-type-identifier`, `urn:fdc:assesskit.wakan.dev:2026:stroke-writing`.        |
 | `writeCharacterModule(character, strokes)`               | The AMD module of a character, which the item's module resolution names `stroke-writing-character`. |
 | `CharacterStrokes`                                       | The reference strokes, in the form of Hanzi Writer's data: `strokes`, `medians` and `radStrokes`.   |
 | `readModuleFiles("stroke-writing", options?)` of `/node` | The module, by its path in the package.                                                             |
@@ -31,7 +31,7 @@ Write the module of a character, and read the module of the interaction, for an 
 import { INTERACTION_TYPES, writeCharacterModule } from "@assesskit/custom-interactions";
 import { readModuleFiles } from "@assesskit/custom-interactions/node";
 
-INTERACTION_TYPES["stroke-writing"]; // => "urn:uuid:36366dbf-22d7-4942-85e7-f334a950edfc"
+INTERACTION_TYPES["stroke-writing"]; // => "urn:fdc:assesskit.wakan.dev:2026:stroke-writing"
 
 // One horizontal stroke, as an author draws it in the 1024 box of Hanzi Writer's data.
 const character = writeCharacterModule("一", {
@@ -55,7 +55,7 @@ The package holds both, at the paths that the item names:
 <qti-response-declaration identifier="RESPONSE" cardinality="record"/>
 <qti-item-body>
   <qti-portable-custom-interaction response-identifier="RESPONSE" module="stroke-writing"
-      custom-interaction-type-identifier="urn:uuid:36366dbf-22d7-4942-85e7-f334a950edfc">
+      custom-interaction-type-identifier="urn:fdc:assesskit.wakan.dev:2026:stroke-writing">
     <qti-prompt>Write the character for one.</qti-prompt>
     <qti-interaction-modules>
       <qti-interaction-module id="stroke-writing" primary-path="modules/stroke-writing"/>
@@ -70,7 +70,7 @@ The package holds both, at the paths that the item names:
 
 | Part                                                   | Value                                                                                                                                                             |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `custom-interaction-type-identifier`                   | `urn:uuid:36366dbf-22d7-4942-85e7-f334a950edfc`, `INTERACTION_TYPES["stroke-writing"]`                                                                            |
+| `custom-interaction-type-identifier`                   | `urn:fdc:assesskit.wakan.dev:2026:stroke-writing`, `INTERACTION_TYPES["stroke-writing"]`                                                                          |
 | `module`, `qti-interaction-module id`                  | `stroke-writing`, the id that the module defines                                                                                                                  |
 | `qti-interaction-module id="stroke-writing-character"` | The character's module, which `writeCharacterModule` writes; its `primary-path` names the file without `.js`, from the root of the package                        |
 | Response                                               | `cardinality="record"`: `strokes`, the strokes written so far, and `mistakes`, the strokes drawn that did not match, both `integer`; NULL before the first stroke |
@@ -180,10 +180,9 @@ the item out of the candidate's form; the interaction itself offers no other way
 
 ## Differences from the references
 
-| Reference                                       | Difference                                                                                                                                                                                                                                  |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| QTI 3.0 Best Practices and Implementation Guide | The type identifier is a `urn:uuid:`, where the guide recommends a Federated Content URN, as for [math entry](math-entry.md#differences-from-the-references); `validateAsi` and `validatePackage` warn with `assesskit/pci/type-identifier` |
-| Hanzi Writer's defaults                         | Darker colors, so that the outline keeps 3:1 on white; the quiz's options as the properties above, with Hanzi Writer's defaults; the data from the item's package, where Hanzi Writer fetches it from a CDN                                 |
+| Reference               | Difference                                                                                                                                                                                                  |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hanzi Writer's defaults | Darker colors, so that the outline keeps 3:1 on white; the quiz's options as the properties above, with Hanzi Writer's defaults; the data from the item's package, where Hanzi Writer fetches it from a CDN |
 
 ## Files
 

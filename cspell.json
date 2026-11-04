@@ -499,7 +499,8 @@
         "packages/custom-interactions/src/math-entry/messages.ts",
         "packages/custom-interactions/test/math-entry.test.ts",
         "packages/custom-interactions/test/math-entry.browser.test.ts",
-        "packages/custom-interactions/test/items.xsd.test.ts"
+        "packages/custom-interactions/test/items.xsd.test.ts",
+        "packages/custom-interactions/test/node.test.ts"
       ],
       "words": [
         "Akar",

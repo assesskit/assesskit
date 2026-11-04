@@ -28,7 +28,7 @@ Hanzi Writer 3.7.3 (MIT).
 import { INTERACTION_TYPES } from "@assesskit/custom-interactions";
 import { readModuleFiles } from "@assesskit/custom-interactions/node";
 
-INTERACTION_TYPES["math-entry"]; // => "urn:uuid:d8feb3d2-0816-4d3b-a66a-9e4461e2c156"
+INTERACTION_TYPES["math-entry"]; // => "urn:fdc:assesskit.wakan.dev:2026:math-entry"
 const files = await readModuleFiles("math-entry");
 [...files.keys()][0]; // => "modules/math-entry.js"
 ```

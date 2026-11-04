@@ -1,8 +1,13 @@
 import { readFileSync } from "node:fs";
 import { DataError } from "@assesskit/runtime/errors";
+import { createScoringOperators } from "@assesskit/runtime/operators";
+import { readManifest, readPackage, writePackage } from "@assesskit/runtime/package";
+import { validatePackage } from "@assesskit/runtime/validate";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
+import { writeCharacterModule } from "../src/index.js";
 import { readModuleFiles } from "../src/node/index.js";
+import { writeMathEntryItem, writeStepsItem, writeStrokeWritingItem } from "./fixtures/items.js";
 
 /** The fonts of MathLive 0.111.1, which it loads all at once when a field first shows. */
 const KATEX_FONTS = 20;
@@ -58,6 +63,60 @@ describe("readModuleFiles", () => {
     await expect(readModuleFiles("math-entry", { signal: AbortSignal.abort() })).rejects.toThrow(
       expect.objectContaining({ name: "AbortError" }),
     );
+  });
+});
+
+describe("the items in a package with their modules", () => {
+  it("validate with no issue, the type identifiers being Federated Content URNs as QTI recommends", async () => {
+    const items = new Map([
+      ["items/expand.xml", writeMathEntryItem({ kind: "expression", expression: "2x+2" }, "Expand 2(x + 1).")],
+      [
+        "items/quarter.xml",
+        writeMathEntryItem(
+          { kind: "expression", expression: "\\frac14", decimalSeparator: "," },
+          "Tulis seperempat.",
+          'data-decimal-separator=","',
+        ),
+      ],
+      ["items/steps.xml", writeStepsItem("Solve 2x + 3 = 7.")],
+      ["items/ten.xml", writeStrokeWritingItem("Write the character for ten.")],
+    ]);
+    const strokes = JSON.parse(readFileSync(new URL("fixtures/hanzi-writer-data/5341.json", import.meta.url), "utf8"));
+    const modules = new Map([
+      ...(await readModuleFiles("math-entry")),
+      ...(await readModuleFiles("stroke-writing")),
+      ["modules/characters/5341.js", new TextEncoder().encode(writeCharacterModule("十", strokes))],
+    ]);
+    const resources = [...items.keys()]
+      .map(
+        (path, index) =>
+          `<resource identifier="item-${index}" type="imsqti_item_xmlv3p0" href="${path}"><file href="${path}"/></resource>`,
+      )
+      .join("");
+    const listed = [...modules.keys()].map((path) => `<file href="${path}"/>`).join("");
+    const manifest =
+      readManifest(`<manifest xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1" identifier="items">
+      <metadata><schema>QTI Package</schema><schemaversion>3.0.0</schemaversion></metadata>
+      <organizations/>
+      <resources>${resources}<resource identifier="modules" type="webcontent">${listed}</resource></resources>
+    </manifest>`);
+    const files = new Map([
+      ...[...items].map(([path, xml]) => [path, new TextEncoder().encode(xml)] as const),
+      ...modules,
+    ]);
+    const pkg = readPackage(writePackage(manifest, files));
+    expect(validatePackage(pkg, { customOperators: createScoringOperators() })).toEqual([]);
+  });
+});
+
+describe("the README", () => {
+  it("shows the results that its Quick start gives", async () => {
+    const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+    const modules = {
+      "@assesskit/custom-interactions": await import("../src/index.js"),
+      "@assesskit/custom-interactions/node": await import("../src/node/index.js"),
+    };
+    expect(await runGuideSamples(readme, modules)).toBeGreaterThan(0);
   });
 });
 
