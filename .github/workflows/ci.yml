@@ -23,7 +23,8 @@ jobs:
   # for instance when no run has passed yet, every job runs. A job runs when a member of the workspace that it reads, or a member
   # that uses that one, changed (the packages, the examples, compat and compat/runtimes, with their dependencies read from their
   # package.json files, and the player build that compat reads); the lock file, the root configuration, the scripts that the tests share
-  # and this workflow reach every job; the Markdown, the changesets and the configuration of the linters reach none but check.
+  # and this workflow reach every job; the Markdown, the changesets, the configuration of the linters, the citation, the Context7
+  # file and the plugin of the docs site reach none but check.
   # A file that no rule names reaches every job. The guides of a package are read by the tests that run their samples, and not
   # by the members that use the package. Outputs: test, browsers, bench, player_bench, engines, runtimes, corpus and xsd say
   # whether the job runs; projects and packages are the Vitest projects and the packages whose coverage floors the test job checks. The
@@ -107,12 +108,14 @@ jobs:
             }
           }
 
-          // A change to these reaches no job but check.
+          // A change to these reaches no job but check, which builds the docs site with the plugin and the files at the top of docs/.
           const NOT_CHECKED =
-            /^(\.changeset\/|\.github\/(?!workflows\/ci\.yml$)|[^/]+\.md$|LICENSE$|biome\.json$|biome\/|cspell\.json$|knip\.json$|typedoc\.json$|lefthook\.yml$|\.editorconfig$|validation\/|examples\/[^/]+\/README\.md$|scripts\/self-host-mermaid\.ts$)/;
-          // The scripts that only check, or are checked by the tests of scripts, which run with every test job. Every other
+            /^(\.changeset\/|\.github\/(?!workflows\/ci\.yml$)|[^/]+\.md$|LICENSE$|biome\.json$|biome\/|cspell\.json$|knip\.json$|typedoc\.json$|lefthook\.yml$|\.editorconfig$|validation\/|examples\/[^/]+\/README\.md$|scripts\/self-host-mermaid\.ts$|CITATION\.cff$|context7\.json$|docs\/[^/]+$)/;
+          // The scripts that only check, or are checked by the tests of scripts, which run with every test job, with the identity of the
+          // family and the generator of the docs site, which check builds. Every other
           // script serves the tests of the packages: the downloads, which every corpus, XSD and browser test reads.
-          const OWN_SCRIPTS = /^scripts\/(test\/|rules\/|check-[a-z]+\.ts$|unicode\.ts$|peak-memory(-[a-z]+)?\.ts$)/;
+          const OWN_SCRIPTS =
+            /^scripts\/(test\/|rules\/|check-[a-z]+\.ts$|family\.ts$|identity\.ts$|llms\.ts$|github-release\.ts$|unicode\.ts$|peak-memory(-[a-z]+)?\.ts$)/;
           // The files that a test of scripts reads besides the scripts: the changesets, which it holds to published packages,
           // and the README, which it holds to the claim of conformance.
           const SCRIPT_TESTED = /^(README\.md|\.changeset\/.+\.md)$/;

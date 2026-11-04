@@ -266,7 +266,7 @@ argument and what was found.
 | `xi:include` with `parse="text"`, XPointer             | QTI forbids them, and `xml` is the only parsed form QTI uses                        |
 | The fixup of `xml:base` and `xml:lang` by `xi:include` | XInclude makes it optional, and the readers of the runtime resolve paths themselves |
 | Canonical XML, pretty printing                         | `serializeXml` adds no white space and keeps the tree as it is                      |
-| Schema validation                                      | [node](node.md) validates files against the official XSDs                           |
+| Schema validation                                      | [node](node.md) validates files against the published XSDs                          |
 | Streaming                                              | A tree is the form every reader needs, and the limits bound its size                |
 
 ## Differences from the references

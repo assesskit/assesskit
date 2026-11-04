@@ -2,6 +2,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { basename, dirname, extname, join, posix, resolve } from "node:path";
+import { checkClaimWords, checkIdentity, checkReadmeLinks, checkTrademarks } from "./check-identity.ts";
 
 /** One breach of the standards: the file, the 1-based line (0 for the whole file), the rule and what to do. */
 export interface Violation {
@@ -258,29 +259,39 @@ export function checkNotIncluded(files: Files): Violation[] {
   return found;
 }
 
-/** The sections of the README of the repository and of each package. */
-const ROOT_README_SECTIONS = ["Which package", "Documentation", "Development", "Layout", "License"];
-const PACKAGE_README_SECTIONS = ["Quick start", "API", "Supported", "Documentation", "License"];
+/**
+ * The sections of a README, in order: the root's guide the reader to a package, and each package's is its npm page, which gives
+ * the install line and a minimal example before the diagram, since npm shows a Mermaid diagram as its source.
+ */
+const README_SECTIONS: readonly { readonly pattern: RegExp; readonly sections: readonly string[] }[] = [
+  { pattern: /^README\.md$/, sections: ["Which package", "Documentation", "Development", "Layout", "License"] },
+  {
+    pattern: /^packages\/[^/]+\/README\.md$/,
+    sections: ["Quick start", "Architecture", "API", "Supported", "Documentation", "License"],
+  },
+];
 
-/** The README of the repository and of each package have the sections of their skeleton, so that a reader finds the same answers in the same places. */
+/** Every README has the sections of its kind, in their order, with others allowed between them. */
 export function checkReadmeSections(files: Files): Violation[] {
-  return [...files].flatMap(([file, text]) => {
-    const required =
-      file === "README.md"
-        ? ROOT_README_SECTIONS
-        : /^packages\/[^/]+\/README\.md$/.test(file)
-          ? PACKAGE_README_SECTIONS
-          : [];
-    const present = new Set(sectionTitles(text).map(([, title]) => title));
-    return required
-      .filter((title) => !present.has(title))
-      .map((title) => ({
-        file,
-        line: 0,
-        rule: "readme-sections",
-        message: `The README has no "## ${title}" section; its sections are ${required.join(", ")}.`,
-      }));
-  });
+  const found: Violation[] = [];
+  for (const [file, text] of files) {
+    const required = README_SECTIONS.find(({ pattern }) => pattern.test(file))?.sections;
+    if (required === undefined) continue;
+    const titles = sectionTitles(text).map(([, title]) => title);
+    let from = 0;
+    for (const title of required) {
+      const at = titles.indexOf(title, from);
+      if (at < 0)
+        found.push({
+          file,
+          line: 0,
+          rule: "readme-sections",
+          message: `A README has the sections ${required.map((name) => `"${name}"`).join(", ")} in this order; "${title}" is missing or comes too early.`,
+        });
+      else from = at + 1;
+    }
+  }
+  return found;
 }
 
 /** The brand's error is the base class; a package that has an error class of its own breaks the rule of one family of errors. */
@@ -406,6 +417,10 @@ export const CHECKS: readonly ((files: Files) => Violation[])[] = [
   checkFamilies,
   checkEntries,
   checkConsole,
+  checkIdentity,
+  checkTrademarks,
+  checkClaimWords,
+  checkReadmeLinks,
 ];
 
 /** Runs every check over the files. */
@@ -413,7 +428,7 @@ export function checkStandards(files: Files): Violation[] {
   return CHECKS.flatMap((check) => check(files));
 }
 
-/** Reads the text files of the repository that git tracks or would track, without the generated and third-party ones. */
+/** Reads the text files of the repository that git tracks or would track, with the manifests, NOTICE files and the files of the identity, without the generated and third-party ones. */
 export function readRepository(root: string): Files {
   const listing = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], {
     cwd: root,
@@ -422,7 +437,16 @@ export function readRepository(root: string): Files {
   });
   const files = new Map<string, string>();
   for (const file of listing.split("\0")) {
-    if (file === "" || EXCLUDED.test(file) || EXEMPT.test(file) || !TEXT_EXTENSIONS.has(extname(file))) continue;
+    if (
+      file === "" ||
+      EXCLUDED.test(file) ||
+      EXEMPT.test(file) ||
+      !(
+        TEXT_EXTENSIONS.has(extname(file)) ||
+        ["package.json", "NOTICE", "context7.json", "CITATION.cff"].includes(basename(file))
+      )
+    )
+      continue;
     try {
       files.set(file, readFileSync(join(root, file), "utf8"));
     } catch (error) {

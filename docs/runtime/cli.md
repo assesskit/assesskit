@@ -1,7 +1,7 @@
 # Command line
 
 `cli` is the command line of the runtime, for Node.js 22 and later. The package installs it as the program `assesskit`. It
-validates a content package or an XML document against the official schemas and with the semantic checks of
+validates a content package or an XML document against the published schemas and with the semantic checks of
 [validate](validate.md), and it downloads the schemas, which the runtime does not ship. `assesskit schemas fetch` is the only
 code in the runtime that uses the network.
 
@@ -233,7 +233,7 @@ It throws a `DataError` when an argument or an option has the wrong type. Every 
 
 ## Differences from the references
 
-None. No specification defines this command line. What it checks is defined elsewhere: the schema check by the official schemas ([node](node.md#choosing-the-schema)) and the semantic checks by [validate](validate.md), each of which lists its differences from the references.
+None. No specification defines this command line. What it checks is defined elsewhere: the schema check by the published schemas ([node](node.md#choosing-the-schema)) and the semantic checks by [validate](validate.md), each of which lists its differences from the references.
 
 ## Files
 

@@ -1,8 +1,7 @@
 @assesskit/custom-interactions
 Copyright Fariz Wakan
 
-QTI and 1EdTech are trademarks of 1EdTech Consortium, Inc. This product implements portable custom interactions of the
-QTI 3.0 specifications; it is not certified by 1EdTech and includes no 1EdTech files.
+This package implements portable custom interactions of the QTI 3.0 specifications and includes no 1EdTech files.
 
 The module of math entry, modules/math-entry.js, includes MathLive 0.111.1. modules/math-entry/fonts/ holds MathLive's
 fonts, which are KaTeX's, under the SIL Open Font License 1.1: licenses/katex-fonts-ofl.txt and
@@ -54,3 +53,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 The package holds no reference strokes of characters; an item's package carries them, with their own license.
+
+QTI® is a trademark of 1EdTech® Consortium, Inc. (1edtech.org).
+assesskit is not affiliated with, endorsed by or approved by 1EdTech Consortium, Inc.

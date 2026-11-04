@@ -218,3 +218,7 @@ start step adds has the index `-1`. An item is the same in every session of the 
 | A queue, a database, routes and sessions    | They are the host's. The example shows the rules they must keep                                                                           |
 | A scenario that runs outside the tests      | The fakes of a learning platform and a tool are test code; the exchange test is the scenario                                              |
 | Registration, Deep Linking, roster services | The host's records, and services an exam does not use: the example of interopkit shows each; `rig.ts` gives one registration of each tool |
+
+LTI® is a trademark of 1EdTech® Consortium, Inc. (1edtech.org).
+Caliper Analytics® is a trademark of 1EdTech® Consortium, Inc. (1edtech.org).
+assesskit is not affiliated with, endorsed by or approved by 1EdTech Consortium, Inc.

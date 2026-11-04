@@ -15,6 +15,7 @@ import {
   checkTestTitles,
   type Files,
 } from "../check-standards.ts";
+import { familyFiles } from "./family-repository.ts";
 
 /** The files of a repository as the checks read them. */
 function repository(files: Record<string, string>): Files {
@@ -190,17 +191,29 @@ describe("not included", () => {
 });
 
 describe("README sections", () => {
-  it("reports the sections that the README of the repository and of a package lack", () => {
+  const root = "# A\n## Which package\n## Documentation\n## Development\n## Layout\n## License\n";
+  const pkg = "# A\n## Quick start\n## Architecture\n## API\n## Supported\n## Documentation\n## License\n";
+
+  it("accepts the sections of the root and of a package in their order, with others between them", () => {
     const files = repository({
-      "README.md": "# A\n\n## Which package\n\n## License\n",
-      "packages/a/README.md": "# A\n\n## Quick start\n\n## API\n\n## Supported\n\n## Documentation\n",
-      "packages/a/docs/README.md": "# Not a package README\n",
+      "README.md": root,
+      "packages/a/README.md": pkg.replace("## API", "## CLI\n## API"),
+      "examples/a/README.md": "# Example\n",
     });
-    expect(checkReadmeSections(files).map(({ file, message }) => [file, message.split(";")[0]])).toStrictEqual([
-      ["README.md", 'The README has no "## Documentation" section'],
-      ["README.md", 'The README has no "## Development" section'],
-      ["README.md", 'The README has no "## Layout" section'],
-      ["packages/a/README.md", 'The README has no "## License" section'],
+    expect(checkReadmeSections(files)).toStrictEqual([]);
+  });
+
+  it("names the section that is missing or out of order", () => {
+    const files = repository({
+      "README.md": root.replace("## Layout\n", ""),
+      "packages/a/README.md":
+        "# A\n## Quick start\n## API\n## Architecture\n## Supported\n## Documentation\n## License\n",
+    });
+    expect(
+      checkReadmeSections(files).map(({ file, message }) => [file, message.match(/; "([^"]+)" is/)?.[1]]),
+    ).toStrictEqual([
+      ["README.md", "Layout"],
+      ["packages/a/README.md", "API"],
     ]);
   });
 });
@@ -302,7 +315,7 @@ describe("console", () => {
 describe("all checks", () => {
   it("reports nothing for a repository that holds the standards", () => {
     const files = repository({
-      "README.md": `# A\n\n${DIAGRAM}\n${["Which package", "Documentation", "Development", "Layout", "License"].map((title) => `## ${title}\n`).join("\n")}`,
+      ...familyFiles(),
       "packages/a/src/index.ts": "export const A = 1;\n",
       "packages/a/test/a.test.ts": 'it("returns one", () => {});\n',
     });
@@ -310,7 +323,7 @@ describe("all checks", () => {
   });
 
   it("names the rule and the line of each violation", () => {
-    const files = repository({ "packages/a/src/x.ts": "const a = 1;\n// §1\n" });
+    const files = repository({ ...familyFiles(), "packages/a/src/x.ts": "const a = 1;\n// §1\n" });
     expect(checkStandards(files)).toStrictEqual([
       {
         file: "packages/a/src/x.ts",

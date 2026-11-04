@@ -956,6 +956,7 @@
     },
     {
       "includes": [
+        "docs/*.ts",
         "packages/runtime/src/cli/**",
         "packages/runtime/test/readme-example.ts",
         "scripts/**",
@@ -1017,7 +1018,7 @@
       }
     },
     {
-      "includes": ["scripts/**", "compat/**", "examples/**", "packages/*/scripts/**"],
+      "includes": ["docs/*.ts", "scripts/**", "compat/**", "examples/**", "packages/*/scripts/**"],
       "linter": {
         "rules": {
           "correctness": {

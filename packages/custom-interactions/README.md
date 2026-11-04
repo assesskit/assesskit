@@ -1,24 +1,12 @@
 # @assesskit/custom-interactions
 
-Portable custom interactions for QTI 3.0 items: `math-entry`, a formula typed in a [MathLive](https://mathlive.io) field with
-a virtual keyboard, whose LaTeX the `expression-equivalent` operator of [`@assesskit/runtime`](../runtime/README.md)
-scores, and `stroke-writing`, a character written with strokes in [Hanzi Writer](https://hanziwriter.org)'s quiz, whose
-strokes and mistakes response processing scores. Each is an AMD module that the item's package carries, so that it loads entirely from the package in the frame of
-[`@assesskit/player`](../player/README.md), which reaches no network, or in any delivery engine that loads modules by the
-QTI 3.0 Best Practices and Implementation Guide.
-
-```mermaid
-flowchart LR
-  tool["An author's tool<br/>INTERACTION_TYPES, readModuleFiles,<br/>writeCharacterModule"] --> pkg["The item's package<br/>item.xml, modules/*.js"]
-  pkg --> frame["The player's frame<br/>loads the module"]
-  frame -- "the response" --> rp["Response processing<br/>@assesskit/runtime/operators"]
-```
+QTI 3.0 portable custom interactions for JavaScript and TypeScript: math entry for formulas in LaTeX and stroke writing for characters, each an AMD module that loads entirely from the item's package. `math-entry` is a formula typed in a [MathLive](https://mathlive.io) field with a virtual keyboard, whose LaTeX the `expression-equivalent` operator of [`@assesskit/runtime`](https://assesskit.wakan.dev/_assesskit/runtime/) scores, and `stroke-writing` is a character written with strokes in [Hanzi Writer](https://hanziwriter.org)'s quiz, whose strokes and mistakes response processing scores. The item's package carries each module, so that it loads from the package in the frame of [`@assesskit/player`](https://assesskit.wakan.dev/_assesskit/player/), which reaches no network, or in any delivery engine that loads modules by the QTI 3.0 Best Practices and Implementation Guide.
 
 ```bash
 npm install @assesskit/custom-interactions
 ```
 
-The package depends on [`@assesskit/runtime`](../runtime/README.md), for its checks and errors. The modules hold their
+The package depends on [`@assesskit/runtime`](https://assesskit.wakan.dev/_assesskit/runtime/), for its checks and errors. The modules hold their
 libraries, bundled and pinned exactly, with each library's license at the head of its module: MathLive 0.111.1 (MIT) and
 Hanzi Writer 3.7.3 (MIT).
 
@@ -34,8 +22,19 @@ const files = await readModuleFiles("math-entry");
 ```
 
 The item names the module at `primary-path="modules/math-entry"`, and the package lists the files.
-[Math entry](https://github.com/assesskit/assesskit/blob/main/docs/custom-interactions/math-entry.md) writes a whole item
+[Math entry](https://assesskit.wakan.dev/_assesskit/custom-interactions/math-entry/) writes a whole item
 and its package.
+
+## Architecture
+
+An author's tool puts the module into the item's package, and the player's frame loads it.
+
+```mermaid
+flowchart LR
+  tool["An author's tool<br/>INTERACTION_TYPES, readModuleFiles,<br/>writeCharacterModule"] --> pkg["The item's package<br/>item.xml, modules/*.js"]
+  pkg --> frame["The player's frame<br/>loads the module"]
+  frame -- "the response" --> rp["Response processing<br/>@assesskit/runtime/operators"]
+```
 
 ## API
 
@@ -53,17 +52,20 @@ and its package.
 | `stroke-writing` | `record`: `strokes` and `mistakes`, integers                                | QTI's own expressions, by `qti-field-value`                             |
 
 The modules run in Chromium 111, Firefox 115 and Safari 16.4, and later versions, the
-[baseline](https://github.com/assesskit/assesskit/blob/main/docs/player/baseline.md) of the player, and are tested in its
+[baseline](https://assesskit.wakan.dev/_assesskit/player/baseline/) of the player, and are tested in its
 frame in the current Chromium, Firefox and WebKit.
 
 ## Documentation
 
-| Guide                                                                                                     | Covers                                                                                   |
-| --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [Architecture](https://github.com/assesskit/assesskit/blob/main/docs/custom-interactions/architecture.md) | Why a package of its own, the build of a module, sizes, dependencies, security and tests |
-| [Math entry](https://github.com/assesskit/assesskit/blob/main/docs/custom-interactions/math-entry.md)     | The item, its properties, what the field writes, worked steps and accessibility          |
+| Guide                                                                                    | Covers                                                                                   |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| [Architecture](https://assesskit.wakan.dev/_assesskit/custom-interactions/architecture/) | Why a package of its own, the build of a module, sizes, dependencies, security and tests |
+| [Math entry](https://assesskit.wakan.dev/_assesskit/custom-interactions/math-entry/)     | The item, its properties, what the field writes, worked steps and accessibility          |
 
 ## License
 
-[Apache-2.0](LICENSE). Copyright Fariz Wakan. The modules include MathLive and Hanzi Writer, under the MIT license, which
-[NOTICE](NOTICE) reproduces with the license of MathLive's fonts.
+[Apache-2.0](https://github.com/assesskit/assesskit/blob/main/packages/custom-interactions/LICENSE). Copyright Fariz Wakan. The modules include MathLive and Hanzi Writer, under the MIT license, which
+[NOTICE](https://github.com/assesskit/assesskit/blob/main/packages/custom-interactions/NOTICE) reproduces with the license of MathLive's fonts.
+
+QTI® is a trademark of 1EdTech® Consortium, Inc. (1edtech.org).
+assesskit is not affiliated with, endorsed by or approved by 1EdTech Consortium, Inc.

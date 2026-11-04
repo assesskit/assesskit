@@ -271,6 +271,24 @@ tests of every engine, and waits for the next change to that part.
 - The Quick start of `packages/player/README.md` runs in `protocol.test.ts`.
 - One purpose for each document: `README.md` for users, `docs/<package>/` for guides, `CONTRIBUTING.md` for the process,
   `AGENTS.md` for conventions, `SECURITY.md` for deployment security, `validation/README.md` for the fixture scripts.
+- The README of a package is its npm page: it opens with its description as its first sentence and the install line, and has
+  the sections `## Quick start`, `## Architecture`, with its diagram, since npm shows a diagram as its source, `## API`,
+  `## Supported`, `## Documentation` and `## License`; the root README opens with the family's sentence and has
+  `## Which package`, with each package's description, `## Documentation`, `## Development`, `## Layout` and `## License`, in
+  that order (`readme-sections`). The root README and the README of each package link absolutely: a guide or a package at its
+  page on the docs site, any other file at its address in the repository.
+- `scripts/family.ts` holds the identity of the family: `SITE`, the base of the docs site (`https://assesskit.wakan.dev/`, the
+  owner's domain), the family's sentence, each package's description, label and keywords, and the marks of others with their
+  holders. A package's `description`, `keywords`, `homepage` and `author` and the first sentence of its README come from its
+  row, and `scripts/check-identity.ts` holds them to it in `pnpm check:standards`; change a sentence in `family.ts` first.
+- Marks of others are named nominatively (`STANDARDS.md` section 2, "Names"): the plain name, and no claim word (compliant,
+  conformant, certified, official, approved, endorsed) in a README, a NOTICE, a guide or a description; a quotation stays in
+  quotation marks, and a name in code stays in code (`OfficialResult`). The marks are 1EdTech's (QTI, LTI, Caliper and the
+  others `family.ts` lists); W3C's Recommendations (WCAG, MathML) and IEEE's metadata (LOM) carry their body's line; Moodle,
+  MathLive, Hanzi Writer and the other products a text names are named plainly, with no line. Every README and NOTICE that names
+  a mark or a body carries, each on a line of its own, the line of each mark, the body's own line and the line that assesskit is
+  not affiliated with the bodies, as `linesFor` of `scripts/identity.ts` writes them; the symbol of a mark appears only inside
+  those lines. `pnpm check:standards` names any line that is missing or not needed.
 
 ## Evidence and tests
 

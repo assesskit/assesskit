@@ -231,7 +231,7 @@ raised XML limits ([xml](xml.md#limits)). An item of a few responses compiles in
 
 No library writes QTI response processing from keys: the QTI libraries that the runtime is compared with, Longsight
 `qti3-core` and Amp-up `qti3-item-player`, deliver and score items that hold their processing already. The compiler is built
-on the runtime's own ASI models, so that `writeAsi` writes its output and the official schemas check it.
+on the runtime's own ASI models, so that `writeAsi` writes its output and the published schemas check it.
 
 ## Files
 

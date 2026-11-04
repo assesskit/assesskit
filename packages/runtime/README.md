@@ -1,22 +1,6 @@
 # @assesskit/runtime
 
-A QTI 3.0 runtime for JavaScript and TypeScript. It reads, writes and validates assessment items, tests, content packages,
-results, usage data and personal needs and preferences; runs template, response and outcome processing; and delivers a
-test session without presenting it: on a server, where the answer keys never reach a candidate's device, or on the device
-for practice. Presentation, the host of portable custom interactions, accessibility in the user interface and the
-integrations with other systems belong to the player, [`@assesskit/player`](../player/README.md), which is built on the runtime. The core runs in
-any JavaScript runtime with the web standards, and is tested on Node.js, Deno, Bun and workerd ([evidence](../../docs/runtime/evidence.md#runtimes)); the `node` and `cli` subpaths need Node.js 22 or later.
-
-```mermaid
-flowchart LR
-  documents["QTI documents, packages,<br/>results, usage data, profiles"] -->|"xml, asi, package, results,<br/>usage, pnp, metadata"| model["Typed model"]
-  formats["GIFT, Moodle XML"] <-->|"item-formats"| model
-  model -->|"validate, cli"| issues["Issues"]
-  model -->|"values, processing, interactions"| engine["Delivery engine<br/>apply(state, action)"]
-  engine -->|"candidate view without keys"| host["The player or your host"]
-  host -->|"actions with the time"| engine
-  engine --> report["Results report"]
-```
+QTI 3.0 runtime for JavaScript and TypeScript: reads, writes, validates and scores assessment items, tests, content packages and results, converts items to and from GIFT and Moodle XML, and runs test sessions, adaptive ones included, without a user interface on a server or a device. It also reads and writes usage data and personal needs and preferences, and runs template, response and outcome processing. The answer keys never reach a candidate's device on a server, and the engine runs on the device for practice. Presentation, the host of portable custom interactions, accessibility in the user interface and the integrations with other systems belong to the player, [`@assesskit/player`](https://assesskit.wakan.dev/_assesskit/player/), which is built on the runtime. The core runs in any JavaScript runtime with the web standards, and is tested on Node.js, Deno, Bun and workerd ([evidence](https://assesskit.wakan.dev/_assesskit/runtime/evidence/#runtimes)); the `node` and `cli` subpaths need Node.js 22 or later.
 
 ```bash
 npm install @assesskit/runtime
@@ -24,7 +8,7 @@ npm install @assesskit/runtime
 
 The runtime has six runtime dependencies, pinned to exact versions: `saxes` and `xmlchars` read XML, `parse5` reads the HTML of
 the questions of other platforms' item formats, `fflate` reads and writes ZIP archives, `valibot` reads untrusted JSON, and
-`libxml2-wasm` validates against the official schemas in the `node` subpath ([SECURITY](../../SECURITY.md#runtime-dependencies)).
+`libxml2-wasm` validates against the published schemas in the `node` subpath ([SECURITY](https://github.com/assesskit/assesskit/blob/main/SECURITY.md#runtime-dependencies)).
 
 ## Quick start
 
@@ -160,12 +144,27 @@ q1 final, q2 final
 <outcomeVariable identifier="TOTAL" cardinality="single" baseType="float"><value>1</value></outcomeVariable>
 ```
 
-[Delivery](https://github.com/assesskit/assesskit/blob/main/docs/runtime/delivery.md) describes the actions and refusals of the engine, time limits, the server and device modes
+[Delivery](https://assesskit.wakan.dev/_assesskit/runtime/delivery/) describes the actions and refusals of the engine, time limits, the server and device modes
 and the pending work of scoring and adaptive sections.
+
+## Architecture
+
+Documents become a typed model, which the validator checks and the delivery engine runs; the engine hands the host a candidate view without keys.
+
+```mermaid
+flowchart LR
+  documents["QTI documents, packages,<br/>results, usage data, profiles"] -->|"xml, asi, package, results,<br/>usage, pnp, metadata"| model["Typed model"]
+  formats["GIFT, Moodle XML"] <-->|"item-formats"| model
+  model -->|"validate, cli"| issues["Issues"]
+  model -->|"values, processing, interactions"| engine["Delivery engine<br/>apply(state, action)"]
+  engine -->|"candidate view without keys"| host["The player or your host"]
+  host -->|"actions with the time"| engine
+  engine --> report["Results report"]
+```
 
 ## CLI
 
-The package installs the program `assesskit`. It validates a package or an XML document against the official schemas, which it
+The package installs the program `assesskit`. It validates a package or an XML document against the published schemas, which it
 downloads once, and with the semantic checks of `validate`:
 
 ```bash
@@ -188,7 +187,7 @@ packaging/simple/simple.zip: valid (0 errors, 0 warnings)
 The exit code is 0 when the content has no issue with severity error, 1 when it has one, and 2 when the command line is
 wrong, the path cannot be read or is refused, or the schemas are missing. `--format json` prints
 `{ tool, version, target, valid, summary: { errors, warnings }, issues }`. `assesskit schemas fetch` is the only code in the runtime that
-uses the network. [CLI](https://github.com/assesskit/assesskit/blob/main/docs/runtime/cli.md) has the checks, the output and the cache directory of each platform.
+uses the network. [CLI](https://assesskit.wakan.dev/_assesskit/runtime/cli/) has the checks, the output and the cache directory of each platform.
 
 ## API
 
@@ -238,12 +237,12 @@ not throw: it returns `Issue`s, each with the specification reference that defin
 
 The runtime does not read QTI 2.x content.
 
-The runtime is not certified by 1EdTech. [Supported](https://github.com/assesskit/assesskit/blob/main/docs/runtime/supported.md) says what it reads, writes, validates and runs,
+The runtime holds no 1EdTech certification. [Supported](https://assesskit.wakan.dev/_assesskit/runtime/supported/) says what it reads, writes, validates and runs,
 and what it does not. The claim is
 scoped: items differentially tested; test sessions specification-tested. Items are compared with the Longsight
 `qti3-core` engine and, for the 1EdTech examples that it supports, with the Amp-up `qti3-item-player`. No independent implementation of a QTI 3 test session was found to compare with, so the rules of test
 sessions rest on tests whose expected values are statements and worked examples of the specifications, on properties
-checked with random input, and on the 1EdTech examples. [Spec gaps](https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md) lists where the specifications
+checked with random input, and on the 1EdTech examples. [Spec gaps](https://assesskit.wakan.dev/_assesskit/runtime/spec-gaps/) lists where the specifications
 contradict themselves or are silent, and what the runtime does.
 
 ## Stored states
@@ -256,41 +255,45 @@ contradict themselves or are silent, and what the runtime does.
 | Recovering a state               | Replay the actions from the seed.                                                                                                                       |
 | Content edited since the session | Name the content to `createEngine` as `contentVersion`; the engine then refuses a state that another version started.                                   |
 
-[Delivery](https://github.com/assesskit/assesskit/blob/main/docs/runtime/delivery.md#state-across-releases) has the details.
+[Delivery](https://assesskit.wakan.dev/_assesskit/runtime/delivery/#state-across-releases) has the details.
 
 ## Documentation
 
-- [Architecture](https://github.com/assesskit/assesskit/blob/main/docs/runtime/architecture.md): principles, layers, errors and determinism.
-- [Performance](https://github.com/assesskit/assesskit/blob/main/docs/runtime/performance.md): the runtime's times against Longsight `qti3-core` and the budgets of the benchmarks.
-- [Conventions](https://github.com/assesskit/assesskit/blob/main/docs/runtime/conventions.md): the runtime conventions for externally scored outcomes: the responses a test outcome covers, and the scoring rubric with the score of its ratings.
-- [Spec gaps](https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md): where the specifications contradict themselves or are silent, and what the runtime does.
-- [ASI](https://github.com/assesskit/assesskit/blob/main/docs/runtime/asi.md): the model of assessment documents and their content, the reader and the writer, the conventions for external scores, and the element table.
-- [Processing](https://github.com/assesskit/assesskit/blob/main/docs/runtime/processing.md): the variables, template, response and outcome processing, the expressions, the standard templates and the decisions where the specifications are silent.
-- [Keys](https://github.com/assesskit/assesskit/blob/main/docs/runtime/keys.md): the key model of an item's responses, each kind with its fields, defaults and share, and the limits of a key.
-- [Operators](https://github.com/assesskit/assesskit/blob/main/docs/runtime/operators.md): the custom operators that score expressions, numbers, texts and hotspots, their calling convention, the LaTeX subset of mathematics with its reader and comparator, the checks of worked steps and the length of a text.
-- [Scoring](https://github.com/assesskit/assesskit/blob/main/docs/runtime/scoring.md): the compiler of keys into response processing: each kind and scheme in QTI or an operator, points and totals, feedback, the portable form and the attributes of the interactions.
-- [Validate](https://github.com/assesskit/assesskit/blob/main/docs/runtime/validate.md): the rule sets of BIND section 5, the static types of processing, test structure, covers, scoring rubrics, packages, results and profiles, with every rule of the issues and the decisions.
-- [Delivery](https://github.com/assesskit/assesskit/blob/main/docs/runtime/delivery.md): the engine: its modes, static gate, actions and refusals, navigation and submission, outcome processing, time limits and deadlines, suspension, supports, variants, events and states; the candidate view and the JSON forms of views and actions; the pending work of scoring requests, adaptive sections with a CAT engine and the results report; the plan of a test session; and item sessions.
-- [Values](https://github.com/assesskit/assesskit/blob/main/docs/runtime/values.md): the model, lexical forms, the JSON forms and the regular expressions.
-- [XML](https://github.com/assesskit/assesskit/blob/main/docs/runtime/xml.md): the tree, the encodings, the limits, the writer, XInclude and the readers of models.
-- [Results](https://github.com/assesskit/assesskit/blob/main/docs/runtime/results.md): the model of a Results Reporting document, its values and its rules.
-- [Usage data](https://github.com/assesskit/assesskit/blob/main/docs/runtime/usage.md): item statistics, their values and mappings.
-- [Interactions](https://github.com/assesskit/assesskit/blob/main/docs/runtime/interactions.md): the descriptors of the 22 interactions, their bindings, the rules of validity, shuffling and numeric text.
-- [PCI](https://github.com/assesskit/assesskit/blob/main/docs/runtime/pci.md): the JSON of variables with file callbacks, module resolution, properties and checks of a portable custom interaction.
-- [Content](https://github.com/assesskit/assesskit/blob/main/docs/runtime/content.md): visibility, printed variables and their number formats, rubric views, catalogs and cards, and hazards.
-- [PNP](https://github.com/assesskit/assesskit/blob/main/docs/runtime/pnp.md): the supports, the sets, custom supports and the resolution of a profile.
-- [Metadata](https://github.com/assesskit/assesskit/blob/main/docs/runtime/metadata.md): QTI metadata, LOM, curriculum standards and the accessibility description.
-- [Package](https://github.com/assesskit/assesskit/blob/main/docs/runtime/package.md): the manifest, ZIP archives and their checks, paths, documents, resolvers, dependencies and LTI links.
-- [CAT](https://github.com/assesskit/assesskit/blob/main/docs/runtime/cat.md): the port to a CAT engine, section data, item stages, the pool check and the metadata JSON.
-- [Node.js](https://github.com/assesskit/assesskit/blob/main/docs/runtime/node.md): getting the schemas, choosing the schema of a document, issues, the engine, and package files.
-- [CLI](https://github.com/assesskit/assesskit/blob/main/docs/runtime/cli.md): `assesskit validate` and `assesskit schemas fetch`, their checks, output, exit codes and defaults.
-- [Supported](https://github.com/assesskit/assesskit/blob/main/docs/runtime/supported.md): what the runtime supports and what it does not, and the scope of the claim.
-- [Evidence](https://github.com/assesskit/assesskit/blob/main/docs/runtime/evidence.md): how the runtime is tested, and how to refresh the corpus and the fixtures.
-- [Conformance](https://github.com/assesskit/assesskit/blob/main/docs/runtime/conformance.md): every feature ID of the 1EdTech conformance document, with its guide and its test.
+- [Architecture](https://assesskit.wakan.dev/_assesskit/runtime/architecture/): principles, layers, errors and determinism.
+- [Performance](https://assesskit.wakan.dev/_assesskit/runtime/performance/): the runtime's times against Longsight `qti3-core` and the budgets of the benchmarks.
+- [Conventions](https://assesskit.wakan.dev/_assesskit/runtime/conventions/): the runtime conventions for externally scored outcomes: the responses a test outcome covers, and the scoring rubric with the score of its ratings.
+- [Spec gaps](https://assesskit.wakan.dev/_assesskit/runtime/spec-gaps/): where the specifications contradict themselves or are silent, and what the runtime does.
+- [ASI](https://assesskit.wakan.dev/_assesskit/runtime/asi/): the model of assessment documents and their content, the reader and the writer, the conventions for external scores, and the element table.
+- [Processing](https://assesskit.wakan.dev/_assesskit/runtime/processing/): the variables, template, response and outcome processing, the expressions, the standard templates and the decisions where the specifications are silent.
+- [Keys](https://assesskit.wakan.dev/_assesskit/runtime/keys/): the key model of an item's responses, each kind with its fields, defaults and share, and the limits of a key.
+- [Operators](https://assesskit.wakan.dev/_assesskit/runtime/operators/): the custom operators that score expressions, numbers, texts and hotspots, their calling convention, the LaTeX subset of mathematics with its reader and comparator, the checks of worked steps and the length of a text.
+- [Scoring](https://assesskit.wakan.dev/_assesskit/runtime/scoring/): the compiler of keys into response processing: each kind and scheme in QTI or an operator, points and totals, feedback, the portable form and the attributes of the interactions.
+- [Validate](https://assesskit.wakan.dev/_assesskit/runtime/validate/): the rule sets of BIND section 5, the static types of processing, test structure, covers, scoring rubrics, packages, results and profiles, with every rule of the issues and the decisions.
+- [Delivery](https://assesskit.wakan.dev/_assesskit/runtime/delivery/): the engine: its modes, static gate, actions and refusals, navigation and submission, outcome processing, time limits and deadlines, suspension, supports, variants, events and states; the candidate view and the JSON forms of views and actions; the pending work of scoring requests, adaptive sections with a CAT engine and the results report; the plan of a test session; and item sessions.
+- [Values](https://assesskit.wakan.dev/_assesskit/runtime/values/): the model, lexical forms, the JSON forms and the regular expressions.
+- [XML](https://assesskit.wakan.dev/_assesskit/runtime/xml/): the tree, the encodings, the limits, the writer, XInclude and the readers of models.
+- [Results](https://assesskit.wakan.dev/_assesskit/runtime/results/): the model of a Results Reporting document, its values and its rules.
+- [Usage data](https://assesskit.wakan.dev/_assesskit/runtime/usage/): item statistics, their values and mappings.
+- [Interactions](https://assesskit.wakan.dev/_assesskit/runtime/interactions/): the descriptors of the 22 interactions, their bindings, the rules of validity, shuffling and numeric text.
+- [PCI](https://assesskit.wakan.dev/_assesskit/runtime/pci/): the JSON of variables with file callbacks, module resolution, properties and checks of a portable custom interaction.
+- [Content](https://assesskit.wakan.dev/_assesskit/runtime/content/): visibility, printed variables and their number formats, rubric views, catalogs and cards, and hazards.
+- [PNP](https://assesskit.wakan.dev/_assesskit/runtime/pnp/): the supports, the sets, custom supports and the resolution of a profile.
+- [Metadata](https://assesskit.wakan.dev/_assesskit/runtime/metadata/): QTI metadata, LOM, curriculum standards and the accessibility description.
+- [Package](https://assesskit.wakan.dev/_assesskit/runtime/package/): the manifest, ZIP archives and their checks, paths, documents, resolvers, dependencies and LTI links.
+- [CAT](https://assesskit.wakan.dev/_assesskit/runtime/cat/): the port to a CAT engine, section data, item stages, the pool check and the metadata JSON.
+- [Node.js](https://assesskit.wakan.dev/_assesskit/runtime/node/): getting the schemas, choosing the schema of a document, issues, the engine, and package files.
+- [CLI](https://assesskit.wakan.dev/_assesskit/runtime/cli/): `assesskit validate` and `assesskit schemas fetch`, their checks, output, exit codes and defaults.
+- [Supported](https://assesskit.wakan.dev/_assesskit/runtime/supported/): what the runtime supports and what it does not, and the scope of the claim.
+- [Evidence](https://assesskit.wakan.dev/_assesskit/runtime/evidence/): how the runtime is tested, and how to refresh the corpus and the fixtures.
+- [Conformance](https://assesskit.wakan.dev/_assesskit/runtime/conformance/): every feature ID of the 1EdTech conformance document, with its guide and its test.
 
-[SECURITY](../../SECURITY.md) lists the threat model, every default limit and how to report a vulnerability.
-[CONTRIBUTING](../../CONTRIBUTING.md) describes how to contribute.
+[SECURITY](https://github.com/assesskit/assesskit/blob/main/SECURITY.md) lists the threat model, every default limit and how to report a vulnerability.
+[CONTRIBUTING](https://github.com/assesskit/assesskit/blob/main/CONTRIBUTING.md) describes how to contribute.
 
 ## License
 
-[Apache-2.0](LICENSE). Copyright Fariz Wakan. QTI and 1EdTech are trademarks of 1EdTech Consortium, Inc.; see [NOTICE](NOTICE).
+[Apache-2.0](https://github.com/assesskit/assesskit/blob/main/packages/runtime/LICENSE). Copyright Fariz Wakan. See [NOTICE](https://github.com/assesskit/assesskit/blob/main/packages/runtime/NOTICE).
+
+QTI® is a trademark of 1EdTech® Consortium, Inc. (1edtech.org).
+LTI® is a trademark of 1EdTech® Consortium, Inc. (1edtech.org).
+assesskit is not affiliated with, endorsed by or approved by 1EdTech Consortium, Inc.

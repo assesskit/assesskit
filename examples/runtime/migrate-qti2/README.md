@@ -91,7 +91,7 @@ The migrator writes `<schemaversion>3.0.1</schemaversion>` in the manifest of th
 (`imsqtiv3p0_imscpv1p2_v1p0.xsd`) enumerates `3.0.0` only, as every 1EdTech package has. assesskit refuses the manifest as written,
 so `migrateSample` changes that one value (`withSchemaVersion`) and nothing else.
 
-### Against the official schemas
+### Against the published schemas
 
 `test/migrate.xsd.test.ts` validates the documents of the 21 migrated packages against the XSDs of QTI 3: 19 are valid, and `figures`
 and `audio_video` are not, for the elements of the HTML5 namespace of QTI 2.2 that the migrator leaves as they are. The four items with
@@ -112,3 +112,6 @@ an `alt` on `object` pass the schema and fail `validatePackage`, which checks th
 | ----------- | ------------------------------------------------------------------------------- |
 | `ReadError` | `readSamples`: the manifest is not well-formed                                  |
 | `Error`     | `readSamples`: a file the manifest lists is missing, so run `pnpm corpus` first |
+
+QTI® is a trademark of 1EdTech® Consortium, Inc. (1edtech.org).
+assesskit is not affiliated with, endorsed by or approved by 1EdTech Consortium, Inc.

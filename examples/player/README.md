@@ -18,3 +18,7 @@ flowchart LR
 The packages of assesskit do not import the libraries of other families. An adapter to such a library lives here, and a host
 copies it or writes its own against the port. The libraries are linked from beside this repository until they are on npm:
 measurekit from `../measurekit`, interopkit from `../interopkit`, each built with `pnpm install && pnpm build` in its own checkout.
+
+LTI® is a trademark of 1EdTech® Consortium, Inc. (1edtech.org).
+Caliper Analytics® is a trademark of 1EdTech® Consortium, Inc. (1edtech.org).
+assesskit is not affiliated with, endorsed by or approved by 1EdTech Consortium, Inc.

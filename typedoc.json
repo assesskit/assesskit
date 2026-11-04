@@ -5,7 +5,7 @@
   "entryPoints": ["packages/runtime", "packages/player", "packages/custom-interactions"],
   "readme": "README.md",
   "out": "docs/api",
-  "plugin": ["typedoc-plugin-mermaid"],
+  "plugin": ["typedoc-plugin-mermaid", "./docs/typedoc-seo.ts"],
   "treatWarningsAsErrors": true,
   "highlightLanguages": [
     "bash",

@@ -39,3 +39,6 @@ python3 -m venv <a folder outside the repository>
 They write the same files every time they run: random samples use a fixed seed. Commit regenerated fixtures; CI runs only
 the TypeScript tests. The oracles, the cases the scripts leave out and why are in
 [evidence.md](../docs/runtime/evidence.md).
+
+QTI® is a trademark of 1EdTech® Consortium, Inc. (1edtech.org).
+assesskit is not affiliated with, endorsed by or approved by 1EdTech Consortium, Inc.

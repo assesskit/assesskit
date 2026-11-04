@@ -1,7 +1,6 @@
 # assesskit
 
-TypeScript packages for QTI 3.0 assessments: a runtime that reads, writes, validates and executes them, and a player that
-delivers them to candidates.
+QTI 3.0 runtime and player for JavaScript and TypeScript: read, validate, score and deliver assessment items and tests, with adaptive testing. This repository holds a runtime that reads, writes, validates and executes QTI 3.0 assessments, a player that delivers them to candidates, and portable custom interactions that items may use.
 
 ```mermaid
 flowchart LR
@@ -22,18 +21,25 @@ flowchart LR
   engine --> content
 ```
 
-| Package                                                                    | What it is                                                                                                                                                                                                                                                  |
-| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`@assesskit/runtime`](packages/runtime/README.md)                         | Reads, writes, validates and executes everything in QTI 3.0 that is not presentation or platform, with a headless delivery engine that serves exams on a server and practice on a device.                                                                   |
-| [`@assesskit/player`](packages/player/README.md)                           | Rendering, the host of portable custom interactions, accessibility applied in the interface, and the server-side session host and integrations. It uses the runtime only through its published subpaths. Its README says what the current version contains. |
-| [`@assesskit/custom-interactions`](packages/custom-interactions/README.md) | Portable custom interactions that any item may use, each an AMD module that the item's package carries: math entry on MathLive and stroke writing on Hanzi Writer.                                                                                          |
-
-assesskit is not certified by 1EdTech. What each package supports, and what it does not, is in
-[Supported](docs/runtime/supported.md) for the runtime and [Supported](docs/player/supported.md) for the player, and
-[Conformance](docs/runtime/conformance.md) takes every feature ID of the 1EdTech conformance document to its guide and its test.
-The claim is scoped: items differentially tested; test sessions specification-tested.
-
 ## Which package
+
+| Package                                                                                         | What it is                                                                                                                                                                                                                                                                                  |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@assesskit/runtime`](https://assesskit.wakan.dev/_assesskit/runtime/)                         | QTI 3.0 runtime for JavaScript and TypeScript: reads, writes, validates and scores assessment items, tests, content packages and results, converts items to and from GIFT and Moodle XML, and runs test sessions, adaptive ones included, without a user interface on a server or a device. |
+| [`@assesskit/player`](https://assesskit.wakan.dev/_assesskit/player/)                           | QTI 3.0 player for JavaScript and TypeScript, built on @assesskit/runtime: renders the 20 standard interactions in the browser, hosts portable custom interactions, and serves test sessions and adaptive tests from a server.                                                              |
+| [`@assesskit/custom-interactions`](https://assesskit.wakan.dev/_assesskit/custom-interactions/) | QTI 3.0 portable custom interactions for JavaScript and TypeScript: math entry for formulas in LaTeX and stroke writing for characters, each an AMD module that loads entirely from the item's package.                                                                                     |
+
+```bash
+npm install @assesskit/runtime
+npm install @assesskit/player
+npm install @assesskit/custom-interactions
+```
+
+assesskit holds no 1EdTech certification. What each package supports, and what it does not, is in
+[Supported](https://assesskit.wakan.dev/_assesskit/runtime/supported/) for the runtime and
+[Supported](https://assesskit.wakan.dev/_assesskit/player/supported/) for the player, and
+[Conformance](https://assesskit.wakan.dev/_assesskit/runtime/conformance/) takes every feature ID of the 1EdTech conformance document
+to its guide and its test. The claim is scoped: items differentially tested; test sessions specification-tested.
 
 To read, validate, process or run QTI content in your own code or pipeline, use the runtime. To deliver tests to candidates in a
 browser, use the player, which depends on the runtime.
@@ -56,19 +62,19 @@ solution view.
 
 The two meet in JSON: views, actions and state, with values in a self-describing form, so nothing needs a declaration to be
 decoded. On a server, the player hosts the runtime's engine: clients hold only views and send actions, and the answer keys and the
-seed never leave. For practice, the engine runs in the browser. [Architecture](docs/runtime/architecture.md#boundary-with-the-player)
-has the full list of who owns what, and [Delivery](docs/runtime/delivery.md#modes) the two modes.
+seed never leave. For practice, the engine runs in the browser. [Architecture](https://assesskit.wakan.dev/_assesskit/runtime/architecture/#boundary-with-the-player)
+has the full list of who owns what, and [Delivery](https://assesskit.wakan.dev/_assesskit/runtime/delivery/#modes) the two modes.
 
 ## Documentation
 
-| Where                                                                               | What it holds                                                                                          |
-| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| [Runtime guides](packages/runtime/README.md#documentation)                          | One guide for each module of the runtime, with its architecture, performance, evidence and conformance |
-| [Player guides](packages/player/README.md#documentation)                            | One guide for each part of the player, with its architecture, size, evidence and the browser baseline  |
-| [Custom interactions](packages/custom-interactions/README.md#documentation)         | One guide for each interaction, with the architecture of the package                                   |
-| [Supported: runtime](docs/runtime/supported.md), [player](docs/player/supported.md) | What each package supports, and what it does not                                                       |
-| [Conformance](docs/runtime/conformance.md)                                          | Every feature ID of the 1EdTech conformance document, with its guide and its test                      |
-| [Spec gaps](docs/runtime/spec-gaps.md)                                              | Where the specifications contradict themselves or are silent, and what the runtime does                |
+| Where                                                                                                                                               | What it holds                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [Runtime guides](https://assesskit.wakan.dev/_assesskit/runtime/#documentation)                                                                     | One guide for each module of the runtime, with its architecture, performance, evidence and conformance |
+| [Player guides](https://assesskit.wakan.dev/_assesskit/player/#documentation)                                                                       | One guide for each part of the player, with its architecture, size, evidence and the browser baseline  |
+| [Custom interactions](https://assesskit.wakan.dev/_assesskit/custom-interactions/#documentation)                                                    | One guide for each interaction, with the architecture of the package                                   |
+| [Supported: runtime](https://assesskit.wakan.dev/_assesskit/runtime/supported/), [player](https://assesskit.wakan.dev/_assesskit/player/supported/) | What each package supports, and what it does not                                                       |
+| [Conformance](https://assesskit.wakan.dev/_assesskit/runtime/conformance/)                                                                          | Every feature ID of the 1EdTech conformance document, with its guide and its test                      |
+| [Spec gaps](https://assesskit.wakan.dev/_assesskit/runtime/spec-gaps/)                                                                              | Where the specifications contradict themselves or are silent, and what the runtime does                |
 
 ## Development
 
@@ -93,11 +99,11 @@ Node.js 22.18+ and pnpm 12 are required. One command sets up the repository: `pn
 | `pnpm compat:runtimes`   | The built runtime gives the same results on Node.js, Deno, Bun and workerd            |
 | `pnpm docs:api`          | TypeDoc into `docs/api`; fails on undocumented exports                                |
 | `pnpm corpus`            | Downloads the 1EdTech examples and the W3C regular expression suite                   |
-| `pnpm schemas`           | Downloads the official XSDs (about 140 MB) into `.cache/schemas`                      |
+| `pnpm schemas`           | Downloads the published XSDs (about 140 MB) into `.cache/schemas`                     |
 | `pnpm unicode`           | Regenerates the Unicode tables of the regular expressions                             |
 
-[AGENTS.md](AGENTS.md) states the conventions, [CONTRIBUTING.md](CONTRIBUTING.md) the process and
-[SECURITY.md](SECURITY.md) how to report a vulnerability and how to deploy safely.
+[AGENTS.md](https://github.com/assesskit/assesskit/blob/main/AGENTS.md) states the conventions, [CONTRIBUTING.md](https://github.com/assesskit/assesskit/blob/main/CONTRIBUTING.md) the process and
+[SECURITY.md](https://github.com/assesskit/assesskit/blob/main/SECURITY.md) how to report a vulnerability and how to deploy safely.
 
 ## Layout
 
@@ -117,4 +123,10 @@ Node.js 22.18+ and pnpm 12 are required. One command sets up the repository: `pn
 
 ## License
 
-[Apache License 2.0](LICENSE). QTI and 1EdTech are trademarks of 1EdTech Consortium, Inc.; see the NOTICE of each package.
+[Apache License 2.0](https://github.com/assesskit/assesskit/blob/main/LICENSE). Copyright Fariz Wakan; see the NOTICE of each package.
+
+QTI® is a trademark of 1EdTech® Consortium, Inc. (1edtech.org).
+LTI® is a trademark of 1EdTech® Consortium, Inc. (1edtech.org).
+Caliper Analytics® is a trademark of 1EdTech® Consortium, Inc. (1edtech.org).
+W3C® is a trademark of the World Wide Web Consortium.
+assesskit is not affiliated with, endorsed by or approved by 1EdTech Consortium, Inc. or W3C.

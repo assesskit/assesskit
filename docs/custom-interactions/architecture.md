@@ -104,7 +104,7 @@ state.
 | `node.test.ts`               | `pnpm test`         | `readModuleFiles`, and the samples of the guides that run in Node                                                                                                                                                               |
 | `size.test.ts`               | `pnpm test`         | The budgets of the modules                                                                                                                                                                                                      |
 | `math-entry.browser.test.ts` | `pnpm test:browser` | The built module in the player's frame, in Chromium, Firefox and WebKit: real keys and taps, what MathLive writes, read by the reader and scored end to end; steps, state, status, the files loaded, axe and the keyboard alone |
-| `items.xsd.test.ts`          | `pnpm test:xsd`     | The items of the interactions against the official ASI schema                                                                                                                                                                   |
+| `items.xsd.test.ts`          | `pnpm test:xsd`     | The items of the interactions against the published ASI schema                                                                                                                                                                  |
 
 The browser tests serve the player's frame and the modules, built for the run, from an asset origin of their own
 (`test/fixtures/browser-setup.ts`), with the module of 十 that it writes from `test/fixtures/hanzi-writer-data/`, the one

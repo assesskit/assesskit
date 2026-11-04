@@ -12,5 +12,5 @@
       "@assesskit/runtime/*": ["./packages/runtime/src/*/index.ts"]
     }
   },
-  "include": ["scripts", "vitest.config.ts"]
+  "include": ["docs/*.ts", "scripts", "vitest.config.ts"]
 }

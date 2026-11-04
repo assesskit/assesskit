@@ -1,6 +1,6 @@
 # Node
 
-`node` is for Node.js 22 and later. It validates XML documents against the official XSD schemas of QTI 3.0 and the
+`node` is for Node.js 22 and later. It validates XML documents against the published XSD schemas of QTI 3.0 and the
 specifications it references, and reads and writes QTI content packages as files. The schemas are 1EdTech and W3C files that
 the runtime does not ship (they are copyrighted); the module pins them by SHA-256 and compiles them with libxml2 in WebAssembly.
 

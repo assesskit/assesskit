@@ -8,7 +8,7 @@ flowchart LR
   fixtures["Fixtures and servers<br/>in test/fixtures"] --> node["Node suites<br/>pnpm test"]
   fixtures --> browsers["Browser suites<br/>Chromium, Firefox, WebKit<br/>pnpm test:browser"]
   corpus["1EdTech examples<br/>pnpm corpus"] --> corp["Corpus suites<br/>pnpm test:corpus"]
-  schemas["Official schemas<br/>pnpm schemas"] --> xsd["Schema suites<br/>pnpm test:xsd"]
+  schemas["Published schemas<br/>pnpm schemas"] --> xsd["Schema suites<br/>pnpm test:xsd"]
   built["Built player<br/>pnpm build"] --> engines["Smoke test in the oldest browsers<br/>pnpm compat:engines"]
   complete --> node
   complete --> browsers

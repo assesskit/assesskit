@@ -193,7 +193,7 @@ flowchart LR
 | `rawScore`  | The value of a negative `SCORE`. Absent otherwise                                                                                               |
 
 The score comes from the test result, or from the one item result when a session delivered an item alone. `result` must be the
-report that `SessionHost.results` returned: a copy of it, and the report of a practice session, is not official.
+report that `SessionHost.results` returned: a copy of it, and the report of a practice session, is not branded.
 
 ## The display
 

@@ -2,7 +2,7 @@
 
 `@assesskit/player/protocol` holds what a browser and a session host send each other: JSON envelopes around the runtime's JSON
 forms of actions and views, the caller that the host's authentication gives to a request, the session client that the player
-mounts against, the host side of a session, the official results report, and the submission that a rater reads. It uses no DOM,
+mounts against, the host side of a session, the branded results report, and the submission that a rater reads. It uses no DOM,
 Node.js, timer or network API.
 
 ```mermaid
@@ -34,12 +34,12 @@ submission, because the server writes it and the browser shows it.
 | `SessionClient`, `DispatchResult`                         | The one interface the player mounts against.                                                           |
 | `HostSession`, `HostStep`, `HostApplyOptions`             | The host side of a session, which a session host and a local session both offer.                       |
 | `Clock`                                                   | The source of the time that a client, a session host and a test pass in.                               |
-| `OfficialResult`, `isOfficialResult`                      | A results report that the session host marked official.                                                |
+| `OfficialResult`, `isOfficialResult`                      | A results report that the session host branded.                                                        |
 | `Submission` and its parts, `checkSubmission`             | What a rater needs to rate an externally scored outcome.                                               |
 
 ## Quick start
 
-Check the envelope of an action and the caller of a session, and tell an official result:
+Check the envelope of an action and the caller of a session, and tell a branded result:
 
 ```ts
 import { checkActionEnvelope, checkCaller, isOfficialResult } from "@assesskit/player/protocol";
@@ -173,7 +173,7 @@ after the test ended while their request exists.
 | Refusal                 | Returned as `HostStep.refusal`; nothing is saved or forwarded                                              | Returned as `HostStep.refusal`; nothing is saved and no step listener runs, while the view listeners run as for any answer |
 | `scoredBy`              | Passed to the log with the step of a `supply-scores` action                                                | Ignored: a local session forwards nothing                                                                                  |
 | `pending`, `scorerView` | Load the session, then ask the engine                                                                      | Queued behind earlier calls, so they see the state those calls left                                                        |
-| `results`               | Branded as official                                                                                        | Never official: `isOfficialResult` is `false`, so `buildSessionScore` refuses it                                           |
+| `results`               | Branded                                                                                                    | Never branded: `isOfficialResult` is `false`, so `buildSessionScore` refuses it                                            |
 | After `close()`         | A session host has no `close`                                                                              | `apply` and `subscribeSteps` throw `DataError`; the reads still work                                                       |
 | Step feed               | `forward.log(step)` for every step with events, in every process, the start included                       | `subscribeSteps(listener)` for the steps with events that are saved after the call                                         |
 | Scorer view             | Holds the correct responses: call it only from a rater's endpoint, never from a candidate's                | Holds the correct responses by design, because the device holds them already                                               |
@@ -198,7 +198,7 @@ Where a host wires each concern:
 | Scoring | The rater endpoint: `session(id)`, `pending`, `scorerView`, `buildSubmission`, then `apply(..., { scoredBy })` | `host.subscribeSteps` on `scoring-requested`, plus one check of `pending()` after creation |
 | Time    | The scheduler's job: `session(id).apply({ type: "time" })`                                                     | Automatic: the local session fires `time` at each maximum time                             |
 
-## Official results
+## Branded results
 
 `SessionHost.session(id).results()` returns a report of type `OfficialResult`. The host records the object it returns in a private `WeakSet`,
 and `isOfficialResult` tells whether a value is one: a copy of the report, a report parsed from JSON and the report of a practice

@@ -140,7 +140,7 @@ first save. A session that was saved stays, and a new call resumes it.
 
 It stamps each action with `stamp(state, action, now)`, saves the state of each accepted step before the step takes effect, and
 fires a `time` action at each maximum time with `setTimeout`, so a time-out happens on the device without a server. A store that
-has the session resumes it. The candidate can suspend and resume. Results of practice are never official: nothing here brands a
+has the session resumes it. The candidate can suspend and resume. Results of practice are never branded: nothing here brands a
 report, so `buildSessionScore` refuses them.
 
 An item alone is a session of `{ kind: "item", item, base }`; `documents.item` is `base`. It serves a preview, a practice item and a
@@ -269,7 +269,7 @@ client.close();
 | `apply(action, options?)`       | Applies a `time`, `supply-scores` or `cat-response` action and resolves with the `HostStep`. A candidate action is a `DataError`: send it with `dispatch`.          |
 | `pending(options?)`             | The scoring requests without a value, and the CAT requests.                                                                                                         |
 | `scorerView(request, options?)` | What a scorer needs to rate the request. It holds the correct responses, which the device holds already.                                                            |
-| `results(options?)`             | The results report. It is never official.                                                                                                                           |
+| `results(options?)`             | The results report. It is never branded.                                                                                                                            |
 | `subscribeSteps(listener)`      | Calls the listener with the events of each step saved after this call, the candidate's, the timer's and the host's, in order. Returns the function that removes it. |
 
 `subscribeSteps` calls the listener after the view listeners. A step with no events calls no listener, and a refused action makes

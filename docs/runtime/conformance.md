@@ -1,8 +1,8 @@
 # Conformance
 
 Every feature ID of Appendix A of the [QTI 3.0 Conformance and Certification](https://www.imsglobal.org/spec/qti/v3p0/conf/)
-document (CERT), with the guide that says how assesskit implements it and the test that holds it. assesskit is not certified by
-1EdTech: certification is for products, each year, with test sets and a validator open to members only. This page says what
+document (CERT), with the guide that says how assesskit implements it and the test that holds it. assesskit holds no
+certification: 1EdTech grants it to products, each year, with test sets and a validator open to members only. This page says what
 assesskit implements; only 1EdTech certifies a product.
 
 ```mermaid
@@ -12,7 +12,7 @@ flowchart LR
   table["The tables of this page"] --> test
   guides["Guides"] --> test
   tests["Test files"] --> test
-  official["Official packages<br/>member-only, outside the repository"] -- "pnpm conformance" --> reports["Report and exports<br/>outside the repository"]
+  official["Conformance packages<br/>member-only, outside the repository"] -- "pnpm conformance" --> reports["Report and exports<br/>outside the repository"]
   reports --> validator["The validator of 1EdTech"]
 ```
 
@@ -37,14 +37,14 @@ file below `test/` and its title.
 
 CERT certifies a level together with what an application does with content.
 
-| Capability                                           | State                                                                                                                                                                                            |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Import of tests with items, and of items alone       | [`readPackage`](package.md) and [`validatePackage`](validate.md) tell valid from invalid; `examples.corpus.test.ts` reads, validates and runs the 1EdTech examples                               |
-| Export of tests with items, and of items alone       | The writers pass the official schemas, and [validate](validate.md) holds the Schematron rules. The validator of 1EdTech has not judged their output: `pnpm conformance` prepares it for a member |
-| Delivery                                             | [`mountDelivery`](../player/delivery.md) over the [engine](delivery.md), as the tables below say                                                                                                 |
-| Scoring from packages and results                    | [Scoring](../player/scoring.md)                                                                                                                                                                  |
-| Results Reporting, Usage Data, PCI, CAT presentation | [Results](results.md), [usage](usage.md), [PCI](../player/pci.md), [CAT](cat.md); CERT lists them as future capabilities                                                                         |
-| Authoring, and a CAT engine as provider              | Not included: the runtime reads and writes documents and has no editor, and the host implements `CatPort` ([Supported](supported.md#not-included))                                               |
+| Capability                                           | State                                                                                                                                                                                             |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Import of tests with items, and of items alone       | [`readPackage`](package.md) and [`validatePackage`](validate.md) tell valid from invalid; `examples.corpus.test.ts` reads, validates and runs the 1EdTech examples                                |
+| Export of tests with items, and of items alone       | The writers pass the published schemas, and [validate](validate.md) holds the Schematron rules. The validator of 1EdTech has not judged their output: `pnpm conformance` prepares it for a member |
+| Delivery                                             | [`mountDelivery`](../player/delivery.md) over the [engine](delivery.md), as the tables below say                                                                                                  |
+| Scoring from packages and results                    | [Scoring](../player/scoring.md)                                                                                                                                                                   |
+| Results Reporting, Usage Data, PCI, CAT presentation | [Results](results.md), [usage](usage.md), [PCI](../player/pci.md), [CAT](cat.md); CERT lists them as future capabilities                                                                          |
+| Authoring, and a CAT engine as provider              | Not included: the runtime reads and writes documents and has no editor, and the host implements `CatPort` ([Supported](supported.md#not-included))                                                |
 
 ## Features
 
@@ -233,7 +233,7 @@ CERT certifies a level together with what an application does with content.
 | P-12 | Variant                              | Elective    | Implements | [runtime/package](package.md#resolvers)              | `runtime/package.test.ts`: reads the variants of a resource with their DRD                                                                                                                          |
 | P-13 | CASE                                 | Elective    | Implements | [runtime/metadata](metadata.md#curriculum-standards) | `runtime/metadata.corpus.test.ts`: has the curriculum standards that the CASE manifest spells                                                                                                       |
 
-## Running the official packages
+## Running the conformance packages
 
 The test sets and the validator are open to 1EdTech members, and nothing of theirs enters this repository. A member with
 a clone of the test set runs `pnpm conformance`, which is opt-in: no gate and no CI job runs it, and it uses no network.
@@ -243,14 +243,14 @@ pnpm schemas
 pnpm conformance --packages ../qti-conformance --reports ../conformance-reports
 ```
 
-| Option       | Default          | Meaning                                                                                                                                   |
-| ------------ | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `--packages` | required         | The directory of the official packages: ZIP files, directories with a manifest and no ZIP file beside it, and other XML files such as PNP |
-| `--reports`  | required         | The directory for the report and the exports. It is made when it is missing                                                               |
-| `--schemas`  | `.cache/schemas` | The directory of the schemas, which `pnpm schemas` downloads                                                                              |
+| Option       | Default          | Meaning                                                                                                                                      |
+| ------------ | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--packages` | required         | The directory of the conformance packages: ZIP files, directories with a manifest and no ZIP file beside it, and other XML files such as PNP |
+| `--reports`  | required         | The directory for the report and the exports. It is made when it is missing                                                                  |
+| `--schemas`  | `.cache/schemas` | The directory of the schemas, which `pnpm schemas` downloads                                                                                 |
 
 The run refuses either directory when it lies inside the repository, symbolic links followed, so that nothing member-only
-can reach a commit. It goes on after a verdict, because some official packages are problematic on purpose: CERT section 4.4
+can reach a commit. It goes on after a verdict, because some conformance packages are problematic on purpose: CERT section 4.4
 asks a system to flag those and to accept the others.
 
 | Step                                      | Result in `report.json`                                                                                 |

@@ -274,7 +274,7 @@ results, and `item-formats.test.ts` compares:
 | The questions that Moodle refuses or stops at | Broken braces, a pair without `->`, a credit off its grades, four questions of each format that stop the import                                                                                                                                        | As in Differences                                                                        |
 | The oddities that Moodle reads past           | Questions without names, a byte order mark, lines ended by carriage returns alone, the formats `wiki_like` and an unknown one, a tolerance that is not a number, base64 with other characters, an essay's unknown response format, a match of one pair | Names, files and grades as Moodle's; every response within 1e-9                          |
 
-The items that a reader writes from every file and export of the fixture pass the official QTI 3.0 schema
+The items that a reader writes from every file and export of the fixture pass the published QTI 3.0 schema
 (`item-formats.xsd.test.ts`). Property tests write and read back any text, GIFT's reserved marks and HTML's included, and any
 credits of Moodle's list; a fuzz test reads mutated files and any text, which a reader reads or refuses with a `SecurityError`.
 Items of one rule each (`item-formats-rules.ts`) pin what each writer lists of them; three of those items are read back and

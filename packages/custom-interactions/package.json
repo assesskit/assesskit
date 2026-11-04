@@ -1,25 +1,28 @@
 {
   "name": "@assesskit/custom-interactions",
   "version": "0.0.0",
-  "description": "Portable custom interactions for QTI 3.0 items: math entry on MathLive and stroke writing on Hanzi Writer, as AMD modules that load entirely from the item's package.",
+  "description": "QTI 3.0 portable custom interactions for JavaScript and TypeScript: math entry for formulas in LaTeX and stroke writing for characters, each an AMD module that loads entirely from the item's package.",
   "keywords": [
-    "assesskit",
     "qti",
     "qti3",
-    "1edtech",
-    "assessment",
     "portable-custom-interaction",
+    "pci",
+    "custom-interaction",
     "math-input",
-    "stroke-order"
+    "math-entry",
+    "stroke-order",
+    "stroke-writing",
+    "e-assessment",
+    "typescript"
   ],
-  "author": "Fariz Wakan",
+  "author": "Fariz Wakan (https://github.com/luthfanwakan)",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/assesskit/assesskit.git",
     "directory": "packages/custom-interactions"
   },
-  "homepage": "https://github.com/assesskit/assesskit/tree/main/packages/custom-interactions#readme",
+  "homepage": "https://assesskit.wakan.dev/_assesskit/custom-interactions/",
   "bugs": "https://github.com/assesskit/assesskit/issues",
   "type": "module",
   "sideEffects": false,

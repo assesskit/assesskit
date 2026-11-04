@@ -1,7 +1,7 @@
 # Conventions
 
 A convention is something the runtime defines because QTI does not. It uses QTI's own elements, so that every document stays valid
-against the official schemas and other tools can still read it. There are three: two are a `qti-rubric-block` for scorers that a
+against the published schemas and other tools can still read it. There are three: two are a `qti-rubric-block` for scorers that a
 class token marks, and the third is the call of a scoring operator.
 
 ```mermaid
@@ -41,7 +41,7 @@ person who reads the document sees the list of the responses that the scorer rat
 </qti-rubric-block>
 ```
 
-The markup is valid ASI: the tests validate the block that `buildScoreCoversBlock` builds against the official schema.
+The markup is valid ASI: the tests validate the block that `buildScoreCoversBlock` builds against the published schema.
 
 | Part                       | Rule                                                                                                                     |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
@@ -154,7 +154,7 @@ flowchart LR
 </qti-rubric-block>
 ```
 
-The markup is valid ASI: the tests validate the blocks that `buildScoringRubricBlock` builds, and the example above, against the official
+The markup is valid ASI: the tests validate the blocks that `buildScoringRubricBlock` builds, and the example above, against the published
 schema. The data model follows the rubric of CASE (see [CASE alignment](#case-alignment)).
 
 ```mermaid
