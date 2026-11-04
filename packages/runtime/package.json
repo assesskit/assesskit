@@ -90,6 +90,10 @@
       "types": "./dist/metadata/index.d.ts",
       "default": "./dist/metadata/index.js"
     },
+    "./operators": {
+      "types": "./dist/operators/index.d.ts",
+      "default": "./dist/operators/index.js"
+    },
     "./package": {
       "types": "./dist/package/index.d.ts",
       "default": "./dist/package/index.js"

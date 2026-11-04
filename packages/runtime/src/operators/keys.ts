@@ -1,0 +1,352 @@
+/**
+ * An area of an image that a point may hit: a rectangle by its left, top, right and bottom edges, a circle by its center and
+ * radius, a polygon by its corners, in the pixels of QTI's `coords`.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-area-map-entry}
+ */
+export interface Area {
+  /** The area's identifier, unique in the key. */
+  readonly id: string;
+  /** The shape of the area. */
+  readonly shape: "rect" | "circle" | "poly";
+  /** The coordinates of the shape, as QTI's `coords` lists them. */
+  readonly coords: readonly number[];
+  /**
+   * The points a hit earns under the `mapping` scheme.
+   *
+   * @defaultValue `1`
+   */
+  readonly points?: number;
+}
+
+/** How far a number may lie from its key and still be right; with neither bound, it must equal the key exactly. */
+export interface Tolerance {
+  /**
+   * The largest distance from the key's value.
+   *
+   * @defaultValue none
+   */
+  readonly absolute?: number;
+  /**
+   * The largest distance from the key's value, as a share of its magnitude; either bound holds when both are given.
+   *
+   * @defaultValue none
+   */
+  readonly relative?: number;
+}
+
+/** A range of numbers that are all right; a bound that is `null` is open. */
+export interface Interval {
+  /** The lower bound, or `null` for none. */
+  readonly min: number | null;
+  /** The upper bound, or `null` for none. */
+  readonly max: number | null;
+  /**
+   * Whether the lower bound is in the interval.
+   *
+   * @defaultValue `true`
+   */
+  readonly minIncluded?: boolean;
+  /**
+   * Whether the upper bound is in the interval.
+   *
+   * @defaultValue `true`
+   */
+  readonly maxIncluded?: boolean;
+}
+
+/** The range of the values that a variable of an expression takes at the sample points. */
+export interface VariableRange {
+  /** The least value. */
+  readonly min: number;
+  /** The greatest value, above `min`. */
+  readonly max: number;
+}
+
+/** A tier of partial credit for a number outside the key's tolerance: within its own tolerance, it earns `share`. */
+export interface NumberCredit {
+  /** How far from the key's value the tier reaches. */
+  readonly tolerance: Tolerance;
+  /** The share of the response's points that the tier earns, from 0 to 1. */
+  readonly share: number;
+}
+
+/** The unit in which `countLength` counts a text. */
+export type LengthUnit = "words" | "characters" | "characters-without-spaces" | "manuscript-squares";
+
+/**
+ * A tier of partial credit for a string of a `text` response that matches no answer: its edit distance, in code points after
+ * normalization, to the nearest accepted text of an answer, within `tolerance`, earns `share` of that answer's points.
+ */
+export interface TextCredit {
+  /** `absolute`: the most edits; `relative`: the most edits as a share of the accepted text's length. */
+  readonly tolerance: Tolerance;
+  /** The share of the answer's points that the tier earns, from 0 to 1. */
+  readonly share: number;
+}
+
+/** What a length rule does to the share of a response whose length passes a bound. */
+export interface LengthEffect {
+  /** `below`: the length is under `share` × `min`; `above`: it is over `share` × `max`. */
+  readonly when: "below" | "above";
+  /**
+   * The share of the bound at which the effect starts.
+   *
+   * @defaultValue `1`
+   */
+  readonly share?: number;
+  /** `zero`: the share becomes 0; `deduct`: that share of the response's points is taken off, floored at 0. */
+  readonly effect:
+    | "zero"
+    | {
+        /** The share of the response's points taken off, from 0 to 1. */
+        readonly deduct: number;
+      };
+}
+
+/** The length of a text response, counted by `countLength` in `unit`, and what passing its bounds does. */
+export interface LengthRule {
+  /** The unit of the count. */
+  readonly unit: LengthUnit;
+  /**
+   * The least length.
+   *
+   * @defaultValue none
+   */
+  readonly min?: number;
+  /**
+   * The most length.
+   *
+   * @defaultValue none
+   */
+  readonly max?: number;
+  /**
+   * What passing a bound does, in order; with none, the length is advised only.
+   *
+   * @defaultValue none
+   */
+  readonly effects?: readonly LengthEffect[];
+}
+
+/** How a response and each answer of a `text` key are normalized before they are compared, in the order of the fields. */
+export interface TextNormalization {
+  /**
+   * The Unicode normalization form applied first.
+   *
+   * @defaultValue `"NFKC"`
+   */
+  readonly form?: "NFC" | "NFD" | "NFKC" | "NFKD";
+  /**
+   * Whether the Halfwidth and Fullwidth Forms block is mapped by NFKC.
+   *
+   * @defaultValue `true`
+   */
+  readonly foldWidth?: boolean;
+  /**
+   * Whether nonspacing marks are removed after NFD, before the text is normalized back to `form`.
+   *
+   * @defaultValue `false`
+   */
+  readonly ignoreMarks?: boolean;
+  /**
+   * Whether case counts; when it does not, both sides are lowered as `toLowerCase` lowers them.
+   *
+   * @defaultValue `false`
+   */
+  readonly caseSensitive?: boolean;
+  /**
+   * Whether each run of Unicode White_Space becomes one space, and the ends are trimmed.
+   *
+   * @defaultValue `true`
+   */
+  readonly collapseWhitespace?: boolean;
+}
+
+/** An accepted answer of a `text` key: its texts and patterns, and the points it earns. */
+export interface TextAnswer {
+  /** The texts that match it once normalized. */
+  readonly texts: readonly string[];
+  /**
+   * The points that matching it earns; an answer of fewer points credits a partly right form.
+   *
+   * @defaultValue `1`
+   */
+  readonly points?: number;
+  /**
+   * XSD regular expressions that a normalized string matches whole, as `qti-pattern-match` reads them.
+   *
+   * @defaultValue none
+   */
+  readonly patterns?: readonly string[];
+}
+
+/** The key of a mathematical expression, an equation or a solution set, typed as LaTeX of the subset. */
+export interface ExpressionKey {
+  /** The kind of the key. */
+  readonly kind: "expression";
+  /** The key's expression; for a solution set, its values or `v = value` joined by `,` or `\lor`. */
+  readonly expression: string;
+  /**
+   * How a response is compared: as an expression, an equation, or the list of an equation's solutions.
+   *
+   * @defaultValue `"expression"`
+   */
+  readonly form?: "expression" | "equation" | "solution-set";
+  /**
+   * The range of the values that each variable takes at the sample points, by its name as the reader gives it.
+   *
+   * @defaultValue none: each variable is drawn from -10 to 10
+   */
+  readonly variables?: Readonly<Record<string, VariableRange>>;
+  /**
+   * The decimal mark of the key and its responses.
+   *
+   * @defaultValue `"."`
+   */
+  readonly decimalSeparator?: "." | ",";
+}
+
+/** The key of a number, with its unit, form and partial credit. */
+export interface NumberKey {
+  /** The kind of the key. */
+  readonly kind: "number";
+  /** The right value, read from its shortest decimal form, so that 1.1 is 11/10. */
+  readonly value: number;
+  /**
+   * How far a response may lie from the value.
+   *
+   * @defaultValue none: exact
+   */
+  readonly tolerance?: Tolerance;
+  /**
+   * The decimal mark of a response.
+   *
+   * @defaultValue `"."`
+   */
+  readonly decimalSeparator?: "." | ",";
+  /**
+   * The units a response may write after its number, by name, each with the factor that converts it to the key's unit.
+   *
+   * @defaultValue none: a unit after the number is not named, and the response is wrong
+   */
+  readonly units?: Readonly<Record<string, number>>;
+  /**
+   * Whether a response may write `a/b` and a mixed `a b/c`.
+   *
+   * @defaultValue `false`
+   */
+  readonly fractions?: boolean;
+  /**
+   * The significant digits a response shows, against the value rounded to as many.
+   *
+   * @defaultValue none
+   */
+  readonly significantFigures?: number;
+  /**
+   * The tiers of partial credit for a response outside the tolerance, each with its own tolerance and share.
+   *
+   * @defaultValue none
+   */
+  readonly credit?: readonly NumberCredit[];
+  /**
+   * The ranges inside which every response is right; with them, the value is not read.
+   *
+   * @defaultValue none
+   */
+  readonly intervals?: readonly Interval[];
+  /**
+   * The values of an ordered response, one for each of its strings, such as the coordinates of a point.
+   *
+   * @defaultValue none
+   */
+  readonly components?: readonly number[];
+}
+
+/** The key of a text response: accepted answers, how many a response gives, and how it is normalized and credited. */
+export interface TextKey {
+  /** The kind of the key. */
+  readonly kind: "text";
+  /** The accepted answers. */
+  readonly answers: readonly TextAnswer[];
+  /**
+   * How many answers a response gives.
+   *
+   * @defaultValue `1`
+   */
+  readonly count?: number;
+  /**
+   * `forms`: each string of the response is one form of a whole answer; `words`: the response's words match answers.
+   *
+   * @defaultValue `"forms"`
+   */
+  readonly scheme?: "forms" | "words";
+  /**
+   * How the response and the answers are normalized.
+   *
+   * @defaultValue each field's own default
+   */
+  readonly normalization?: TextNormalization;
+  /**
+   * Whether spelling variants of an answer count; the operators define `"exact"` alone.
+   *
+   * @defaultValue `"exact"`
+   */
+  readonly spelling?: "exact" | "variants";
+  /**
+   * Whether a number written in words equals one in digits; the operators define `false` alone.
+   *
+   * @defaultValue `false`
+   */
+  readonly numericEquivalence?: boolean;
+  /**
+   * The tiers of partial credit, by edit distance, for a string that matches no answer.
+   *
+   * @defaultValue none: a string matches an answer or earns 0
+   */
+  readonly credit?: readonly TextCredit[];
+  /**
+   * The length rule of the response.
+   *
+   * @defaultValue none
+   */
+  readonly length?: LengthRule;
+}
+
+/** The key of points on an image: areas, of which a response hits up to `select`, each point counting for one area. */
+export interface AreasKey {
+  /** The kind of the key. */
+  readonly kind: "areas";
+  /** The areas. */
+  readonly areas: readonly Area[];
+  /** `keyed`: areas matched over `select`, which `hotspot-matching` scores; `mapping`: QTI's `area-mapping`. */
+  readonly scheme: "mapping" | "keyed";
+  /**
+   * How many areas a response selects.
+   *
+   * @defaultValue the count of areas
+   */
+  readonly select?: number;
+}
+
+/** An `areas` key of the scheme `keyed`, which `hotspot-matching` scores. */
+export interface KeyedAreasKey extends AreasKey {
+  /** The scheme, `keyed`. */
+  readonly scheme: "keyed";
+}
+
+/** The key of one response that an operator scores: an expression, a number, a text or areas. */
+export type Key = ExpressionKey | NumberKey | TextKey | AreasKey;
+
+/** Credit for an answer that follows from an earlier response: the key's operator scores it against both. */
+export interface FollowThrough {
+  /** The identifier of the earlier response, the operator's second operand. */
+  readonly from: string;
+  /** An expression of the subset in `variable`, whose value with the earlier response in its place also earns the credit. */
+  readonly expression: string;
+  /**
+   * The variable of `expression` that the earlier response replaces.
+   *
+   * @defaultValue `"r"`
+   */
+  readonly variable?: string;
+}

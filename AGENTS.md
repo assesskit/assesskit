@@ -78,7 +78,7 @@ Biome enforces, folder by folder.
 | `pnpm compat:runtimes`           | The built runtime and the handler of the CAT binding give the same results on Node.js, Deno, Bun and workerd; needs Deno and Bun                                                                                                                                     |
 | `pnpm corpus`, `pnpm schemas`    | Download the 1EdTech examples into `.cache/corpus` and the XSDs into `.cache/schemas`, which CI keeps by the hash of their locks; `corpus:pin` and `schemas:pin` write new hashes                                                                                    |
 | `pnpm conformance`               | Takes the official packages of a 1EdTech member through the runtime, outside the repository; `conformance:pin` rewrites the feature list                                                                                                                             |
-| `pnpm unicode`, `pnpm asi-table` | Regenerate the Unicode tables of `values` and the element table of `asi` (needs `pnpm schemas`) from the pinned files                                                                                                                                                |
+| `pnpm unicode`, `pnpm asi-table` | Regenerate the Unicode tables of `values` and `operators` with the grapheme break test fixture, and the element table of `asi` (needs `pnpm schemas`), from the pinned files                                                                                         |
 
 - A gate that reads `dist/` builds it first, so a fresh clone passes every gate.
 - Run the gates that the change touches before finishing; [CONTRIBUTING.md](CONTRIBUTING.md#before-opening-a-pull-request) says which.

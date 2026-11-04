@@ -172,6 +172,30 @@ const READINGS: readonly {
     outcome: "true",
   },
   {
+    title: "scores an expression and a response of the most characters, sums of 1,000 terms, at 24 points",
+    name: "operatorExpression",
+    heapMiB: 32,
+    outcome: '{"cardinality":"single","baseType":"float","value":1}',
+  },
+  {
+    title: "matches the most words of a text response to the most answers of a key",
+    name: "operatorText",
+    heapMiB: 48,
+    outcome: '{"cardinality":"single","baseType":"float","value":1}',
+  },
+  {
+    title: "matches the most points of a hotspot response to the most areas of a key, every point in every area",
+    name: "operatorHotspot",
+    heapMiB: 48,
+    outcome: '{"cardinality":"single","baseType":"float","value":1}',
+  },
+  {
+    title: "checks the most lines of worked steps, each of the most characters",
+    name: "mathSteps",
+    heapMiB: 64,
+    outcome: "199 equivalent",
+  },
+  {
     title: "reads a module resolution file of 65,536 characters, the limit",
     name: "moduleResolution",
     heapMiB: 32,

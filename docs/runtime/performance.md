@@ -91,6 +91,10 @@ of the tests generate with a fixed seed. A benchmark fails when its fastest samp
 | `serializeState` and `deserializeState` | The state of a session of 100 items, all answered                                                                           | 4.81 ms                  | 30 ms         |
 | Rescoring a report                      | `readTestInputs` and `runOutcomeProcessing` on the report of 200 items, all answered, with 21 rules that read item sessions | 1.40 ms                  | 7 ms          |
 | Size of that state                      | The same state as JSON text                                                                                                 | 118,699 bytes            | 150,000 bytes |
+| `expression-equivalent`                 | A key and a response that are equal, `\frac{x^2-1}{x-1}` and `x+1`, the options read on the call                            | 0.02 ms on a laptop      | 0.1 ms        |
+| The longest expressions                 | A key and a response of 2,000 characters, sums of 1,000 terms                                                               | 2.40 ms on a laptop      | 20 ms         |
+| `text-equivalent`                       | A response of 200 words against 50 answers with a credit tier by edit distance                                              | 0.48 ms on a laptop      | 3 ms          |
+| `compareMathSteps`                      | 60 lines of equations                                                                                                       | 0.81 ms on a laptop      | 5 ms          |
 
 The replay also checks that the replayed state equals the state of the session. The peak memory of the readers is a test, not a
 benchmark: [SECURITY.md](../../SECURITY.md#default-limits) lists it.
@@ -147,14 +151,14 @@ shows in the change that makes it. The player's entry points are in [size](../pl
 ```mermaid
 xychart-beta
   title "Subpaths after gzip, in kilobytes"
-  x-axis ["errors", "checks", "content", "pci", "cat", "xml", "values", "interactions", "delivery/wire", "metadata", "usage", "results", "pnp", "processing", "asi", "package", "validate", "delivery", "root"]
-  y-axis "kB" 0 --> 170
-  bar [0.2, 4.0, 8.2, 8.7, 9.3, 16.9, 18.4, 17.2, 17.8, 18.8, 19.2, 22.0, 22.1, 26.6, 39.3, 51.2, 72.9, 118.0, 167.5]
+  x-axis ["errors", "checks", "content", "pci", "cat", "xml", "values", "interactions", "delivery/wire", "metadata", "usage", "results", "pnp", "processing", "operators", "asi", "package", "validate", "delivery", "root"]
+  y-axis "kB" 0 --> 190
+  bar [0.2, 4.0, 8.2, 8.7, 9.3, 16.9, 18.4, 17.2, 17.8, 18.8, 19.2, 22.0, 22.1, 26.6, 34.3, 39.3, 51.2, 72.9, 118.0, 189.2]
 ```
 
 | Subpath         | Bytes     | Gzip    | Budget  | Holds besides its own code, `errors`, `checks` and valibot                                                                                                               |
 | --------------- | --------- | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `.`             | 664,638   | 167,471 | 208,000 | Every module but `node` and `cli`; fflate, saxes, xmlchars                                                                                                               |
+| `.`             | 732,963   | 189,230 | 208,000 | Every module but `node` and `cli`; fflate, saxes, xmlchars                                                                                                               |
 | `asi`           | 235,113   | 39,319  | 49,000  | `values`, `xml`; saxes, xmlchars                                                                                                                                         |
 | `cat`           | 28,642    | 9,252   | 12,000  | `metadata`, `results`, `values`                                                                                                                                          |
 | `checks`        | 13,522    | 4,006   | 5,500   | Nothing                                                                                                                                                                  |
@@ -169,6 +173,7 @@ xychart-beta
 | `usage`         | 62,966    | 19,218  | 24,000  | `values`, `xml`; saxes, xmlchars                                                                                                                                         |
 | `validate`      | 355,320   | 72,905  | 91,000  | `asi`, `interactions`, `metadata`, `package`, `pci`, `pnp`, `processing`, `results`, `values`, `xml`; saxes, xmlchars                                                    |
 | `metadata`      | 62,685    | 18,789  | 23,500  | `asi`, `xml`; saxes, xmlchars                                                                                                                                            |
+| `operators`     | 108,303   | 34,312  | 43,000  | `asi`, `processing`, `random`, `values`                                                                                                                                  |
 | `package`       | 265,369   | 51,160  | 64,000  | `asi`, `metadata`, `values`, `xml`; fflate, saxes, xmlchars                                                                                                              |
 | `processing`    | 87,333    | 26,601  | 33,500  | `asi`, `random`, `values`                                                                                                                                                |
 | `values`        | 57,813    | 18,412  | 23,500  | Nothing                                                                                                                                                                  |
@@ -176,7 +181,9 @@ xychart-beta
 | `node`          | 1,615,533 | 500,784 | 626,000 | `asi`, `metadata`, `package`, `validate`, `values`, `xml`; fflate, libxml2-wasm, saxes, xmlchars                                                                         |
 | `cli`           | 1,773,113 | 546,076 | 682,500 | `asi`, `interactions`, `metadata`, `node`, `package`, `pci`, `pnp`, `processing`, `results`, `usage`, `validate`, `values`, `xml`; fflate, libxml2-wasm, saxes, xmlchars |
 
-`errors` holds nothing else, and `checks` holds only `errors` and valibot. A module that reads XML holds the parser (`xml`,
+`operators` holds the regular expressions of `values` for the patterns of a text key, with their Unicode tables, and the hit
+test of `processing`; its own code is the reader of the LaTeX subset, its arithmetic and comparator, exact rationals, the
+grapheme table of Unicode 17.0.0 and the schemas of the keys. `errors` holds nothing else, and `checks` holds only `errors` and valibot. A module that reads XML holds the parser (`xml`,
 saxes and xmlchars). A module that walks the model of a document (`asi`, `package`, `validate`, `delivery`) holds the element
 table of `asi`, which is most of its 234 kB; `content`, `interactions` and `processing` hold a few hundred bytes of `asi`, its
 guards and constants. `delivery/wire` is the wire forms of `delivery` alone (`writeView`, `readView`, `writeCandidateAction`,

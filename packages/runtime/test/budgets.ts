@@ -23,6 +23,16 @@ export const BUDGETS = {
   stateRoundTrip: 30,
   /** The size of the state of a session of 100 items that has ended, in bytes. */
   stateBytes: 150_000,
+  // The operators' budgets are five times the fastest sample of a laptop (0.02, 2.68, 0.53 and 0.82 ms), rounded up to one
+  // significant digit, until the CI runner's samples replace them.
+  /** Comparing an expression with its key by `expression-equivalent`, its options read on the call. */
+  operatorExpression: 0.1,
+  /** Comparing a sum of 1,000 terms with a key of as many, the most that a response holds. */
+  operatorLongest: 20,
+  /** Scoring a text of 200 words against 50 answers with credit tiers. */
+  operatorText: 3,
+  /** Checking 60 lines of worked steps. */
+  mathSteps: 5,
 } as const;
 
 /**

@@ -622,6 +622,40 @@
       }
     },
     {
+      "includes": ["packages/runtime/src/operators/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../checks-internal.js",
+                      "!../random.js",
+                      "!../values/**",
+                      "!../asi/**",
+                      "!../processing/**"
+                    ],
+                    "message": "operators/ builds on values/, asi/ and processing/ only."
+                  },
+                  {
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["packages/runtime/src/package/**"],
       "linter": {
         "rules": {

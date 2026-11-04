@@ -2,16 +2,21 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  buildGraphemeRuns,
   encodeRuns,
   parseBlocks,
   parseCategories,
+  parseGraphemeBreakTest,
+  parseProperty,
   renderBlocks,
   renderCategories,
+  renderGraphemes,
   sha256,
   UNICODE_FILES,
 } from "../unicode.ts";
 
 const VALUES = resolve(import.meta.dirname, "../../packages/runtime/src/values");
+const OPERATORS = resolve(import.meta.dirname, "../../packages/runtime/src/operators");
 
 describe("sha256", () => {
   it("hashes the UTF-8 bytes of a text", () => {
@@ -97,17 +102,74 @@ describe("encodeRuns", () => {
   });
 });
 
+describe("parseProperty", () => {
+  const text = ["# A comment", "0600..0605    ; Prepend # Cf   [6] ARABIC NUMBER SIGN", "000D          ; CR", ""].join(
+    "\n",
+  );
+
+  it("reads ranges and single code points with their values", () => {
+    expect(parseProperty(text)).toEqual([
+      { first: 0x600, last: 0x605, value: "Prepend" },
+      { first: 0x0d, last: 0x0d, value: "CR" },
+    ]);
+  });
+
+  it("reads the value of one property of a file of several", () => {
+    const derived = "0915..0939    ; InCB; Consonant # Lo\n0300          ; Alphabetic # Mn";
+    expect(parseProperty(derived, "InCB")).toEqual([{ first: 0x915, last: 0x939, value: "Consonant" }]);
+  });
+
+  it("refuses a line it cannot read", () => {
+    expect(() => parseProperty("0600-0605 ; Prepend")).toThrow('Cannot read the property line "0600-0605 ; Prepend".');
+  });
+});
+
+describe("buildGraphemeRuns", () => {
+  it("codes each code point by its break, its conjunct break times 16 and 64 for a pictograph", () => {
+    const runs = buildGraphemeRuns(
+      [{ first: 0x0d, last: 0x0d, value: "CR" }],
+      [{ first: 0x20, last: 0x20, value: "Extended_Pictographic" }],
+      [{ first: 0x0d, last: 0x0d, value: "Linker" }],
+    );
+    expect(runs.slice(0, 5)).toEqual([
+      { code: 0, length: 0x0d },
+      { code: 1 + 16 * 2, length: 1 },
+      { code: 0, length: 0x20 - 0x0e },
+      { code: 64, length: 1 },
+      { code: 0, length: 0x110000 - 0x21 },
+    ]);
+  });
+});
+
+describe("parseGraphemeBreakTest", () => {
+  it("reads the clusters that the marks between code points give", () => {
+    const line = "\u00f7 000D \u00d7 000A \u00f7 0308 \u00d7 200D \u00f7\t#  \u00f7 [0.2] <CARRIAGE RETURN (CR)>";
+    expect(parseGraphemeBreakTest(`# A comment\n${line}\n`)).toEqual([
+      {
+        clusters: [
+          [0x0d, 0x0a],
+          [0x308, 0x200d],
+        ],
+      },
+    ]);
+  });
+});
+
 describe("generated files", () => {
   it("name the sources they were generated from, as pinned", () => {
     const blocks = readFileSync(resolve(VALUES, "unicode-blocks.ts"), "utf8");
     const categories = readFileSync(resolve(VALUES, "unicode-categories.ts"), "utf8");
     expect(blocks).toContain(`${UNICODE_FILES.blocks.url} (SHA-256 ${UNICODE_FILES.blocks.sha256})`);
     expect(categories).toContain(`${UNICODE_FILES.characters.url} (SHA-256 ${UNICODE_FILES.characters.sha256})`);
+    const graphemes = readFileSync(resolve(OPERATORS, "unicode-graphemes.ts"), "utf8");
+    for (const source of [UNICODE_FILES.graphemeBreaks, UNICODE_FILES.emoji, UNICODE_FILES.coreProperties])
+      expect(graphemes).toContain(`${source.url} (SHA-256 ${source.sha256})`);
   });
 
   it("are rendered in the form that the package reads", () => {
     const runs = [{ category: "Cc", length: 2 }];
     expect(renderCategories(runs)).toContain('"Cc2"');
     expect(renderBlocks([{ name: "BasicLatin", first: 0, last: 0x7f }])).toContain('["BasicLatin", [[0x0, 0x7f]]]');
+    expect(renderGraphemes([{ code: 33, length: 36 }])).toContain('"x:10"');
   });
 });

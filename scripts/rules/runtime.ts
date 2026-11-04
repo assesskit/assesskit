@@ -17,6 +17,8 @@ const XML_TEST = "packages/runtime/test/xml.test.ts";
 const NODE_TEST = "packages/runtime/test/node.test.ts";
 const DELIVERY_TEST = "packages/runtime/test/delivery.test.ts";
 const CAT_TEST = "packages/runtime/test/cat.test.ts";
+const OPERATORS = "packages/runtime/src/operators";
+const OPERATORS_TEST = "packages/runtime/test/operators.test.ts";
 
 /** The limits and the security checks of the runtime, which SECURITY.md lists, each with the test that guards it. */
 export const RUNTIME_RULES: readonly Rule[] = [
@@ -355,5 +357,96 @@ export const RUNTIME_RULES: readonly Rule[] = [
     find: "if (text.length > MAX_LENGTH) {",
     replace: "if (false) {",
     test: "packages/runtime/test/pci.test.ts",
+  },
+  {
+    rule: "A response that an operator cannot read within its limits is unreadable, never an error of the item.",
+    file: `${OPERATORS}/expression-equivalent.ts`,
+    find: "if (error instanceof DataError || error instanceof SecurityError) return undefined;",
+    replace: "if (error instanceof DataError) return undefined;",
+    test: OPERATORS_TEST,
+  },
+  {
+    rule: "A line of worked steps that the reader cannot read within its limits is a null check, never an error.",
+    file: `${OPERATORS}/math-steps.ts`,
+    find: "if (error instanceof DataError || error instanceof SecurityError) return undefined;",
+    replace: "if (error instanceof DataError) return undefined;",
+    test: OPERATORS_TEST,
+  },
+  {
+    rule: "The reader of the expression subset refuses a line past maxInputLength before it reads it.",
+    file: `${OPERATORS}/read.ts`,
+    find: "if (text.length > limits.maxInputLength) {",
+    replace: "if (false) {",
+    test: OPERATORS_TEST,
+  },
+  {
+    rule: "The reader of the expression subset refuses a line nested deeper than maxExpressionDepth.",
+    file: `${OPERATORS}/read.ts`,
+    find: "if (this.depth > maxExpressionDepth) {",
+    replace: "if (false) {",
+    test: OPERATORS_TEST,
+  },
+  {
+    rule: "A solution set of more values than maxSolutions once its signs are expanded is unreadable.",
+    file: `${OPERATORS}/compare.ts`,
+    find: "if (count > maxSolutions) {",
+    replace: "if (false) {",
+    test: OPERATORS_TEST,
+  },
+  {
+    rule: "A key of more entries than the limit entries is refused.",
+    file: `${OPERATORS}/schemas.ts`,
+    find: "if (count > entries)",
+    replace: "if (false)",
+    test: OPERATORS_TEST,
+  },
+  {
+    rule: "A pattern of a key longer than patternLength is refused.",
+    file: `${OPERATORS}/schemas.ts`,
+    find: "if (pattern.length > patternLength)",
+    replace: "if (false)",
+    test: OPERATORS_TEST,
+  },
+  {
+    rule: "A hotspot response of more points than the key has areas is unreadable.",
+    file: `${OPERATORS}/hotspot-matching.ts`,
+    find: "if (points === null || points.length > key.areas.length) return null;",
+    replace: "if (points === null) return null;",
+    test: OPERATORS_TEST,
+  },
+  {
+    rule: "Worked steps of more lines than maxSteps are refused.",
+    file: `${OPERATORS}/math-steps.ts`,
+    find: "if (steps.length > maxSteps)",
+    replace: "if (false)",
+    test: OPERATORS_TEST,
+  },
+  {
+    rule: "A text response past maxInputLength is unreadable.",
+    file: `${OPERATORS}/text-equivalent.ts`,
+    find: "if (strings === null || strings.reduce((total, text) => total + text.length, 0) > limits.maxInputLength) return null;",
+    replace: "if (strings === null) return null;",
+    test: OPERATORS_TEST,
+  },
+  {
+    rule: "A number response past maxInputLength is unreadable.",
+    file: `${OPERATORS}/number-equivalent.ts`,
+    find: "if (strings === null || strings.reduce((total, text) => total + text.length, 0) > limits.maxInputLength) return null;",
+    replace: "if (strings === null) return null;",
+    test: OPERATORS_TEST,
+  },
+  {
+    rule: "A credit tier measures its edit distance within maxEditBand.",
+    file: `${OPERATORS}/text-equivalent.ts`,
+    find: "boundedEditDistance(text, accepted, Math.min(band, Math.floor(allowed)))",
+    replace: "boundedEditDistance(text, accepted, Math.floor(allowed))",
+    test: OPERATORS_TEST,
+  },
+  {
+    rule: "A number past a power of ten of 400 is unreadable, so that its exact value stays small.",
+    file: `${OPERATORS}/number-text.ts`,
+    find: "return Math.abs(exponent) > MAX_EXPONENT ? undefined : { exponent, length: match[0].length };",
+    replace: "return { exponent, length: match[0].length };",
+    test: OPERATORS_TEST,
   },
 ];

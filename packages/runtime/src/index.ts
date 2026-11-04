@@ -21,6 +21,7 @@ export {
 } from "./errors.js";
 export * from "./interactions/index.js";
 export * from "./metadata/index.js";
+export * from "./operators/index.js";
 export * from "./package/index.js";
 export * from "./pci/index.js";
 export * from "./pnp/index.js";

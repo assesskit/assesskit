@@ -5,11 +5,17 @@ import { createDeflateRaw, deflateRawSync, crc32 as nodeCrc32 } from "node:zlib"
 import { createCatRestHandler } from "../packages/player/src/cat-rest/index.ts";
 import {
   AssesskitError,
+  buildOperatorCall,
+  compareMathSteps,
   compileXsdRegex,
   createRandom,
+  createScoringOperators,
+  DEFAULT_KEY_LIMITS,
+  DEFAULT_OPERATOR_LIMITS,
   DEFAULT_RESULTS_JSON_LIMITS,
   DEFAULT_XML_LIMITS,
   DEFAULT_ZIP_LIMITS,
+  OPERATOR_DEFINITIONS,
   parseXml,
   planTest,
   RESULTS_NAMESPACE,
@@ -24,6 +30,7 @@ import {
   resolveStructure,
   SecurityError,
   USAGE_NAMESPACE,
+  type Value,
   validateAsi,
 } from "../packages/runtime/src/index.ts";
 import { readPackageFile } from "../packages/runtime/src/node/package-file.ts";
@@ -626,7 +633,79 @@ export const READINGS = {
     input: () => Buffer.from(emptyObjects(1_000_000, BODY_BYTES)),
     read: (body: Uint8Array) => catStatus(body),
   },
+  /**
+   * `expression-equivalent` on a key and a response of `maxInputLength` characters each, sums of 1,000 terms, which the
+   * comparator evaluates at 24 points.
+   */
+  operatorExpression: {
+    input: () => "x+".repeat(DEFAULT_OPERATOR_LIMITS.maxInputLength / 2 - 1).concat("x"),
+    read: (sum: string) =>
+      scoreWith(
+        "expression-equivalent",
+        { operator: "expression-equivalent", key: { kind: "expression", expression: sum } },
+        [{ cardinality: "single", baseType: "string", value: sum }],
+      ),
+  },
+  /**
+   * `text-equivalent` on a key of as many answers as a key holds, each a pattern that every word matches, and a response of
+   * `maxInputLength` characters of one-letter words: a matching of 1,000 answers to 1,000 words.
+   */
+  operatorText: {
+    input: () => "a ".repeat(DEFAULT_OPERATOR_LIMITS.maxInputLength / 2),
+    read: (words: string) =>
+      scoreWith(
+        "text-equivalent",
+        {
+          operator: "text-equivalent",
+          key: {
+            kind: "text",
+            answers: Array.from({ length: DEFAULT_KEY_LIMITS.entries }, () => ({ texts: [], patterns: [".*"] })),
+            count: DEFAULT_KEY_LIMITS.entries,
+            scheme: "words",
+          },
+        },
+        [{ cardinality: "single", baseType: "string", value: words }],
+      ),
+  },
+  /** `hotspot-matching` on as many areas as a key holds and as many points, each in every area: 10^6 hit tests and edges. */
+  operatorHotspot: {
+    input: () => Array.from({ length: DEFAULT_KEY_LIMITS.entries }, () => [50, 50] as const),
+    read: (points: readonly (readonly [number, number])[]) =>
+      scoreWith(
+        "hotspot-matching",
+        {
+          operator: "hotspot-matching",
+          key: {
+            kind: "areas",
+            scheme: "keyed",
+            areas: Array.from({ length: DEFAULT_KEY_LIMITS.entries }, (_, index) => ({
+              id: `a${index}`,
+              shape: "rect" as const,
+              coords: [0, 0, 100, 100],
+            })),
+          },
+        },
+        [{ cardinality: "multiple", baseType: "point", values: points }],
+      ),
+  },
+  /** `compareMathSteps` on 200 lines, its default `maxSteps`, of `maxInputLength` characters each. */
+  mathSteps: {
+    input: () =>
+      Array.from({ length: 200 }, () => "x+".repeat(DEFAULT_OPERATOR_LIMITS.maxInputLength / 2 - 1).concat("x")),
+    read: (steps: readonly string[]) =>
+      `${compareMathSteps(steps).filter((check) => check.equivalent === true).length} equivalent`,
+  },
 } satisfies Readonly<Record<string, Reading>>;
+
+/** Scores operands with an operator, on the call that `buildOperatorCall` writes, and says the result. */
+function scoreWith(
+  name: keyof typeof OPERATOR_DEFINITIONS,
+  call: Parameters<typeof buildOperatorCall>[0],
+  operands: readonly Value[],
+): string {
+  const operator = createScoringOperators().get(OPERATOR_DEFINITIONS[name]);
+  return JSON.stringify(operator?.(operands, buildOperatorCall(call, "RESPONSE")) ?? null);
+}
 
 /** The name of a reading. */
 export type ReadingName = keyof typeof READINGS;

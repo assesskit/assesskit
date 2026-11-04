@@ -1,10 +1,14 @@
 import { createCatRestHandler } from "@assesskit/player/cat-rest";
 import {
   type Action,
+  buildOperatorCall,
   buildSingle,
+  compareMathSteps,
   compileXsdRegex,
+  countLength,
   createEngine,
   createPackageResolvers,
+  createScoringOperators,
   type DeliveryState,
   deserializeState,
   parseXml,
@@ -43,6 +47,14 @@ export interface Results {
   readonly limits: { readonly doctype: string; readonly nodes: string; readonly pattern: readonly boolean[] };
   /** The handler of the CAT binding over the `Request` and `Response` of the runtime. */
   readonly cat: { readonly refused: number; readonly oversize: number; readonly missing: number };
+  /**
+   * The verdicts of the scoring operators, whose comparator evaluates `Math`'s functions, which may differ in their last bit
+   * between engines: its bound of agreement is wide enough that every engine gives the same verdicts.
+   */
+  readonly operators: {
+    readonly verdicts: readonly (number | boolean | null)[];
+    readonly steps: readonly (boolean | null)[];
+  };
 }
 
 const NAMESPACE = 'xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"';
@@ -210,7 +222,42 @@ async function runCat(): Promise<Results["cat"]> {
   };
 }
 
-/** Runs the scenario: a package, a session, its state and report, the limits, and the CAT handler. */
+/** The verdicts of the scoring operators on pairs that call the functions, roots and branch cuts of the comparator. */
+function runOperators(): Results["operators"] {
+  const operators = createScoringOperators();
+  const verdict = (key: string, response: string, form: "expression" | "equation" = "expression") => {
+    const call = buildOperatorCall(
+      { operator: "expression-equivalent", key: { kind: "expression", expression: key, form } },
+      "R",
+    );
+    const result = operators.get(call.definition ?? "")?.([buildSingle("string", response)], call);
+    return result === null || result === undefined || result.cardinality !== "single" ? null : (result.value as number);
+  };
+  const text = buildOperatorCall(
+    {
+      operator: "text-equivalent",
+      key: { kind: "text", answers: [{ texts: ["Jakarta"] }], credit: [{ tolerance: { absolute: 5 }, share: 0.5 }] },
+    },
+    "R",
+  );
+  const textShare = operators.get(text.definition ?? "")?.([buildSingle("string", "Jakarta City")], text);
+  return {
+    verdicts: [
+      verdict("\\sin^2x+\\cos^2x", "1"),
+      verdict("\\cosh^2x-\\sinh^2x", "1"),
+      verdict("\\ln(x^2)", "2\\ln x"),
+      verdict("\\sqrt{x}\\sqrt{x}", "x"),
+      verdict("\\arcsin\\frac{x}{3}+\\arccos\\frac{x}{3}", "\\frac{\\pi}{2}"),
+      verdict("e^{\\tan x}\\cdot\\sqrt[3]{x}", "\\exp(\\tan x)x^{\\frac13}"),
+      verdict("2x+3=7", "x=2", "equation"),
+      textShare?.cardinality === "single" ? (textShare.value as number) : null,
+      countLength("Saya suka matematika.", "words"),
+    ],
+    steps: compareMathSteps(["x^2=9", "x=\\pm3", "x=4"]).map((check) => check.equivalent),
+  };
+}
+
+/** Runs the scenario: a package, a session, its state and report, the limits, the CAT handler, and the scoring operators. */
 export async function runAll(): Promise<Results> {
-  return { ...runSession(), limits: runLimits(), cat: await runCat() };
+  return { ...runSession(), limits: runLimits(), cat: await runCat(), operators: runOperators() };
 }

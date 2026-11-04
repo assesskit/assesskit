@@ -22,7 +22,7 @@ flowchart TD
     cli["cli"] --> node["node"]
     node --> validate["validate"]
     delivery["delivery"] --> validate
-    validate --> l5["cat, package"]
+    validate --> l5["cat, package, operators"]
     l5 --> l4["metadata, processing, interactions, pci, content"]
     l4 --> l3["asi, results, usage, pnp"]
     l3 --> l2["xml, values"]
@@ -50,6 +50,7 @@ checks that only the runtime uses and imports `errors.ts` and `checks.ts`, and `
 | 4     | `content/`                                                  | `values/`, `asi/`, `pnp/`                                                                                                  |
 | 5     | `cat/`                                                      | `values/`, `asi/`, `results/`, `metadata/`                                                                                 |
 | 5     | `package/`                                                  | `xml/`, `asi/`, `metadata/`, `usage/`                                                                                      |
+| 5     | `operators/`                                                | `values/`, `asi/`, `processing/`                                                                                           |
 | 6     | `validate/`                                                 | every module of layers 2 to 5                                                                                              |
 | 7     | `delivery/`                                                 | `values/`, `asi/`, `results/`, `pnp/`, `processing/`, `interactions/`, `pci/`, `content/`, `cat/`, `package/`, `validate/` |
 | 8     | `node/`                                                     | `xml/`, `package/`, `validate/`, `node:*`                                                                                  |

@@ -32,6 +32,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
       "runtime/errors",
       "runtime/interactions",
       "runtime/metadata",
+      "runtime/operators",
       "runtime/package",
       "runtime/pci",
       "runtime/pnp",
@@ -199,6 +200,19 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
       "saxes",
       "valibot",
       "xmlchars",
+    ],
+  },
+  "@assesskit/runtime/operators": {
+    gzip: 43_000,
+    holds: [
+      "runtime/asi",
+      "runtime/checks",
+      "runtime/checks-internal",
+      "runtime/errors",
+      "runtime/processing",
+      "runtime/random",
+      "runtime/values",
+      "valibot",
     ],
   },
   "@assesskit/runtime/package": {

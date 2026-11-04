@@ -1,8 +1,8 @@
 # Conventions
 
 A convention is something the runtime defines because QTI does not. It uses QTI's own elements, so that every document stays valid
-against the official schemas and other tools can still read it. There are two, and both are a `qti-rubric-block` for scorers that
-a class token marks.
+against the official schemas and other tools can still read it. There are three: two are a `qti-rubric-block` for scorers that a
+class token marks, and the third is the call of a scoring operator.
 
 ```mermaid
 flowchart LR
@@ -19,6 +19,7 @@ flowchart LR
 | ----------------------------------------------- | ------------------------- | -------------------------------------- | ---------------------------------------------- |
 | [Covers](#covers-of-externally-scored-outcomes) | `external-score-covers`   | A rubric block of a test               | Which responses an outcome of the test rates   |
 | [Scoring rubric](#scoring-rubrics)              | `external-scoring-rubric` | A rubric block of an item or of a test | The criteria, levels and weights of an outcome |
+| [Scoring operators](#scoring-operators)         | A `urn:uuid:` definition  | A `qti-custom-operator` of an item     | How a response is scored where QTI cannot      |
 
 ## Covers of externally scored outcomes
 
@@ -390,3 +391,18 @@ resolves in the scorer view, and only its texts can vary: the criteria, the leve
 | Negative scores (penalties)                            | Keeps the range and the checklist rule simple; a penalty is response processing              |
 | A rubric shared across items at section level          | QTI items are self-contained; each item carries its rubric                                   |
 | Agreement or severity across raters                    | Measurement, outside QTI                                                                     |
+
+## Scoring operators
+
+A `qti-custom-operator` whose `definition` is one of `OPERATOR_DEFINITIONS` calls a scoring operator of
+[operators](operators.md): its `class` is the operator's name, its first operand the response, its second, for a follow-through,
+the earlier response, and its key is one attribute, `options`, in `OPERATOR_NAMESPACE`, the canonical JSON of RFC 8785 with
+every default resolved. The schema of QTI allows an attribute of another namespace on the element, so the item stays valid,
+and a processor without the operators refuses the item rather than scoring it wrongly: `validate` reports the operator, and
+processing throws a `ProcessingError`. The definitions name no brand, so an item scores alike under any publisher's name.
+
+| Part       | Rule                                                                                                                  |
+| ---------- | --------------------------------------------------------------------------------------------------------------------- |
+| Definition | A `urn:uuid:` for each operator; a change that alters a verdict takes a new one, and the earlier ones stay registered |
+| Attribute  | `options` in `urn:uuid:37ee0bb1-9b3b-4da2-92a2-3102380d98b5`, read by namespace whatever its prefix                   |
+| Writer     | `buildOperatorCall`, which writes the prefix `operator` and checks the key as the operator reads it                   |
