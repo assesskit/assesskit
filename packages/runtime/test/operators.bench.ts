@@ -39,6 +39,31 @@ test("compares a sum of 1,000 terms with a key of as many within its budget", as
   await expectWithin(annotate, "compare a sum of 1,000 terms", result, BUDGETS.operatorLongest);
 });
 
+test("scores a mixed fraction with a unit against a key with a tolerance and a tier within its budget", async ({
+  annotate,
+  bench,
+}) => {
+  const score = OPERATORS.get(OPERATOR_DEFINITIONS["number-equivalent"]);
+  const call = buildOperatorCall(
+    {
+      operator: "number-equivalent",
+      key: {
+        kind: "number",
+        value: 1250,
+        tolerance: { relative: 0.01 },
+        units: { m: 1, km: 1000 },
+        fractions: true,
+        credit: [{ tolerance: { relative: 0.05 }, share: 0.5 }],
+      },
+    },
+    "R",
+  );
+  const response = [text("1 1/4 km")];
+  expect(score?.(response, call)).toStrictEqual({ cardinality: "single", baseType: "float", value: 1 });
+  const result = await bench("score a number", () => score?.(response, call)).run(BENCH_OPTIONS);
+  await expectWithin(annotate, "score a number", result, BUDGETS.operatorNumber);
+});
+
 test("scores a text of 200 words against 50 answers with credit tiers within its budget", async ({
   annotate,
   bench,

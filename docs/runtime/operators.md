@@ -405,6 +405,66 @@ text; a hotspot response tests at most 1,000 points against areas of 4,000 coord
 | A compiler of keys into response processing                      | The key model's compiler, which writes these calls                                                                                   |
 | Word segmentation by dictionary                                  | `Intl.Segmenter`, which the browser baseline lacks; `characters` counts any script                                                   |
 
+## Build or adopt
+
+The trusted libraries for two generic parts of these operators, each measured in place of the code it would replace, at its best
+setting: `leven` with `maxDistance`, and `decimal.js` at 20 digits and at 900. Times are the fastest samples on a laptop with
+Node.js 22, on 2026-11-04; sizes are esbuild's for the browser baseline, after gzip. Both parts stay built.
+
+| The edit distance of a credit tier                                      | `leven` 4.1.0 (MIT) | Built: a band, in code points |
+| ----------------------------------------------------------------------- | ------------------- | ----------------------------- |
+| Alone                                                                   | 360 B               | 391 B                         |
+| The subpath `operators`                                                 | 34,374 B            | 34,321 B                      |
+| The text benchmark: 200 words against 50 answers, a tier of 2 edits     | 0.37 ms             | 0.53 ms                       |
+| A response and a text of 2,000 characters, 50 edits apart, a tier of 64 | 12.2 ms             | 0.93 ms                       |
+| The same text, a response past the tier                                 | 0.83 ms             | 0.11 ms                       |
+| The 1,440 cases of the reference                                        | All agree           | All agree                     |
+| Key `𠮷野`, response `吉野`, a tier of 1 edit                           | 0: two edits        | 0.5: one edit                 |
+
+`leven` is faster on short words and weighs the same, but it counts UTF-16 code units where the rule counts code points, and
+`maxDistance` stops it only once a whole row passes the cap: it computes each row whole, so two long texts near each other cost
+the whole table, 13 times the band, which holds each accepted text to 2,000 × 129 cells. Mapping each code point above U+FFFF to
+one unit would mend the count, not the time.
+
+| The exact numbers of `number-equivalent`                                          | `decimal.js` 10.6.0 (MIT)                    | Built: BigInt rationals |
+| --------------------------------------------------------------------------------- | -------------------------------------------- | ----------------------- |
+| Alone                                                                             | 13,027 B                                     | 558 B                   |
+| The subpath `operators`                                                           | 47,769 B, over its budget of 43,000          | 34,321 B                |
+| The number benchmark: `1 1/4 km` against a key with units, a tolerance and a tier | 5.0 µs at 20 digits, 5.3 µs at 900           | 3.3 µs                  |
+| The 3,158 cases of the reference                                                  | All agree, at both                           | All agree               |
+| Key 4 with the unit `yd` of factor 3, response `4/3 yd`                           | 0: 1.33… × 3 falls short of 4, at any digits | 1                       |
+
+A decimal holds no third, so a fraction under a unit's factor can miss a value that it equals, and its 13 kB hold no reading of
+units, fractions or `\times10^{n}`, which would stay built. No case of the reference tells the two apart, so these samples hold
+what does:
+
+```ts
+import { buildOperatorCall, createScoringOperators, OPERATOR_DEFINITIONS } from "@assesskit/runtime/operators";
+
+const operators = createScoringOperators();
+const of = (text) => [{ cardinality: "single", baseType: "string", value: text }];
+const name = buildOperatorCall(
+  {
+    operator: "text-equivalent",
+    key: {
+      kind: "text",
+      answers: [{ texts: ["\u{20BB7}\u91CE"] }],
+      credit: [{ tolerance: { absolute: 1 }, share: 0.5 }],
+    },
+  },
+  "R",
+);
+operators.get(OPERATOR_DEFINITIONS["text-equivalent"])(of("\u5409\u91CE"), name).value; // => 0.5
+const length = buildOperatorCall(
+  {
+    operator: "number-equivalent",
+    key: { kind: "number", value: 4, units: { ft: 1, yd: 3 }, fractions: true },
+  },
+  "R",
+);
+operators.get(OPERATOR_DEFINITIONS["number-equivalent"])(of("4/3 yd"), length).value; // => 1
+```
+
 ## Files
 
 | File                                                                                                                       | Concept                                                     |

@@ -93,6 +93,7 @@ of the tests generate with a fixed seed. A benchmark fails when its fastest samp
 | Size of that state                      | The same state as JSON text                                                                                                 | 118,699 bytes            | 150,000 bytes |
 | `expression-equivalent`                 | A key and a response that are equal, `\frac{x^2-1}{x-1}` and `x+1`, the options read on the call                            | 0.02 ms on a laptop      | 0.1 ms        |
 | The longest expressions                 | A key and a response of 2,000 characters, sums of 1,000 terms                                                               | 2.40 ms on a laptop      | 20 ms         |
+| `number-equivalent`                     | `1 1/4 km` against a key with units, fractions, a tolerance and a credit tier                                               | 0.0033 ms on a laptop    | 0.02 ms       |
 | `text-equivalent`                       | A response of 200 words against 50 answers with a credit tier by edit distance                                              | 0.48 ms on a laptop      | 3 ms          |
 | `compareMathSteps`                      | 60 lines of equations                                                                                                       | 0.81 ms on a laptop      | 5 ms          |
 
