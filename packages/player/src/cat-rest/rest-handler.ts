@@ -10,7 +10,6 @@ import {
   raceAbort,
 } from "@assesskit/runtime/checks";
 import * as v from "valibot";
-import { httpsUrlSchema } from "../checks.js";
 import { type CatAuthorizer, grantOf } from "./authorization.js";
 import {
   readCreateSessionBody,
@@ -22,6 +21,7 @@ import {
   writeSubmitResultsAnswer,
 } from "./binding.js";
 import { readJsonBody } from "./body.js";
+import { httpsUrlSchema } from "./https-url.js";
 import { DEFAULT_MAX_TOKENS } from "./json-tokens.js";
 import { type CatOperation, matchRoute, type PathIdentifiers, withoutTrailingSlashes } from "./route.js";
 import {

@@ -20,7 +20,7 @@ const LAYERS: Readonly<Record<string, readonly string[]>> = {
   server: ["messages", "protocol", "scoring", "cat", "cat-rest"],
 };
 const FOLDERS = Object.keys(LAYERS);
-const SHARED = ["errors", "checks"];
+const SHARED = ["errors"];
 
 interface Diagnostic {
   readonly category: string;
@@ -76,11 +76,9 @@ const layers = FOLDERS.map((folder) => ({
   path: source(`${SRC}/${folder}/layers.ts`, targetsOf(folder).map(importOf)),
 }));
 const rootFiles = {
-  errors: source(`${SRC}/errors.ts`, ['export * from "./checks.js";', 'export * from "./messages/index.js";']),
-  checks: source(`${SRC}/checks.ts`, ['export * from "./errors.js";', 'export * from "./messages/index.js";']),
+  errors: source(`${SRC}/errors.ts`, ['export * from "./messages/index.js";', 'export * from "./protocol/index.js";']),
   index: source(`${SRC}/index.ts`, [
     'export * from "./errors.js";',
-    'export * from "./checks.js";',
     'export * from "./messages/index.js";',
     'export * from "./protocol/index.js";',
   ]),
@@ -325,10 +323,9 @@ describe("layering", () => {
     });
   }
 
-  it("limits errors.ts to nothing, checks.ts to errors.ts and index.ts to errors.ts and messages/", () => {
+  it("limits errors.ts to nothing and index.ts to errors.ts and messages/", () => {
     expect(linesFor(rootFiles.errors, RESTRICTED_IMPORT)).toEqual([1, 2]);
-    expect(linesFor(rootFiles.checks, RESTRICTED_IMPORT)).toEqual([2]);
-    expect(linesFor(rootFiles.index, RESTRICTED_IMPORT)).toEqual([2, 4]);
+    expect(linesFor(rootFiles.index, RESTRICTED_IMPORT)).toEqual([3]);
   });
 
   it("lets only server/ import protocol/official.ts, which brands a report as official", () => {

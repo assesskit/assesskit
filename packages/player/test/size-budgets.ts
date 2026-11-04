@@ -349,7 +349,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   },
   "@assesskit/player/client/local": {
     gzip: 11_000,
-    holds: ["player/errors", "player/protocol", "runtime/checks", "runtime/errors", "runtime/package", "valibot"],
+    holds: ["player/protocol", "runtime/checks", "runtime/errors", "runtime/package", "valibot"],
   },
   "@assesskit/player/protocol": {
     gzip: 7_500,
@@ -388,8 +388,6 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   "@assesskit/player/cat-rest": {
     gzip: 18_000,
     holds: [
-      "player/checks",
-      "player/errors",
       "runtime/cat",
       "runtime/checks",
       "runtime/checks-internal",

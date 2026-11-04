@@ -1067,7 +1067,6 @@
       "includes": [
         "packages/player/src/index.ts",
         "packages/player/src/errors.ts",
-        "packages/player/src/checks.ts",
         "packages/player/src/messages/**",
         "packages/player/src/protocol/**",
         "packages/player/src/scoring/**",
@@ -1202,30 +1201,6 @@
       }
     },
     {
-      "includes": ["packages/player/src/checks.ts"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noRestrictedImports": {
-              "level": "error",
-              "options": {
-                "patterns": [
-                  {
-                    "group": ["./*", "./*/**", "!./errors.js"],
-                    "message": "checks.ts depends only on errors.ts."
-                  },
-                  {
-                    "group": ["../**/runtime/**"],
-                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
-                  }
-                ]
-              }
-            }
-          }
-        }
-      }
-    },
-    {
       "includes": ["packages/player/src/messages/**"],
       "linter": {
         "rules": {
@@ -1251,7 +1226,7 @@
                       "**/server",
                       "**/server/**"
                     ],
-                    "message": "messages/ builds on errors.ts and checks.ts only."
+                    "message": "messages/ builds on errors.ts only."
                   },
                   {
                     "group": ["../**/runtime/**"],
@@ -1289,7 +1264,7 @@
                       "**/server",
                       "**/server/**"
                     ],
-                    "message": "protocol/ builds on errors.ts, checks.ts and messages/ only."
+                    "message": "protocol/ builds on errors.ts and messages/ only."
                   },
                   {
                     "group": ["../**/runtime/**"],
@@ -1324,7 +1299,7 @@
                       "**/server",
                       "**/server/**"
                     ],
-                    "message": "player/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                    "message": "player/ builds on errors.ts, messages/ and protocol/ only."
                   },
                   {
                     "group": ["**/protocol/official", "**/protocol/official.js"],
@@ -1369,7 +1344,7 @@
                       "**/server",
                       "**/server/**"
                     ],
-                    "message": "client/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                    "message": "client/ builds on errors.ts, messages/ and protocol/ only."
                   },
                   {
                     "group": ["**/protocol/official", "**/protocol/official.js"],
@@ -1413,7 +1388,7 @@
                       "**/server",
                       "**/server/**"
                     ],
-                    "message": "scoring/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                    "message": "scoring/ builds on errors.ts, messages/ and protocol/ only."
                   },
                   {
                     "group": ["**/protocol/official", "**/protocol/official.js"],
@@ -1457,7 +1432,7 @@
                       "**/server",
                       "**/server/**"
                     ],
-                    "message": "cat/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                    "message": "cat/ builds on errors.ts, messages/ and protocol/ only."
                   },
                   {
                     "group": ["**/protocol/official", "**/protocol/official.js"],
@@ -1502,7 +1477,7 @@
                       "**/server",
                       "**/server/**"
                     ],
-                    "message": "cat-rest/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                    "message": "cat-rest/ builds on errors.ts, messages/ and protocol/ only."
                   },
                   {
                     "group": ["**/protocol/official", "**/protocol/official.js"],
@@ -1535,7 +1510,7 @@
                 "patterns": [
                   {
                     "group": ["**/player", "**/player/**", "**/client", "**/client/**"],
-                    "message": "server/ builds on errors.ts, checks.ts, messages/, protocol/, scoring/, cat/ and cat-rest/ only."
+                    "message": "server/ builds on errors.ts, messages/, protocol/, scoring/, cat/ and cat-rest/ only."
                   },
                   {
                     "group": ["../**/runtime/**"],

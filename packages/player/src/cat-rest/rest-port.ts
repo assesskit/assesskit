@@ -15,7 +15,6 @@ import {
 } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import * as v from "valibot";
-import { httpsUrlSchema } from "../checks.js";
 import {
   readCreateSectionAnswer,
   readCreateSessionAnswer,
@@ -25,6 +24,7 @@ import {
   writeResultsBody,
   writeSectionBody,
 } from "./binding.js";
+import { httpsUrlSchema } from "./https-url.js";
 import { DEFAULT_MAX_TOKENS } from "./json-tokens.js";
 import { type CatFetch, createRestClient, type OAuthClientCredentials, oauthCredentialsSchema } from "./rest-client.js";
 import { withoutTrailingSlashes } from "./route.js";

@@ -11,7 +11,7 @@ import {
 } from "@assesskit/runtime/checks";
 import { encodeBase64 } from "@assesskit/runtime/values";
 import * as v from "valibot";
-import { httpsUrlSchema } from "../checks.js";
+import { httpsUrlSchema } from "./https-url.js";
 import { hasMoreTokensThan } from "./json-tokens.js";
 
 /** A request of the REST client: the part of `RequestInit` that it uses. */

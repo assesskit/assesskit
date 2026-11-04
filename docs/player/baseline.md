@@ -1,7 +1,7 @@
 # Browser baseline
 
 The browser code of the player runs in Chromium 111, Firefox 115 and Safari 16.4, and in later versions. The baseline covers
-the shared and browser folders (`errors.ts`, `checks.ts`, `messages/`, `protocol/`, `scoring/`, `cat/`, `player/` and
+the shared and browser folders (`errors.ts`, `messages/`, `protocol/`, `scoring/`, `cat/`, `player/` and
 `client/`) and every stylesheet, so that a page can run practice on a device with `scoring/` and `cat/`. Server folders
 (`server/` and `cat-rest/`) are outside it.
 

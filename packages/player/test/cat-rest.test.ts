@@ -10,6 +10,7 @@ import {
   type SubmitResultsResponse,
   writeResultsJson,
 } from "@assesskit/runtime/cat";
+import { parseWith } from "@assesskit/runtime/checks";
 import { DataError, ReadError, SecurityError, ServiceError } from "@assesskit/runtime/errors";
 import type { QtiMetadata } from "@assesskit/runtime/metadata";
 import { buildSingle } from "@assesskit/runtime/values";
@@ -29,7 +30,13 @@ import {
   type OAuthClientCredentials,
   type RestCatPortOptions,
 } from "../src/cat-rest/index.js";
-import { readCreateSessionBody, readResultsBody, readSectionBody, readSectionData } from "../src/cat-rest/internal.js";
+import {
+  httpsUrlSchema,
+  readCreateSessionBody,
+  readResultsBody,
+  readSectionBody,
+  readSectionData,
+} from "../src/cat-rest/internal.js";
 import { base64, json, PREFIX, rejection, resultsOf } from "./cat-fixture.js";
 import { fuzzJson } from "./fuzz.js";
 import { waitFor } from "./wait.js";
@@ -2799,5 +2806,27 @@ describe("the exports", () => {
       "createRestCatPort",
       "listScopes",
     ]);
+  });
+});
+
+describe("httpsUrlSchema", () => {
+  it("accepts an absolute https URL", () => {
+    expect(parseWith(httpsUrlSchema, "https://a.example/b", "The URL")).toBe("https://a.example/b");
+  });
+
+  it("refuses other URLs", () => {
+    expect(() => parseWith(httpsUrlSchema, "http://a.example", "The URL")).toThrow(
+      new DataError('The URL is invalid: expected an absolute https URL, found "http://a.example".'),
+    );
+  });
+
+  it("accepts the schemes and hosts of an https URL in any case, and refuses a relative reference and another type", () => {
+    for (const url of ["https://example.edu:8443/path?q=1#f", "HTTPS://EXAMPLE.EDU/"]) {
+      expect(parseWith(httpsUrlSchema, url, "The URL")).toBe(url);
+    }
+    for (const url of ["ftp://example.edu", "urn:uuid:1", "/path", "example.edu", ""]) {
+      expect(() => parseWith(httpsUrlSchema, url, "The URL"), url).toThrow(DataError);
+    }
+    expect(() => parseWith(httpsUrlSchema, JSON.parse("5"), "The URL")).toThrow(DataError);
   });
 });

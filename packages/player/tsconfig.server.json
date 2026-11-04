@@ -14,7 +14,6 @@
   "include": [
     "src/index.ts",
     "src/errors.ts",
-    "src/checks.ts",
     "src/messages",
     "src/protocol",
     "src/server",

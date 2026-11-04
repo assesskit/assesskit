@@ -23,7 +23,7 @@ flowchart TB
     protocol["protocol"]
   end
   subgraph L1["Layer 1: shared"]
-    base["errors.ts, checks.ts, messages"]
+    base["errors.ts, messages"]
   end
   server --> scoring & cat & catRest
   server --> protocol
@@ -47,18 +47,18 @@ flowchart TB
 
 ## Layers
 
-A folder imports only the folders in its row, and imports never form cycles (lint). `errors.ts` and `checks.ts` are
-below every folder; `checks.ts` holds the schema of `https` URLs and imports valibot only; the other checks come from `@assesskit/runtime/checks`. The lint knows every folder of the table, so a folder is held
+A folder imports only the folders in its row, and imports never form cycles (lint). `errors.ts` is
+below every folder; the checks come from `@assesskit/runtime/checks`. The lint knows every folder of the table, so a folder is held
 to its row from its first file.
 
-| Layer | Folders                               | Side    | Imports                                     |
-| ----- | ------------------------------------- | ------- | ------------------------------------------- |
-| 1     | `errors.ts`, `checks.ts`, `messages/` | shared  | none of the folders below                   |
-| 2     | `protocol/`                           | shared  | layer 1                                     |
-| 3     | `player/`, `client/`                  | browser | layers 1 and 2                              |
-| 3     | `scoring/`, `cat/`                    | shared  | layers 1 and 2                              |
-| 3     | `cat-rest/`                           | server  | layers 1 and 2                              |
-| 4     | `server/`                             | server  | layers 1 to 3, the browser folders excepted |
+| Layer | Folders                  | Side    | Imports                                     |
+| ----- | ------------------------ | ------- | ------------------------------------------- |
+| 1     | `errors.ts`, `messages/` | shared  | none of the folders below                   |
+| 2     | `protocol/`              | shared  | layer 1                                     |
+| 3     | `player/`, `client/`     | browser | layers 1 and 2                              |
+| 3     | `scoring/`, `cat/`       | shared  | layers 1 and 2                              |
+| 3     | `cat-rest/`              | server  | layers 1 and 2                              |
+| 4     | `server/`                | server  | layers 1 to 3, the browser folders excepted |
 
 Shared folders use no DOM, Node.js, timer or network API. Browser folders use the DOM and no Node.js. Server folders use
 Node.js or any server runtime, and no DOM. A page that runs practice on a device imports `client/local`, `scoring` and `cat`, which
