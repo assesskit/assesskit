@@ -1,4 +1,4 @@
-import { type RubricRating, type ScoringRubric, scoreFromRatings } from "@assesskit/runtime/asi";
+import { type RubricRating, rubricScore, type ScoringRubric } from "@assesskit/runtime/asi";
 import { describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import { html, shadowRootOf, uniqueId } from "../internal.js";
@@ -80,7 +80,7 @@ function clearError(criterion: CriterionView): void {
  */
 function show(rubric: ScoringRubric, ratings: readonly RubricRating[], settings: RatingSettings): Shown {
   // The check of the rubric and of each rating is the runtime's, which also gives the score of the ratings.
-  const score = scoreFromRatings(rubric, ratings);
+  const score = rubricScore(rubric, ratings);
   const chosen = new Map(ratings.map(({ criterion, score: chosenScore }) => [criterion, chosenScore]));
   return { rubric, chosen, view: buildRatingForm(rubric, chosen, score, settings), stop: new AbortController() };
 }
@@ -117,7 +117,7 @@ export function mountRatingForm(
 
   const current = (): { readonly ratings: RubricRating[]; readonly score: number | null } => {
     const ratings = ratingsOf(shown.rubric, shown.chosen);
-    return { ratings, score: scoreFromRatings(shown.rubric, ratings) };
+    return { ratings, score: rubricScore(shown.rubric, ratings) };
   };
 
   /** Puts a view in the shadow root and listens for the rater's choices. */

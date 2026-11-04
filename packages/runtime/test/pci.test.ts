@@ -4,29 +4,29 @@ import { describe, expect, it } from "vitest";
 import {
   ASI_NAMESPACE,
   type BaseType,
+  buildContainer,
+  buildRecord,
+  buildSingle,
   type Cardinality,
-  checkPortableInteraction,
-  container,
   DataError,
   DEFAULT_WAIT_SECONDS,
   decodePciValue,
+  derivePciProperties,
   encodePciValue,
   isPackageRelative,
   type ModuleResolution,
-  moduleConfigurationPaths,
   type PciFileLoader,
   type PciFileStore,
   type PciModuleConfiguration,
   type PortableCustomInteraction,
-  parseModuleResolution,
-  pciProperties,
   readAsi,
-  record,
+  readModuleResolution,
+  resolveModuleConfigurationPaths,
   resolvePciModules,
   type SingleValue,
-  single,
   type Value,
   type ValueDeclaration,
+  validatePortableInteraction,
 } from "../src/index.js";
 import { baseType, recordValue, valueArbitrary } from "./arbitraries/values.js";
 import { fuzzJson } from "./fuzz.js";
@@ -64,13 +64,13 @@ const HOST: PciFileLoader & PciFileStore = {
 const PI_TO_SEVEN_PLACES = 3.1415926;
 
 function str(value: string): SingleValue {
-  const built = single("string", value);
+  const built = buildSingle("string", value);
   if (built === null) throw new Error("The test builds an empty string.");
   return built;
 }
 
 const file = (data: string, mimeType: string, fileName?: string): SingleValue =>
-  single("file", { reference: `stored:${data}`, mimeType, ...(fileName === undefined ? {} : { fileName }) });
+  buildSingle("file", { reference: `stored:${data}`, mimeType, ...(fileName === undefined ? {} : { fileName }) });
 
 describe("the JSON of a value", () => {
   const Single: Cardinality = "single";
@@ -83,59 +83,74 @@ describe("the JSON of a value", () => {
     readonly value: Value | null;
   }[] = [
     { json: { base: null }, cardinality: Single, baseType: "string", value: null },
-    { json: { base: { boolean: true } }, cardinality: Single, baseType: "boolean", value: single("boolean", true) },
-    { json: { base: { integer: 123 } }, cardinality: Single, baseType: "integer", value: single("integer", 123) },
-    { json: { base: { float: 23.23 } }, cardinality: Single, baseType: "float", value: single("float", 23.23) },
+    {
+      json: { base: { boolean: true } },
+      cardinality: Single,
+      baseType: "boolean",
+      value: buildSingle("boolean", true),
+    },
+    { json: { base: { integer: 123 } }, cardinality: Single, baseType: "integer", value: buildSingle("integer", 123) },
+    { json: { base: { float: 23.23 } }, cardinality: Single, baseType: "float", value: buildSingle("float", 23.23) },
     {
       json: { base: { string: "string" } },
       cardinality: Single,
       baseType: "string",
       value: str("string"),
     },
-    { json: { base: { point: [10, 20] } }, cardinality: Single, baseType: "point", value: single("point", [10, 20]) },
-    { json: { base: { pair: ["A", "B"] } }, cardinality: Single, baseType: "pair", value: single("pair", ["A", "B"]) },
+    {
+      json: { base: { point: [10, 20] } },
+      cardinality: Single,
+      baseType: "point",
+      value: buildSingle("point", [10, 20]),
+    },
+    {
+      json: { base: { pair: ["A", "B"] } },
+      cardinality: Single,
+      baseType: "pair",
+      value: buildSingle("pair", ["A", "B"]),
+    },
     {
       json: { base: { directedPair: ["a", "b"] } },
       cardinality: Single,
       baseType: "directedPair",
-      value: single("directedPair", ["a", "b"]),
+      value: buildSingle("directedPair", ["a", "b"]),
     },
     {
       json: { base: { uri: "file:///somewhere.txt" } },
       cardinality: Single,
       baseType: "uri",
-      value: single("uri", "file:///somewhere.txt"),
+      value: buildSingle("uri", "file:///somewhere.txt"),
     },
     {
       json: { base: { identifier: "_identifier" } },
       cardinality: Single,
       baseType: "identifier",
-      value: single("identifier", "_identifier"),
+      value: buildSingle("identifier", "_identifier"),
     },
     { json: { list: null }, cardinality: "multiple", baseType: "boolean", value: null },
     {
       json: { list: { boolean: [true, false, true, true] } },
       cardinality: "multiple",
       baseType: "boolean",
-      value: container("multiple", "boolean", [true, false, true, true]),
+      value: buildContainer("multiple", "boolean", [true, false, true, true]),
     },
     {
       json: { list: { integer: [2, 3, 5, 7, 11, 13] } },
       cardinality: "ordered",
       baseType: "integer",
-      value: container("ordered", "integer", [2, 3, 5, 7, 11, 13]),
+      value: buildContainer("ordered", "integer", [2, 3, 5, 7, 11, 13]),
     },
     {
       json: { list: { float: [PI_TO_SEVEN_PLACES, 12.34, 98.76] } },
       cardinality: "multiple",
       baseType: "float",
-      value: container("multiple", "float", [PI_TO_SEVEN_PLACES, 12.34, 98.76]),
+      value: buildContainer("multiple", "float", [PI_TO_SEVEN_PLACES, 12.34, 98.76]),
     },
     {
       json: { list: { string: ["Another", "And Another"] } },
       cardinality: "multiple",
       baseType: "string",
-      value: container("multiple", "string", ["Another", "And Another"]),
+      value: buildContainer("multiple", "string", ["Another", "And Another"]),
     },
     {
       json: {
@@ -148,7 +163,7 @@ describe("the JSON of a value", () => {
       },
       cardinality: "multiple",
       baseType: "point",
-      value: container("multiple", "point", [
+      value: buildContainer("multiple", "point", [
         [123, 456],
         [640, 480],
       ]),
@@ -164,7 +179,7 @@ describe("the JSON of a value", () => {
       },
       cardinality: "multiple",
       baseType: "pair",
-      value: container("multiple", "pair", [
+      value: buildContainer("multiple", "pair", [
         ["A", "B"],
         ["D", "C"],
       ]),
@@ -180,7 +195,7 @@ describe("the JSON of a value", () => {
       },
       cardinality: "ordered",
       baseType: "directedPair",
-      value: container("ordered", "directedPair", [
+      value: buildContainer("ordered", "directedPair", [
         ["A", "B"],
         ["C", "D"],
       ]),
@@ -189,13 +204,13 @@ describe("the JSON of a value", () => {
       json: { list: { uri: ["file:///aFile.txt", "file:///abc.txt"] } },
       cardinality: "multiple",
       baseType: "uri",
-      value: container("multiple", "uri", ["file:///aFile.txt", "file:///abc.txt"]),
+      value: buildContainer("multiple", "uri", ["file:///aFile.txt", "file:///abc.txt"]),
     },
     {
       json: { list: { identifier: ["_id1", "id2", "ID3"] } },
       cardinality: "multiple",
       baseType: "identifier",
-      value: container("multiple", "identifier", ["_id1", "id2", "ID3"]),
+      value: buildContainer("multiple", "identifier", ["_id1", "id2", "ID3"]),
     },
     { json: { record: null }, cardinality: "record", value: null },
     {
@@ -207,10 +222,10 @@ describe("the JSON of a value", () => {
         ],
       },
       cardinality: "record",
-      value: record([
-        ["rock", single("boolean", true)],
+      value: buildRecord([
+        ["rock", buildSingle("boolean", true)],
         ["paper", str("Four score and seven years ago...")],
-        ["scissors", single("integer", 4)],
+        ["scissors", buildSingle("integer", 4)],
       ]),
     },
   ];
@@ -227,10 +242,10 @@ describe("the JSON of a value", () => {
   it("reads intOrIdentifier as an integer for a number and as an identifier for a string", () => {
     expect(
       decodePciValue({ base: { intOrIdentifier: 123456 } }, { cardinality: "single", baseType: "integer" }, HOST),
-    ).toEqual(single("integer", 123456));
+    ).toEqual(buildSingle("integer", 123456));
     expect(
       decodePciValue({ base: { intOrIdentifier: "_id" } }, { cardinality: "single", baseType: "identifier" }, HOST),
-    ).toEqual(single("identifier", "_id"));
+    ).toEqual(buildSingle("identifier", "_id"));
     expect(
       decodePciValue(
         {
@@ -243,17 +258,17 @@ describe("the JSON of a value", () => {
         HOST,
       ),
     ).toEqual(
-      record([
-        ["a", single("integer", 2)],
-        ["b", single("identifier", "_id")],
+      buildRecord([
+        ["a", buildSingle("integer", 2)],
+        ["b", buildSingle("identifier", "_id")],
       ]),
     );
   });
 
   it("writes a duration as PT<seconds>S and reads it back, and refuses years and months", () => {
     const declaration = { cardinality: "single", baseType: "duration" } as const;
-    expect(encodePciValue(single("duration", 90.5), declaration, HOST)).toEqual({ base: { duration: "PT90.5S" } });
-    expect(decodePciValue({ base: { duration: "PT1H30M" } }, declaration, HOST)).toEqual(single("duration", 5400));
+    expect(encodePciValue(buildSingle("duration", 90.5), declaration, HOST)).toEqual({ base: { duration: "PT90.5S" } });
+    expect(decodePciValue({ base: { duration: "PT1H30M" } }, declaration, HOST)).toEqual(buildSingle("duration", 5400));
     expect(() => decodePciValue({ base: { duration: "P10Y3M20DT4H30M25S" } }, declaration, HOST)).toThrow(DataError);
     expect(() =>
       decodePciValue({ list: { duration: ["P1M"] } }, { cardinality: "multiple", baseType: "duration" }, HOST),
@@ -272,7 +287,7 @@ describe("the JSON of a value", () => {
         { cardinality: "record" },
         HOST,
       ),
-    ).toEqual(record([["bar", single("integer", 1)]]));
+    ).toEqual(buildRecord([["bar", buildSingle("integer", 1)]]));
     expect(decodePciValue({ record: [{ name: "foo", base: null }] }, { cardinality: "record" }, HOST)).toBeNull();
   });
 
@@ -292,7 +307,7 @@ describe("the JSON of a value", () => {
       );
       expect(calls).toEqual([["cGxlYXN1cmUu", "text/plain", "helloworld.txt"]]);
       expect(value).toEqual(
-        single("file", { reference: "file-1", mimeType: "text/plain", fileName: "helloworld.txt" }),
+        buildSingle("file", { reference: "file-1", mimeType: "text/plain", fileName: "helloworld.txt" }),
       );
     });
 
@@ -304,13 +319,13 @@ describe("the JSON of a value", () => {
           return "cGxlYXN1cmUu";
         },
       };
-      const named = single("file", { reference: "file-1", mimeType: "text/plain", fileName: "helloworld.txt" });
+      const named = buildSingle("file", { reference: "file-1", mimeType: "text/plain", fileName: "helloworld.txt" });
       expect(encodePciValue(named, { cardinality: "single", baseType: "file" }, files)).toEqual({
         base: { file: { data: "cGxlYXN1cmUu", mime: "text/plain", name: "helloworld.txt" } },
       });
       expect(
         encodePciValue(
-          single("file", { reference: "file-2", mimeType: "text/plain" }),
+          buildSingle("file", { reference: "file-2", mimeType: "text/plain" }),
           { cardinality: "single", baseType: "file" },
           files,
         ),
@@ -319,7 +334,7 @@ describe("the JSON of a value", () => {
     });
 
     it("handles the files of a list and of the fields of a record, once each", () => {
-      const list = container("multiple", "file", [
+      const list = buildContainer("multiple", "file", [
         { reference: "stored:AA==", mimeType: "image/png" },
         { reference: "stored:Ag==", mimeType: "image/png", fileName: "b.png" },
       ]);
@@ -333,7 +348,7 @@ describe("the JSON of a value", () => {
         },
       });
       expect(decodePciValue(json, { cardinality: "multiple", baseType: "file" }, HOST)).toEqual(list);
-      const fields = record([
+      const fields = buildRecord([
         ["upload", file("AA==", "image/png")],
         ["note", str("x")],
       ]);
@@ -386,7 +401,7 @@ describe("the JSON of a value", () => {
     });
   });
 
-  it("refuses JSON that is not the JSON of a value of the declaration, as fromJsonValue does", () => {
+  it("refuses JSON that is not the JSON of a value of the declaration, as readJsonValue does", () => {
     const declaration = { cardinality: "single", baseType: "integer" } as const;
     for (const text of [
       "null",
@@ -410,14 +425,14 @@ describe("the JSON of a value", () => {
     expect(() => decodePciValue({ base: null }, declaration, json("null"))).toThrow(DataError);
     expect(() => decodePciValue({ base: null }, declaration, json("{}"))).toThrow(DataError);
     expect(() => encodePciValue(str("a"), json("null"), HOST)).toThrow(DataError);
-    expect(() => encodePciValue(single("integer", 1), declaration, HOST)).toThrow(DataError);
+    expect(() => encodePciValue(buildSingle("integer", 1), declaration, HOST)).toThrow(DataError);
     expect(() => encodePciValue(json('{"cardinality": "x"}'), declaration, HOST)).toThrow(DataError);
   });
 });
 
 describe("module resolution files", () => {
   it("reads the example of the best practices guide: waitSeconds and the paths in the order of the file", () => {
-    const parsed = parseModuleResolution(
+    const parsed = readModuleResolution(
       '{ "waitSeconds": 15, "paths": { "graph": "https://example.com/js/modules/graph1.01/graph", "foo": "https://foobar.com/foo/bar1.2/foo" } }',
     );
     expect(parsed.waitSeconds).toBe(15);
@@ -429,13 +444,13 @@ describe("module resolution files", () => {
 
   it("waits 7 seconds when the file does not say, and 0 stays 0, which is no timeout", () => {
     expect(DEFAULT_WAIT_SECONDS).toBe(7);
-    expect(parseModuleResolution('{"paths": {"a": "modules/a"}}').waitSeconds).toBe(7);
-    expect(parseModuleResolution('{"waitSeconds": 0, "paths": {}}').waitSeconds).toBe(0);
-    expect(parseModuleResolution("{}")).toEqual({ waitSeconds: 7, paths: new Map() });
+    expect(readModuleResolution('{"paths": {"a": "modules/a"}}').waitSeconds).toBe(7);
+    expect(readModuleResolution('{"waitSeconds": 0, "paths": {}}').waitSeconds).toBe(0);
+    expect(readModuleResolution("{}")).toEqual({ waitSeconds: 7, paths: new Map() });
   });
 
   it("ignores properties besides waitSeconds and paths, and keeps a module id such as __proto__ as data", () => {
-    const parsed = parseModuleResolution('{"baseUrl": "x", "paths": {"__proto__": "modules/p", "a": "modules/a"}}');
+    const parsed = readModuleResolution('{"baseUrl": "x", "paths": {"__proto__": "modules/p", "a": "modules/a"}}');
     expect([...parsed.paths]).toEqual([
       ["__proto__", "modules/p"],
       ["a", "modules/a"],
@@ -448,30 +463,30 @@ describe("module resolution files", () => {
       return `${head}${"a".repeat(length - head.length - 3)}"}}`;
     };
     expect(filled(65_536)).toHaveLength(65_536);
-    expect(parseModuleResolution(filled(65_536)).paths.get("a")).toMatch(/^modules\/a+$/);
-    expect(() => parseModuleResolution(filled(65_537))).toThrow(
+    expect(readModuleResolution(filled(65_536)).paths.get("a")).toMatch(/^modules\/a+$/);
+    expect(() => readModuleResolution(filled(65_537))).toThrow(
       "The module resolution file has 65537 characters, more than the 65536 that a module resolution file may have.",
     );
     // Text that would parse into millions of objects is refused by its length, as it is not read.
-    expect(() => parseModuleResolution(`[${"{},".repeat(1_000_000)}{}]`)).toThrow(/more than the 65536/);
+    expect(() => readModuleResolution(`[${"{},".repeat(1_000_000)}{}]`)).toThrow(/more than the 65536/);
   });
 
   it("refuses text that is not the file: not JSON, not an object, a bad waitSeconds, a path that is not a string", () => {
-    expect(() => parseModuleResolution("{")).toThrow("The module resolution file must be JSON: ");
-    expect(() => parseModuleResolution("[]")).toThrow(
+    expect(() => readModuleResolution("{")).toThrow("The module resolution file must be JSON: ");
+    expect(() => readModuleResolution("[]")).toThrow(
       "The module resolution file is invalid: expected an object, found an array.",
     );
-    expect(() => parseModuleResolution('{"waitSeconds": -1}')).toThrow(
+    expect(() => readModuleResolution('{"waitSeconds": -1}')).toThrow(
       "The module resolution file is invalid at waitSeconds: expected a value of at least 0, found -1.",
     );
-    expect(() => parseModuleResolution('{"waitSeconds": "7"}')).toThrow(DataError);
-    expect(() => parseModuleResolution('{"waitSeconds": null}')).toThrow(DataError);
-    expect(() => parseModuleResolution('{"paths": []}')).toThrow(DataError);
-    expect(() => parseModuleResolution('{"paths": {"a": 1}}')).toThrow(
+    expect(() => readModuleResolution('{"waitSeconds": "7"}')).toThrow(DataError);
+    expect(() => readModuleResolution('{"waitSeconds": null}')).toThrow(DataError);
+    expect(() => readModuleResolution('{"paths": []}')).toThrow(DataError);
+    expect(() => readModuleResolution('{"paths": {"a": 1}}')).toThrow(
       'The module resolution file is invalid at paths: the property "a" is invalid: expected a string, found 1.',
     );
-    expect(() => parseModuleResolution('{"paths": {"a": ""}}')).toThrow(DataError);
-    expect(() => parseModuleResolution(json("1"))).toThrow(DataError);
+    expect(() => readModuleResolution('{"paths": {"a": ""}}')).toThrow(DataError);
+    expect(() => readModuleResolution(json("1"))).toThrow(DataError);
   });
 });
 
@@ -495,12 +510,12 @@ describe("locations in the package", () => {
 
 describe("the paths of the configuration files", () => {
   it("reads modules/module_resolution.js and modules/fallback_module_resolution.js by default", () => {
-    expect(moduleConfigurationPaths(interactionOf('module="m"'))).toEqual({
+    expect(resolveModuleConfigurationPaths(interactionOf('module="m"'))).toEqual({
       primary: "modules/module_resolution.js",
       fallback: "modules/fallback_module_resolution.js",
     });
     expect(
-      moduleConfigurationPaths(
+      resolveModuleConfigurationPaths(
         interactionOf(
           "",
           '<qti-interaction-modules><qti-interaction-module id="m" primary-path="a"/></qti-interaction-modules><qti-interaction-markup/>',
@@ -514,14 +529,14 @@ describe("the paths of the configuration files", () => {
       "",
       '<qti-interaction-modules primary-configuration="modules/maths_config.js" secondary-configuration="modules/maths_fallback.js"><qti-interaction-module id="m"/></qti-interaction-modules><qti-interaction-markup/>',
     );
-    expect(moduleConfigurationPaths(interaction)).toEqual({
+    expect(resolveModuleConfigurationPaths(interaction)).toEqual({
       primary: "modules/maths_config.js",
       fallback: "modules/maths_fallback.js",
     });
   });
 
   it("refuses an interaction that is not one", () => {
-    expect(() => moduleConfigurationPaths(json("null"))).toThrow(DataError);
+    expect(() => resolveModuleConfigurationPaths(json("null"))).toThrow(DataError);
   });
 });
 
@@ -600,7 +615,7 @@ describe("the properties of a PCI", () => {
     const interaction = interactionOf(
       'data-label-min="Very Poorly" data-max-choices-message="Too Many" data-toggle="true" data-selected_color="blue" data-n1="x" data-x-1="y" data-a--b="z" class="horizontal"',
     );
-    expect([...pciProperties(interaction)]).toEqual([
+    expect([...derivePciProperties(interaction)]).toEqual([
       ["labelMin", "Very Poorly"],
       ["maxChoicesMessage", "Too Many"],
       ["toggle", "true"],
@@ -615,12 +630,12 @@ describe("the properties of a PCI", () => {
     const interaction = interactionOf(
       'data-catalog-idref="c1" data-qti-suppress-tts="all" xml:lang="en" data-custom="1"',
     );
-    expect([...pciProperties(interaction)]).toEqual([["custom", "1"]]);
-    expect(pciProperties(interactionOf('module="m"')).size).toBe(0);
+    expect([...derivePciProperties(interaction)]).toEqual([["custom", "1"]]);
+    expect(derivePciProperties(interactionOf('module="m"')).size).toBe(0);
   });
 
   it("refuses an interaction that is not one", () => {
-    expect(() => pciProperties(json("null"))).toThrow(DataError);
+    expect(() => derivePciProperties(json("null"))).toThrow(DataError);
   });
 });
 
@@ -638,7 +653,11 @@ describe("the variables that a PCI is bound to", () => {
     const declaration = document.item.templateDeclarations[0];
     expect(declaration).toBeDefined();
     expect(
-      encodePciValue(container("multiple", "integer", [3, 4]), { cardinality: "multiple", baseType: "integer" }, HOST),
+      encodePciValue(
+        buildContainer("multiple", "integer", [3, 4]),
+        { cardinality: "multiple", baseType: "integer" },
+        HOST,
+      ),
     ).toEqual({
       list: { integer: [3, 4] },
     });
@@ -647,11 +666,11 @@ describe("the variables that a PCI is bound to", () => {
 
 describe("checks of a PCI", () => {
   const codes = (interaction: PortableCustomInteraction, configuration: PciModuleConfiguration): string[] =>
-    checkPortableInteraction(interaction, configuration).map(({ code }) => code);
+    validatePortableInteraction(interaction, configuration).map(({ code }) => code);
   const configured: PciModuleConfiguration = { primary: resolution({ m: "modules/m" }) };
 
   it("reports an interaction with neither a module attribute nor qti-interaction-modules", () => {
-    const [issue] = checkPortableInteraction(interactionOf(""), configured);
+    const [issue] = validatePortableInteraction(interactionOf(""), configured);
     expect(issue).toEqual({
       severity: "error",
       code: "assesskit/pci/no-module",
@@ -670,7 +689,7 @@ describe("checks of a PCI", () => {
       '<qti-interaction-modules><qti-interaction-module id="x" primary-path="modules/x"/><qti-interaction-module id="y"/></qti-interaction-modules><qti-interaction-markup/>',
     );
     expect(codes(own, {})).toEqual(["assesskit/pci/module-not-configured"]);
-    expect(checkPortableInteraction(own, {})[0]?.message).toContain('"y"');
+    expect(validatePortableInteraction(own, {})[0]?.message).toContain('"y"');
   });
 
   it("warns about a custom-interaction-type-identifier that is not a Federated Content URN, and not about one that is", () => {
@@ -682,9 +701,9 @@ describe("checks of a PCI", () => {
       if (node?.kind !== "portable-custom-interaction") throw new Error("The test reads a PCI.");
       return node;
     };
-    expect(checkPortableInteraction(interaction("urn:fdc:hmhco.com:pci:tapToReveal"), configured)).toEqual([]);
-    expect(checkPortableInteraction(interaction("URN:FDC:example.com:2024:x"), configured)).toEqual([]);
-    const [warning] = checkPortableInteraction(interaction("urn-fdc-hmhco.com-pci-tapToReveal"), configured);
+    expect(validatePortableInteraction(interaction("urn:fdc:hmhco.com:pci:tapToReveal"), configured)).toEqual([]);
+    expect(validatePortableInteraction(interaction("URN:FDC:example.com:2024:x"), configured)).toEqual([]);
+    const [warning] = validatePortableInteraction(interaction("urn-fdc-hmhco.com-pci-tapToReveal"), configured);
     expect(warning).toMatchObject({
       severity: "warning",
       code: "assesskit/pci/type-identifier",
@@ -694,8 +713,8 @@ describe("checks of a PCI", () => {
   });
 
   it("refuses arguments of the wrong type", () => {
-    expect(() => checkPortableInteraction(json("null"), {})).toThrow(DataError);
-    expect(() => checkPortableInteraction(interactionOf('module="m"'), json("1"))).toThrow(DataError);
+    expect(() => validatePortableInteraction(json("null"), {})).toThrow(DataError);
+    expect(() => validatePortableInteraction(interactionOf('module="m"'), json("1"))).toThrow(DataError);
   });
 });
 
@@ -746,7 +765,7 @@ describe("properties", () => {
 
   it("reads or refuses arbitrary JSON text with a DataError, and nothing else", () => {
     fuzzJson(
-      (json) => parseModuleResolution(JSON.stringify(json)),
+      (json) => readModuleResolution(JSON.stringify(json)),
       [{ waitSeconds: 15, paths: { graph: "https://example.com/js/graph", foo: "foo" } }, {}],
     );
   });

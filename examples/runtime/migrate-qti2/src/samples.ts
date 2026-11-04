@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { attributeOf, childElements, parseXml, type XmlElement } from "@assesskit/runtime/xml";
+import { findAttribute, listChildElements, parseXml, type XmlElement } from "@assesskit/runtime/xml";
 
 /** The type of a resource that is a QTI 2.2 item in a content package. */
 const ITEM_RESOURCE_TYPE = "imsqti_item_xmlv2p2";
@@ -17,7 +17,7 @@ export interface Sample {
 
 /** Returns the child elements of an element that have a local name. */
 const named = (element: XmlElement, name: string): readonly XmlElement[] =>
-  childElements(element).filter((child) => child.name === name);
+  listChildElements(element).filter((child) => child.name === name);
 
 /**
  * Reads the items that the manifest of a QTI 2.2 package lists, each with the files of its resource.
@@ -30,12 +30,12 @@ export function readSamples(directory: string): readonly Sample[] {
   const manifest = parseXml(readFileSync(join(directory, "imsmanifest.xml")));
   return named(manifest, "resources").flatMap((resources) =>
     named(resources, "resource").flatMap((resource) => {
-      const identifier = attributeOf(resource, "identifier");
-      const href = attributeOf(resource, "href");
-      if (attributeOf(resource, "type") !== ITEM_RESOURCE_TYPE || identifier === undefined || href === undefined) {
+      const identifier = findAttribute(resource, "identifier");
+      const href = findAttribute(resource, "href");
+      if (findAttribute(resource, "type") !== ITEM_RESOURCE_TYPE || identifier === undefined || href === undefined) {
         return [];
       }
-      const paths = new Set(named(resource, "file").flatMap((file) => attributeOf(file, "href") ?? []));
+      const paths = new Set(named(resource, "file").flatMap((file) => findAttribute(file, "href") ?? []));
       const files = Object.fromEntries(
         [...paths].map((path): [string, Uint8Array] => [path, new Uint8Array(readFileSync(join(directory, path)))]),
       );

@@ -4,8 +4,8 @@
  *
  * @module @assesskit/runtime/package
  */
-export { dependencyClosure } from "./closure.js";
-export { type LtiExtensions, type LtiLink, type LtiVendor, ltiLaunchUrl, readLtiLink } from "./lti-link.js";
+export { listDependencies } from "./closure.js";
+export { type LtiExtensions, type LtiLink, type LtiVendor, readLtiLink, resolveLaunchUrl } from "./lti-link.js";
 export {
   CPX_NAMESPACE,
   MANIFEST_SCHEMA_VERSION,
@@ -30,16 +30,16 @@ export {
 export type { PackageFiles } from "./package-files.js";
 export { resolveReference } from "./paths.js";
 export { readManifest } from "./read-manifest.js";
+export { resolveResourcePath } from "./resolve-resource-path.js";
 export {
+  createPackageResolvers,
   type DeliverableItem,
   type LtiDeliverable,
-  packageResolvers,
   type QtiDeliverable,
   type ResolvedItem,
   type ResolvedVariant,
   type Resolvers,
 } from "./resolvers.js";
-export { resourcePath } from "./resource-path.js";
 export { writeManifest } from "./write-manifest.js";
 export { writePackage } from "./write-package.js";
 export { DEFAULT_ZIP_LIMITS, type ZipLimits } from "./zip-limits.js";

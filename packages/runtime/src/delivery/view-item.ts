@@ -1,6 +1,6 @@
 import type { AssessmentItem, BodyNode, Catalog } from "../asi/index.js";
 import { withDescendants } from "../asi/internal.js";
-import { hazardExposure, resolveContent, visibleModalFeedback } from "../content/index.js";
+import { deriveHazardExposure, resolveContent, selectModalFeedback } from "../content/index.js";
 import type { InteractionDescriptor } from "../interactions/index.js";
 import { type LtiLink, resolveReference } from "../package/index.js";
 import type { Value } from "../values/index.js";
@@ -8,7 +8,7 @@ import { attemptsOf, DEFAULT_MAX_ATTEMPTS, isAdaptive } from "./attempt.js";
 import type { CandidateItem, LtiView, PciView, VariantView } from "./candidate-view.js";
 import { type CourseItem, candidateOf, candidateTitle } from "./course.js";
 import type { DeliveredItem, DeliveryState } from "./delivery-state.js";
-import { itemFeedback, itemResponses, presentedInteractions } from "./item-display.js";
+import { deriveItemFeedback, deriveItemResponses, presentedInteractions } from "./item-display.js";
 import { arrangeChoices, catalogsIn, portableInteractionsIn } from "./view-body.js";
 
 /** Returns the package path of a reference as the document at `base` writes it; a reference outside the package stays as written. */
@@ -93,7 +93,7 @@ export function candidateItem(state: DeliveryState, delivered: DeliveredItem, en
   const candidate = candidateOf(entry, delivered.variant);
   const { item } = candidate;
   const { control } = entry;
-  const feedback = itemFeedback(session, item, control);
+  const feedback = deriveItemFeedback(session, item, control);
   const variables = { outcomes: feedback.outcomes, templates: session.variables.templates };
   const resolve = (nodes: readonly BodyNode[]): readonly BodyNode[] =>
     resolveContent(nodes, variables, item, { view: "candidate" });
@@ -102,11 +102,11 @@ export function candidateItem(state: DeliveryState, delivered: DeliveredItem, en
     identifier: stimulus.identifier,
     body: resolve(stimulus.body.children),
   }));
-  const shownModals = feedback.modal ? visibleModalFeedback(item, feedback.outcomes) : [];
+  const shownModals = feedback.modal ? selectModalFeedback(item, feedback.outcomes) : [];
   const modalFeedback = resolve(shownModals.flatMap((modal) => modal.contentBody?.children ?? []));
   const interactions = presentedInteractions(session, item, control);
   const bound = responseIdentifiers(interactions);
-  const responses = new Map([...itemResponses(session)].filter(([identifier]) => bound.has(identifier)));
+  const responses = new Map([...deriveItemResponses(session)].filter(([identifier]) => bound.has(identifier)));
   const catalogs = distinctCatalogs([
     ...(item.catalogInfo?.catalogs ?? []),
     ...candidate.stimuli.flatMap(({ stimulus }) => stimulus.catalogInfo?.catalogs ?? []),
@@ -138,7 +138,7 @@ export function candidateItem(state: DeliveryState, delivered: DeliveredItem, en
     modalFeedback,
     pci: pciViews(body, delivered),
     ...(delivered.variant === undefined ? {} : { variant: variantViewOf(delivered.variant, candidate.languages[0]) }),
-    hazards: hazardExposure(candidate.hazards).map(({ hazard }) => ({
+    hazards: deriveHazardExposure(candidate.hazards).map(({ hazard }) => ({
       hazard,
       avoided: state.needs.avoidedHazards.includes(hazard),
     })),

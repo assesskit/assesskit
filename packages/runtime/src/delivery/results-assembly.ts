@@ -1,6 +1,6 @@
 import type { AssessmentItem, OutcomeDeclaration } from "../asi/index.js";
 import { setCorrectResponses } from "../asi/internal.js";
-import { answeredStatus } from "../interactions/index.js";
+import { deriveAnsweredStatus } from "../interactions/index.js";
 import type { SupportName } from "../pnp/index.js";
 import { COMPLETION_STATUS, DURATION, NUM_ATTEMPTS } from "../processing/index.js";
 import type {
@@ -16,16 +16,16 @@ import type {
   TemplateVariable,
   TestResult,
 } from "../results/index.js";
-import { single, type Value } from "../values/index.js";
+import { buildSingle, type Value } from "../values/index.js";
 import { endAttemptInteractions } from "./attempt.js";
 import { type CatSession, endedAttempts } from "./cat-session.js";
 import { type Course, candidateOf } from "./course.js";
 import { datestampOf } from "./datestamp.js";
 import { type DeliveredItem, type DeliveryState, deliveredLookup, findDelivered } from "./delivery-state.js";
+import { deriveSessionStatus } from "./derive-session-status.js";
 import { presentedInteractions } from "./item-display.js";
 import { type ItemKey, sameKey } from "./plan.js";
 import { planIndex } from "./plan-index.js";
-import { resultStatus } from "./result-status.js";
 import { isCoveredUnscored, outstandingScores } from "./scoring.js";
 import { durationOf, SessionScope } from "./session-scope.js";
 
@@ -142,7 +142,7 @@ function sessionStatusOf(
   item: AssessmentItem,
 ): SessionStatus {
   const { key } = delivered.session;
-  const status = resultStatus(delivered.session, item);
+  const status = deriveSessionStatus(delivered.session, item);
   if (status === "pendingExternalScoring") {
     return outstandingScores(state, key, item).length > 0 ? status : "final";
   }
@@ -215,7 +215,7 @@ function responseVariables(
   );
   if (entry === undefined || item === undefined || options.omitted) return builtIns;
   const interactions = presentedInteractions(session, item, entry.control);
-  const answered = answeredStatus(interactions, variables.responses);
+  const answered = deriveAnsweredStatus(interactions, variables.responses);
   const keysSet = setCorrectResponses(item);
   const declared = item.responseDeclarations.map((declaration): ResponseVariable => {
     const sequence = interactions.find(
@@ -413,7 +413,7 @@ function notPresented(state: DeliveryState, key: ItemKey, sequenceIndex: number)
     sequenceIndex,
     datestamp: datestampOf(state.at),
     sessionStatus: "initial",
-    variables: builtInResponses(single("integer", 0), single("duration", 0)),
+    variables: builtInResponses(buildSingle("integer", 0), buildSingle("duration", 0)),
     supports: [],
   };
 }

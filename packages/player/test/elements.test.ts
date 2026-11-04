@@ -5,7 +5,7 @@ import {
   type InteractionDescriptor,
   type ResponseViolation,
 } from "@assesskit/runtime/interactions";
-import { container, single } from "@assesskit/runtime/values";
+import { buildContainer, buildSingle } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES } from "../src/index.js";
@@ -51,19 +51,21 @@ describe("values", () => {
 
   it("gives a single value for one identifier of a single variable, a container otherwise, and NULL for none", () => {
     const one = choose('max-choices="1"', "single");
-    expect(responseOf(one, "identifier", ["A"])).toEqual(single("identifier", "A"));
+    expect(responseOf(one, "identifier", ["A"])).toEqual(buildSingle("identifier", "A"));
     expect(responseOf(one, "identifier", [])).toBeNull();
     const many = choose('max-choices="0"');
-    expect(responseOf(many, "identifier", ["A"])).toEqual(container("multiple", "identifier", ["A"]));
-    expect(responseOf(many, "identifier", ["A", "B"], true)).toEqual(container("ordered", "identifier", ["A", "B"]));
+    expect(responseOf(many, "identifier", ["A"])).toEqual(buildContainer("multiple", "identifier", ["A"]));
+    expect(responseOf(many, "identifier", ["A", "B"], true)).toEqual(
+      buildContainer("ordered", "identifier", ["A", "B"]),
+    );
   });
 
   it("reads the strings and the pairs of a value, and none from NULL, a record or other types", () => {
-    expect(stringsOf(container("multiple", "identifier", ["A", "B"]))).toEqual(["A", "B"]);
-    expect(stringsOf(single("integer", 3))).toEqual([]);
+    expect(stringsOf(buildContainer("multiple", "identifier", ["A", "B"]))).toEqual(["A", "B"]);
+    expect(stringsOf(buildSingle("integer", 3))).toEqual([]);
     expect(stringsOf(null)).toEqual([]);
-    expect(pairsOf(container("multiple", "directedPair", [["A", "B"]]))).toEqual([["A", "B"]]);
-    expect(pairsOf(single("identifier", "A"))).toEqual([]);
+    expect(pairsOf(buildContainer("multiple", "directedPair", [["A", "B"]]))).toEqual([["A", "B"]]);
+    expect(pairsOf(buildSingle("identifier", "A"))).toEqual([]);
   });
 });
 

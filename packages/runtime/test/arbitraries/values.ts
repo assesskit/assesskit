@@ -2,11 +2,11 @@ import fc from "fast-check";
 import {
   BASE_TYPES,
   type BaseType,
-  container,
+  buildContainer,
+  buildRecord,
+  buildSingle,
   type Primitive,
-  record,
   type SingleValue,
-  single,
   type Value,
 } from "../../src/index.js";
 
@@ -72,7 +72,7 @@ function nonNull<T>(value: T | null): T {
 
 /** A single value of the given base type. */
 const singleOf = (type: BaseType): fc.Arbitrary<SingleValue> =>
-  primitives[type].map((primitive) => nonNull(single(type, primitive)));
+  primitives[type].map((primitive) => nonNull(buildSingle(type, primitive)));
 
 /** A value of the given cardinality and base type, or NULL (`null`) sometimes. */
 export function valueArbitrary(
@@ -86,7 +86,7 @@ export function valueArbitrary(
       weight: 5,
       arbitrary: fc
         .array(primitives[type], { minLength: 1, maxLength: 5 })
-        .map((values) => container(cardinality, type, values)),
+        .map((values) => buildContainer(cardinality, type, values)),
     },
     { weight: 1, arbitrary: fc.constant(null) },
   );
@@ -102,7 +102,7 @@ export const recordValue: fc.Arbitrary<Value | null> = fc.oneof(
         maxLength: 4,
         selector: ([name]) => name,
       })
-      .map((fields) => record(fields)),
+      .map((fields) => buildRecord(fields)),
   },
   { weight: 1, arbitrary: fc.constant(null) },
 );

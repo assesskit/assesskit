@@ -1,16 +1,27 @@
 import { checkRecord, checkString } from "../checks.js";
 import type { ElementReader } from "../xml/index.js";
 
+/** The options of the readers of the metadata of a resource. */
+export interface ReadMetadataOptions {
+  /**
+   * The path of the document in its package or directory; errors and issues name the document by it.
+   *
+   * @defaultValue none, which names the document "The document"
+   */
+  readonly path?: string;
+}
+
 /**
- * Checks the arguments of a reader of the metadata: an element and the path of its document.
+ * Checks the arguments of a reader of the metadata: an element and the options with the path of its document.
  *
  * @param element - The element to read.
- * @param path - The path of the document, when it has one.
- * @throws `DataError` when the element is not an object or the path is not a string.
+ * @param options - The options of the reader.
+ * @throws `DataError` when the element or the options are not objects or the option `path` is not a string.
  */
-export function checkReadArguments(element: unknown, path: unknown): void {
+export function checkReadArguments(element: unknown, options: unknown): void {
   checkRecord(element, "The element must be an element");
-  if (path !== undefined) checkString(path, "The path");
+  checkRecord(options, "The options must be an object");
+  if (options.path !== undefined) checkString(options.path, "The option path");
 }
 
 /**

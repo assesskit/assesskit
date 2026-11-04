@@ -1,7 +1,7 @@
 import { ASI_NAMESPACE } from "@assesskit/runtime/asi";
 import type { DeliveryDefinition } from "@assesskit/runtime/delivery";
 import { createEngine } from "@assesskit/runtime/delivery";
-import { openPackage, packageResolvers, type QtiPackage } from "@assesskit/runtime/package";
+import { createPackageResolvers, openPackage, type QtiPackage } from "@assesskit/runtime/package";
 import type { FileValue } from "@assesskit/runtime/values";
 import {
   createAssetGate,
@@ -241,7 +241,7 @@ export function packageOf(files: Readonly<Record<string, string | Uint8Array>>):
 export function examDefinition(pkg: QtiPackage = packageOf(examFiles())): DeliveryDefinition {
   const document = pkg.document("tests/exam.xml");
   if (document.kind !== "test") throw new Error("The fixture test is not a test.");
-  return { kind: "test", test: document.test, base: "tests/exam.xml", resolvers: packageResolvers(pkg) };
+  return { kind: "test", test: document.test, base: "tests/exam.xml", resolvers: createPackageResolvers(pkg) };
 }
 
 /** A clock that a test moves. */

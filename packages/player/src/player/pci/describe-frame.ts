@@ -1,4 +1,4 @@
-import { type PciJson, pciProperties } from "@assesskit/runtime/pci";
+import { derivePciProperties, type PciJson } from "@assesskit/runtime/pci";
 import { encodeVariable, type PciFiles, type PciVariable } from "./files.js";
 import { pciModules } from "./modules.js";
 import type { PciFrameOptions } from "./options.js";
@@ -38,7 +38,7 @@ export function describeFrame(options: PciFrameOptions): FrameDescription {
   const { origins = [], templateVariables = new Map(), contextVariables = new Map() } = options;
   const title = oneLine(prompt ?? "") || messages.interactiveQuestion;
   const modules = pciModules(interaction, configuration, assets, [new URL(options.staticUrl).origin, ...origins]);
-  const properties = pciProperties(interaction);
+  const properties = derivePciProperties(interaction);
   return {
     title,
     prepare: async () => {

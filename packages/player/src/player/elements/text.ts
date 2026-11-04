@@ -1,11 +1,11 @@
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
-import { numericRecord } from "@assesskit/runtime/interactions";
+import { readNumericRecord } from "@assesskit/runtime/interactions";
 import {
   type BaseType,
-  container,
+  buildContainer,
+  buildSingle,
   normalizeValue,
   type Primitive,
-  single,
   type Value,
 } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
@@ -88,7 +88,7 @@ export class ControlField implements TextField {
 function primitiveOf(baseType: BaseType, text: string, base: number): { primitive?: Primitive; problem?: TextProblem } {
   if (baseType !== "integer" && baseType !== "float") return text === "" ? {} : { primitive: text };
   if (text.trim() === "") return {};
-  const fields = numericRecord(text, base)?.fields;
+  const fields = readNumericRecord(text, { base })?.fields;
   const number = fields?.get(baseType === "integer" ? "integerValue" : "floatValue")?.value;
   if (typeof number === "number") return { primitive: number };
   return { problem: fields?.has("floatValue") ? "integer" : "number" };
@@ -96,7 +96,7 @@ function primitiveOf(baseType: BaseType, text: string, base: number): { primitiv
 
 /**
  * Returns the response for the texts that the candidate typed, as the declaration of the response variable asks: the
- * strings, the numbers that they read as, or the record of the runtime's `numericRecord`.
+ * strings, the numbers that they read as, or the record of the runtime's `readNumericRecord`.
  *
  * @remarks
  * Texts that are empty are NULL.
@@ -107,7 +107,7 @@ function responseOfTexts(descriptor: InteractionDescriptor, texts: readonly stri
   const cardinality = descriptor.declaration?.cardinality ?? "single";
   const baseType = descriptor.declaration?.baseType ?? "string";
   const base = descriptor.constraints.base ?? DECIMAL;
-  if (cardinality === "record") return { value: numericRecord(texts[0] ?? "", base) };
+  if (cardinality === "record") return { value: readNumericRecord(texts[0] ?? "", { base }) };
   const read = texts.map((text) => primitiveOf(baseType, text, base));
   const primitives = read.flatMap(({ primitive }) => (primitive === undefined ? [] : [primitive]));
   const problem = read.find((item) => item.problem !== undefined)?.problem;
@@ -116,8 +116,8 @@ function responseOfTexts(descriptor: InteractionDescriptor, texts: readonly stri
     cardinality === "single"
       ? first === undefined
         ? null
-        : single(baseType, first)
-      : container(cardinality, baseType, primitives);
+        : buildSingle(baseType, first)
+      : buildContainer(cardinality, baseType, primitives);
   return problem === undefined ? { value } : { value, problem };
 }
 
@@ -199,7 +199,7 @@ export abstract class TextElement extends InteractionElement {
     const { value, problem } = responseOfTexts(descriptor, texts);
     this.#problem = problem;
     const { stringIdentifier } = descriptor;
-    this.#typed = stringIdentifier === undefined ? null : single("string", texts[0] ?? "");
+    this.#typed = stringIdentifier === undefined ? null : buildSingle("string", texts[0] ?? "");
     this.respond(value);
     if (stringIdentifier !== undefined) this.respond(this.#typed, stringIdentifier);
   }

@@ -3,19 +3,17 @@ import { describe, expect, it } from "vitest";
 import {
   ASI_NAMESPACE,
   type AssessmentItem,
-  answeredStatus,
   type BaseType,
   type Binding,
-  checkBindings,
-  checkResponse,
-  container,
+  buildContainer,
+  buildSingle,
   createRandom,
   DataError,
+  deriveAnsweredStatus,
+  deriveInitialResponse,
   describeInteractions,
   type InteractionDescriptor,
   type InteractionKind,
-  initialResponse,
-  numericRecord,
   type Primitive,
   presentChoices,
   type Random,
@@ -23,10 +21,12 @@ import {
   type RecordValue,
   type ResponseViolation,
   readAsi,
+  readNumericRecord,
   type SingleValue,
   shuffleChoices,
-  single,
   type Value,
+  validateBindings,
+  validateResponse,
 } from "../src/index.js";
 import { shufflingDescriptor } from "./arbitraries/interactions.js";
 import { interactionKinds } from "./asi-elements.js";
@@ -58,11 +58,11 @@ function descriptorOf(body: string, declarations = declare("single", "identifier
   return descriptor;
 }
 
-const id = (value: string): SingleValue => single("identifier", value);
+const id = (value: string): SingleValue => buildSingle("identifier", value);
 const pair = (first: string, second: string): [string, string] => [first, second];
 
 function list(cardinality: "multiple" | "ordered", baseType: BaseType, values: readonly Primitive[]): Value {
-  const built = container(cardinality, baseType, values);
+  const built = buildContainer(cardinality, baseType, values);
   if (built === null) throw new Error("The test builds an empty container.");
   return built;
 }
@@ -483,7 +483,7 @@ describe("the vocabularies of the interactions", () => {
 
 describe("checking bindings", () => {
   const issueCodes = (body: string, declarations: string): string[] =>
-    checkBindings(itemOf(body, declarations)).map(({ code }) => code);
+    validateBindings(itemOf(body, declarations)).map(({ code }) => code);
   const Choice = `<qti-choice-interaction response-identifier="R">${choice("A")}</qti-choice-interaction>`;
 
   it.each(INTERACTIONS)(
@@ -491,12 +491,12 @@ describe("checking bindings", () => {
     ({ body, bindings }) => {
       const [first = ""] = bindings;
       const [cardinality = "", baseType = ""] = first.split(" ");
-      expect(checkBindings(itemOf(body, declare(cardinality, baseType === "" ? "string" : baseType)))).toEqual([]);
+      expect(validateBindings(itemOf(body, declare(cardinality, baseType === "" ? "string" : baseType)))).toEqual([]);
     },
   );
 
   it("reports a response variable whose base type the interaction does not accept, with the section that says so", () => {
-    expect(checkBindings(itemOf(Choice, declare("single", "string")))).toEqual([
+    expect(validateBindings(itemOf(Choice, declare("single", "string")))).toEqual([
       {
         severity: "error",
         code: "assesskit/interactions/binding",
@@ -522,7 +522,7 @@ describe("checking bindings", () => {
   });
 
   it("reports a response variable that the item does not declare", () => {
-    const [issue] = checkBindings(itemOf(Choice, ""));
+    const [issue] = validateBindings(itemOf(Choice, ""));
     expect(issue).toMatchObject({ code: "assesskit/interactions/response-undeclared" });
     expect(issue?.message).toBe(
       'The interaction qti-choice-interaction is bound to the response variable "R", which the item does not declare. Declare it with a qti-response-declaration.',
@@ -563,13 +563,13 @@ describe("checking bindings", () => {
   });
 
   it("rejects an item that is not an item", () => {
-    expect(() => checkBindings(json("[]"))).toThrow(DataError);
+    expect(() => validateBindings(json("[]"))).toThrow(DataError);
   });
 });
 
 describe("checking responses", () => {
   const check = (descriptor: InteractionDescriptor, response: Value | null): [string, readonly ResponseViolation[]] => {
-    const { status, reasons } = checkResponse(descriptor, response);
+    const { status, reasons } = validateResponse(descriptor, response);
     return [status, reasons];
   };
   const choiceInteraction = (
@@ -754,7 +754,7 @@ describe("checking responses", () => {
       '<qti-extended-text-interaction response-identifier="R" min-strings="1"/>',
       declare("single", "string"),
     );
-    expect(check(one, single("string", "text"))).toEqual(["answered", []]);
+    expect(check(one, buildSingle("string", "text"))).toEqual(["answered", []]);
     expect(check(one, null)).toEqual(["presented", ["min-strings"]]);
   });
 
@@ -763,10 +763,10 @@ describe("checking responses", () => {
       '<p><qti-text-entry-interaction response-identifier="R" pattern-mask="[0-9]{2,3}"/></p>',
       declare("single", "string"),
     );
-    expect(check(entry, single("string", "123"))).toEqual(["answered", []]);
-    expect(check(entry, single("string", "12a"))).toEqual(["attempted", ["pattern-mask"]]);
-    expect(check(entry, single("string", "1234"))).toEqual(["attempted", ["pattern-mask"]]);
-    const record = numericRecord("45");
+    expect(check(entry, buildSingle("string", "123"))).toEqual(["answered", []]);
+    expect(check(entry, buildSingle("string", "12a"))).toEqual(["attempted", ["pattern-mask"]]);
+    expect(check(entry, buildSingle("string", "1234"))).toEqual(["attempted", ["pattern-mask"]]);
+    const record = readNumericRecord("45");
     expect(
       check(
         descriptorOf(
@@ -780,7 +780,7 @@ describe("checking responses", () => {
       '<p><qti-text-entry-interaction response-identifier="R" pattern-mask="[a-z]+"/></p>',
       declare("single", "integer"),
     );
-    expect(check(numeric, single("integer", 7))).toEqual(["answered", []]);
+    expect(check(numeric, buildSingle("integer", 7))).toEqual(["answered", []]);
   });
 
   it("slider: the value is within the bounds and on a step", () => {
@@ -788,21 +788,21 @@ describe("checking responses", () => {
       '<qti-slider-interaction response-identifier="R" lower-bound="1" upper-bound="9" step="2"/>',
       declare("single", "float"),
     );
-    expect(check(slider, single("float", 5))).toEqual(["answered", []]);
-    expect(check(slider, single("float", 4))).toEqual(["attempted", ["step"]]);
-    expect(check(slider, single("float", 11))).toEqual(["attempted", ["bounds"]]);
-    expect(check(slider, single("float", 0))).toEqual(["attempted", ["bounds", "step"]]);
+    expect(check(slider, buildSingle("float", 5))).toEqual(["answered", []]);
+    expect(check(slider, buildSingle("float", 4))).toEqual(["attempted", ["step"]]);
+    expect(check(slider, buildSingle("float", 11))).toEqual(["attempted", ["bounds"]]);
+    expect(check(slider, buildSingle("float", 0))).toEqual(["attempted", ["bounds", "step"]]);
     const fine = descriptorOf(
       '<qti-slider-interaction response-identifier="R" lower-bound="0" upper-bound="1" step="0.1"/>',
       declare("single", "float"),
     );
-    expect(check(fine, single("float", 0.30000000000000004))).toEqual(["answered", []]);
+    expect(check(fine, buildSingle("float", 0.30000000000000004))).toEqual(["answered", []]);
     expect(check(slider, null)).toEqual(["presented", []]);
     const continuous = descriptorOf(
       '<qti-slider-interaction response-identifier="R" lower-bound="0" upper-bound="1"/>',
       declare("single", "float"),
     );
-    expect(check(continuous, single("float", 0.123456))).toEqual(["answered", []]);
+    expect(check(continuous, buildSingle("float", 0.123456))).toEqual(["answered", []]);
   });
 
   it("media: the number of plays is at least min-plays and at most max-plays", () => {
@@ -810,9 +810,9 @@ describe("checking responses", () => {
       '<qti-media-interaction response-identifier="R" autostart="false" min-plays="1" max-plays="3"><object data="a.mp3" type="audio/mpeg"/></qti-media-interaction>',
       declare("single", "integer"),
     );
-    expect(check(media, single("integer", 2))).toEqual(["answered", []]);
-    expect(check(media, single("integer", 4))).toEqual(["attempted", ["max-plays"]]);
-    expect(check(media, single("integer", 0))).toEqual(["attempted", ["min-plays"]]);
+    expect(check(media, buildSingle("integer", 2))).toEqual(["answered", []]);
+    expect(check(media, buildSingle("integer", 4))).toEqual(["attempted", ["max-plays"]]);
+    expect(check(media, buildSingle("integer", 0))).toEqual(["attempted", ["min-plays"]]);
     expect(check(media, null)).toEqual(["presented", ["min-plays"]]);
   });
 
@@ -821,7 +821,7 @@ describe("checking responses", () => {
       '<qti-upload-interaction response-identifier="R" type="image/png text/plain"/>',
       declare("single", "file"),
     );
-    const file = (mimeType: string): Value => single("file", { reference: "f1", mimeType });
+    const file = (mimeType: string): Value => buildSingle("file", { reference: "f1", mimeType });
     expect(check(upload, file("image/png"))).toEqual(["answered", []]);
     expect(check(upload, file("TEXT/Plain; charset=utf-8"))).toEqual(["answered", []]);
     expect(check(upload, file("application/pdf"))).toEqual(["attempted", ["mime-type"]]);
@@ -831,7 +831,7 @@ describe("checking responses", () => {
 
   it("a response of another type than the interaction accepts, or than the declaration states, is a binding violation", () => {
     const descriptor = choiceInteraction(' max-choices="2"');
-    expect(check(descriptor, single("float", 1))).toEqual(["attempted", ["binding"]]);
+    expect(check(descriptor, buildSingle("float", 1))).toEqual(["attempted", ["binding"]]);
     expect(check(descriptor, id("A"))).toEqual(["attempted", ["binding"]]);
     expect(check(choiceInteraction("", declare("multiple", "identifier")), identifiers("multiple", ["A"]))).toEqual([
       "answered",
@@ -841,22 +841,22 @@ describe("checking responses", () => {
 
   it("a custom interaction accepts any response", () => {
     const custom = descriptorOf('<qti-custom-interaction response-identifier="R"/>', declare("single", "string"));
-    expect(check(custom, single("string", "x"))).toEqual(["answered", []]);
+    expect(check(custom, buildSingle("string", "x"))).toEqual(["answered", []]);
   });
 
   it("rejects a descriptor or a response of the wrong type", () => {
     const descriptor = choiceInteraction("");
-    expect(() => checkResponse(json("null"), null)).toThrow(
+    expect(() => validateResponse(json("null"), null)).toThrow(
       "The interaction descriptor must be an object, found null.",
     );
-    expect(() => checkResponse(json('{"kind": 1}'), null)).toThrow(DataError);
-    expect(() => checkResponse(descriptor, json('{"cardinality": "x"}'))).toThrow(DataError);
-    expect(() => checkResponse(descriptor, json('"A"'))).toThrow(DataError);
-    expect(() => checkResponse({ ...descriptor, choices: json('"x"') }, null)).toThrow(
+    expect(() => validateResponse(json('{"kind": 1}'), null)).toThrow(DataError);
+    expect(() => validateResponse(descriptor, json('{"cardinality": "x"}'))).toThrow(DataError);
+    expect(() => validateResponse(descriptor, json('"A"'))).toThrow(DataError);
+    expect(() => validateResponse({ ...descriptor, choices: json('"x"') }, null)).toThrow(
       'The choices of an interaction descriptor must be an array, found "x".',
     );
-    expect(() => checkResponse({ ...descriptor, choices: json('[{"identifier": 1}]') }, null)).toThrow(DataError);
-    expect(() => checkResponse({ ...descriptor, matchSets: json("1") }, null)).toThrow(DataError);
+    expect(() => validateResponse({ ...descriptor, choices: json('[{"identifier": 1}]') }, null)).toThrow(DataError);
+    expect(() => validateResponse({ ...descriptor, matchSets: json("1") }, null)).toThrow(DataError);
   });
 });
 
@@ -866,7 +866,7 @@ describe("the answered status", () => {
     itemOf(body, declare("single", "identifier", "ONE") + declare("single", "identifier", "TWO")),
   );
   const status = (responses: Record<string, Value | null>): string =>
-    answeredStatus(descriptors, new Map(Object.entries(responses)));
+    deriveAnsweredStatus(descriptors, new Map(Object.entries(responses)));
 
   it("is presented when no interaction has a response", () => {
     expect(status({})).toBe("presented");
@@ -884,19 +884,19 @@ describe("the answered status", () => {
   });
 
   it("is presented for an item without interactions and ignores the end attempt interaction", () => {
-    expect(answeredStatus([], new Map())).toBe("presented");
+    expect(deriveAnsweredStatus([], new Map())).toBe("presented");
     const hint = describeInteractions(
       itemOf(
         '<p><qti-end-attempt-interaction response-identifier="HINT" title="Hint"/></p>',
         declare("single", "boolean", "HINT"),
       ),
     );
-    expect(answeredStatus(hint, new Map([["HINT", single("boolean", false)]]))).toBe("presented");
+    expect(deriveAnsweredStatus(hint, new Map([["HINT", buildSingle("boolean", false)]]))).toBe("presented");
   });
 
   it("rejects arguments of the wrong type", () => {
-    expect(() => answeredStatus(json("null"), new Map())).toThrow(DataError);
-    expect(() => answeredStatus([], json("{}"))).toThrow(
+    expect(() => deriveAnsweredStatus(json("null"), new Map())).toThrow(DataError);
+    expect(() => deriveAnsweredStatus([], json("{}"))).toThrow(
       "The responses must be a Map from response identifier to value, found an object.",
     );
   });
@@ -910,7 +910,7 @@ describe("the initial response", () => {
       `<qti-choice-interaction response-identifier="R" max-choices="2">${choice("A")}</qti-choice-interaction>`,
       declare("multiple", "identifier"),
     );
-    expect(initialResponse(descriptor, defaultValue)).toBeNull();
+    expect(deriveInitialResponse(descriptor, defaultValue)).toBeNull();
   });
 
   it("gives a hot text interaction its default value", () => {
@@ -918,8 +918,8 @@ describe("the initial response", () => {
       '<qti-hottext-interaction response-identifier="R" max-choices="2"><p><qti-hottext identifier="A">a</qti-hottext></p></qti-hottext-interaction>',
       declare("multiple", "identifier"),
     );
-    expect(initialResponse(descriptor, defaultValue)).toEqual(defaultValue);
-    expect(initialResponse(descriptor, null)).toBeNull();
+    expect(deriveInitialResponse(descriptor, defaultValue)).toEqual(defaultValue);
+    expect(deriveInitialResponse(descriptor, null)).toBeNull();
   });
 
   it("gives an order interaction its default value, which overrides the initial order of the choices", () => {
@@ -928,7 +928,7 @@ describe("the initial response", () => {
       declare("ordered", "identifier"),
     );
     const order = identifiers("ordered", ["B", "A"]);
-    expect(initialResponse(descriptor, order)).toEqual(order);
+    expect(deriveInitialResponse(descriptor, order)).toEqual(order);
   });
 
   it("ignores the default value of an end attempt interaction", () => {
@@ -936,14 +936,14 @@ describe("the initial response", () => {
       '<p><qti-end-attempt-interaction response-identifier="R" title="Hint"/></p>',
       declare("single", "boolean"),
     );
-    expect(initialResponse(descriptor, single("boolean", true))).toBeNull();
+    expect(deriveInitialResponse(descriptor, buildSingle("boolean", true))).toBeNull();
   });
 
   it("rejects a default value that is not a value", () => {
     const descriptor = descriptorOf(
       '<qti-slider-interaction response-identifier="R" lower-bound="0" upper-bound="1"/>',
     );
-    expect(() => initialResponse(descriptor, json("1"))).toThrow(DataError);
+    expect(() => deriveInitialResponse(descriptor, json("1"))).toThrow(DataError);
   });
 });
 
@@ -1080,7 +1080,7 @@ describe("presenting choices", () => {
 
 describe("the numeric record of a text entry", () => {
   it("reads an integer: all fields but the exponent", () => {
-    expect(fields(numericRecord("123"))).toEqual({
+    expect(fields(readNumericRecord("123"))).toEqual({
       stringValue: "123",
       floatValue: 123,
       integerValue: 123,
@@ -1092,7 +1092,7 @@ describe("the numeric record of a text entry", () => {
   });
 
   it("reads a decimal with fractional digits: no integerValue, ndp is rightDigits", () => {
-    expect(fields(numericRecord("12.50"))).toEqual({
+    expect(fields(readNumericRecord("12.50"))).toEqual({
       stringValue: "12.50",
       floatValue: 12.5,
       leftDigits: 2,
@@ -1100,11 +1100,11 @@ describe("the numeric record of a text entry", () => {
       ndp: 2,
       nsf: 4,
     });
-    expect(fields(numericRecord("-.5"))).toMatchObject({ floatValue: -0.5, leftDigits: 0, rightDigits: 1, nsf: 1 });
+    expect(fields(readNumericRecord("-.5"))).toMatchObject({ floatValue: -0.5, leftDigits: 0, rightDigits: 1, nsf: 1 });
   });
 
   it("reads an exponent: ndp is the fractional digits less the exponent, never below 0", () => {
-    expect(fields(numericRecord("1.5e3"))).toEqual({
+    expect(fields(readNumericRecord("1.5e3"))).toEqual({
       stringValue: "1.5e3",
       floatValue: 1500,
       leftDigits: 1,
@@ -1113,63 +1113,64 @@ describe("the numeric record of a text entry", () => {
       nsf: 2,
       exponent: 3,
     });
-    expect(fields(numericRecord("1.5E-2"))).toMatchObject({ floatValue: 0.015, ndp: 3, exponent: -2 });
+    expect(fields(readNumericRecord("1.5E-2"))).toMatchObject({ floatValue: 0.015, ndp: 3, exponent: -2 });
   });
 
   it("counts the significant digits from the first digit that is not 0, at least one", () => {
-    expect(fields(numericRecord("0.0120"))).toMatchObject({ leftDigits: 1, rightDigits: 4, ndp: 4, nsf: 3 });
-    expect(fields(numericRecord("1200"))).toMatchObject({ nsf: 4 });
-    expect(fields(numericRecord("0"))).toMatchObject({ nsf: 1, integerValue: 0 });
-    expect(fields(numericRecord("000.00"))).toMatchObject({ nsf: 1 });
+    expect(fields(readNumericRecord("0.0120"))).toMatchObject({ leftDigits: 1, rightDigits: 4, ndp: 4, nsf: 3 });
+    expect(fields(readNumericRecord("1200"))).toMatchObject({ nsf: 4 });
+    expect(fields(readNumericRecord("0"))).toMatchObject({ nsf: 1, integerValue: 0 });
+    expect(fields(readNumericRecord("000.00"))).toMatchObject({ nsf: 1 });
   });
 
   it("keeps the text as typed and ignores white space around the number", () => {
-    expect(fields(numericRecord(" 42 "))).toMatchObject({ stringValue: " 42 ", floatValue: 42, integerValue: 42 });
-    expect(fields(numericRecord("5."))).toMatchObject({ floatValue: 5, integerValue: 5, rightDigits: 0 });
+    expect(fields(readNumericRecord(" 42 "))).toMatchObject({ stringValue: " 42 ", floatValue: 42, integerValue: 42 });
+    expect(fields(readNumericRecord("5."))).toMatchObject({ floatValue: 5, integerValue: 5, rightDigits: 0 });
   });
 
   it("has the string alone when the text is no number", () => {
     for (const text of ["abc", "1,5", "1e", "e5", ".", "+", "1 2", "0x10", "Infinity", "1e999"]) {
-      expect(fields(numericRecord(text))).toEqual({ stringValue: text });
+      expect(fields(readNumericRecord(text))).toEqual({ stringValue: text });
     }
   });
 
   it("has no integerValue for a number beyond the safe integers, but a float", () => {
-    expect(fields(numericRecord("9007199254740993"))).toMatchObject({ floatValue: 9007199254740992 });
-    expect(fields(numericRecord("9007199254740993"))).not.toHaveProperty("integerValue");
+    expect(fields(readNumericRecord("9007199254740993"))).toMatchObject({ floatValue: 9007199254740992 });
+    expect(fields(readNumericRecord("9007199254740993"))).not.toHaveProperty("integerValue");
   });
 
   it("reads an integer in the base of the interaction", () => {
-    expect(fields(numericRecord("ff", 16))).toMatchObject({
+    expect(fields(readNumericRecord("ff", { base: 16 }))).toMatchObject({
       floatValue: 255,
       integerValue: 255,
       leftDigits: 2,
       nsf: 2,
     });
-    expect(fields(numericRecord("-101", 2))).toMatchObject({ floatValue: -5, integerValue: -5 });
-    expect(fields(numericRecord("Z", 36))).toMatchObject({ floatValue: 35 });
-    expect(fields(numericRecord("12", 2))).toEqual({ stringValue: "12" });
-    expect(fields(numericRecord("1.5", 16))).toEqual({ stringValue: "1.5" });
+    expect(fields(readNumericRecord("-101", { base: 2 }))).toMatchObject({ floatValue: -5, integerValue: -5 });
+    expect(fields(readNumericRecord("Z", { base: 36 }))).toMatchObject({ floatValue: 35 });
+    expect(fields(readNumericRecord("12", { base: 2 }))).toEqual({ stringValue: "12" });
+    expect(fields(readNumericRecord("1.5", { base: 16 }))).toEqual({ stringValue: "1.5" });
   });
 
   it("is NULL for the empty string", () => {
-    expect(numericRecord("")).toBeNull();
+    expect(readNumericRecord("")).toBeNull();
   });
 
-  it("makes the record of a text-entry response, which checkResponse accepts as one entry", () => {
+  it("makes the record of a text-entry response, which validateResponse accepts as one entry", () => {
     const descriptor = descriptorOf(
       '<p><qti-text-entry-interaction response-identifier="R"/></p>',
       declare("record", "string").replace(' base-type="string"', ""),
     );
-    expect(checkResponse(descriptor, numericRecord("3.14")).status).toBe("answered");
+    expect(validateResponse(descriptor, readNumericRecord("3.14")).status).toBe("answered");
   });
 
   it("rejects a text that is not a string and a base outside 2 to 36", () => {
-    expect(() => numericRecord(json("1"))).toThrow("The text must be a string, found 1.");
-    expect(() => numericRecord("1", 1)).toThrow("The base must be an integer from 2 to 36, found 1.");
-    expect(() => numericRecord("1", 37)).toThrow(DataError);
-    expect(() => numericRecord("1", json('"10"'))).toThrow(DataError);
-    expect(() => numericRecord("1", 10.5)).toThrow(DataError);
+    expect(() => readNumericRecord(json("1"))).toThrow("The text must be a string, found 1.");
+    expect(() => readNumericRecord("1", { base: 1 })).toThrow("The base must be an integer from 2 to 36, found 1.");
+    expect(() => readNumericRecord("1", { base: 37 })).toThrow(DataError);
+    expect(() => readNumericRecord("1", { base: json('"10"') })).toThrow(DataError);
+    expect(() => readNumericRecord("1", { base: 10.5 })).toThrow(DataError);
+    expect(() => readNumericRecord("1", json("null"))).toThrow("The options must be an object, found null.");
   });
 });
 
@@ -1203,7 +1204,7 @@ describe("properties", () => {
           );
           const count = Math.min(picked, size);
           const response = count === 0 ? null : identifiers("multiple", names.slice(0, count));
-          const { status, reasons } = checkResponse(descriptor, response);
+          const { status, reasons } = validateResponse(descriptor, response);
           expect(reasons.includes("min-choices")).toBe(count < min);
           expect(reasons.includes("max-choices")).toBe(max > 0 && count > max);
           expect(status).toBe(count === 0 ? "presented" : reasons.length === 0 ? "answered" : "attempted");
@@ -1228,7 +1229,7 @@ describe("properties", () => {
             `<qti-order-interaction response-identifier="R">${names.map((name) => choice(name)).join("")}</qti-order-interaction>`,
             declare("ordered", "identifier"),
           );
-          const { status } = checkResponse(descriptor, identifiers("ordered", order));
+          const { status } = validateResponse(descriptor, identifiers("ordered", order));
           expect(status).toBe(order.length === size ? "answered" : "attempted");
         },
       ),
@@ -1242,7 +1243,7 @@ describe("properties", () => {
     );
     fc.assert(
       fc.property(fc.stringMatching(/^[a-z0-9]{1,6}$/), (typed) => {
-        const { reasons } = checkResponse(entry, single("string", typed));
+        const { reasons } = validateResponse(entry, buildSingle("string", typed));
         expect(reasons.length === 0).toBe(/^[a-z]+[0-9]?$/.test(typed));
       }),
     );
@@ -1302,13 +1303,13 @@ describe("properties", () => {
     fc.assert(
       fc.property(fc.integer({ min: -1_000_000, max: 1_000_000 }), fc.integer({ min: 2, max: 36 }), (integer, base) => {
         const text = integer.toString(base);
-        expect(fields(numericRecord(text, base))).toMatchObject({ integerValue: integer, floatValue: integer });
+        expect(fields(readNumericRecord(text, { base }))).toMatchObject({ integerValue: integer, floatValue: integer });
       }),
     );
     fc.assert(
       fc.property(fc.stringMatching(/^[0-9]{0,5}$/), fc.stringMatching(/^[0-9]{0,5}$/), (left, right) => {
         fc.pre(left + right !== "");
-        const typed = fields(numericRecord(`${left}.${right}`));
+        const typed = fields(readNumericRecord(`${left}.${right}`));
         expect(typed).toMatchObject({ leftDigits: left.length, rightDigits: right.length, ndp: right.length });
         expect(typed.floatValue).toBe(Number(`${left || "0"}.${right || "0"}`));
       }),

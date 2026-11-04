@@ -113,7 +113,7 @@ const instantSchema = v.pipe(finiteSchema, v.minValue(FIRST_INSTANT), v.maxValue
 
 const optionalString = v.optional(v.string());
 
-/** A value: NULL or an object, which `fromWireValue` of the runtime reads when the value is shown. */
+/** A value: NULL or an object, which `readWireValue` of the runtime reads when the value is shown. */
 const valueSchema = v.nullable(recordSchema);
 
 /** A scoring rubric: an object that `checkScoringRubric` of the runtime accepts. */

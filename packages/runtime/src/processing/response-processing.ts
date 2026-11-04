@@ -4,7 +4,7 @@ import { DataError, ProcessingError } from "../errors.js";
 import { checkContext, type Environment, type ProcessingContext } from "./context.js";
 import { ItemScope } from "./item-scope.js";
 import { runOutcomeRules } from "./outcome-rules.js";
-import { STANDARD_TEMPLATES, standardTemplateUri } from "./standard-templates.js";
+import { findStandardTemplate, STANDARD_TEMPLATES } from "./standard-templates.js";
 import { checkItem, checkVariables, type ItemVariables } from "./variables.js";
 
 /**
@@ -20,7 +20,7 @@ import { checkItem, checkVariables, type ItemVariables } from "./variables.js";
 function responseRules(processing: ResponseProcessing | undefined, environment: Environment): readonly ResponseRule[] {
   if (processing === undefined || processing.rules.length > 0) return processing?.rules ?? [];
   const template = processing.template === "" ? undefined : processing.template;
-  const standard = template === undefined ? undefined : STANDARD_TEMPLATES.get(standardTemplateUri(template) ?? "");
+  const standard = template === undefined ? undefined : STANDARD_TEMPLATES.get(findStandardTemplate(template) ?? "");
   if (standard !== undefined) return standard.rules;
   const location = processing.templateLocation ?? template;
   if (location === undefined) return [];

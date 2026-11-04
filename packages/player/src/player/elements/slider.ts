@@ -1,6 +1,6 @@
 import type { SliderInteraction } from "@assesskit/runtime/asi";
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
 import { html } from "../internal.js";
@@ -162,7 +162,7 @@ export class SliderInteractionElement extends InteractionElement {
     const scale = this.#scale;
     if (scale === undefined || this.disabled) return;
     const snapped = snap(scale, value);
-    this.respond(single(scale.integer ? "integer" : "float", snapped));
+    this.respond(buildSingle(scale.integer ? "integer" : "float", snapped));
   }
 
   #key(event: KeyboardEvent): void {

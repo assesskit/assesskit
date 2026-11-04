@@ -19,14 +19,14 @@ const FEDERATED_CONTENT_URN = "urn:fdc:";
  * | `assesskit/pci/type-identifier`       | warning  | `custom-interaction-type-identifier` is not a Federated Content URN (`urn:fdc:...`)               |
  *
  * @param interaction - The PCI.
- * @param configuration - The configuration files that `moduleConfigurationPaths` names, parsed.
+ * @param configuration - The configuration files that `resolveModuleConfigurationPaths` names, parsed.
  * @returns The issues, in the order of the table.
  * @throws `DataError` when an argument has the wrong type.
  * @see
  * {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, portable custom interactions}
  * @see {@link https://www.rfc-editor.org/rfc/rfc4198 | RFC 4198, Federated Content URNs}
  */
-export function checkPortableInteraction(
+export function validatePortableInteraction(
   interaction: PortableCustomInteraction,
   configuration: PciModuleConfiguration,
 ): readonly Issue[] {

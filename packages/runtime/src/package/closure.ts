@@ -6,7 +6,7 @@ import { indexResources } from "./resource-index.js";
 /**
  * Returns a resource with the resources it depends on, directly or through other dependencies: the
  * resource first, then each dependency once in depth-first order, following the order of the `dependency` elements. A
- * cycle ends where it closes. Variants are not part of the closure: `packageResolvers` returns them.
+ * cycle ends where it closes. Variants are not part of the closure: `createPackageResolvers` returns them.
  *
  * @param manifest - The manifest.
  * @param resourceIdentifier - The identifier of the resource to start from.
@@ -14,7 +14,7 @@ import { indexResources } from "./resource-index.js";
  * @throws `DataError` when an argument has the wrong type, the manifest has no such resource, or a dependency names no resource.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding, content packages}
  */
-export function dependencyClosure(manifest: Manifest, resourceIdentifier: string): readonly Resource[] {
+export function listDependencies(manifest: Manifest, resourceIdentifier: string): readonly Resource[] {
   checkRecord(manifest, "The manifest must be an object");
   checkArray(manifest.resources, "The resources of the manifest must be an array");
   checkString(resourceIdentifier, "The resource identifier");

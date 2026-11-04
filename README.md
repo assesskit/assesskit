@@ -17,7 +17,7 @@ flowchart LR
   host --> browser
   host --> server
   browser <-->|"views and actions as JSON"| server
-  browser -->|"viewFromJson, actionToJson"| engine
+  browser -->|"readView, writeCandidateAction"| engine
   server -->|"the engine, its keys and its seed"| engine
   engine --> content
 ```

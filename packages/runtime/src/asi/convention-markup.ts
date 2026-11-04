@@ -16,6 +16,16 @@ export type ListEntry = ElementModel<"LI", "li">;
  */
 export type RubricContent = TestRubricBlock["contentBody"]["children"][number];
 
+/** The options of {@link buildScoreCoversBlock} and {@link buildScoringRubricBlock}. */
+export interface RubricBlockOptions {
+  /**
+   * Content for the scorers before the list, such as instructions.
+   *
+   * @defaultValue `[]`
+   */
+  readonly notes?: readonly RubricContent[];
+}
+
 /** Returns the value of an attribute without a namespace among the extensions of an element, or `undefined` when it has none. */
 export function attributeOf(
   element: { readonly extensions: readonly XmlAttribute[] },

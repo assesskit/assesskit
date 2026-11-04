@@ -2,12 +2,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  checkPortableInteraction,
-  moduleConfigurationPaths,
+  derivePciProperties,
   type PortableCustomInteraction,
-  parseModuleResolution,
-  pciProperties,
+  readModuleResolution,
+  resolveModuleConfigurationPaths,
   resolvePciModules,
+  validatePortableInteraction,
 } from "../src/index.js";
 import { EXAMPLES, exampleItems } from "./corpus-items.js";
 
@@ -31,20 +31,20 @@ function resolutionFile(path: string): string {
 describe("the portable custom interactions of the 1EdTech examples", () => {
   it("read the module resolution file of a package: the timeout and the paths that the JSON says", () => {
     const text = resolutionFile("pci/src/modules/module_resolution.js");
-    const parsed = parseModuleResolution(text);
+    const parsed = readModuleResolution(text);
     const json: { waitSeconds: number; paths: Record<string, string> } = JSON.parse(text);
     expect(parsed.waitSeconds).toBe(60);
     expect([...parsed.paths]).toEqual(Object.entries(json.paths));
     expect(parsed.paths.get("jquery")).toBe("https://code.jquery.com/jquery-2.2.2.min");
     expect(parsed.paths.get("tap")).toBe("modules/tap");
-    const fallback = parseModuleResolution(resolutionFile("pci/src/modules/hmh_co_com_fallback.json"));
+    const fallback = readModuleResolution(resolutionFile("pci/src/modules/hmh_co_com_fallback.json"));
     expect([...fallback.paths.keys()]).toEqual(["jquery", "eve", "raphael"]);
   });
 
   it("have the configuration files the interaction names, and none when it names none", () => {
     for (const path of ["packaging/pci/src/fractions1.xml", "packaging/pci/src/fractions_deps.xml"]) {
       for (const interaction of interactionsOf(path)) {
-        expect(moduleConfigurationPaths(interaction)).toEqual({
+        expect(resolveModuleConfigurationPaths(interaction)).toEqual({
           primary: "modules/module_resolution.js",
           fallback: "modules/fallback_module_resolution.js",
         });
@@ -75,22 +75,22 @@ describe("the portable custom interactions of the 1EdTech examples", () => {
 
   it("load the module of the module attribute from the package configuration", () => {
     const [interaction] = interactionsOf("packaging/pci/src/measuring_ph.xml");
-    const primary = parseModuleResolution(resolutionFile("pci/src/modules/module_resolution.js"));
+    const primary = readModuleResolution(resolutionFile("pci/src/modules/module_resolution.js"));
     expect(interaction?.module).toBe("tap");
     const modules = interaction && resolvePciModules(interaction, { primary });
     expect(modules?.[0]).toEqual({ id: "tap", primary: "modules/tap", packageRelative: true });
     expect(modules?.map(({ id }) => id)).toContain("jquery");
-    expect(interaction && checkPortableInteraction(interaction, { primary }).map(({ code }) => code)).toEqual([
+    expect(interaction && validatePortableInteraction(interaction, { primary }).map(({ code }) => code)).toEqual([
       "assesskit/pci/type-identifier",
     ]);
   });
 
   it("have no module for a module the configuration lacks: measuring_ph names tap, which no configuration locates", () => {
     for (const interaction of interactionsOf("packaging/pci/src/fractions1.xml")) {
-      expect(checkPortableInteraction(interaction, {})).toEqual([]);
+      expect(validatePortableInteraction(interaction, {})).toEqual([]);
     }
     const [interaction] = interactionsOf("packaging/pci/src/measuring_ph.xml");
-    expect(interaction && checkPortableInteraction(interaction, {}).map(({ code }) => code)).toEqual([
+    expect(interaction && validatePortableInteraction(interaction, {}).map(({ code }) => code)).toEqual([
       "assesskit/pci/module-not-configured",
       "assesskit/pci/type-identifier",
     ]);
@@ -99,7 +99,7 @@ describe("the portable custom interactions of the 1EdTech examples", () => {
   it("have a Federated Content URN as type identifier, but for the two tap-to-reveal examples, which write dashes", () => {
     const warned = items.flatMap(({ path }) =>
       interactionsOf(path).flatMap((interaction) =>
-        checkPortableInteraction(interaction, {}).some(({ code }) => code === "assesskit/pci/type-identifier")
+        validatePortableInteraction(interaction, {}).some(({ code }) => code === "assesskit/pci/type-identifier")
           ? [path]
           : [],
       ),
@@ -109,12 +109,12 @@ describe("the portable custom interactions of the 1EdTech examples", () => {
 
   it("pass the data- attributes as properties named like element.dataset", () => {
     const [interaction] = interactionsOf("packaging/pci/src/measuring_ph.xml");
-    expect([...(interaction ? pciProperties(interaction) : [])]).toEqual([
+    expect([...(interaction ? derivePciProperties(interaction) : [])]).toEqual([
       ["toggle", "true"],
       ["tapMessage", "Tap to reveal the color of the solution"],
     ]);
     const [shading] = interactionsOf("packaging/pci/src/fractions1.xml");
-    const properties = shading ? pciProperties(shading) : new Map<string, string>();
+    const properties = shading ? derivePciProperties(shading) : new Map<string, string>();
     expect(properties.get("controls")).toBe("none");
     expect(properties.get("selected_color")).toBe("red");
     expect(properties.get("dimension1_initial")).toBe("3");

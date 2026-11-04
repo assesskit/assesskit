@@ -1,5 +1,5 @@
 import { readAsi } from "@assesskit/runtime/asi";
-import { createEngine, type SupportView, stamp, viewFromJson, viewToJson } from "@assesskit/runtime/delivery";
+import { createEngine, readView, type SupportView, stamp, writeView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import {
   type ColorTheme,
@@ -538,7 +538,7 @@ describe("the support action and the runtime's engine", () => {
     if (!on.ok) throw new Error(on.refusal.message);
     expect(engine.view(on.state, 11).supports.find(({ name }) => name === "high-contrast")?.active).toBe(true);
     // The wire carries the view to the browser, and the panel and the presentation read it there.
-    const wire = viewFromJson(JSON.parse(JSON.stringify(viewToJson(engine.view(on.state, 11)))));
+    const wire = readView(JSON.parse(JSON.stringify(writeView(engine.view(on.state, 11)))));
     expect(lookOf(...wire.supports).attributes).toEqual({ "data-ak-contrast": "high" });
     const off = engine.apply(on.state, stamp(on.state, { type: "support", name: "high-contrast", active: false }, 12));
     if (!off.ok) throw new Error(off.refusal.message);

@@ -7,18 +7,19 @@ import {
   type AssessmentTest,
   type BodyNode,
   type Braille,
+  buildContainer,
+  buildRecord,
+  buildSingle,
   type Catalog,
   type ContentVariables,
-  catalogsFor,
-  checkCatalog,
-  container,
   DataError,
   DRD_HAZARDS,
-  descendantNodes,
+  deriveHazardExposure,
   formatPrintedVariable,
   HAZARD_TERMS,
-  hazardExposure,
   isShown,
+  listCatalogs,
+  listDescendantNodes,
   type ModelNode,
   type PersonalNeedsProfile,
   PNP_HAZARDS,
@@ -27,18 +28,17 @@ import {
   ReadError,
   readAsi,
   readPnp,
-  record,
   resolveContent,
-  rubricBlocksFor,
   type SingleValue,
   selectCard,
-  single,
-  testRubricBlocks,
+  selectModalFeedback,
+  selectRubricBlocks,
+  selectTestFeedback,
+  selectTestRubricBlocks,
   type Value,
   VIEWS,
   type View,
-  visibleModalFeedback,
-  visibleTestFeedback,
+  validateCatalog,
 } from "../src/index.js";
 import { asProfile } from "./arbitraries/pnp.js";
 import printf from "./fixtures/printf.json" with { type: "json" };
@@ -67,17 +67,17 @@ function testOf(content: string): AssessmentTest {
   return document.test;
 }
 
-const id = (value: string): SingleValue => single("identifier", value);
-const int = (value: number): SingleValue => single("integer", value);
-const float = (value: number): SingleValue => single("float", value);
+const id = (value: string): SingleValue => buildSingle("identifier", value);
+const int = (value: number): SingleValue => buildSingle("integer", value);
+const float = (value: number): SingleValue => buildSingle("float", value);
 function text(value: string): SingleValue {
-  const built = single("string", value);
+  const built = buildSingle("string", value);
   if (built === null) throw new Error("The test builds an empty string.");
   return built;
 }
 
 function ids(cardinality: "multiple" | "ordered", values: readonly string[]): Value {
-  const built = container(cardinality, "identifier", values);
+  const built = buildContainer(cardinality, "identifier", values);
   if (built === null) throw new Error("The test builds an empty container.");
   return built;
 }
@@ -99,7 +99,7 @@ function printedOf(attributes: string): PrintedVariable {
 /** The text of a node and its descendants. */
 function textOf(nodes: readonly ModelNode[]): string {
   return nodes
-    .flatMap((node) => [node, ...descendantNodes(node)])
+    .flatMap((node) => [node, ...listDescendantNodes(node)])
     .map((node) => (node.kind === "text" && "value" in node ? String(node.value) : ""))
     .join("");
 }
@@ -180,7 +180,7 @@ describe("catalogs and cards", () => {
     language?: string,
     support: "glossary-on-screen" | "spoken" | "transcript" = "glossary-on-screen",
   ): string | undefined => {
-    const content = selectCard(catalog(), support, language);
+    const content = selectCard(catalog(), support, { language });
     return content === undefined ? undefined : textOf(content.htmlContent === undefined ? [] : [content.htmlContent]);
   };
 
@@ -197,7 +197,9 @@ describe("catalogs and cards", () => {
     expect(htmlOf(undefined, "spoken")).toBe("read this");
     expect(selectCard(catalog(), "sign-language")?.fileHrefs.map((href) => href.value)).toEqual(["a.mp4", "a.webm"]);
     expect(selectCard(catalog(), "sign-language")?.htmlContent).toBeUndefined();
-    expect(selectCard(catalog(), "glossary-on-screen", "id")?.fileHrefs.map((href) => href.value)).toEqual(["id.mp3"]);
+    expect(
+      selectCard(catalog(), "glossary-on-screen", { language: "id" })?.fileHrefs.map((href) => href.value),
+    ).toEqual(["id.mp3"]);
   });
 
   it("gives nothing when the catalog has no card for the support, or no entry fits and none is the default", () => {
@@ -219,12 +221,10 @@ describe("catalogs and cards", () => {
       settings?: Partial<Braille>,
       language?: string,
     ): string[] | undefined =>
-      selectCard(
-        braille,
-        support,
+      selectCard(braille, support, {
         language,
-        settings === undefined ? undefined : { name: "braille", replaceAccessModes: [], ...settings },
-      )?.fileHrefs.map(({ value }) => value);
+        braille: settings === undefined ? undefined : { name: "braille", replaceAccessModes: [], ...settings },
+      })?.fileHrefs.map(({ value }) => value);
     expect(files("braille")).toBeUndefined();
     expect(files("braille", {})).toBeUndefined();
     expect(files("braille", { brailleType: "ueb" })).toEqual(["ueb.brf"]);
@@ -236,20 +236,20 @@ describe("catalogs and cards", () => {
     expect(files("tactile", { brailleType: "ueb" })).toEqual(["ueb-2.svg"]);
     expect(files("tactile", { mathType: "nemeth" }, "fr")).toEqual(["nemeth.svg"]);
     expect(files("tactile", { mathType: "ueb" }, "fr")).toEqual(["ueb-2.svg"]);
-    expect(() => selectCard(braille, "braille", undefined, JSON.parse('"ueb"'))).toThrow(
+    expect(() => selectCard(braille, "braille", { braille: JSON.parse('"ueb"') })).toThrow(
       'The braille settings must be an object, found "ueb".',
     );
     const settingsOf = (json: string): Braille => ({ name: "braille", replaceAccessModes: [], ...JSON.parse(json) });
-    expect(() => selectCard(braille, "braille", undefined, settingsOf('{"brailleType": 5}'))).toThrow(
+    expect(() => selectCard(braille, "braille", { braille: settingsOf('{"brailleType": 5}') })).toThrow(
       "The braille type must be a string, found 5.",
     );
-    expect(() => selectCard(braille, "tactile", undefined, settingsOf('{"mathType": null}'))).toThrow(
+    expect(() => selectCard(braille, "tactile", { braille: settingsOf('{"mathType": null}') })).toThrow(
       "The math type must be a string, found null.",
     );
-    expect(() => selectCard(braille, "tactile", undefined, settingsOf('{"grade": "2"}'))).toThrow(
+    expect(() => selectCard(braille, "tactile", { braille: settingsOf('{"grade": "2"}') })).toThrow(
       'The braille grade must be a positive integer, found "2".',
     );
-    expect(() => selectCard(braille, "tactile", undefined, settingsOf('{"grade": {}}'))).toThrow(
+    expect(() => selectCard(braille, "tactile", { braille: settingsOf('{"grade": {}}') })).toThrow(
       "The braille grade must be a positive integer, found an object.",
     );
   });
@@ -257,7 +257,7 @@ describe("catalogs and cards", () => {
   it("finds the catalog that data-catalog-idref names, wherever the item keeps it", () => {
     const [first, plain, missing, feedback] = catalogItem.body?.children ?? [];
     const reference = (node: BodyNode | undefined): string[] =>
-      node === undefined ? [] : catalogsFor(catalogItem, node).map((found) => found.id);
+      node === undefined ? [] : listCatalogs(catalogItem, node).map((found) => found.id);
     expect(reference(first)).toEqual(["c1"]);
     expect(reference(plain)).toEqual([]);
     expect(reference(missing)).toEqual([]);
@@ -293,20 +293,20 @@ describe("catalogs and cards", () => {
     }
   });
 
-  describe("checkCatalog", () => {
-    const checkIssues = (cards: string): ReturnType<typeof checkCatalog> => {
+  describe("validateCatalog", () => {
+    const checkIssues = (cards: string): ReturnType<typeof validateCatalog> => {
       const item = itemOf(
         `<qti-item-body><p>x</p></qti-item-body><qti-catalog-info><qti-catalog id="c">${cards}</qti-catalog></qti-catalog-info>`,
       );
       const [found] = item.catalogInfo?.catalogs ?? [];
       if (found === undefined) throw new Error("The test reads a catalog.");
-      return checkCatalog(found);
+      return validateCatalog(found);
     };
     const check = (cards: string): string[] => checkIssues(cards).map(({ code }) => code);
     const html = "<qti-html-content>x</qti-html-content>";
 
     it("reports nothing for a catalog that follows the rules", () => {
-      expect(checkCatalog(catalog())).toEqual([]);
+      expect(validateCatalog(catalog())).toEqual([]);
       expect(
         check(
           `<qti-card support="spoken">${html}</qti-card><qti-card support="braille"><qti-file-href mime-type="text/plain">b.brf</qti-file-href></qti-card>`,
@@ -347,10 +347,11 @@ describe("catalogs and cards", () => {
     expect(() => selectCard(json("null"), "spoken")).toThrow(DataError);
     expect(() => selectCard(json('{"cards": 1}'), "spoken")).toThrow(DataError);
     expect(() => selectCard(catalog(), json("1"))).toThrow(DataError);
-    expect(() => selectCard(catalog(), "spoken", json("1"))).toThrow(DataError);
-    expect(() => catalogsFor(json("null"), { kind: "text", value: "x" })).toThrow(DataError);
-    expect(() => catalogsFor(catalogItem, json("null"))).toThrow(DataError);
-    expect(() => checkCatalog(json("null"))).toThrow(DataError);
+    expect(() => selectCard(catalog(), "spoken", { language: json("1") })).toThrow(DataError);
+    expect(() => selectCard(catalog(), "spoken", json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => listCatalogs(json("null"), { kind: "text", value: "x" })).toThrow(DataError);
+    expect(() => listCatalogs(catalogItem, json("null"))).toThrow(DataError);
+    expect(() => validateCatalog(json("null"))).toThrow(DataError);
   });
 });
 
@@ -359,7 +360,7 @@ describe("modal feedback", () => {
     '<qti-item-body><p>x</p></qti-item-body><qti-modal-feedback outcome-identifier="FEEDBACK" show-hide="show" identifier="right" title="Right"><qti-content-body><p>Right</p></qti-content-body></qti-modal-feedback><qti-modal-feedback outcome-identifier="FEEDBACK" show-hide="show" identifier="wrong"><qti-content-body><p>Wrong</p></qti-content-body></qti-modal-feedback><qti-modal-feedback outcome-identifier="FEEDBACK" show-hide="hide" identifier="wrong"><qti-content-body><p>Not wrong</p></qti-content-body></qti-modal-feedback>',
   );
   const shown = (feedback: Value | null): string[] =>
-    visibleModalFeedback(item, new Map([["FEEDBACK", feedback]])).map((modal) => textOf(modal.contentBody.children));
+    selectModalFeedback(item, new Map([["FEEDBACK", feedback]])).map((modal) => textOf(modal.contentBody.children));
 
   it("shows the modal feedback that the outcome selects, in document order", () => {
     expect(shown(id("right"))).toEqual(["Right", "Not wrong"]);
@@ -369,20 +370,20 @@ describe("modal feedback", () => {
 
   it("treats a missing or NULL outcome as naming nothing", () => {
     expect(shown(null)).toEqual(["Not wrong"]);
-    expect(visibleModalFeedback(item, new Map()).map((modal) => modal.identifier)).toEqual(["wrong"]);
+    expect(selectModalFeedback(item, new Map()).map((modal) => modal.identifier)).toEqual(["wrong"]);
   });
 
   it("shows the feedback of the outcomes it is given: the defaults give the item as at the start of the attempt, the final outcomes the feedback", () => {
     const defaults = new Map<string, Value | null>([["FEEDBACK", null]]);
     const final = new Map<string, Value | null>([["FEEDBACK", id("right")]]);
-    expect(visibleModalFeedback(item, defaults).map((modal) => modal.identifier)).toEqual(["wrong"]);
-    expect(visibleModalFeedback(item, final).map((modal) => modal.identifier)).toEqual(["right", "wrong"]);
+    expect(selectModalFeedback(item, defaults).map((modal) => modal.identifier)).toEqual(["wrong"]);
+    expect(selectModalFeedback(item, final).map((modal) => modal.identifier)).toEqual(["right", "wrong"]);
   });
 
   it("refuses arguments of the wrong type", () => {
-    expect(() => visibleModalFeedback(json("null"), new Map())).toThrow(DataError);
-    expect(() => visibleModalFeedback(json('{"modalFeedback": 1}'), new Map())).toThrow(DataError);
-    expect(() => visibleModalFeedback(item, json("{}"))).toThrow(
+    expect(() => selectModalFeedback(json("null"), new Map())).toThrow(DataError);
+    expect(() => selectModalFeedback(json('{"modalFeedback": 1}'), new Map())).toThrow(DataError);
+    expect(() => selectModalFeedback(item, json("{}"))).toThrow(
       "The outcomes must be a Map from identifier to value, found an object.",
     );
   });
@@ -394,7 +395,7 @@ describe("test feedback", () => {
   );
   const feedback = test.testParts[0]?.testFeedback ?? [];
   const shown = (access: "atEnd" | "during", outcome: Value | null): string[] =>
-    visibleTestFeedback(feedback, new Map([["PASSED", outcome]]), access).map((entry) =>
+    selectTestFeedback(feedback, new Map([["PASSED", outcome]]), access).map((entry) =>
       textOf(entry.contentBody?.children ?? []),
     );
 
@@ -406,11 +407,11 @@ describe("test feedback", () => {
   });
 
   it("refuses an access that is neither during nor atEnd, and other arguments of the wrong type", () => {
-    expect(() => visibleTestFeedback(feedback, new Map(), json('"always"'))).toThrow(
+    expect(() => selectTestFeedback(feedback, new Map(), json('"always"'))).toThrow(
       'The access must be "during" or "atEnd", found "always".',
     );
-    expect(() => visibleTestFeedback(json("null"), new Map(), "during")).toThrow(DataError);
-    expect(() => visibleTestFeedback(feedback, json("[]"), "during")).toThrow(DataError);
+    expect(() => selectTestFeedback(json("null"), new Map(), "during")).toThrow(DataError);
+    expect(() => selectTestFeedback(feedback, json("[]"), "during")).toThrow(DataError);
   });
 
   it("TestFeedbackAccessEnum: reads during and atEnd and refuses any other term", () => {
@@ -446,7 +447,9 @@ describe("hazards", () => {
     const avoiding = profile(
       "<hazard-avoidance>flashing</hazard-avoidance><hazard-avoidance>olfactory-hazard</hazard-avoidance>",
     );
-    expect(hazardExposure(["flashing", "sound", "olfactoryHazard", "motionSimulation"], avoiding)).toEqual([
+    expect(
+      deriveHazardExposure(["flashing", "sound", "olfactoryHazard", "motionSimulation"], { profile: avoiding }),
+    ).toEqual([
       { hazard: "flashing", avoided: true },
       { hazard: "sound", avoided: false },
       { hazard: "olfactory-hazard", avoided: true },
@@ -455,22 +458,25 @@ describe("hazards", () => {
   });
 
   it("avoids nothing without a profile or a hazard-avoidance, lists each hazard once and none for a resource without hazards", () => {
-    expect(hazardExposure(["sound", "sound"])).toEqual([{ hazard: "sound", avoided: false }]);
-    expect(hazardExposure(["sound"], profile("<high-contrast/>"))).toEqual([{ hazard: "sound", avoided: false }]);
-    expect(hazardExposure([], profile("<hazard-avoidance>sound</hazard-avoidance>"))).toEqual([]);
+    expect(deriveHazardExposure(["sound", "sound"])).toEqual([{ hazard: "sound", avoided: false }]);
+    expect(deriveHazardExposure(["sound"], { profile: profile("<high-contrast/>") })).toEqual([
+      { hazard: "sound", avoided: false },
+    ]);
+    expect(deriveHazardExposure([], { profile: profile("<hazard-avoidance>sound</hazard-avoidance>") })).toEqual([]);
   });
 
   it("does not take an extension term of the PNP for a hazard of the resource", () => {
     const extended = profile("<hazard-avoidance>ext:strobe</hazard-avoidance>");
-    expect(hazardExposure(["flashing"], extended)).toEqual([{ hazard: "flashing", avoided: false }]);
+    expect(deriveHazardExposure(["flashing"], { profile: extended })).toEqual([{ hazard: "flashing", avoided: false }]);
   });
 
   it("refuses arguments of the wrong type", () => {
-    expect(() => hazardExposure(json("null"))).toThrow(DataError);
-    expect(() => hazardExposure(json('["olfactory-hazard"]'))).toThrow(
+    expect(() => deriveHazardExposure(json("null"))).toThrow(DataError);
+    expect(() => deriveHazardExposure(json('["olfactory-hazard"]'))).toThrow(
       'A hazard must be one of flashing, motionSimulation, olfactoryHazard, sound, found "olfactory-hazard".',
     );
-    expect(() => hazardExposure([], json("1"))).toThrow(DataError);
+    expect(() => deriveHazardExposure([], { profile: json("1") })).toThrow("The profile must be an object, found 1.");
+    expect(() => deriveHazardExposure([], json("null"))).toThrow("The options must be an object, found null.");
   });
 });
 
@@ -566,21 +572,21 @@ describe("printed variables", () => {
     expect(print("", float(0.1))).toBe("0.1");
     expect(print("", float(1234567))).toBe("1.23457E+06");
     expect(print("", float(100000))).toBe("100000");
-    expect(print("", single("duration", 90))).toBe("90");
+    expect(print("", buildSingle("duration", 90))).toBe("90");
   });
 
   it("writes the other base types as text: boolean, point, pair, directed pair, identifier, string, uri and the name of a file", () => {
-    expect(print("", single("boolean", true))).toBe("true");
-    expect(print("", single("point", [118, 184]))).toBe("118 184");
-    expect(print("", single("pair", ["W", "G1"]))).toBe("W G1");
-    expect(print("", single("directedPair", ["a", "b"]))).toBe("a b");
+    expect(print("", buildSingle("boolean", true))).toBe("true");
+    expect(print("", buildSingle("point", [118, 184]))).toBe("118 184");
+    expect(print("", buildSingle("pair", ["W", "G1"]))).toBe("W G1");
+    expect(print("", buildSingle("directedPair", ["a", "b"]))).toBe("a b");
     expect(print("", id("choiceA"))).toBe("choiceA");
     expect(print("", text("Hello"))).toBe("Hello");
-    expect(print("", single("uri", "http://example.com/x"))).toBe("http://example.com/x");
-    expect(print("", single("file", { reference: "f1", mimeType: "text/plain", fileName: "notes.txt" }))).toBe(
+    expect(print("", buildSingle("uri", "http://example.com/x"))).toBe("http://example.com/x");
+    expect(print("", buildSingle("file", { reference: "f1", mimeType: "text/plain", fileName: "notes.txt" }))).toBe(
       "notes.txt",
     );
-    expect(print("", single("file", { reference: "f1", mimeType: "text/plain" }))).toBe("");
+    expect(print("", buildSingle("file", { reference: "f1", mimeType: "text/plain" }))).toBe("");
   });
 
   it("writes NULL as the empty string", () => {
@@ -607,7 +613,7 @@ describe("printed variables", () => {
     const multiple = ids("multiple", ["A", "B", "C"]);
     expect(print("", multiple)).toBe("A;B;C");
     expect(print('delimiter=", "', multiple)).toBe("A, B, C");
-    expect(print('format="%.1f"', container("ordered", "float", [1, 2.25]))).toBe("1.0;2.2");
+    expect(print('format="%.1f"', buildContainer("ordered", "float", [1, 2.25]))).toBe("1.0;2.2");
   });
 
   it("writes only the value at index of an ordered container, counting from 1, and nothing when there is none", () => {
@@ -620,7 +626,7 @@ describe("printed variables", () => {
   });
 
   it("writes a record as its fields with the mapping indicator, = by default, or the one field that field names", () => {
-    const fields = record([
+    const fields = buildRecord([
       ["name", text("Ada")],
       ["score", float(0.5)],
     ]);
@@ -726,7 +732,11 @@ describe("resolving content", () => {
       ["count", "7"],
       ["keep", "literal"],
     ]);
-    const asAuthored = resolve(rightOutcomes, { ...drawnTemplates, W: null, N: container("multiple", "integer", [1]) });
+    const asAuthored = resolve(rightOutcomes, {
+      ...drawnTemplates,
+      W: null,
+      N: buildContainer("multiple", "integer", [1]),
+    });
     const kept = asAuthored.find((node) => node.kind === "div");
     const authored = kept?.kind === "div" && kept.children[0]?.kind === "object" ? kept.children[0].children : [];
     expect(authored.flatMap((child) => (child.kind === "param" ? [child.value] : []))).toEqual(["W", "N", "literal"]);
@@ -786,33 +796,34 @@ describe("rubric blocks", () => {
   const outer = part?.sections[0];
   const inner = outer?.kind === "assessment-section" ? outer.children[0] : undefined;
   const sections = [outer, inner].flatMap((section) => (section?.kind === "assessment-section" ? [section] : []));
-  const labels = (blocks: ReturnType<typeof testRubricBlocks>): string[] => blocks.map((entry) => textOf([entry]));
+  const labels = (blocks: ReturnType<typeof selectTestRubricBlocks>): string[] =>
+    blocks.map((entry) => textOf([entry]));
 
   it("keeps the rubric blocks of a list whose view lists the view", () => {
     const blocks = rubricTest.rubricBlocks;
-    expect(labels(rubricBlocksFor(blocks, "candidate"))).toEqual(["test candidate"]);
-    expect(labels(rubricBlocksFor(blocks, "scorer"))).toEqual(["test scorer"]);
-    expect(rubricBlocksFor(blocks, "proctor")).toEqual([]);
+    expect(labels(selectRubricBlocks(blocks, "candidate"))).toEqual(["test candidate"]);
+    expect(labels(selectRubricBlocks(blocks, "scorer"))).toEqual(["test scorer"]);
+    expect(selectRubricBlocks(blocks, "proctor")).toEqual([]);
   });
 
   it("puts the rubric in the order test, test part, then the sections from the top down, each level in its own order", () => {
-    expect(labels(testRubricBlocks({ test: rubricTest, part, sections }, "candidate"))).toEqual([
+    expect(labels(selectTestRubricBlocks({ test: rubricTest, part, sections }, "candidate"))).toEqual([
       "test candidate",
       "part candidate",
       "outer candidate",
       "inner candidate",
     ]);
-    expect(labels(testRubricBlocks({ test: rubricTest, part, sections }, "tutor"))).toEqual(["outer candidate"]);
-    expect(labels(testRubricBlocks({ test: rubricTest, part, sections }, "author"))).toEqual(["inner author"]);
+    expect(labels(selectTestRubricBlocks({ test: rubricTest, part, sections }, "tutor"))).toEqual(["outer candidate"]);
+    expect(labels(selectTestRubricBlocks({ test: rubricTest, part, sections }, "author"))).toEqual(["inner author"]);
   });
 
   it("gives the rubric of the test alone, or of the test and its part, when the position has no part or no sections", () => {
-    expect(labels(testRubricBlocks({ test: rubricTest }, "candidate"))).toEqual(["test candidate"]);
-    expect(labels(testRubricBlocks({ test: rubricTest, part }, "candidate"))).toEqual([
+    expect(labels(selectTestRubricBlocks({ test: rubricTest }, "candidate"))).toEqual(["test candidate"]);
+    expect(labels(selectTestRubricBlocks({ test: rubricTest, part }, "candidate"))).toEqual([
       "test candidate",
       "part candidate",
     ]);
-    expect(labels(testRubricBlocks({ test: rubricTest, sections: [] }, "candidate"))).toEqual(["test candidate"]);
+    expect(labels(selectTestRubricBlocks({ test: rubricTest, sections: [] }, "candidate"))).toEqual(["test candidate"]);
   });
 
   it("ViewEnum: reads author, candidate, proctor, scorer, testConstructor and tutor, alone or together, and refuses any other term", () => {
@@ -857,13 +868,13 @@ describe("rubric blocks", () => {
   });
 
   it("refuses arguments of the wrong type", () => {
-    expect(() => rubricBlocksFor(json("null"), "candidate")).toThrow(DataError);
-    expect(() => rubricBlocksFor([], json('"student"'))).toThrow(DataError);
-    expect(() => rubricBlocksFor(json("[1]"), "candidate")).toThrow(DataError);
-    expect(() => rubricBlocksFor(json('[{"view": "candidate"}]'), "candidate")).toThrow(DataError);
-    expect(() => testRubricBlocks(json("null"), "candidate")).toThrow(DataError);
-    expect(() => testRubricBlocks(json("{}"), "candidate")).toThrow(DataError);
-    expect(() => testRubricBlocks({ test: rubricTest, sections: json("1") }, "candidate")).toThrow(DataError);
+    expect(() => selectRubricBlocks(json("null"), "candidate")).toThrow(DataError);
+    expect(() => selectRubricBlocks([], json('"student"'))).toThrow(DataError);
+    expect(() => selectRubricBlocks(json("[1]"), "candidate")).toThrow(DataError);
+    expect(() => selectRubricBlocks(json('[{"view": "candidate"}]'), "candidate")).toThrow(DataError);
+    expect(() => selectTestRubricBlocks(json("null"), "candidate")).toThrow(DataError);
+    expect(() => selectTestRubricBlocks(json("{}"), "candidate")).toThrow(DataError);
+    expect(() => selectTestRubricBlocks({ test: rubricTest, sections: json("1") }, "candidate")).toThrow(DataError);
   });
 });
 
@@ -893,7 +904,7 @@ describe("the visibility of content", () => {
   it("a variable of another base type or a record names nothing", () => {
     expect(isShown("show", "A", text("A"))).toBe(false);
     expect(isShown("hide", "A", text("A"))).toBe(true);
-    expect(isShown("show", "A", record([["A", id("A")]]))).toBe(false);
+    expect(isShown("show", "A", buildRecord([["A", id("A")]]))).toBe(false);
     expect(isShown("show", "1", int(1))).toBe(false);
   });
 

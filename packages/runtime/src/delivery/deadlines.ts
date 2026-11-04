@@ -74,7 +74,7 @@ export function runningScopes(course: Course, state: DeliveryState): RunningScop
       scope: kind,
       identifier,
       instance,
-      limits: timeLimits(node, extra),
+      limits: timeLimits(node, { extra }),
       spent: clock?.spent ?? 0,
       ...(expired === undefined ? {} : { expired }),
     };
@@ -97,7 +97,7 @@ export function runningScopes(course: Course, state: DeliveryState): RunningScop
       scope: "item",
       identifier: current.ref,
       instance: current.instance,
-      limits: timeLimits(node, extra),
+      limits: timeLimits(node, { extra }),
       spent: item.session.spent + (state.at - item.session.since),
       ...(expired === undefined ? {} : { expired }),
     },

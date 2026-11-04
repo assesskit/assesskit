@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   type AssessmentItem,
-  checkBindings,
-  checkResponse,
   createItemVariables,
   createRandom,
   describeInteractions,
@@ -10,6 +8,8 @@ import {
   ProcessingError,
   shuffleChoices,
   type Value,
+  validateBindings,
+  validateResponse,
 } from "../src/index.js";
 import { exampleItems } from "./corpus-items.js";
 
@@ -63,7 +63,7 @@ describe("the interactions of the 1EdTech examples", () => {
   });
 
   it("bind a response variable that the interaction accepts, in every example", () => {
-    for (const { path, item } of items) expect(checkBindings(item), path).toEqual([]);
+    for (const { path, item } of items) expect(validateBindings(item), path).toEqual([]);
   });
 
   it("have a correct response that is a valid response, but for one example that pairs a hotspot with a choice", () => {
@@ -75,7 +75,7 @@ describe("the interactions of the 1EdTech examples", () => {
         const response = correct.get(descriptor.responseIdentifier) ?? null;
         if (response === null) continue;
         checked++;
-        const { status, reasons } = checkResponse(descriptor, response);
+        const { status, reasons } = validateResponse(descriptor, response);
         if (status !== "answered") rejected.push(`${path} ${descriptor.responseIdentifier}: ${reasons.join(", ")}`);
       }
     }

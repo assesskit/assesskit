@@ -122,7 +122,9 @@ describe("writeAsi: worked examples", () => {
     const block = buildScoreCoversBlock(
       "CONTENT",
       [{ itemRef: "W1", responseIdentifier: "RESPONSE", label: "Task 1" }],
-      notes,
+      {
+        notes,
+      },
     );
     const test: AssessmentTest = { ...document.test, rubricBlocks: [block] };
     expect(await validated({ kind: "test", test })).toEqual([]);
@@ -134,7 +136,7 @@ describe("writeAsi: worked examples", () => {
     if (item.kind !== "item" || test.kind !== "test") throw new Error("Expected an item and a test.");
     const notes: XmlElement[] = [];
     for (const rubric of Object.values(KIND_EXAMPLES)) {
-      const block = buildScoringRubricBlock({ ...rubric, outcomeIdentifier: "SCORE" }, notes);
+      const block = buildScoringRubricBlock({ ...rubric, outcomeIdentifier: "SCORE" }, { notes });
       const body = { kind: "item-body", children: [...(item.item.body?.children ?? []), block] } as const;
       expect(await validated({ kind: "item", item: { ...item.item, body } }), rubric.kind).toEqual([]);
       const rubricBlocks = [...test.test.rubricBlocks, block];

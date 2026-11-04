@@ -4,9 +4,9 @@ import { DataError, ProcessingError } from "../errors.js";
 import { normalizeValue, type Value } from "../values/index.js";
 import { assign, describeType, fitValue, type VariableType } from "./assign.js";
 import type { Environment } from "./context.js";
-import { declaredValue } from "./declared-value.js";
+import { readDeclaredValue } from "./declared-value.js";
 import { ItemScope } from "./item-scope.js";
-import { itemIdentifier, weigh, weightOf } from "./item-session.js";
+import { resolveItemIdentifier, weigh, weightOf } from "./item-session.js";
 import type { DeclaredResponse, Scope } from "./scope.js";
 import type { ItemSessionView, TestScope } from "./test-scope.js";
 import { initialOutcome } from "./variables.js";
@@ -86,13 +86,13 @@ export class OutcomeScope implements Scope {
     this.test = scope;
     for (const declaration of test.contextDeclarations) {
       const what = `The default value of ${declaration.identifier}`;
-      this.defaults.set(declaration.identifier, declaredValue(declaration.defaultValue?.values, declaration, what));
+      this.defaults.set(declaration.identifier, readDeclaredValue(declaration.defaultValue?.values, declaration, what));
     }
     for (const declaration of test.outcomeDeclarations) this.declarations.set(declaration.identifier, declaration);
     const values = givenOutcomes(given, this.declarations);
     for (const declaration of test.outcomeDeclarations) {
       const what = `The default value of ${declaration.identifier}`;
-      const defaultValue = declaredValue(declaration.defaultValue?.values, declaration, what);
+      const defaultValue = readDeclaredValue(declaration.defaultValue?.values, declaration, what);
       this.defaults.set(declaration.identifier, defaultValue);
       const value = values.has(declaration.identifier)
         ? (values.get(declaration.identifier) ?? null)
@@ -114,7 +114,7 @@ export class OutcomeScope implements Scope {
     const view = named === undefined ? undefined : this.test.itemSession(item, named.instance);
     if (named === undefined || view === undefined) return undefined;
     const scope = new ItemScope(view.item, view.variables, this.environment, "item");
-    return { view, scope, identifier: itemIdentifier(view.ref, named.name) };
+    return { view, scope, identifier: resolveItemIdentifier(view.ref, named.name) };
   }
 
   variable(identifier: string, weightIdentifier: string | undefined): Value | null {

@@ -8,7 +8,7 @@ import {
   type ScorerView,
   type Step,
 } from "@assesskit/runtime/delivery";
-import { single, type Value } from "@assesskit/runtime/values";
+import { buildSingle, type Value } from "@assesskit/runtime/values";
 
 /** Throws, so that a fixture that is not what a test expects fails by name. */
 export function fail(message: string): never {
@@ -149,7 +149,7 @@ export const answer = (ref: string, value: Value | null, at: number): Action => 
 
 /** An action that sets the string response of an essay. */
 export const write = (ref: string, text: string, at: number): Action =>
-  answer(ref, single("string", text) ?? fail("A string value cannot be empty."), at);
+  answer(ref, buildSingle("string", text) ?? fail("A string value cannot be empty."), at);
 
 /** An action on an item that needs no more than the item. */
 export const act = (type: "submit" | "skip", ref: string, at: number): Action => ({ type, item: key(ref), at });

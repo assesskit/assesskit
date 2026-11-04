@@ -103,7 +103,7 @@ export class Findings {
   }
 
   /**
-   * Adds issues that another check returned, such as `checkBindings`, naming the file when they do not.
+   * Adds issues that another check returned, such as `validateBindings`, naming the file when they do not.
    *
    * @param issues - The issues to add.
    */

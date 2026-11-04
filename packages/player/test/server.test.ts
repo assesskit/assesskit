@@ -1,18 +1,18 @@
 import {
-  actionToJson,
   type CandidateAction,
   type CandidateView,
   createEngine,
   type DeliveryEventType,
   deserializeState,
   type HostAction,
+  readView,
   stamp,
-  viewFromJson,
-  viewToJson,
+  writeCandidateAction,
+  writeView,
 } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { type PersonalNeedsProfile, PNP_NAMESPACE, readPnp } from "@assesskit/runtime/pnp";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import assetGateGuide from "../../../docs/player/asset-gate.md?raw";
@@ -79,14 +79,14 @@ const BOB = { session: "exam-1", principal: "bob" };
 const NOW = 1_700_000_000_000;
 
 /** The envelope of a request: an action of the candidate in the runtime's JSON form, with its sequence number. */
-const request = (seq: number, action: CandidateAction): unknown => ({ seq, action: actionToJson(action) });
+const request = (seq: number, action: CandidateAction): unknown => ({ seq, action: writeCandidateAction(action) });
 const Q1 = { ref: "q1", instance: 1 };
 const answer = (identifier: string): CandidateAction => ({
   type: "set-responses",
   item: Q1,
-  responses: new Map([["RESPONSE", single("identifier", identifier)]]),
+  responses: new Map([["RESPONSE", buildSingle("identifier", identifier)]]),
 });
-const viewOf = (envelope: ViewEnvelope): CandidateView => viewFromJson(envelope.view);
+const viewOf = (envelope: ViewEnvelope): CandidateView => readView(envelope.view);
 
 describe("collectAssetPrefixes", () => {
   it("gives the content root the deepest directory that holds its document, image and stylesheet", async () => {
@@ -808,7 +808,7 @@ describe("createSessionHost", () => {
     const reply = await host.handle(ALICE, request(1, answer("A")));
     expect(reply.seq).toBe(1);
     expect(reply.refusal).toBeUndefined();
-    expect(viewOf(reply).current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+    expect(viewOf(reply).current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "A"));
     const stored = store.records.get("exam-1");
     expect(stored).toMatchObject({ principal: "alice", version: 1, seq: 1 });
     const state = deserializeState(stored?.state ?? "");
@@ -897,7 +897,7 @@ describe("createSessionHost", () => {
     expect(again.seq).toBe(1);
     expect(store.saves).toHaveLength(saves);
     expect(logged).toHaveLength(steps);
-    expect(viewOf(again).current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+    expect(viewOf(again).current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "A"));
   });
 
   it("renews the tokens of a repeated answer", async () => {
@@ -977,7 +977,7 @@ describe("createSessionHost", () => {
     clock.advance(600_000);
     const resumed = await host.handle(ALICE, request(3, { type: "resume" }));
     expect(viewOf(resumed).status).toBe("in-progress");
-    expect(viewOf(resumed).current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+    expect(viewOf(resumed).current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "A"));
     const without = await examHost();
     const plain = await without.host.start(ALICE, { seed: 7, pnp: profile(false) });
     expect(viewOf(plain).actions).not.toContain("suspend");
@@ -1031,7 +1031,7 @@ describe("createSessionHost", () => {
     expect((await host.proctor(ALICE.session, { type: "resume" })).refusal).toBeUndefined();
     const after = await host.handle(ALICE, request(3, answer("B")));
     expect(after.refusal).toBeUndefined();
-    expect(viewOf(after).current?.responses.get("RESPONSE")).toEqual(single("identifier", "B"));
+    expect(viewOf(after).current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "B"));
     // The refused request saved a version without events, so the log has no step for it.
     expect(logged.map(({ step }) => step)).toEqual(["start", 1, 2, 4, 5]);
     expect(store.records.get("exam-1")?.version).toBe(5);
@@ -1057,7 +1057,7 @@ describe("createSessionHost", () => {
     await host.start(ALICE, { seed: 7 });
     store.conflictNext(MAX_SAVE_RETRIES);
     const reply = await host.handle(ALICE, request(1, answer("A")));
-    expect(viewOf(reply).current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+    expect(viewOf(reply).current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "A"));
     expect(store.saves).toHaveLength(1);
     expect(store.records.get("exam-1")).toMatchObject({ version: MAX_SAVE_RETRIES + 1, seq: 1 });
     expect(logged.filter(({ events }) => events.some(({ type }) => type === "responses-set"))).toHaveLength(1);
@@ -1147,7 +1147,7 @@ describe("createSessionHost", () => {
     });
     const restored = await second.view(ALICE);
     expect(restored.seq).toBe(1);
-    expect(viewOf(restored).current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+    expect(viewOf(restored).current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "A"));
     const next = await second.handle(ALICE, request(restored.seq + 1, { type: "move", to: "next" }));
     expect(viewOf(next).current?.key).toEqual({ ref: "q2", instance: 1 });
   });
@@ -1201,7 +1201,7 @@ describe("createSessionHost", () => {
       request(2, {
         type: "set-responses",
         item: q2,
-        responses: new Map([["RESPONSE", single("string", "An essay.")]]),
+        responses: new Map([["RESPONSE", buildSingle("string", "An essay.")]]),
       }),
     );
     await host.handle(ALICE, request(3, { type: "submit", item: q2 }));
@@ -1209,7 +1209,7 @@ describe("createSessionHost", () => {
     expect(pending?.id).toBe("item:q2:1:SCORE");
     expect(logged.filter(({ supplied }) => supplied !== undefined)).toEqual([]);
     const session = host.session(ALICE.session);
-    const value = single("float", 3);
+    const value = buildSingle("float", 3);
     const supply = { type: "supply-scores", request: pending?.id ?? "", value, scorer: "human" } as const;
 
     const bare = await session.apply(supply);
@@ -1218,9 +1218,13 @@ describe("createSessionHost", () => {
     expect(supplied?.supplied).toStrictEqual({ value, scorer: "human" });
     expect(supplied?.events.map(({ type }) => type)).toContain("scores-applied");
 
-    const named = await session.apply({ ...supply, value: single("float", 4) }, { scoredBy: "rater-17" });
+    const named = await session.apply({ ...supply, value: buildSingle("float", 4) }, { scoredBy: "rater-17" });
     expect(named.events.map(({ type }) => type)).toContain("scores-replaced");
-    expect(logged.at(-1)?.supplied).toStrictEqual({ value: single("float", 4), scorer: "human", scoredBy: "rater-17" });
+    expect(logged.at(-1)?.supplied).toStrictEqual({
+      value: buildSingle("float", 4),
+      scorer: "human",
+      scoredBy: "rater-17",
+    });
     await expect(session.apply(supply, { scoredBy: "" })).rejects.toThrow(
       new DataError('The option scoredBy must be a non-empty string, found "".'),
     );
@@ -1260,8 +1264,8 @@ describe("createSessionHost", () => {
     const before = order.length;
     const replayed = await host.handle(ALICE, request(1, answer("A")));
     expect(order).toHaveLength(before);
-    expect(viewOf(replayed).current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
-    expect(viewOf(await host.view(ALICE)).current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+    expect(viewOf(replayed).current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "A"));
+    expect(viewOf(await host.view(ALICE)).current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "A"));
   });
 
   it("rejects a forward option without a log", async () => {
@@ -1287,14 +1291,14 @@ describe("createSessionHost", () => {
     const q2 = { ref: "q2", instance: 1 };
     const replies = [await host.start(ALICE, { seed: 7 })];
     replies.push(await host.handle(ALICE, request(1, { type: "move", to: q2 })));
-    const guess = new Map([["RESPONSE", single("string", "A guess")]]);
+    const guess = new Map([["RESPONSE", buildSingle("string", "A guess")]]);
     replies.push(await host.handle(ALICE, request(2, { type: "set-responses", item: q2, responses: guess })));
     replies.push(await host.handle(ALICE, request(3, { type: "submit", item: q2 })));
     replies.push(await host.view(ALICE));
     for (const reply of replies) expect(JSON.stringify(reply)).not.toContain(RATED_KEY);
     const [pending] = (await host.session(ALICE.session).pending()).scoring;
     const view = await host.session(ALICE.session).scorerView(pending?.id ?? "");
-    expect(view.items[0]?.correctResponses.get("RESPONSE")).toEqual(single("string", RATED_KEY));
+    expect(view.items[0]?.correctResponses.get("RESPONSE")).toEqual(buildSingle("string", RATED_KEY));
   });
 
   it("keeps the scoring rubric of a rated item out of every envelope, and gives it to the rater", async () => {
@@ -1302,7 +1306,7 @@ describe("createSessionHost", () => {
     const q2 = { ref: "q2", instance: 1 };
     const replies = [await host.start(ALICE, { seed: 7 })];
     replies.push(await host.handle(ALICE, request(1, { type: "move", to: q2 })));
-    const guess = new Map([["RESPONSE", single("string", "A guess")]]);
+    const guess = new Map([["RESPONSE", buildSingle("string", "A guess")]]);
     replies.push(await host.handle(ALICE, request(2, { type: "set-responses", item: q2, responses: guess })));
     replies.push(await host.handle(ALICE, request(3, { type: "submit", item: q2 })));
     replies.push(await host.view(ALICE));
@@ -1674,7 +1678,7 @@ describe("the option cat of the session host", () => {
   const choose = (ref: string): CandidateAction => ({
     type: "set-responses",
     item: item(ref),
-    responses: new Map([["RESPONSE", single("identifier", "A")]]),
+    responses: new Map([["RESPONSE", buildSingle("identifier", "A")]]),
   });
 
   /** A session host over the adaptive test, whose CAT engine is behind the port. */
@@ -1902,10 +1906,10 @@ describe("the option cat of the session host", () => {
       expect(moved.refusal).toBeUndefined();
       expect(viewOf(moved).current?.key).toEqual(b1);
       expect((await session.pending()).cat.map(({ kind }) => kind)).toEqual(["end-session"]);
-      const draft = new Map([["RESPONSE", single("string", "A draft.")]]);
+      const draft = new Map([["RESPONSE", buildSingle("string", "A draft.")]]);
       const saved = await host.handle(ALICE, request(2, { type: "set-responses", item: b1, responses: draft }));
       expect(saved.refusal).toBeUndefined();
-      expect(viewOf(saved).current?.responses.get("RESPONSE")).toEqual(single("string", "A draft."));
+      expect(viewOf(saved).current?.responses.get("RESPONSE")).toEqual(buildSingle("string", "A draft."));
       expect(store.records.get("exam-1")?.seq).toBe(2);
       expect(port.calls.filter((call) => call === "endSession").length).toBeGreaterThan(1);
     });
@@ -1928,7 +1932,7 @@ describe("the option cat of the session host", () => {
 
     it("applies the score that a rater supplies, and reports the failure", async () => {
       const { host, session } = await abandoned();
-      const text = new Map([["RESPONSE", single("string", "An essay.")]]);
+      const text = new Map([["RESPONSE", buildSingle("string", "An essay.")]]);
       await host.handle(ALICE, request(2, { type: "set-responses", item: b1, responses: text }));
       await host.handle(ALICE, request(3, { type: "submit", item: b1 }));
       const [pending] = (await session.pending()).scoring;
@@ -1936,7 +1940,7 @@ describe("the option cat of the session host", () => {
       const step = await session.apply({
         type: "supply-scores",
         request: pending?.id ?? "",
-        value: single("float", 5),
+        value: buildSingle("float", 5),
         scorer: "human",
       });
       expect(step.refusal).toBeUndefined();
@@ -2097,7 +2101,7 @@ describe("a review step with a cap on changes", () => {
   const choose = (ref: string): CandidateAction => ({
     type: "set-responses",
     item: key(ref),
-    responses: new Map([["RESPONSE", single("identifier", "A")]]),
+    responses: new Map([["RESPONSE", buildSingle("identifier", "A")]]),
   });
   const submit = (ref: string): CandidateAction => ({ type: "submit", item: key(ref) });
   const edit = (ref: string): CandidateAction => ({ type: "next-attempt", item: key(ref) });
@@ -2290,7 +2294,7 @@ describe("createToolScoreIntake", () => {
       ["externalMachine", { scoredBy: "tool-s1" }],
       ["externalMachine", { scoredBy: "tool-s1" }],
     ]);
-    expect(calls[0]?.action).toMatchObject({ value: single("float", 6) });
+    expect(calls[0]?.action).toMatchObject({ value: buildSingle("float", 6) });
   });
 
   it("supplies NULL for a part the score does not have", async () => {
@@ -2648,7 +2652,7 @@ describe("properties", () => {
   ];
   const actions = fc.array(fc.constantFrom(...Actions), { maxLength: 7 });
 
-  it("returns the view that the engine gives for the same actions, through viewToJson and viewFromJson", async () => {
+  it("returns the view that the engine gives for the same actions, through writeView and readView", async () => {
     await fc.assert(
       fc.asyncProperty(actions, async (list) => {
         const { host, clock, engine } = await examHost();
@@ -2665,7 +2669,7 @@ describe("properties", () => {
           if (step.ok) state = step.state;
           const expected = engine.view(state, clock.now());
           const allowed = { ...expected, actions: expected.actions.filter((type) => type !== "suspend") };
-          expect(viewOf(reply)).toEqual(viewFromJson(viewToJson(allowed)));
+          expect(viewOf(reply)).toEqual(readView(writeView(allowed)));
         }
       }),
       { numRuns: 25 },

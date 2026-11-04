@@ -1,7 +1,7 @@
 import type { Interaction } from "@assesskit/runtime/asi";
 import { checkBoolean, describe, isRecord } from "@assesskit/runtime/checks";
 import { AssesskitError, DataError } from "@assesskit/runtime/errors";
-import { checkResponse, type InteractionDescriptor, type InteractionKind } from "@assesskit/runtime/interactions";
+import { type InteractionDescriptor, type InteractionKind, validateResponse } from "@assesskit/runtime/interactions";
 import { matchValues, normalizeValue, type Value } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";
@@ -75,7 +75,7 @@ const ElementBase: typeof HTMLElement =
  * | `messages`   | The text of the interface; the renderer sets it.                                                             |
  *
  * The element dispatches {@link ResponseEvent}s when the candidate changes the response. It decides nothing of QTI: the
- * runtime's `checkResponse` says whether the response is valid, and the element says what is wrong in words. Setting a
+ * runtime's `validateResponse` says whether the response is valid, and the element says what is wrong in words. Setting a
  * property to what it holds does nothing, so that a host that sets every property on each view leaves the candidate's
  * focus and caret where they are.
  *
@@ -110,8 +110,8 @@ export abstract class InteractionElement extends ElementBase {
    * @throws `DataError` when the value is not a descriptor of this kind of interaction and this response variable.
    */
   set descriptor(descriptor: InteractionDescriptor) {
-    // checkResponse checks the whole descriptor, as the element reads it.
-    checkResponse(descriptor, null);
+    // validateResponse checks the whole descriptor, as the element reads it.
+    validateResponse(descriptor, null);
     if (descriptor.kind !== this.kind || descriptor.responseIdentifier !== this.responseIdentifier) {
       throw new DataError(
         `The descriptor must be that of the ${this.kind} for ${describe(this.responseIdentifier)}, found ${describe(descriptor.kind)} for ${describe(descriptor.responseIdentifier)}.`,
@@ -269,7 +269,7 @@ export abstract class InteractionElement extends ElementBase {
   #report(descriptor: InteractionDescriptor, messages: Messages): void {
     const notes = this.notes;
     if (notes === undefined) return;
-    const check = checkResponse(descriptor, this.#value);
+    const check = validateResponse(descriptor, this.#value);
     const reasons = check.status === "attempted" ? check.reasons : [];
     const texts = new Set([
       ...reasons.map((reason) => violationText(reason, descriptor, messages, this.custom)),

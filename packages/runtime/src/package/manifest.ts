@@ -53,7 +53,7 @@ export interface ManifestMetadata {
   readonly schema: ManifestSchema;
   /** The curriculum standards the package addresses. */
   readonly curriculumStandards?: CurriculumStandardsSet;
-  /** The `lom` element, kept as XML; `lomGeneral` types its category `general`. */
+  /** The `lom` element, kept as XML; `readLomGeneral` types its category `general`. */
   readonly lom?: XmlElement;
 }
 

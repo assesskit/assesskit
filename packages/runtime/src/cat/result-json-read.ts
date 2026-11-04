@@ -25,12 +25,12 @@ import {
   type TestResult,
 } from "../results/index.js";
 import {
-  container,
+  buildContainer,
+  buildRecord,
+  buildSingle,
   isBaseType,
   parsePrimitive,
-  record,
   type SingleValue,
-  single,
   type Value,
 } from "../values/index.js";
 import { baseTypeSchema, cardinalitySchema } from "../values/internal.js";
@@ -66,7 +66,7 @@ function readField(label: string): (entry: ValueEntry) => readonly [string, Sing
     if (!isBaseType(baseType)) {
       throw new DataError(`The baseType of a field of ${label} must be a base type, found ${describe(baseType)}.`);
     }
-    const field = single(baseType, parsePrimitive(text, baseType));
+    const field = buildSingle(baseType, parsePrimitive(text, baseType));
     if (field === null) throw new DataError(`A field of ${label} cannot be an empty string, which is NULL.`);
     return [name, field];
   };
@@ -78,14 +78,14 @@ function readValue(
   { cardinality, baseType }: ResultVariableType,
   label: string,
 ): Value | null {
-  if (cardinality === "record") return record(entries.map(readField(label)));
+  if (cardinality === "record") return buildRecord(entries.map(readField(label)));
   if (baseType === undefined)
     throw new DataError(`The baseType of ${label} is required unless its cardinality is record.`);
   const primitives = entries.map(({ value: text }) => parsePrimitive(text, baseType));
-  if (cardinality !== "single") return container(cardinality, baseType, primitives);
+  if (cardinality !== "single") return buildContainer(cardinality, baseType, primitives);
   const [only, ...more] = primitives;
   if (more.length > 0) throw new DataError(`${label} has the cardinality single and ${primitives.length} values.`);
-  return only === undefined ? null : single(baseType, only);
+  return only === undefined ? null : buildSingle(baseType, only);
 }
 
 const responseVariableSchema: Schema<ResponseVariable> = v.pipe(
@@ -252,6 +252,6 @@ const assessmentResultSchema: Schema<AssessmentResult> = v.pipe(
  * of its base type. see
  * {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, JSON binding of the assessment result}
  */
-export function assessmentResultFromJson(json: unknown): AssessmentResult {
+export function readResultsJson(json: unknown): AssessmentResult {
   return parseWith(assessmentResultSchema, json, "The assessmentResult");
 }

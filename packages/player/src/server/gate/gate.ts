@@ -7,7 +7,7 @@ import {
   methodsSchema,
   parseWith,
   positiveIntegerSchema,
-  untilAborted,
+  raceAbort,
 } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import { type QtiPackage, resolveReference } from "@assesskit/runtime/package";
@@ -314,7 +314,7 @@ export function createAssetGate(options: AssetGateOptions): AssetGate {
       if (match === null) return refused(404);
       const [, kind = "", token = "", rest = ""] = match;
       const served = kind === "g" ? servePackage(token, rest, now, options) : serveFile(token, rest, now, options);
-      return untilAborted(served, options?.signal);
+      return raceAbort(served, { signal: options?.signal });
     },
   };
 }

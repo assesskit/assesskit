@@ -1,6 +1,6 @@
 import * as v from "valibot";
 import { checkFunction, checkRecord, checkString, parseWith } from "../checks.js";
-import { fromJsonValue, type Value, type ValueDeclaration } from "../values/index.js";
+import { readJsonValue, type Value, type ValueDeclaration } from "../values/index.js";
 import { convertFiles } from "./convert-files.js";
 import type { PciFileStore } from "./file-callbacks.js";
 import { isPciJson } from "./pci-json.js";
@@ -19,7 +19,7 @@ function storedFile(file: unknown, files: PciFileStore): unknown {
  * Reads the JSON that a portable custom interaction gives for a variable.
  *
  * @remarks
- * It is `fromJsonValue` with each file `{ "data", "mime", "name" }` stored through the host and replaced by its
+ * It is `readJsonValue` with each file `{ "data", "mime", "name" }` stored through the host and replaced by its
  * reference. NULL, an empty list, an empty record and the empty string are NULL, a NULL field of a record is left out,
  * and `intOrIdentifier` is read as an integer for a number and an identifier for a string. A duration with years or
  * months is refused.
@@ -38,5 +38,5 @@ function storedFile(file: unknown, files: PciFileStore): unknown {
 export function decodePciValue(json: unknown, declaration: ValueDeclaration, files: PciFileStore): Value | null {
   checkRecord(files, "The files must be an object with a function store");
   checkFunction(files.store, "The files must be an object with a function store");
-  return fromJsonValue(isPciJson(json) ? convertFiles(json, (file) => storedFile(file, files)) : json, declaration);
+  return readJsonValue(isPciJson(json) ? convertFiles(json, (file) => storedFile(file, files)) : json, declaration);
 }

@@ -37,7 +37,7 @@ import {
   writeManifest,
 } from "../src/index.js";
 import { type BindContext, BindRuleSets, DocumentChecks, Findings } from "../src/validate/internal.js";
-import { readError } from "../src/xml/index.js";
+import { createReadError } from "../src/xml/index.js";
 import { FUZZ } from "./fuzz.js";
 import { runGuideSamples } from "./guide-samples.js";
 import { criterionMarkup, rubricMarkup } from "./scoring-rubrics.js";
@@ -1087,9 +1087,15 @@ function resolversOf(files: Files): Resolvers {
     const path = resolveReference(base, href);
     const xml = path === undefined ? undefined : files[path];
     if (xml === undefined)
-      throw readError("assesskit/package/missing-file", `The package has no file ${JSON.stringify(path ?? href)}.`, {
-        path: base,
-      });
+      throw createReadError(
+        "assesskit/package/missing-file",
+        `The package has no file ${JSON.stringify(path ?? href)}.`,
+        {
+          location: {
+            path: base,
+          },
+        },
+      );
     return read(xml);
   };
   return {

@@ -3,12 +3,12 @@ import { describe } from "../checks.js";
 import { DataError, ProcessingError } from "../errors.js";
 import {
   type BaseType,
-  container,
+  buildContainer,
+  buildRecord,
+  buildSingle,
   type Primitive,
   parsePrimitive,
-  record,
   type SingleValue,
-  single,
   type Value,
 } from "../values/index.js";
 import type { VariableType } from "./assign.js";
@@ -38,7 +38,7 @@ export function readPrimitive(text: string, baseType: BaseType, what: string): P
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function readSingle(text: string, baseType: BaseType, what: string): SingleValue | null {
-  return single(baseType, readPrimitive(text, baseType, what));
+  return buildSingle(baseType, readPrimitive(text, baseType, what));
 }
 
 function readField(element: ValueElement, what: string): readonly [string, SingleValue] | undefined {
@@ -65,24 +65,24 @@ function readField(element: ValueElement, what: string): readonly [string, Singl
  * one value, or a field of a record lacks its identifier or base type.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-value}
  */
-export function declaredValue(
+export function readDeclaredValue(
   elements: readonly ValueElement[] | undefined,
   type: VariableType,
   what: string,
 ): Value | null {
   if (elements === undefined) return null;
   if (type.cardinality === "record") {
-    return record(elements.map((element) => readField(element, what)).filter((field) => field !== undefined));
+    return buildRecord(elements.map((element) => readField(element, what)).filter((field) => field !== undefined));
   }
   const { baseType } = type;
   if (baseType === undefined) throw new ProcessingError(`${what} belongs to a variable without a base type.`);
   const primitives = elements
     .map((element) => readPrimitive(element.value, baseType, what))
     .filter((primitive) => !(baseType === "string" && primitive === ""));
-  if (type.cardinality !== "single") return container(type.cardinality, baseType, primitives);
+  if (type.cardinality !== "single") return buildContainer(type.cardinality, baseType, primitives);
   if (elements.length > 1) {
     throw new ProcessingError(`${what} has ${elements.length} values, but its variable is single.`);
   }
   const [primitive] = primitives;
-  return primitive === undefined ? null : single(baseType, primitive);
+  return primitive === undefined ? null : buildSingle(baseType, primitive);
 }

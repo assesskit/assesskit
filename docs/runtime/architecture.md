@@ -146,8 +146,8 @@ default limit and the deployment advice.
 ## Boundary with the player
 
 The runtime owns everything QTI defines that is not presentation or platform. The player owns presentation and the platform, and uses
-the runtime only through its published subpaths. The two meet in JSON: `viewToJson` and `viewFromJson` for views, `actionToJson` and
-`parseCandidateAction` for actions, `serializeState` for state, with values as `WireValue`.
+the runtime only through its published subpaths. The two meet in JSON: `writeView` and `readView` for views, `writeCandidateAction` and
+`readCandidateAction` for actions, `serializeState` for state, with values as `WireValue`.
 
 | Concern                                                                               | runtime                                      | player                                                             | Host application                                             |
 | ------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------ |

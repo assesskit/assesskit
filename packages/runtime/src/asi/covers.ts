@@ -1,8 +1,14 @@
-import { checkArray, checkRecord, checkString, describe } from "../checks.js";
+import { checkArray, checkOptions, checkRecord, checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import { isIdentifier } from "../values/index.js";
 import { xmlTokens } from "../values/internal.js";
-import { attributeOf, entryText, type ListEntry, OUTCOME_ATTRIBUTE, type RubricContent } from "./convention-markup.js";
+import {
+  attributeOf,
+  entryText,
+  type ListEntry,
+  OUTCOME_ATTRIBUTE,
+  type RubricBlockOptions,
+} from "./convention-markup.js";
 import type { AssessmentTest, ElementModel, TestRubricBlock } from "./model.js";
 import { isModelNode } from "./nodes.js";
 
@@ -75,7 +81,7 @@ function entriesOf(block: TestRubricBlock): ScoreCoverEntry[] {
  * @returns The blocks in document order.
  * @throws `DataError` when the test, its rubric blocks or their content are not objects and arrays of the model.
  */
-export function scoreCoverBlocks(test: AssessmentTest): readonly ScoreCoverBlock[] {
+export function selectScoreCoverBlocks(test: AssessmentTest): readonly ScoreCoverBlock[] {
   checkRecord(test, "The test must be an object");
   checkArray(test.rubricBlocks, "The rubric blocks of the test must be an array");
   const blocks: ScoreCoverBlock[] = [];
@@ -108,7 +114,7 @@ export function scoreCoverBlocks(test: AssessmentTest): readonly ScoreCoverBlock
  */
 export function readScoreCovers(test: AssessmentTest): ReadonlyMap<string, readonly ScoreCover[]> {
   const covers = new Map<string, ScoreCover[]>();
-  for (const { outcomeIdentifier, entries } of scoreCoverBlocks(test)) {
+  for (const { outcomeIdentifier, entries } of selectScoreCoverBlocks(test)) {
     if (outcomeIdentifier === undefined) continue;
     const complete = entries.flatMap(({ itemRef, responseIdentifier, label }) =>
       itemRef === undefined || responseIdentifier === undefined
@@ -152,19 +158,20 @@ function coverEntry(cover: unknown): ListEntry {
  *
  * @param outcomeIdentifier - The identifier of the outcome.
  * @param covers - The responses the outcome covers.
- * @param notes - Content for the scorers before the list, such as instructions.
+ * @param options - See {@link RubricBlockOptions}.
  * @returns The rubric block.
  * @throws `DataError` when an identifier is not an identifier, a label is not a string, or an argument has the wrong type.
- * @defaultValue `[]`
  * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/conventions.md | Conventions of the runtime, covers}
  */
 export function buildScoreCoversBlock(
   outcomeIdentifier: string,
   covers: readonly ScoreCover[],
-  notes: readonly RubricContent[] = [],
+  options: RubricBlockOptions = {},
 ): TestRubricBlock {
   checkIdentifier(outcomeIdentifier, "The outcome identifier");
   checkArray(covers, "The covers must be an array");
+  checkOptions(options);
+  const { notes = [] } = options;
   checkArray(notes, "The notes must be an array");
   if (!notes.every(isModelNode)) {
     throw new DataError(`The notes must be nodes of body content, found ${describe(notes)}.`);

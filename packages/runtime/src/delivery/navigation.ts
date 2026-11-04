@@ -6,9 +6,9 @@ import type { Value } from "../values/index.js";
 import {
   checkKey,
   type ItemKey,
+  listPlanItems,
   type PlannedChild,
   type PlannedPart,
-  planItems,
   sameKey,
   type TestPlan,
 } from "./plan.js";
@@ -457,7 +457,7 @@ function checkArguments(structure: TestStructure, plan: TestPlan): void {
  * @throws `SecurityError` when an expression builds a container above the limit.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-pre-condition}
  */
-export function nextItem(
+export function findNextItem(
   structure: TestStructure,
   plan: TestPlan,
   from: ItemKey | undefined,
@@ -471,7 +471,7 @@ export function nextItem(
 }
 
 /**
- * Returns where the candidate goes on leaving an item, or a section it lies in, as {@link nextItem} decides, except
+ * Returns where the candidate goes on leaving an item, or a section it lies in, as {@link findNextItem} decides, except
  * that the walk stops at the end of the test part of the item: the engine ends the part, so that its submissions and
  * outcome processing come first, then calls {@link itemAfterPart}. Its callers pass a structure, a plan and an instance
  * of the session, so the arguments are not checked.
@@ -511,7 +511,7 @@ export function destinationAfterPart(
 }
 
 /**
- * Returns where the candidate goes on leaving an adaptive section that has no item to present, as {@link nextItem}
+ * Returns where the candidate goes on leaving an adaptive section that has no item to present, as {@link findNextItem}
  * decides.
  *
  * @remarks
@@ -531,7 +531,7 @@ export function destinationAfterSection(
 }
 
 /**
- * Returns where the session starts, as {@link nextItem} decides without a `from`, with an adaptive section among the
+ * Returns where the session starts, as {@link findNextItem} decides without a `from`, with an adaptive section among the
  * destinations.
  *
  * @remarks
@@ -555,11 +555,11 @@ export function startDestination(structure: TestStructure, plan: TestPlan, rules
  * @throws `DataError` when an argument has the wrong type, the plan does not match the structure, or `from` is not in
  * the plan.
  */
-export function previousItem(structure: TestStructure, plan: TestPlan, from: ItemKey): ItemKey | undefined {
+export function findPreviousItem(structure: TestStructure, plan: TestPlan, from: ItemKey): ItemKey | undefined {
   checkArguments(structure, plan);
   checkKey(from);
   for (const part of plan.parts) {
-    const items = planItems(plan, part.identifier);
+    const items = listPlanItems(plan, { part: part.identifier });
     const at = items.findIndex((key) => sameKey(key, from));
     if (at >= 0) return navigationMode(structure, part.identifier) === "nonlinear" ? items[at - 1] : undefined;
   }

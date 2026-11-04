@@ -67,7 +67,7 @@ export interface SessionHostOptions {
    */
   readonly maxIdle?: number;
   /**
-   * The limits on the size of an action, which replace the defaults of the runtime's `parseCandidateAction` field by field.
+   * The limits on the size of an action, which replace the defaults of the runtime's `readCandidateAction` field by field.
    *
    * @defaultValue the runtime's limits
    */

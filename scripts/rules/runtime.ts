@@ -209,7 +209,7 @@ export const RUNTIME_RULES: readonly Rule[] = [
   {
     rule: "An include with an xpointer is refused.",
     file: INCLUDE,
-    find: 'if (attributeOf(include, "xpointer") !== undefined) {',
+    find: 'if (findAttribute(include, "xpointer") !== undefined) {',
     replace: "if (false) {",
     test: XML_TEST,
   },

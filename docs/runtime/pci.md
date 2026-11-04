@@ -11,27 +11,27 @@ flowchart LR
   host["Host<br/>reads the package, stores files"]
   player["Player<br/>AMD loader, PCI frame"]
   module["PCI module"]
-  item -- "moduleConfigurationPaths" --> host
-  host -- "parseModuleResolution" --> files
+  item -- "resolveModuleConfigurationPaths" --> host
+  host -- "readModuleResolution" --> files
   files -- "resolvePciModules" --> player
-  item -- "pciProperties" --> player
+  item -- "derivePciProperties" --> player
   player --> module
   module -- "response JSON" --> player
   player -- "decodePciValue" --> host
   host -- "encodePciValue" --> player
-  item -- "checkPortableInteraction" --> issues["Issues"]
+  item -- "validatePortableInteraction" --> issues["Issues"]
 ```
 
-| Function                                               | Does                                                                                                |
-| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| `encodePciValue(value, declaration, files)`            | Writes a value as the JSON of a PCI; the bytes of a file value come from `files.load`               |
-| `decodePciValue(json, declaration, files)`             | Reads the JSON a module gives as a value; the bytes of a file go to `files.store`                   |
-| `parseModuleResolution(text)`                          | Reads a module resolution configuration file as a `ModuleResolution`                                |
-| `moduleConfigurationPaths(interaction)`                | Gives the package paths of the two configuration files of an interaction, with their defaults       |
-| `resolvePciModules(interaction, configuration)`        | Lists the modules of an interaction and where each is, as `PciModule`s                              |
-| `isPackageRelative(location)`                          | Tells whether a module location is a path in the package                                            |
-| `pciProperties(interaction)`                           | Gives the `data-*` attributes as the properties a module receives                                   |
-| `checkPortableInteraction(interaction, configuration)` | Returns `Issue`s for modules that no configuration locates and for a type identifier that is no URN |
+| Function                                                  | Does                                                                                                |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `encodePciValue(value, declaration, files)`               | Writes a value as the JSON of a PCI; the bytes of a file value come from `files.load`               |
+| `decodePciValue(json, declaration, files)`                | Reads the JSON a module gives as a value; the bytes of a file go to `files.store`                   |
+| `readModuleResolution(text)`                              | Reads a module resolution configuration file as a `ModuleResolution`                                |
+| `resolveModuleConfigurationPaths(interaction)`            | Gives the package paths of the two configuration files of an interaction, with their defaults       |
+| `resolvePciModules(interaction, configuration)`           | Lists the modules of an interaction and where each is, as `PciModule`s                              |
+| `isPackageRelative(location)`                             | Tells whether a module location is a path in the package                                            |
+| `derivePciProperties(interaction)`                        | Gives the `data-*` attributes as the properties a module receives                                   |
+| `validatePortableInteraction(interaction, configuration)` | Returns `Issue`s for modules that no configuration locates and for a type identifier that is no URN |
 
 The types are `PciJson`, `PciFileLoader`, `PciFileStore`, `ModuleResolution`, `ModuleConfigurationPaths`, `PciModule` and
 `PciModuleConfiguration`.
@@ -41,7 +41,7 @@ The types are `PciJson`, `PciFileLoader`, `PciFileStore`, `ModuleResolution`, `M
 `encodePciValue` and `decodePciValue` read and write the plain binding of the best practices guide: `{ "base": ... }` for a
 single value, `{ "list": ... }` for `multiple` and `ordered`, `{ "record": ... }` for a record, and `null` inside each for NULL. A
 PCI receives its template variables, its context variables and its response in this form, and gives its response back in it.
-The binding is `toJsonValue` and `fromJsonValue` of `values`, with these forms:
+The binding is `writeJsonValue` and `readJsonValue` of `values`, with these forms:
 
 | Case                       | Form                                                                                                            |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------- |
@@ -53,9 +53,9 @@ The binding is `toJsonValue` and `fromJsonValue` of `values`, with these forms:
 
 ```ts
 import { decodePciValue, encodePciValue } from "@assesskit/runtime/pci";
-import { container } from "@assesskit/runtime/values";
+import { buildContainer } from "@assesskit/runtime/values";
 
-const numbers = container("multiple", "integer", [3, 4]);
+const numbers = buildContainer("multiple", "integer", [3, 4]);
 encodePciValue(numbers, { cardinality: "multiple", baseType: "integer" }, { load: () => "" }); // => { list: { integer: [3, 4] } }
 decodePciValue(
   { base: { file: { data: "cGxlYXN1cmUu", mime: "text/plain", name: "helloworld.txt" } } },
@@ -72,7 +72,7 @@ called for a value without a file. A message from a module is untrusted until it
 
 ## Modules
 
-A module resolution file is JSON with `waitSeconds` and `paths`. `parseModuleResolution` reads it and ignores other properties. A
+A module resolution file is JSON with `waitSeconds` and `paths`. `readModuleResolution` reads it and ignores other properties. A
 path has no `.js` extension; a path with a protocol is fetched from there, and any other is a path from the root of the package,
 whichever folder holds the item. The same holds for the configuration files and for `primary-path`.
 
@@ -94,12 +94,12 @@ package paths it may serve.
 import { readAsi } from "@assesskit/runtime/asi";
 import {
   isPackageRelative,
-  moduleConfigurationPaths,
-  parseModuleResolution,
+  resolveModuleConfigurationPaths,
+  readModuleResolution,
   resolvePciModules,
 } from "@assesskit/runtime/pci";
 
-const primary = parseModuleResolution(
+const primary = readModuleResolution(
   '{"waitSeconds": 15, "paths": {"likert": "modules/likert", "handlebars": "https://cdn.example/handlebars"}}',
 );
 primary.waitSeconds; // => 15
@@ -115,14 +115,14 @@ const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/x
   </qti-item-body>
 </qti-assessment-item>`);
 const interaction = document.item.body.children[0];
-moduleConfigurationPaths(interaction); // => { primary: "modules/module_resolution.js", fallback: "modules/fallback_module_resolution.js" }
+resolveModuleConfigurationPaths(interaction); // => { primary: "modules/module_resolution.js", fallback: "modules/fallback_module_resolution.js" }
 resolvePciModules(interaction, { primary });
 // => [{ id: "likert", primary: "modules/likert", packageRelative: true }, { id: "handlebars", primary: "https://cdn.example/handlebars", packageRelative: false }]
 ```
 
 ## Properties
 
-`pciProperties` gives the custom `data-*` attributes of the interaction, named as `element.dataset` names them: the prefix goes,
+`derivePciProperties` gives the custom `data-*` attributes of the interaction, named as `element.dataset` names them: the prefix goes,
 and a hyphen followed by a lowercase letter becomes that letter in capitals. `data-catalog-idref` and `data-qti-suppress-tts` are
 QTI's own and are not properties.
 
@@ -134,7 +134,7 @@ QTI's own and are not properties.
 
 ## Checks
 
-`checkPortableInteraction` returns `Issue`s:
+`validatePortableInteraction` returns `Issue`s:
 
 | Code                                  | Severity | Reported when                                                                                     |
 | ------------------------------------- | -------- | ------------------------------------------------------------------------------------------------- |

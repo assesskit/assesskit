@@ -2,21 +2,21 @@
 
 `mountRatingForm` shows a rater a scoring rubric as an accessible form: one choice of level for each criterion, and the score
 of the choices. The rubric is the [scoring rubric](../runtime/conventions.md#scoring-rubrics) of the runtime; the score is the
-runtime's `scoreFromRatings`, so the form and a machine rater compute the same number.
+runtime's `rubricScore`, so the form and a machine rater compute the same number.
 
 ```mermaid
 flowchart LR
   rubric["ScoringRubric<br/>from the scorer view or a submission"] --> form["mountRatingForm"]
   initial["Earlier ratings<br/>of another rater"] -.-> form
   form -->|"the rater chooses a level<br/>for each criterion"| ratings["ratings: { criterion, score }[]"]
-  ratings --> score["scoreFromRatings:<br/>the score, or null while a criterion is unrated"]
+  ratings --> score["rubricScore:<br/>the score, or null while a criterion is unrated"]
   ratings --> host["The host: onChange, then submit"]
   score --> supply["toSupplyScores → the engine"]
 ```
 
 The form is the player's part of rating, and the workflow is the host's: assignment, double rating, adjudication and queues
 stay outside it. A host that shows a submission to a rater puts the form beside `mountSubmission` ([scoring](scoring.md)); a
-host with a machine rater uses the same rubric and `scoreFromRatings` without a page.
+host with a machine rater uses the same rubric and `rubricScore` without a page.
 
 ```ts
 import { mountRatingForm } from "@assesskit/player/player";

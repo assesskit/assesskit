@@ -73,7 +73,7 @@ function feedbackOf(session: ItemSession, item: AssessmentItem, control: Effecti
  * @throws `DataError` when an argument has the wrong type.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function itemFeedback(
+export function deriveItemFeedback(
   session: ItemSession,
   item: AssessmentItem,
   control: EffectiveSessionControl,
@@ -88,7 +88,7 @@ const isInteraction = (node: ModelNode): node is Interaction => node.kind.endsWi
 
 /**
  * Returns the interactions that the candidate sees in the state of the session: those of the body that feedback and
- * template content shown by {@link itemFeedback} hold, with the choices in the order of the session and those that
+ * template content shown by {@link deriveItemFeedback} hold, with the choices in the order of the session and those that
  * template variables hide left out.
  *
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
@@ -142,7 +142,7 @@ export function presentedInteractions(
  * @throws `DataError` when `session` is not an item session.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function itemResponses(session: ItemSession): ReadonlyMap<string, Value | null> {
+export function deriveItemResponses(session: ItemSession): ReadonlyMap<string, Value | null> {
   checkSession(session);
   const { drafts, variables } = session;
   switch (session.status) {

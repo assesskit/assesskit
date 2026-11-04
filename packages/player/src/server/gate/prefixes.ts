@@ -1,12 +1,12 @@
-import { descendantNodes, type ModelNode, type PortableCustomInteraction } from "@assesskit/runtime/asi";
+import { listDescendantNodes, type ModelNode, type PortableCustomInteraction } from "@assesskit/runtime/asi";
 import type { CandidateView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import { type QtiPackage, resourcePath } from "@assesskit/runtime/package";
+import { type QtiPackage, resolveResourcePath } from "@assesskit/runtime/package";
 import {
   isPackageRelative,
-  moduleConfigurationPaths,
   type PciModuleConfiguration,
-  parseModuleResolution,
+  readModuleResolution,
+  resolveModuleConfigurationPaths,
   resolvePciModules,
 } from "@assesskit/runtime/pci";
 import type { ViewDocuments } from "../../protocol/index.js";
@@ -50,7 +50,7 @@ function referencesOf(node: ModelNode): string[] {
 /** Returns the paths in the package of the files that nodes reference, resolved against the document that holds them. */
 function referencedPaths(pkg: QtiPackage, base: string, nodes: readonly ModelNode[]): string[] {
   const present = pathsOf(pkg);
-  return [...nodes, ...nodes.flatMap(descendantNodes)]
+  return [...nodes, ...nodes.flatMap(listDescendantNodes)]
     .flatMap(referencesOf)
     .flatMap((reference) => pkg.resolve(base, reference) ?? [])
     .filter((path) => present.has(path));
@@ -60,8 +60,8 @@ function referencedPaths(pkg: QtiPackage, base: string, nodes: readonly ModelNod
 function manifestFiles(pkg: QtiPackage, document: string, variant: string | undefined): string[] {
   const { manifest } = pkg;
   return dependenciesOf(pkg, document, variant).flatMap((each) => [
-    ...(resourcePath(manifest, each) ?? []),
-    ...each.files.flatMap((file) => resourcePath(manifest, each, file.href) ?? []),
+    ...(resolveResourcePath(manifest, each) ?? []),
+    ...each.files.flatMap((file) => resolveResourcePath(manifest, each, { href: file.href }) ?? []),
   ]);
 }
 
@@ -86,7 +86,7 @@ function configurationOf(pkg: QtiPackage, path: string): PciModuleConfiguration[
   const bytes = pkg.file(path);
   if (bytes === undefined) return undefined;
   try {
-    return parseModuleResolution(new TextDecoder().decode(bytes));
+    return readModuleResolution(new TextDecoder().decode(bytes));
   } catch (error) {
     // The frame reports the failure of the modules; the gate only has no files to name for it.
     if (error instanceof DataError) return undefined;
@@ -97,7 +97,7 @@ function configurationOf(pkg: QtiPackage, path: string): PciModuleConfiguration[
 /** Returns the files of a PCI that the gate must serve: its module resolution files and its modules, with or without `.js`. */
 function pciFiles(pkg: QtiPackage, interaction: PortableCustomInteraction): string[] {
   const present = pathsOf(pkg);
-  const { primary, fallback } = moduleConfigurationPaths(interaction);
+  const { primary, fallback } = resolveModuleConfigurationPaths(interaction);
   const first = configurationOf(pkg, primary);
   const second = configurationOf(pkg, fallback);
   const configuration: PciModuleConfiguration = {
@@ -148,7 +148,7 @@ function interactionsOf(view: CandidateView): PortableCustomInteraction[] {
   const { current } = view;
   if (current === undefined) return [];
   const nodes: readonly ModelNode[] = [...current.body, ...current.stimuli.flatMap((stimulus) => stimulus.body)];
-  return [...nodes, ...nodes.flatMap(descendantNodes)].filter(isPortableInteraction);
+  return [...nodes, ...nodes.flatMap(listDescendantNodes)].filter(isPortableInteraction);
 }
 
 /**

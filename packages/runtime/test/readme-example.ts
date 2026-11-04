@@ -1,7 +1,7 @@
-import { type Action, createEngine, type DeliveryState, viewToJson } from "../src/delivery/index.js";
-import { packageResolvers, readManifest, readPackage, writePackage } from "../src/package/index.js";
+import { type Action, createEngine, type DeliveryState, writeView } from "../src/delivery/index.js";
+import { createPackageResolvers, readManifest, readPackage, writePackage } from "../src/package/index.js";
 import { writeResults } from "../src/results/index.js";
-import { single } from "../src/values/index.js";
+import { buildSingle } from "../src/values/index.js";
 
 // A package is a ZIP archive of QTI documents. This one is built in memory, so that the example runs as it is; in Node.js
 // `readPackageFile` of `@assesskit/runtime/node` reads one from disk.
@@ -61,7 +61,12 @@ const zip = writePackage(
 const pkg = readPackage(zip);
 const document = pkg.document("test.xml");
 if (document.kind !== "test") throw new Error("Expected a test.");
-const engine = createEngine({ kind: "test", test: document.test, base: "test.xml", resolvers: packageResolvers(pkg) });
+const engine = createEngine({
+  kind: "test",
+  test: document.test,
+  base: "test.xml",
+  resolvers: createPackageResolvers(pkg),
+});
 
 // The engine reads no clock: every step takes the time it happened, in epoch milliseconds. A refusal is data.
 const apply = (state: DeliveryState, action: Action) => {
@@ -78,12 +83,12 @@ console.log(view.current?.title);
 console.log(view.current?.interactions[0]?.choices.map(({ identifier }) => identifier).join(" "));
 console.log(view.actions.join(" "));
 // The JSON form of the view, as a server sends it to a client, holds no correct response.
-console.log(JSON.stringify(viewToJson(view)).includes("qti-correct-response"));
+console.log(JSON.stringify(writeView(view)).includes("qti-correct-response"));
 
 const answered = apply(started.state, {
   type: "set-responses",
   item: { ref: "q1", instance: 1 },
-  responses: new Map([["RESPONSE", single("identifier", "A")]]),
+  responses: new Map([["RESPONSE", buildSingle("identifier", "A")]]),
   at: 1_000,
 });
 const moved = apply(answered.state, { type: "move", to: "next", at: 2_000 });
@@ -94,7 +99,7 @@ console.log(refused.ok ? "accepted" : refused.refusal.code);
 const second = apply(moved.state, {
   type: "set-responses",
   item: { ref: "q2", instance: 1 },
-  responses: new Map([["RESPONSE", single("identifier", "A")]]),
+  responses: new Map([["RESPONSE", buildSingle("identifier", "A")]]),
   at: 3_000,
 });
 const ended = apply(second.state, { type: "end-test", at: 4_000 });

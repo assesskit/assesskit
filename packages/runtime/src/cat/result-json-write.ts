@@ -144,7 +144,7 @@ function contextToJson({ sourcedId, sessionIdentifiers }: ResultContext): unknow
  * of its base type. see
  * {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, JSON binding of the assessment result}
  */
-export function assessmentResultToJson(result: AssessmentResult): unknown {
+export function writeResultsJson(result: AssessmentResult): unknown {
   checkRecord(result, "The assessmentResult must be an object");
   checkRecord(result.context, "The context of the assessmentResult must be an object");
   checkArray(result.itemResults, "The itemResults of the assessmentResult must be an array");

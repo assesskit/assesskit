@@ -3,6 +3,7 @@ import {
   ASI_NAMESPACE,
   type AssessmentItem,
   type AssessmentTest,
+  buildSingle,
   type CatPort,
   type CatRequest,
   type CatSectionRef,
@@ -23,7 +24,6 @@ import {
   resolveStructure,
   type StartOptions,
   type SubmitResultsRequest,
-  single,
   type TestStructure,
 } from "../src/index.js";
 
@@ -239,7 +239,7 @@ export const key = (ref: string, instance = 1): ItemKey => ({ ref, instance });
 export const write = (ref: string, text: string, at: number, instance = 1): Action => ({
   type: "set-responses",
   item: key(ref, instance),
-  responses: new Map([["RESPONSE", single("string", text) ?? fail("A string value cannot be empty.")]]),
+  responses: new Map([["RESPONSE", buildSingle("string", text) ?? fail("A string value cannot be empty.")]]),
   at,
 });
 
@@ -247,7 +247,7 @@ export const write = (ref: string, text: string, at: number, instance = 1): Acti
 export const pick = (ref: string, selected: string, at: number, instance = 1): Action => ({
   type: "set-responses",
   item: key(ref, instance),
-  responses: new Map([["RESPONSE", single("identifier", selected)]]),
+  responses: new Map([["RESPONSE", buildSingle("identifier", selected)]]),
   at,
 });
 

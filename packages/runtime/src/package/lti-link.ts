@@ -152,7 +152,7 @@ export function readLtiLink(input: string | Uint8Array | XmlElement, options: Pa
  * @throws `DataError` when `link` is not a link, or names no launch URL, which is the case of a link that gives only a vendor.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, packaging}
  */
-export function ltiLaunchUrl(link: LtiLink): string {
+export function resolveLaunchUrl(link: LtiLink): string {
   checkRecord(link, "The LTI link must be an object");
   const url = [link.secureLaunchUrl, link.launchUrl].find((each) => typeof each === "string" && each !== "");
   if (url === undefined) {

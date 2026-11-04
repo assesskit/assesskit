@@ -1,5 +1,5 @@
 import type { AssessmentItem, AssessmentItemRef, AssessmentTest, OutcomeDeclaration } from "../asi/index.js";
-import { BUILT_IN_CONTEXTS, DURATION, itemIdentifier, QTI_CONTEXT } from "../processing/index.js";
+import { BUILT_IN_CONTEXTS, DURATION, QTI_CONTEXT, resolveItemIdentifier } from "../processing/index.js";
 import { type DeclaredVariable, itemVariables } from "./item-scope.js";
 import type { Lookup, Problem, Processing, ResponseLookup, RuleScope, Target } from "./scope.js";
 import { type StaticType, typeOfVariable, UNKNOWN } from "./static-type.js";
@@ -131,7 +131,7 @@ export class TestScope implements RuleScope {
       return { problem: this.problem(identifier, "item variable or duration") };
     }
     if (info.item === undefined) return { type: UNKNOWN };
-    const found = this.variablesOf(info.item).get(itemIdentifier(info.ref, name));
+    const found = this.variablesOf(info.item).get(resolveItemIdentifier(info.ref, name));
     if (found === undefined) {
       return {
         problem: {
@@ -228,7 +228,7 @@ export class TestScope implements RuleScope {
     const info = this.context.itemRefs.get(split.head);
     if (info === undefined) return { problem: this.problem(identifier, "response variable") };
     if (info.item === undefined) return {};
-    const name = itemIdentifier(info.ref, split.name);
+    const name = resolveItemIdentifier(info.ref, split.name);
     const declaration = info.item.responseDeclarations.find((each) => each.identifier === name);
     return declaration === undefined ? { problem: this.problem(identifier, "response variable") } : { declaration };
   }

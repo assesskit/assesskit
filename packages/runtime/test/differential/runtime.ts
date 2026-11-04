@@ -6,7 +6,7 @@ import {
   type ItemSessionContext,
   type ItemStep,
   presentItem,
-  standaloneSessionControl,
+  resolveStandaloneSessionControl,
   startItemSession,
 } from "../../src/delivery/index.js";
 import { AssesskitError, createRandom } from "../../src/index.js";
@@ -18,10 +18,10 @@ import {
 } from "../../src/processing/index.js";
 import {
   type BaseType,
-  container,
+  buildContainer,
+  buildSingle,
   type Primitive,
   parsePrimitive,
-  single,
   type Value,
 } from "../../src/values/index.js";
 import { longsightRandom } from "./longsight.js";
@@ -60,9 +60,9 @@ function responseOf(observed: Observed, declaration: ResponseDeclaration): Value
   const { identifier, cardinality, baseType = "string" } = declaration;
   if (observed === null) return null;
   if (cardinality === "record") throw new Error(`The case gives the record response ${identifier}.`);
-  if (cardinality === "single") return single(baseType, primitiveOf(observed, baseType));
+  if (cardinality === "single") return buildSingle(baseType, primitiveOf(observed, baseType));
   const items = Array.isArray(observed) ? observed : [observed];
-  return container(
+  return buildContainer(
     cardinality,
     baseType,
     items.map((item) => primitiveOf(item, baseType)),
@@ -77,7 +77,7 @@ function responseOf(observed: Observed, declaration: ResponseDeclaration): Value
 function attempt(item: AssessmentItem, variables: ItemVariables, responses: ItemCase["responses"]): ItemVariables {
   if (Object.keys(responses).length === 0 && item.adaptive !== true) return variables;
   const given = new Map(variables.responses);
-  given.set("numAttempts", single("integer", 1));
+  given.set("numAttempts", buildSingle("integer", 1));
   for (const declaration of item.responseDeclarations) {
     const { identifier } = declaration;
     given.set(
@@ -88,7 +88,7 @@ function attempt(item: AssessmentItem, variables: ItemVariables, responses: Item
     );
   }
   const outcomes = new Map(variables.outcomes);
-  outcomes.set("completionStatus", single("identifier", "unknown"));
+  outcomes.set("completionStatus", buildSingle("identifier", "unknown"));
   return { ...variables, responses: given, outcomes };
 }
 
@@ -138,7 +138,7 @@ function playTurn(session: ItemSession, { responses, endAttempt }: Turn, context
 
 /** The context of a session of an item delivered alone, without a limit on attempts, as the oracle has none. */
 export function sessionContext(item: AssessmentItem, seed: number): ItemSessionContext {
-  return { item, control: { ...standaloneSessionControl(), maxAttempts: 0 }, random: longsightRandom(seed) };
+  return { item, control: { ...resolveStandaloneSessionControl(), maxAttempts: 0 }, random: longsightRandom(seed) };
 }
 
 /**

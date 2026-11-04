@@ -51,7 +51,7 @@ function chosenScores(rubric: ScoringRubric, ratings: readonly RubricRating[]): 
  * level of its criterion has.
  * @see {@link https://www.imsglobal.org/sites/default/files/CASE/casev1p0/information_model/caseservicev1p0_infomodelv1p0.html | CASE 1.0 Information Model, CFRubricCriterion}
  */
-export function scoreFromRatings(rubric: ScoringRubric, ratings: readonly RubricRating[]): number | null {
+export function rubricScore(rubric: ScoringRubric, ratings: readonly RubricRating[]): number | null {
   checkScoringRubric(rubric);
   const chosen = chosenScores(rubric, parseWith(ratingsSchema, ratings, "The ratings"));
   let score = 0;
@@ -76,7 +76,7 @@ export interface RubricScoreRange {
  * checks it against the declaration of its outcome. The range starts at 0 only when every criterion has a level of 0.
  *
  * @param rubric - The scoring rubric.
- * @returns The lowest and the highest score; every score that {@link scoreFromRatings} returns lies between them.
+ * @returns The lowest and the highest score; every score that {@link rubricScore} returns lies between them.
  * @throws `DataError` when the rubric fails {@link checkScoringRubric}.
  */
 export function rubricScoreRange(rubric: ScoringRubric): RubricScoreRange {

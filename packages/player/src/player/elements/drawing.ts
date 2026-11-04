@@ -1,7 +1,7 @@
 import type { DrawingInteraction } from "@assesskit/runtime/asi";
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Point } from "@assesskit/runtime/values";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import { EN_MESSAGES, type Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
 import { html } from "../internal.js";
@@ -429,7 +429,7 @@ export class DrawingInteractionElement extends InteractionElement {
     if (blob === null) throw new Error("The canvas gave no picture.");
     const file = await files.upload(blob, blob.type, `drawing.${blob.type.split("/")[1] ?? "png"}`);
     this.#known = file.reference;
-    this.respond(single("file", file));
+    this.respond(buildSingle("file", file));
   }
 
   /**

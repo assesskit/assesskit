@@ -7,9 +7,9 @@ import {
   DEFAULT_RANDOM_STEP,
   describeCount,
   describeOperand,
+  listOperands,
   OPERATOR_SIGNATURES,
   type OperatorSignature,
-  operandsOf,
 } from "../processing/index.js";
 import { type BaseType, compileXsdRegex } from "../values/index.js";
 import type { Findings } from "./findings.js";
@@ -111,7 +111,7 @@ export class ExpressionChecker {
       this.findings.error("assesskit/validate/unknown-expression", message, here);
       return UNKNOWN;
     }
-    const operands = operandsOf(expression).map((operand) => this.check(operand, here));
+    const operands = listOperands(expression).map((operand) => this.check(operand, here));
     this.checkOperands(expression.kind, signature, operands, here);
     const declared = this.checkLeaf(expression, operands, here);
     return this.resultOf(expression, signature, operands, declared);

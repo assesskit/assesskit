@@ -1,11 +1,11 @@
 import type { CandidateView } from "@assesskit/runtime/delivery";
 import { resolveStructure, type TestStructure } from "@assesskit/runtime/delivery";
 import {
-  packageResolvers,
+  createPackageResolvers,
   type QtiPackage,
   type Resolvers,
   resolveReference,
-  resourcePath,
+  resolveResourcePath,
 } from "@assesskit/runtime/package";
 import { type DocumentSource, type ItemDocuments, type ViewDocuments, viewDocuments } from "../../protocol/index.js";
 import { dependenciesOf } from "./dependencies.js";
@@ -27,7 +27,7 @@ const RESOLVERS = new WeakMap<QtiPackage, Resolvers>();
 function resolversOf(pkg: QtiPackage): Resolvers {
   let resolvers = RESOLVERS.get(pkg);
   if (resolvers === undefined) {
-    resolvers = packageResolvers(pkg);
+    resolvers = createPackageResolvers(pkg);
     RESOLVERS.set(pkg, resolvers);
   }
   return resolvers;
@@ -37,7 +37,7 @@ function resolversOf(pkg: QtiPackage): Resolvers {
 function findTest(pkg: QtiPackage, identifier: string): LocatedTest | undefined {
   for (const resource of pkg.manifest.resources) {
     if (resource.type !== "imsqti_test_xmlv3p0") continue;
-    const path = resourcePath(pkg.manifest, resource);
+    const path = resolveResourcePath(pkg.manifest, resource);
     if (path === undefined) continue;
     const document = pkg.document(path);
     if (document.kind === "test" && document.test.identifier === identifier) {
@@ -61,7 +61,7 @@ function testOf(pkg: QtiPackage, identifier: string): LocatedTest | undefined {
 function standaloneItemPath(pkg: QtiPackage, identifier: string): string | undefined {
   for (const resource of pkg.manifest.resources) {
     if (resource.type !== "imsqti_item_xmlv3p0") continue;
-    const path = resourcePath(pkg.manifest, resource);
+    const path = resolveResourcePath(pkg.manifest, resource);
     if (path === undefined) continue;
     const document = pkg.document(path);
     if (document.kind === "item" && document.item.identifier === identifier) return path;
@@ -72,7 +72,7 @@ function standaloneItemPath(pkg: QtiPackage, identifier: string): string | undef
 /** Tells whether the file at a path is the link of an LTI resource, a document of the LTI schema and not of QTI. */
 function isLtiLink(pkg: QtiPackage, path: string): boolean {
   return pkg.manifest.resources.some(
-    (resource) => resource.type === "imsbasiclti_xmlv1p3" && resourcePath(pkg.manifest, resource) === path,
+    (resource) => resource.type === "imsbasiclti_xmlv1p3" && resolveResourcePath(pkg.manifest, resource) === path,
   );
 }
 
@@ -87,7 +87,7 @@ function stimulusPaths(pkg: QtiPackage, itemPath: string): readonly string[] {
 function lexiconPaths(pkg: QtiPackage, itemPath: string): readonly string[] {
   return dependenciesOf(pkg, itemPath, undefined)
     .filter(({ type }) => type === "pls")
-    .flatMap((resource) => resourcePath(pkg.manifest, resource) ?? []);
+    .flatMap((resource) => resolveResourcePath(pkg.manifest, resource) ?? []);
 }
 
 /** Returns the documents of an item: its own, those of its stimuli and its lexicons. */

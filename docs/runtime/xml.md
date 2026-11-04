@@ -21,19 +21,19 @@ flowchart LR
   tree -- "serializeXml" --> output
 ```
 
-| Export                                                                                | Purpose                                                                    |
-| ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `parseXml(input, options?)`                                                           | Parses text or bytes into an `XmlElement`.                                 |
-| `serializeXml(root)`                                                                  | Writes an `XmlElement` as a UTF-8 document.                                |
-| `ElementReader`, `ReaderRules`, `termOf`                                              | Reads an element into a model and reports what the model leaves unread.    |
-| `buildElement(namespace, name, attributes?, children?)`, `ElementAttributes`          | Builds an element for a writer, and the type of its attributes.            |
-| `isXmlLanguage(value)`                                                                | Tells whether a value can be the value of `xml:lang`.                      |
-| `resolveIncludes(root, base, resolve, options?)`                                      | Replaces each `xi:include` with the root element of the document it names. |
-| `childElements(element)`, `attributeOf(element, name, namespace?)`, `textOf(element)` | The child elements, an attribute and the text of an element.               |
-| `readError(code, message, location?)`, `locationOf(element, path, trail?)`            | Build the `ReadError` of one problem, and the location of an element.      |
-| `DEFAULT_XML_LIMITS`, `XmlLimits`                                                     | The limits on size, depth, attributes, nodes and include nesting.          |
-| `XML_NAMESPACE`, `XMLNS_NAMESPACE`, `XSI_NAMESPACE`, `XINCLUDE_NAMESPACE`             | Namespace URIs the reader and writer treat specially.                      |
-| `XmlElement`, `XmlAttribute`, `XmlNode`, `XmlCharacterData`, `XmlInstruction`         | The tree.                                                                  |
+| Export                                                                                         | Purpose                                                                    |
+| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `parseXml(input, options?)`                                                                    | Parses text or bytes into an `XmlElement`.                                 |
+| `serializeXml(root)`                                                                           | Writes an `XmlElement` as a UTF-8 document.                                |
+| `ElementReader`, `ReaderRules`, `createTermConverter`                                          | Reads an element into a model and reports what the model leaves unread.    |
+| `buildElement(namespace, name, options?)`, `ElementAttributes`                                 | Builds an element for a writer, and the type of its attributes.            |
+| `isXmlLanguage(value)`                                                                         | Tells whether a value can be the value of `xml:lang`.                      |
+| `resolveIncludes(root, base, resolve, options?)`                                               | Replaces each `xi:include` with the root element of the document it names. |
+| `listChildElements(element)`, `findAttribute(element, name, options?)`, `collectText(element)` | The child elements, an attribute and the text of an element.               |
+| `createReadError(code, message, options?)`, `locateElement(element, path, options?)`           | Build the `ReadError` of one problem, and the location of an element.      |
+| `DEFAULT_XML_LIMITS`, `XmlLimits`                                                              | The limits on size, depth, attributes, nodes and include nesting.          |
+| `XML_NAMESPACE`, `XMLNS_NAMESPACE`, `XSI_NAMESPACE`, `XINCLUDE_NAMESPACE`                      | Namespace URIs the reader and writer treat specially.                      |
+| `XmlElement`, `XmlAttribute`, `XmlNode`, `XmlCharacterData`, `XmlInstruction`                  | The tree.                                                                  |
 
 ## Example
 
@@ -70,13 +70,13 @@ serializeXml(resolved);
 - `line` and `column` (from 1, columns count characters) locate the start tag of an element that `parseXml` read.
 
 ```ts
-import { attributeOf, childElements, parseXml, textOf } from "@assesskit/runtime/xml";
+import { findAttribute, listChildElements, parseXml, collectText } from "@assesskit/runtime/xml";
 
 const root = parseXml('<a xmlns="urn:demo" id="x">one <b/><!--note-->two <![CDATA[<3]]></a>');
-attributeOf(root, "id"); // => "x"
-attributeOf(root, "id", "urn:other"); // => undefined
-childElements(root).map((child) => child.name); // => ["b"]
-textOf(root); // => "one two <3"
+findAttribute(root, "id"); // => "x"
+findAttribute(root, "id", { namespace: "urn:other" }); // => undefined
+listChildElements(root).map((child) => child.name); // => ["b"]
+collectText(root); // => "one two <3"
 root.children.map((child) => child.kind); // => ["text", "element", "comment", "text", "cdata"]
 ```
 
@@ -141,7 +141,10 @@ read from. Node.js with its default stack reads, writes and evaluates trees of 1
 ```ts
 import { buildElement, serializeXml } from "@assesskit/runtime/xml";
 
-const item = buildElement("urn:demo", "item", { id: "q1", note: undefined, "xml:lang": "en" }, ["a < b", ""]);
+const item = buildElement("urn:demo", "item", {
+  attributes: { id: "q1", note: undefined, "xml:lang": "en" },
+  children: ["a < b", ""],
+});
 serializeXml(item);
 // => '<?xml version="1.0" encoding="UTF-8"?>\n<item id="q1" xml:lang="en" xmlns="urn:demo">a &lt; b</item>'
 ```
@@ -155,7 +158,7 @@ serializeXml(item);
   an NCName, a prefix without a namespace or a namespace without a prefix on an attribute, one prefix for two namespaces on an
   element, a repeated attribute, `--` in a comment, a processing instruction named `xml` or containing `?>`. The message names the element.
 
-`buildElement` leaves out an attribute whose value is `undefined`, writes a string child as text and drops an empty one; a name
+`buildElement` takes the `attributes` and the `children` as options. It leaves out an attribute whose value is `undefined`, writes a string child as text and drops an empty one; a name
 with the prefix `xml:` or `xsi:` is in that namespace. `isXmlLanguage` accepts the language tags of `xs:language` and the
 empty string, which undoes an inherited language.
 
@@ -194,7 +197,7 @@ reader.done(); // => undefined
 | `namespaces`        | The namespaces of the schema's elements; an element in another namespace is an extension.         |
 | `path`              | The path of the document, which the issues name. `open` takes it from its options. Default: none. |
 
-`termOf(terms, label?)` makes the conversion for `text` and `attribute` that accepts one of some terms. A reader takes the
+`createTermConverter(terms, options?)` makes the conversion for `text` and `attribute` that accepts one of some terms; its option `label` names the text in the message. A reader takes the
 children in the order of the schema. An issue has the line and column of the element and its path, such as
 `assessmentResult/itemResult`.
 
@@ -229,8 +232,8 @@ An include that is the root of the tree must be replaced by exactly one element.
 
 ## Reading a tree without mapping it
 
-`childElements`, `attributeOf` and `textOf` read a tree you do not map completely, such as the parts of an element that a
-model keeps as XML. `lomGeneral` of [metadata](metadata.md) reads the title and identifiers of a LOM this way. They never
+`listChildElements`, `findAttribute` and `collectText` read a tree you do not map completely, such as the parts of an element that a
+model keeps as XML. `readLomGeneral` of [metadata](metadata.md) reads the title and identifiers of a LOM this way. They never
 fail: an attribute or a child that is not there is `undefined` or left out. A reader that maps a whole document uses
 `ElementReader`.
 

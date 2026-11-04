@@ -36,70 +36,70 @@ sequenceDiagram
   participant Host as Host or server
   participant Engine
   Client->>Host: JSON of an action
-  Host->>Host: parseCandidateAction checks type and limits
+  Host->>Host: readCandidateAction checks type and limits
   Host->>Host: stamp sets the time
   Host->>Engine: apply(state, action)
   Engine-->>Host: Step: state and events, or a Refusal
   Host->>Engine: view(state, now)
   Engine-->>Host: CandidateView without answer keys
-  Host-->>Client: viewToJson(view)
+  Host-->>Client: writeView(view)
 ```
 
-| Function or type                                               | Does                                                                                                 |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `createEngine(definition, options?)`                           | The `Engine`: `start`, `apply`, `deadlines`, `view`, `pending`, `scorerView`, `results`.             |
-| `stamp(state, action, now)`                                    | The action with `at` = max(`now`, the time of the latest step).                                      |
-| `viewToJson(view)`, `viewFromJson(json)`                       | The JSON form of a `CandidateView`, and the view of a JSON form.                                     |
-| `actionToJson(action)`, `parseCandidateAction(json, options?)` | The JSON form of a candidate action, and the action of a JSON form, within limits.                   |
-| `CandidateView`, `CandidateItem`, `NavigationEntry`, …         | What the candidate sees: the item, the navigation map, timers, actions and supports.                 |
-| `DEFAULT_ACTION_LIMITS`, `ActionLimits`                        | The limits of `parseCandidateAction`.                                                                |
-| `serializeState(state)`, `deserializeState(text)`              | The JSON text of a state, and the state of a text, with the version of the format.                   |
-| `DeliveryState`, `Step`, `Deadline`                            | A candidate session as plain data, the result of a step, a time limit as an absolute time.           |
-| `CandidateAction`, `HostAction`, `Action`                      | The actions of the candidate and the host, with their time.                                          |
-| `DeliveryDefinition`, `EngineOptions`, `StartOptions`          | What the engine delivers, its options, and the options of a session.                                 |
-| `drainCat(engine, state, port, now, options?)`                 | Makes the waiting requests of CAT engines through a `CatSessionPort` and applies each answer.        |
-| `sendCatRequest(port, request, options?)`                      | Makes one CAT request through a `CatSessionPort` and returns the answer for a `cat-response` action. |
-| `DrainCatOptions`, `SendCatRequestOptions`                     | The options of `drainCat` and `sendCatRequest`: `signal`.                                            |
-| `PendingWork`, `ScoringRequest`, `CatRequest`                  | What the engine waits on the host for: scores and answers of CAT engines.                            |
-| `ScorerView`, `ScorerItem`                                     | What a scorer needs to rate a request, correct responses included.                                   |
-| `CatSession`, `CatSectionRef`                                  | The session of an adaptive section in a state, and where its CAT engine is.                          |
-| `resolveStructure(test, base, resolvers)`                      | The `TestStructure`: parts, sections and item references, section references replaced.               |
-| `planTest(structure, options)`                                 | A `TestPlan`: the sections and item instances of one session.                                        |
-| `planItems(plan, part?)`                                       | The item instances of a plan, or of one test part, in order of presentation.                         |
-| `nextItem(structure, plan, from, rules)`                       | The item to present after `from`, or the first item; pre-conditions and branch rules apply.          |
-| `previousItem(structure, plan, from)`                          | The item before `from`, in a nonlinear part.                                                         |
-| `sessionControl(item)`                                         | The item session control of an item reference after inheritance.                                     |
-| `timeLimits(node, extra?)`                                     | The time limits of the test, a part, a section or an item reference, with extra time.                |
-| `additionalTestingTime(profile)`                               | The extra testing time of a PNP.                                                                     |
-| `ancestry(node)`, `partOf(node)`                               | The nodes that enclose a node, outermost first; the test part of a section or item reference.        |
-| `ItemKey`                                                      | An item instance: the identifier of the item reference and the instance, from 1.                     |
-| `TestPlan`, `PlannedPart`, `PlannedSection`, …                 | The plan: plain data, identifiers and numbers only.                                                  |
-| `TestNode`, `PartNode`, `SectionNode`, …                       | The nodes of the structure, with their models and the path of the document that holds them.          |
-| `RuleContext`                                                  | What pre-conditions and branch rules read.                                                           |
-| `EffectiveSessionControl`, `EffectiveTimeLimits`               | The results of `sessionControl` and `timeLimits`.                                                    |
-| `DEFAULT_PLAN_LIMITS`, `PlanLimits`, `PlanOptions`             | The limit on the size of a plan, and the options of `planTest`.                                      |
-| `startItemSession(key, at, context, options?)`                 | A new item session in the state `initial`, after template processing.                                |
-| `presentItem(session, at, context)`                            | Presents the item: the first time it starts the first attempt; a suspended session resumes.          |
-| `suspendItem(session, at)`                                     | Suspends an interacting session, as when the candidate moves to another item.                        |
-| `closeItem(session, at, context)`                              | Closes the session, ending an open attempt with its drafts.                                          |
-| `applyItemAction(session, action, context)`                    | Applies an action of the candidate: responses, submit, skip, end attempt, review and more.           |
-| `itemFeedback(session, item, control)`                         | The outcomes that decide the feedback shown in the state of the session.                             |
-| `itemResponses(session)`                                       | The responses the item shows: drafts, submitted responses, or the solution.                          |
-| `resultStatus(session, item)`                                  | The session status of Results Reporting.                                                             |
-| `readItemVariables(item, result)`                              | The variables that response processing starts from, read from a stored result of one instance.       |
-| `readTestInputs(structure, result, items, options?)`           | The outcomes and the scope that outcome processing takes, read from a stored report.                 |
-| `TestInputs`, `ReadTestInputsOptions`                          | What `readTestInputs` returns, and its option `variables`.                                           |
-| `standaloneSessionControl(control?)`                           | The item session control of an item delivered alone.                                                 |
-| `ItemSession`, `ItemSessionStatus`                             | The state of an item session: plain data with its variables, drafts and attempts.                    |
-| `ItemSessionContext`, `ItemAction`, `ItemStep`                 | What a step reads besides the session, the actions of the candidate, and the result of a step.       |
-| `Refusal`, `RefusalCode`, `DeliveryEvent`, …                   | Why a step is refused, and what an accepted step reports.                                            |
+| Function or type                                                      | Does                                                                                                 |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `createEngine(definition, options?)`                                  | The `Engine`: `start`, `apply`, `deadlines`, `view`, `pending`, `scorerView`, `results`.             |
+| `stamp(state, action, now)`                                           | The action with `at` = max(`now`, the time of the latest step).                                      |
+| `writeView(view)`, `readView(json)`                                   | The JSON form of a `CandidateView`, and the view of a JSON form.                                     |
+| `writeCandidateAction(action)`, `readCandidateAction(json, options?)` | The JSON form of a candidate action, and the action of a JSON form, within limits.                   |
+| `CandidateView`, `CandidateItem`, `NavigationEntry`, …                | What the candidate sees: the item, the navigation map, timers, actions and supports.                 |
+| `DEFAULT_ACTION_LIMITS`, `ActionLimits`                               | The limits of `readCandidateAction`.                                                                 |
+| `serializeState(state)`, `deserializeState(text)`                     | The JSON text of a state, and the state of a text, with the version of the format.                   |
+| `DeliveryState`, `Step`, `Deadline`                                   | A candidate session as plain data, the result of a step, a time limit as an absolute time.           |
+| `CandidateAction`, `HostAction`, `Action`                             | The actions of the candidate and the host, with their time.                                          |
+| `DeliveryDefinition`, `EngineOptions`, `StartOptions`                 | What the engine delivers, its options, and the options of a session.                                 |
+| `drainCat(engine, state, port, now, options?)`                        | Makes the waiting requests of CAT engines through a `CatSessionPort` and applies each answer.        |
+| `sendCatRequest(port, request, options?)`                             | Makes one CAT request through a `CatSessionPort` and returns the answer for a `cat-response` action. |
+| `DrainCatOptions`, `SendCatRequestOptions`                            | The options of `drainCat` and `sendCatRequest`: `signal`.                                            |
+| `PendingWork`, `ScoringRequest`, `CatRequest`                         | What the engine waits on the host for: scores and answers of CAT engines.                            |
+| `ScorerView`, `ScorerItem`                                            | What a scorer needs to rate a request, correct responses included.                                   |
+| `CatSession`, `CatSectionRef`                                         | The session of an adaptive section in a state, and where its CAT engine is.                          |
+| `resolveStructure(test, base, resolvers)`                             | The `TestStructure`: parts, sections and item references, section references replaced.               |
+| `planTest(structure, options)`                                        | A `TestPlan`: the sections and item instances of one session.                                        |
+| `listPlanItems(plan, options?)`                                       | The item instances of a plan, or of the option `part`, in order of presentation.                     |
+| `findNextItem(structure, plan, from, rules)`                          | The item to present after `from`, or the first item; pre-conditions and branch rules apply.          |
+| `findPreviousItem(structure, plan, from)`                             | The item before `from`, in a nonlinear part.                                                         |
+| `resolveSessionControl(item)`                                         | The item session control of an item reference after inheritance.                                     |
+| `timeLimits(node, options?)`                                          | The time limits of the test, a part, a section or an item reference, with the option `extra` time.   |
+| `additionalTestingTime(profile)`                                      | The extra testing time of a PNP.                                                                     |
+| `listAncestors(node)`, `findTestPart(node)`                           | The nodes that enclose a node, outermost first; the test part of a section or item reference.        |
+| `ItemKey`                                                             | An item instance: the identifier of the item reference and the instance, from 1.                     |
+| `TestPlan`, `PlannedPart`, `PlannedSection`, …                        | The plan: plain data, identifiers and numbers only.                                                  |
+| `TestNode`, `PartNode`, `SectionNode`, …                              | The nodes of the structure, with their models and the path of the document that holds them.          |
+| `RuleContext`                                                         | What pre-conditions and branch rules read.                                                           |
+| `EffectiveSessionControl`, `EffectiveTimeLimits`                      | The results of `resolveSessionControl` and `timeLimits`.                                             |
+| `DEFAULT_PLAN_LIMITS`, `PlanLimits`, `PlanOptions`                    | The limit on the size of a plan, and the options of `planTest`.                                      |
+| `startItemSession(key, at, context, options?)`                        | A new item session in the state `initial`, after template processing.                                |
+| `presentItem(session, at, context)`                                   | Presents the item: the first time it starts the first attempt; a suspended session resumes.          |
+| `suspendItem(session, at)`                                            | Suspends an interacting session, as when the candidate moves to another item.                        |
+| `closeItem(session, at, context)`                                     | Closes the session, ending an open attempt with its drafts.                                          |
+| `applyItemAction(session, action, context)`                           | Applies an action of the candidate: responses, submit, skip, end attempt, review and more.           |
+| `deriveItemFeedback(session, item, control)`                          | The outcomes that decide the feedback shown in the state of the session.                             |
+| `deriveItemResponses(session)`                                        | The responses the item shows: drafts, submitted responses, or the solution.                          |
+| `deriveSessionStatus(session, item)`                                  | The session status of Results Reporting.                                                             |
+| `readItemVariables(item, result)`                                     | The variables that response processing starts from, read from a stored result of one instance.       |
+| `readTestInputs(structure, result, items, options?)`                  | The outcomes and the scope that outcome processing takes, read from a stored report.                 |
+| `TestInputs`, `ReadTestInputsOptions`                                 | What `readTestInputs` returns, and its option `variables`.                                           |
+| `resolveStandaloneSessionControl(options?)`                           | The item session control of an item delivered alone, from the option `control`.                      |
+| `ItemSession`, `ItemSessionStatus`                                    | The state of an item session: plain data with its variables, drafts and attempts.                    |
+| `ItemSessionContext`, `ItemAction`, `ItemStep`                        | What a step reads besides the session, the actions of the candidate, and the result of a step.       |
+| `Refusal`, `RefusalCode`, `DeliveryEvent`, …                          | Why a step is refused, and what an accepted step reports.                                            |
 
 ## Engine
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
 import { createEngine, deserializeState, serializeState, stamp } from "@assesskit/runtime/delivery";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 
 const itemXml = (identifier) => `<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
     identifier="${identifier}" title="${identifier}" time-dependent="false">
@@ -160,7 +160,7 @@ engine.deadlines(started.state);
 const answer = {
   type: "set-responses",
   item: { ref: "q1", instance: 1 },
-  responses: new Map([["RESPONSE", single("identifier", "B")]]),
+  responses: new Map([["RESPONSE", buildSingle("identifier", "B")]]),
 };
 const answered = engine.apply(started.state, stamp(started.state, answer, 5_000));
 const moved = engine.apply(answered.state, { type: "move", to: "next", at: 9_000 });
@@ -179,7 +179,7 @@ it is given, and a refusal gives no state. `apply` never throws on a state of it
 
 | `DeliveryDefinition` | Fields                                                                                                  |
 | -------------------- | ------------------------------------------------------------------------------------------------------- |
-| `kind: "test"`       | `test`, `base`, `resolvers` (such as `packageResolvers(pkg)`), `catSections` (default: none)            |
+| `kind: "test"`       | `test`, `base`, `resolvers` (such as `createPackageResolvers(pkg)`), `catSections` (default: none)      |
 | `kind: "item"`       | `item`, `base` (the path of the item document), `control` (a `qti-item-session-control`; default: none) |
 
 | `EngineOptions`   | Default                                            | Meaning                                                                                                             |
@@ -209,7 +209,7 @@ that holds it.
 | `sections(href, base)` | The `AssessmentSection` that a `qti-assessment-section-ref` names.                                             |
 | `stimuli(href, base)`  | The `AssessmentStimulus` that a `qti-assessment-stimulus-ref` names.                                           |
 
-`packageResolvers(pkg)` builds them from a `QtiPackage`. A resolver reports a reference it cannot resolve by throwing, and
+`createPackageResolvers(pkg)` builds them from a `QtiPackage`. A resolver reports a reference it cannot resolve by throwing, and
 the error leaves `createEngine`. A resolver returns its value and never a promise: `createEngine` throws a `DataError` that
 names the resolver, and `validateTest` and `resolveStructure` do the same. `createEngine` calls each resolver while
 it builds the engine and the engine never calls one again, so a host whose documents are in a store loads those the test can
@@ -430,7 +430,7 @@ nothing. A host that wants to go on with the old content keeps the engine of the
 
 `createEngine({ kind: "item", item, base, control })` delivers an item as a test of one nonlinear test part with individual
 submission: the test is named as the item, the part `<identifier>-part`, its section `<identifier>-section`, and the
-item reference has the identifier of the item. Its control is `standaloneSessionControl(control)`. The definition may give
+item reference has the identifier of the item. Its control is `resolveStandaloneSessionControl({ control })`. The definition may give
 `resolvers` with `stimuli`, to present the stimuli the item names.
 
 ### Review after the end
@@ -486,15 +486,15 @@ The same engine serves an exam on a server and practice on a device. Only the pl
 **Server mode.** The server owns the engine, the states and the clock. A request is handled in four steps, and the answer is
 the view:
 
-1. `parseCandidateAction(json, options?)` reads the JSON of the client into an action, and throws a `DataError` for one that is
+1. `readCandidateAction(json, options?)` reads the JSON of the client into an action, and throws a `DataError` for one that is
    malformed or an action of the host, and a `SecurityError` for one above a limit.
 2. `stamp(state, action, now)` sets the time of the action to the clock of the server.
 3. `engine.apply(state, action)` gives the next state, or a refusal, which the server reports to the client.
-4. `viewToJson(engine.view(state, now))` is what the client receives.
+4. `writeView(engine.view(state, now))` is what the client receives.
 
 The server keeps the state between requests with `serializeState`, fires `{ type: "time", at }` at the `deadlines` of the
 state, and supplies the other actions of the host, `supply-scores` and `cat-response`. A client holds only views, which
-`viewFromJson` reads, and sends actions, which `actionToJson` writes; it imports them from `@assesskit/runtime/delivery/wire`,
+`readView` reads, and sends actions, which `writeCandidateAction` writes; it imports them from `@assesskit/runtime/delivery/wire`,
 which reaches no file of the engine, so its bundle holds no answer key. The seed of a session stays on the server too:
 selection and shuffles are reproducible from it ([SECURITY](https://github.com/assesskit/assesskit/blob/main/SECURITY.md)).
 
@@ -536,8 +536,8 @@ changed.
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
-import { actionToJson, createEngine, parseCandidateAction, stamp, viewToJson } from "@assesskit/runtime/delivery";
-import { single } from "@assesskit/runtime/values";
+import { writeCandidateAction, createEngine, readCandidateAction, stamp, writeView } from "@assesskit/runtime/delivery";
+import { buildSingle } from "@assesskit/runtime/values";
 
 const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="capital"
     title="Capital" time-dependent="false">
@@ -560,13 +560,13 @@ view.actions; // => ["set-responses", "submit", "skip", "mark", "move", "end-par
 const answer = {
   type: "set-responses",
   item: { ref: "capital", instance: 1 },
-  responses: new Map([["RESPONSE", single("identifier", "B")]]),
+  responses: new Map([["RESPONSE", buildSingle("identifier", "B")]]),
 };
-const text = JSON.stringify(actionToJson(answer));
-const received = parseCandidateAction(JSON.parse(text), { limits: { maxActionSize: 100_000 } });
+const text = JSON.stringify(writeCandidateAction(answer));
+const received = readCandidateAction(JSON.parse(text), { limits: { maxActionSize: 100_000 } });
 stamp(started.state, received, 5_000).at; // => 5000
 const step = engine.apply(started.state, stamp(started.state, received, 5_000));
-JSON.parse(JSON.stringify(viewToJson(engine.view(step.state, 5_000)))).current.responses;
+JSON.parse(JSON.stringify(writeView(engine.view(step.state, 5_000)))).current.responses;
 // => [["RESPONSE", { cardinality: "single", baseType: "identifier", value: { base: { identifier: "B" } } }]]
 ```
 
@@ -618,12 +618,12 @@ with NULL as `null`, durations as `PT<seconds>S`, and files as references. Maps 
 so an identifier such as `__proto__` stays data. They decode without declarations and lose nothing: `multiple` stays apart
 from `ordered`, and the NULL of one type from that of another.
 
-| Function                               | Does                                                                                                                                                         |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `viewToJson(view)`                     | Builds the JSON form property by property, reads it back with `viewFromJson` and returns it. The content nodes are shared with the view.                     |
-| `viewFromJson(json)`                   | Checks every property of the form and no other, the type of each field, the values, and the content as plain JSON of at most 256 levels with finite numbers. |
-| `actionToJson(action)`                 | Writes the properties of the action's type and no other: the time `at` is not written.                                                                       |
-| `parseCandidateAction(json, options?)` | Reads an action of the candidate, checks its type, its properties and its limits, and refuses an action of the host and any property `at`.                   |
+| Function                              | Does                                                                                                                                                         |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `writeView(view)`                     | Builds the JSON form property by property, reads it back with `readView` and returns it. The content nodes are shared with the view.                         |
+| `readView(json)`                      | Checks every property of the form and no other, the type of each field, the values, and the content as plain JSON of at most 256 levels with finite numbers. |
+| `writeCandidateAction(action)`        | Writes the properties of the action's type and no other: the time `at` is not written.                                                                       |
+| `readCandidateAction(json, options?)` | Reads an action of the candidate, checks its type, its properties and its limits, and refuses an action of the host and any property `at`.                   |
 
 | Limit                  | Default   | Bounds                                                                                                     |
 | ---------------------- | --------- | ---------------------------------------------------------------------------------------------------------- |
@@ -681,7 +681,7 @@ responses it covers `scoreStatus="notscored"`.
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
 import { createEngine } from "@assesskit/runtime/delivery";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 
 const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="essay"
     title="Essay" time-dependent="false">
@@ -695,7 +695,7 @@ const key = { ref: "essay", instance: 1 };
 const written = engine.apply(started.state, {
   type: "set-responses",
   item: key,
-  responses: new Map([["RESPONSE", single("string", "Dear Sir")]]),
+  responses: new Map([["RESPONSE", buildSingle("string", "Dear Sir")]]),
   at: 1_000,
 });
 const submitted = engine.apply(written.state, { type: "submit", item: key, at: 2_000 });
@@ -706,7 +706,7 @@ engine.results(submitted.state).itemResults[0].sessionStatus; // => "pendingExte
 const scored = engine.apply(submitted.state, {
   type: "supply-scores",
   request: request.id,
-  value: single("float", 7.5),
+  value: buildSingle("float", 7.5),
   scorer: "human",
   at: 3_000,
 });
@@ -793,7 +793,7 @@ instance `n` after the jumps of a nonlinear part, so a report can be scored agai
 | Item result       | Content                                                                                                                                                                                                                     |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `datestamp`       | The time of its last event: the end of its last attempt (a submission, a skip, a time-out), else its latest change. `RFC 3339` with the offset `Z` and milliseconds.                                                        |
-| `sessionStatus`   | `resultStatus`, with `pendingExternalScoring` until every score of the item is supplied, and while a pending score of the test covers one of its responses.                                                                 |
+| `sessionStatus`   | `deriveSessionStatus`, with `pendingExternalScoring` until every score of the item is supplied, and while a pending score of the test covers one of its responses.                                                          |
 | responses         | `numAttempts` and `duration` (also for an item that is not time dependent), then each declared response with its last submitted value, `choiceSequence` when the choices were shuffled, `scoreStatus` and `answeredStatus`. |
 | other variables   | Template and context variables, then `completionStatus` and each declared outcome with its `view`, interpretation, normal and mastery values, `external-scored` and `variable-identifier-ref`.                              |
 | comment, supports | The candidate's comment, and the supports on while the item was presented: `assigned` when the profile names them, `universal` when only the program gives them.                                                            |
@@ -810,14 +810,14 @@ of the test. A datestamp is always written with an offset because the JSON bindi
 import { createRandom } from "@assesskit/runtime";
 import { readAsi } from "@assesskit/runtime/asi";
 import {
-  nextItem,
-  planItems,
+  findNextItem,
+  listPlanItems,
   planTest,
   resolveStructure,
-  sessionControl,
+  resolveSessionControl,
   timeLimits,
 } from "@assesskit/runtime/delivery";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 
 const { test } =
   readAsi(`<qti-assessment-test xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="demo" title="Demo">
@@ -846,19 +846,19 @@ const structure = resolveStructure(test, "tests/demo.xml", {
   },
 });
 const plan = planTest(structure, { random: createRandom(7) });
-planItems(plan); // => [{ ref: "w1", instance: 1 }, { ref: "q2", instance: 1 }, { ref: "q3", instance: 1 }]
+listPlanItems(plan); // => [{ ref: "w1", instance: 1 }, { ref: "q2", instance: 1 }, { ref: "q3", instance: 1 }]
 const rules = (passed) => ({
-  outcomes: new Map([["PASSED_WARMUP", single("boolean", passed)]]),
+  outcomes: new Map([["PASSED_WARMUP", buildSingle("boolean", passed)]]),
   scope: { itemSessions: () => [], itemSession: () => undefined, variable: () => undefined },
   context: { random: createRandom(1) },
 });
-const first = nextItem(structure, plan, undefined, rules(true));
+const first = findNextItem(structure, plan, undefined, rules(true));
 first; // => { ref: "w1", instance: 1 }
-nextItem(structure, plan, first, rules(true)); // => { ref: "q2", instance: 1 }
-nextItem(structure, plan, first, rules(false)); // => undefined
-sessionControl(structure.itemRef("q3")).maxAttempts; // => 3
+findNextItem(structure, plan, first, rules(true)); // => { ref: "q2", instance: 1 }
+findNextItem(structure, plan, first, rules(false)); // => undefined
+resolveSessionControl(structure.itemRef("q3")).maxAttempts; // => 3
 timeLimits(structure.test); // => { maxTime: 3600, allowLateSubmission: false }
-timeLimits(structure.test, { kind: "time-multiplier", multiplier: 1.5 }); // => { maxTime: 5400, allowLateSubmission: false }
+timeLimits(structure.test, { extra: { kind: "time-multiplier", multiplier: 1.5 } }); // => { maxTime: 5400, allowLateSubmission: false }
 ```
 
 ## Structure
@@ -871,7 +871,7 @@ document, which `resolveReference` of `package` computes from the reference and 
 - The identifiers of test parts, sections and item references are one set. A repeat is a `DataError`, also when one section
   document is referenced from two places.
 - A section reference and the section it names have the same identifier; a different one is a `DataError`.
-- An `xi:include` left in a section is a `DataError`; `packageResolvers` resolves includes.
+- An `xi:include` left in a section is a `DataError`; `createPackageResolvers` resolves includes.
 - `structure.part(id)`, `structure.section(id)` and `structure.itemRef(id)` find a node, `undefined` for an identifier the
   test does not have.
 - An adaptive section keeps its item references in the structure, as the pool of its CAT engine; the plan gives it no items.
@@ -931,7 +931,7 @@ draws of its own, and numbered the same way.
 
 ## Navigation
 
-`nextItem(structure, plan, from, rules)` returns the item to present after the candidate leaves `from`, or the first item of
+`findNextItem(structure, plan, from, rules)` returns the item to present after the candidate leaves `from`, or the first item of
 the test when `from` is `undefined`; `undefined` is returned when no item follows. `rules` holds the outcomes of the test, the
 `TestScope` of its item sessions and the processing context, as `runOutcomeProcessing` takes them.
 
@@ -947,12 +947,12 @@ the test when `from` is `undefined`; `undefined` is returned when no item follow
 | `EXIT_TESTPART`   | Completes the test part, so its branch rules follow. `EXIT_TEST` ends the test.                                                                                                                                                                    |
 | Expressions       | NULL counts as false; a value that is not a single boolean is a `ProcessingError`.                                                                                                                                                                 |
 
-`previousItem` gives the item before `from` in a nonlinear part, `undefined` at the first item and in a linear part, which
+`findPreviousItem` gives the item before `from` in a nonlinear part, `undefined` at the first item and in a linear part, which
 moves forward only.
 
 ## Item session control
 
-`sessionControl(item)` starts from the defaults and applies the `qti-item-session-control` of the test part, of each section
+`resolveSessionControl(item)` starts from the defaults and applies the `qti-item-session-control` of the test part, of each section
 from the outermost, and of the item reference, attribute by attribute. A section that
 ordering mixes into its parent still passes its control to its items.
 
@@ -968,12 +968,12 @@ ordering mixes into its parent still passes its control to its items.
 
 ## Time limits of the plan
 
-`timeLimits(node, extra?)` returns `minTime`, `maxTime` (seconds, absent when undeclared) and `allowLateSubmission`
+`timeLimits(node, options?)` returns `minTime`, `maxTime` (seconds, absent when undeclared) and `allowLateSubmission`
 (default `false`) of the scope. Each scope declares its own limits; nothing is inherited. The minimum
 time of a section or item reference is absent in a nonlinear part. A section that ordering mixes into its parent has no
 limits.
 
-Extra time comes from `additionalTestingTime(profile)`, the `additional-testing-time` support unless the profile prohibits it, and changes maximum times only:
+Extra time comes from `additionalTestingTime(profile)`, the `additional-testing-time` support unless the profile prohibits it. It goes in the option `extra` of `timeLimits` and changes maximum times only:
 
 | Extra time        | Effect on each maximum time                                                                                                                       |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -996,11 +996,11 @@ import { readAsi } from "@assesskit/runtime/asi";
 import {
   applyItemAction,
   presentItem,
-  resultStatus,
-  standaloneSessionControl,
+  deriveSessionStatus,
+  resolveStandaloneSessionControl,
   startItemSession,
 } from "@assesskit/runtime/delivery";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 
 const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="capital"
     title="Capital" adaptive="true" time-dependent="false">
@@ -1024,12 +1024,12 @@ const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/x
     </qti-response-condition>
   </qti-response-processing>
 </qti-assessment-item>`);
-const context = { item, control: standaloneSessionControl(), random: createRandom(7) };
+const context = { item, control: resolveStandaloneSessionControl(), random: createRandom(7) };
 const key = { ref: "capital", instance: 1 };
 const answer = (choice, at) => ({
   type: "set-responses",
   item: key,
-  responses: new Map([["RESPONSE", single("identifier", choice)]]),
+  responses: new Map([["RESPONSE", buildSingle("identifier", choice)]]),
   at,
 });
 const started = startItemSession(key, 0, context);
@@ -1049,7 +1049,7 @@ const right = applyItemAction(
 );
 right.session.status; // => "closed"
 right.session.variables.outcomes.get("SCORE"); // => { cardinality: "single", baseType: "float", value: 1 }
-resultStatus(right.session, item); // => "final"
+deriveSessionStatus(right.session, item); // => "final"
 applyItemAction(right.session, answer("bandung", 10_000), context).refusal.code; // => "item-closed"
 ```
 
@@ -1117,7 +1117,7 @@ session keeps the latest for the PCI's `getInstance`.
 
 ### Feedback and responses shown
 
-`itemFeedback` gives the outcomes that decide integrated feedback and whether modal feedback shows, for `content` to
+`deriveItemFeedback` gives the outcomes that decide integrated feedback and whether modal feedback shows, for `content` to
 resolve. Feedback that is not shown is decided by the values that response processing starts from, which
 show the body as at the start of an attempt.
 
@@ -1129,12 +1129,12 @@ show the body as at the start of an attempt.
 | `closed`             | all when `show-feedback` is true                                                     |
 | `review`, `solution` | all when `show-feedback` is true, or when the item is adaptive and review is allowed |
 
-`itemResponses` gives the drafts while the session is open, the submitted responses when it is closed or in review, and in
+`deriveItemResponses` gives the drafts while the session is open, the submitted responses when it is closed or in review, and in
 the solution state the correct responses, NULL where none is declared; the session keeps the candidate's.
 
 ### Results status and processing failures
 
-| `resultStatus`              | When                                                                            |
+| `deriveSessionStatus`       | When                                                                            |
 | --------------------------- | ------------------------------------------------------------------------------- |
 | `initial`                   | `numAttempts` is 0                                                              |
 | `pendingSubmission`         | an attempt is open                                                              |
@@ -1149,7 +1149,7 @@ item or the outcomes of the earlier attempt of an adaptive one. The attempt stil
 
 ### Item delivered alone
 
-`standaloneSessionControl(control?)` gives the control of an item delivered outside a test: the defaults of item
+`resolveStandaloneSessionControl(options?)` gives the control of an item delivered outside a test: the defaults of item
 session control, except that `show-feedback` and `allow-review` are true, with the attributes of the control given in
 their place. `max-attempts` stays with the item when no control sets it.
 
@@ -1188,7 +1188,7 @@ Where the specifications are silent or contradict themselves, the engine follows
 | Stylesheets                      | `stylesheets` are package paths against the document of the item, and of each stimulus against its own; a variant, whose path the resolvers do not give, resolves against the package root.                                                        |
 | Time-dependent items             | `timeDependent` is part of `CandidateItem`, because the player marks time-dependent items. The title of an item that models a link to a tool is the title of the link.                                                                             |
 | Times in the view                | `remaining` and `minimumRemaining` are in milliseconds, like every time of the engine.                                                                                                                                                             |
-| Limits of requests               | A request above a limit of `parseCandidateAction` is a `SecurityError`, as for every other limit. The limits are the option `limits` of `parseCandidateAction`; `EngineOptions.limits` keeps the limits of processing and planning.                |
+| Limits of requests               | A request above a limit of `readCandidateAction` is a `SecurityError`, as for every other limit. The limits are the option `limits` of `readCandidateAction`; `EngineOptions.limits` keeps the limits of processing and planning.                  |
 | Settings of supports             | The settings of a support are kept in the state (`SessionSupport.settings`), so that the view of a state read back on another device has them.                                                                                                     |
 
 ### Pending work
@@ -1246,7 +1246,7 @@ the adaptive form. With [`eventOutcomes`](#events) the host reads the rung, the 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
 import { createEngine } from "@assesskit/runtime/delivery";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 
 const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
     identifier="ladder" title="Ladder" adaptive="true" time-dependent="false">
@@ -1330,7 +1330,7 @@ const hint = (state, at) => engine.apply(state, { type: "end-attempt", item: key
 const again = (state, at) => engine.apply(state, { type: "next-attempt", item: key, at });
 const first = hint(started.state, 2_000);
 const second = hint(again(first.state, 2_500).state, 3_000);
-const responses = new Map([["RESPONSE", single("identifier", "B")]]);
+const responses = new Map([["RESPONSE", buildSingle("identifier", "B")]]);
 const answered = engine.apply(again(second.state, 3_500).state, {
   type: "set-responses",
   item: key,
@@ -1520,12 +1520,12 @@ rules, and the value to choose: above the longest pause that a learner takes whi
 
 ## Errors
 
-| Class             | Thrown when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `DataError`       | `parseCandidateAction` meets input that is not an action of the candidate; `viewFromJson` meets JSON that is not a view; `viewToJson` or `actionToJson` is given something else; the static checks of `createEngine` find an error; a context value given to `start` names no context variable or does not fit one; a state is not one of the format, or started on another content version than the engine's; an argument has the wrong type; identifiers repeat; a section reference and its section differ; a selection cannot be made; a multiplier is not positive; a plan does not match its structure; an item instance is not in the plan; a context value does not fit its declaration; a response is not a value; `readItemVariables` is given an adaptive item, or `readItemVariables` or `readTestInputs` meets a value of a report that does not fit the declaration, an item or a position that the test lacks, a report without a test result, or a datestamp that is not a date. |
-| `SecurityError`   | An action is above `maxActionSize`, `maxPciStateLength` or `maxSettingListLength` at `parseCandidateAction`; a plan would hold more than `maxPlanNodes` sections and items, also at `start`; an expression of a pre-condition or branch rule builds a container above its limit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `ProcessingError` | A pre-condition or branch rule fails, or does not give a boolean; a declared value of an item is not in the lexical form of its base type, also in `readItemVariables`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `ReadError`       | A resolver cannot find a section.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Class             | Thrown when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DataError`       | `readCandidateAction` meets input that is not an action of the candidate; `readView` meets JSON that is not a view; `writeView` or `writeCandidateAction` is given something else; the static checks of `createEngine` find an error; a context value given to `start` names no context variable or does not fit one; a state is not one of the format, or started on another content version than the engine's; an argument has the wrong type; identifiers repeat; a section reference and its section differ; a selection cannot be made; a multiplier is not positive; a plan does not match its structure; an item instance is not in the plan; a context value does not fit its declaration; a response is not a value; `readItemVariables` is given an adaptive item, or `readItemVariables` or `readTestInputs` meets a value of a report that does not fit the declaration, an item or a position that the test lacks, a report without a test result, or a datestamp that is not a date. |
+| `SecurityError`   | An action is above `maxActionSize`, `maxPciStateLength` or `maxSettingListLength` at `readCandidateAction`; a plan would hold more than `maxPlanNodes` sections and items, also at `start`; an expression of a pre-condition or branch rule builds a container above its limit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `ProcessingError` | A pre-condition or branch rule fails, or does not give a boolean; a declared value of an item is not in the lexical form of its base type, also in `readItemVariables`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `ReadError`       | A resolver cannot find a section.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 A well-formed action that the rules do not allow is a refusal, not an error, and processing failures in item sessions and in the engine are data.
 

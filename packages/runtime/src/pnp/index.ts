@@ -34,7 +34,7 @@ export type {
   Zoom,
 } from "./settings.js";
 export {
-  extensionName,
+  deriveExtensionName,
   isSetSupportName,
   isSupportName,
   LANGUAGE_SUPPORTS,

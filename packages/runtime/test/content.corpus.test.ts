@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   type AssessmentItem,
   type BodyNode,
-  container,
+  buildContainer,
   createItemVariables,
   createRandom,
-  descendantNodes,
   type ItemVariables,
   isShown,
+  listDescendantNodes,
   type ModelNode,
   ProcessingError,
   resolveContent,
@@ -27,7 +27,8 @@ function instanceOf(item: AssessmentItem): ItemVariables | undefined {
   }
 }
 
-const nodesOf = (nodes: readonly ModelNode[]): ModelNode[] => nodes.flatMap((node) => [node, ...descendantNodes(node)]);
+const nodesOf = (nodes: readonly ModelNode[]): ModelNode[] =>
+  nodes.flatMap((node) => [node, ...listDescendantNodes(node)]);
 const countKinds = (nodes: readonly ModelNode[], kinds: ReadonlySet<string>): number =>
   nodesOf(nodes).filter((node) => kinds.has(node.kind)).length;
 
@@ -120,7 +121,7 @@ describe("the content of the 1EdTech examples", () => {
     const feedback = nodesOf(body).flatMap((node) =>
       "outcomeIdentifier" in node ? [String(Reflect.get(node, "identifier"))] : [],
     );
-    const outcomes = new Map(instance.outcomes).set("FEEDBACK", container("multiple", "identifier", feedback));
+    const outcomes = new Map(instance.outcomes).set("FEEDBACK", buildContainer("multiple", "identifier", feedback));
     const mathVariables = new Set(
       item.templateDeclarations.filter(({ mathVariable }) => mathVariable).map(({ identifier }) => identifier),
     );

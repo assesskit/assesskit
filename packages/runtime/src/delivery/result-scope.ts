@@ -3,15 +3,15 @@ import { checkArray, checkFunction, checkOptions, checkRecord, describe } from "
 import { DataError } from "../errors.js";
 import {
   DURATION,
-  declaredValue,
   type ItemSessionFilter,
   type ItemSessionView,
   type ItemVariables,
   QTI_CONTEXT,
+  readDeclaredValue,
   type TestScope,
 } from "../processing/index.js";
 import type { AssessmentResult, ItemResult, TestResult } from "../results/index.js";
-import { single, type Value } from "../values/index.js";
+import { buildSingle, type Value } from "../values/index.js";
 import { attemptsOf } from "./attempt.js";
 import type { ScopeClock } from "./delivery-state.js";
 import { fitReported, itemVariablesFromResult, type ReportedValues, reportedValues } from "./result-variables.js";
@@ -19,7 +19,7 @@ import { keeps, type TestVariableSource, testVariable } from "./session-scope.js
 import type { ItemRefNode, TestStructure } from "./structure.js";
 
 /** The `duration` of a clock that was not entered. */
-const NOT_ENTERED = single("duration", 0);
+const NOT_ENTERED = buildSingle("duration", 0);
 
 /** What the test reads of one result of an item instance. */
 interface ReadSession {
@@ -126,7 +126,7 @@ class ResultScope implements TestScope {
     const declaration = test.contextDeclarations.find((each) => each.identifier === identifier);
     if (declaration === undefined) return undefined;
     if (held !== undefined) return fitReported(`the test ${test.identifier}`, "context", identifier, declaration, held);
-    return declaredValue(declaration.defaultValue?.values, declaration, `The default value of ${identifier}`);
+    return readDeclaredValue(declaration.defaultValue?.values, declaration, `The default value of ${identifier}`);
   }
 }
 

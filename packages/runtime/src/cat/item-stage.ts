@@ -58,6 +58,6 @@ export function isSessionEnd(stage: ItemStage | null | undefined): boolean {
  * @throws `DataError` when it is not an item stage.
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, item stage}
  */
-export function itemStageFromJson(json: unknown, noun: string): ItemStage {
+export function readItemStage(json: unknown, noun: string): ItemStage {
   return parseWith(itemStageSchema, json, `The ${noun}`);
 }

@@ -1,6 +1,6 @@
 import type { UploadInteraction } from "@assesskit/runtime/asi";
-import { checkResponse, type InteractionDescriptor } from "@assesskit/runtime/interactions";
-import { type FileValue, single } from "@assesskit/runtime/values";
+import { type InteractionDescriptor, validateResponse } from "@assesskit/runtime/interactions";
+import { buildSingle, type FileValue } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
 import { clockText, html, replaceAll, uniqueId } from "../internal.js";
@@ -388,7 +388,7 @@ export class UploadInteractionElement extends InteractionElement {
     this.#status.textContent = messages.uploadRecording;
     this.#status.classList.add("ak-recording");
     this.#count(this.#attributes.limit, messages.uploadTimeLeft, () => void this.#end());
-    this.respond(single("file", prepared.file));
+    this.respond(buildSingle("file", prepared.file));
     for (const track of prepared.stream.getTracks()) {
       track.addEventListener("ended", () => this.#microphoneLost(recording, messages), { once: true });
     }
@@ -501,8 +501,8 @@ export class UploadInteractionElement extends InteractionElement {
     const descriptor = this.descriptor;
     if (descriptor === undefined) return false;
     // The type is checked before the bytes travel: the runtime's rule says whether the interaction accepts it.
-    const probe = single("file", { reference: PENDING_REFERENCE, mimeType, fileName });
-    this.#rejected = checkResponse(descriptor, probe).reasons.includes("mime-type");
+    const probe = buildSingle("file", { reference: PENDING_REFERENCE, mimeType, fileName });
+    this.#rejected = validateResponse(descriptor, probe).reasons.includes("mime-type");
     if (this.#rejected) this.refresh();
     return !this.#rejected;
   }
@@ -519,7 +519,7 @@ export class UploadInteractionElement extends InteractionElement {
       const file = await services.files.upload(bytes, mimeType, fileName);
       this.#status.textContent = "";
       this.#busy = false;
-      this.respond(single("file", file));
+      this.respond(buildSingle("file", file));
     } catch {
       this.#busy = false;
       this.#status.textContent = messages.uploadFailed;

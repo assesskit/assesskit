@@ -29,7 +29,7 @@ export function renderCard(
 ): DocumentFragment | undefined {
   const catalog = catalogs.find(({ id }) => id === idref);
   const { language, braille } = preferences;
-  const content = catalog === undefined ? undefined : selectCard(catalog, support, language, braille);
+  const content = catalog === undefined ? undefined : selectCard(catalog, support, { language, braille });
   if (content === undefined) return undefined;
   const fragment = document.createDocumentFragment();
   const { htmlContent } = content;

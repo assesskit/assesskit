@@ -82,7 +82,7 @@ const DEFAULT_INCLUDE_BOUND = true;
  * @param expression - The expression.
  * @returns The expressions of its operands; none when it has none.
  */
-export function operandsOf(expression: Expression): readonly Expression[] {
+export function listOperands(expression: Expression): readonly Expression[] {
   if ("operands" in expression) return expression.operands;
   return "operand" in expression ? [expression.operand] : [];
 }
@@ -266,7 +266,7 @@ function apply(expression: Expression, operands: readonly (Value | null)[], scop
  */
 export function evaluateIn(expression: Expression, scope: Scope): Value | null {
   checkRecord(expression, "An expression must be an object of the model");
-  const expressions = operandsOf(expression);
+  const expressions = listOperands(expression);
   const operands: (Value | null)[] = [];
   for (const operand of expressions) operands.push(evaluateIn(operand, scope));
   checkOperands(expression.kind, operands);

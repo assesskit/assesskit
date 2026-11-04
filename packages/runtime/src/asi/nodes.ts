@@ -43,7 +43,7 @@ const XML_ELEMENT = "element";
  * @param node - A node of the model.
  * @returns The child nodes in document order, text and elements.
  */
-export function childNodes(node: ModelNode): readonly ModelNode[] {
+export function listChildNodes(node: ModelNode): readonly ModelNode[] {
   const children: ModelNode[] = [];
   if (node.kind === XML_ELEMENT) return children;
   for (const property of Object.values(node)) {
@@ -58,7 +58,7 @@ export function childNodes(node: ModelNode): readonly ModelNode[] {
 
 /** Appends the nodes below a node to `found`, depth first. */
 function collect(node: ModelNode, found: ModelNode[]): void {
-  for (const child of childNodes(node)) {
+  for (const child of listChildNodes(node)) {
     found.push(child);
     collect(child, found);
   }
@@ -70,7 +70,7 @@ function collect(node: ModelNode, found: ModelNode[]): void {
  * @param node - A node of the model.
  * @returns Every node below it, depth first, in document order.
  */
-export function descendantNodes(node: ModelNode): readonly ModelNode[] {
+export function listDescendantNodes(node: ModelNode): readonly ModelNode[] {
   const found: ModelNode[] = [];
   collect(node, found);
   return found;

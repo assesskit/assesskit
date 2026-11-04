@@ -53,7 +53,7 @@ function issue(code: string, message: string, descriptor: InteractionDescriptor)
  * @throws `DataError` when `item` is not an object of the model of `qti-assessment-item`.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function checkBindings(item: AssessmentItem): readonly Issue[] {
+export function validateBindings(item: AssessmentItem): readonly Issue[] {
   const descriptors = describeInteractions(item);
   const declared = new Map(item.responseDeclarations.map((declaration) => [declaration.identifier, declaration]));
   const issues: Issue[] = [];

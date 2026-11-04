@@ -23,7 +23,7 @@ function datasetName(attribute: string): string {
  * {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, portable custom interaction properties}
  * @see {@link https://html.spec.whatwg.org/multipage/dom.html#dom-dataset | HTML Standard, dataset}
  */
-export function pciProperties(interaction: PortableCustomInteraction): ReadonlyMap<string, string> {
+export function derivePciProperties(interaction: PortableCustomInteraction): ReadonlyMap<string, string> {
   checkRecord(interaction, "The interaction must be an object of the model of qti-portable-custom-interaction");
   return new Map(
     interaction.extensions

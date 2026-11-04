@@ -37,7 +37,7 @@ export interface CatPort {
    * Returns the section as the engine has deployed it and its item pool: `GET {prefix}/sections/{sectionIdentifier}`.
    *
    * @remarks
-   * `checkPool` compares the pool with the section of the test.
+   * `validatePool` compares the pool with the section of the test.
    *
    * @param prefix - The URL prefix of the engine.
    * @param sectionIdentifier - The identifier that `createSection` returned.

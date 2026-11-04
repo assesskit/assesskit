@@ -6,9 +6,9 @@ import {
   type ToolScoreIntake,
   type ToolScoreStore,
 } from "@assesskit/player/server";
-import { actionToJson, type CandidateAction, type ItemKey } from "@assesskit/runtime/delivery";
+import { type CandidateAction, type ItemKey, writeCandidateAction } from "@assesskit/runtime/delivery";
 import { type LtiLink, readLtiLink } from "@assesskit/runtime/package";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import { type Fetch, signerFromCryptoKey } from "@interopkit/core";
 import type { HttpRequest, HttpResponse } from "@interopkit/core/http";
 import { createJwksCache, type LtiMessage, SCOPES } from "@interopkit/tool-integration";
@@ -249,7 +249,7 @@ export async function rig(files: Readonly<Record<string, string>> = examFiles({ 
   let seq = 0;
   const send = async (action: CandidateAction): Promise<ViewEnvelope> => {
     seq += 1;
-    return host.handle(CANDIDATE, { seq, action: actionToJson(action) });
+    return host.handle(CANDIDATE, { seq, action: writeCandidateAction(action) });
   };
   /** Runs the three jobs of the session, in the order a queue would. */
   const runJobs = async () => {
@@ -395,7 +395,7 @@ export async function openDrawing(ctx: Rig): Promise<LaunchedTool> {
   await ctx.send({
     type: "set-responses",
     item: ESSAY,
-    responses: new Map([["RESPONSE", single("string", "An essay.")]]),
+    responses: new Map([["RESPONSE", buildSingle("string", "An essay.")]]),
   });
   await ctx.send({ type: "submit", item: ESSAY });
   await ctx.send({ type: "move", to: DRAW });
@@ -414,7 +414,7 @@ export const supplyEssay = (ctx: Rig, score: number) =>
   ctx.host
     .session(CANDIDATE.session)
     .apply(
-      { type: "supply-scores", request: "item:essay:1:SCORE", value: single("float", score), scorer: "human" },
+      { type: "supply-scores", request: "item:essay:1:SCORE", value: buildSingle("float", score), scorer: "human" },
       { scoredBy: "https://rater.example/raters/17" },
     );
 

@@ -1,8 +1,8 @@
 import { checkFunction, checkOptions, checkRecord, checkString, describe, isRecord } from "../checks.js";
 import { DataError, type IssueLocation, type ReadError, SecurityError } from "../errors.js";
 import { resolveXmlLimits, type XmlLimits } from "./limits.js";
-import { attributeOf } from "./query.js";
-import { locationOf, readError } from "./read-error.js";
+import { findAttribute } from "./query.js";
+import { createReadError, locateElement } from "./read-error.js";
 import { XINCLUDE_NAMESPACE, type XmlElement, type XmlNode } from "./tree.js";
 
 /**
@@ -98,11 +98,9 @@ class Expander {
     const name = xincludeName(node);
     if (name === "include") return this.include(node, context);
     if (name === "fallback") {
-      throw readError(
-        "assesskit/xml/xinclude-structure",
-        "An xi:fallback must be a child of an xi:include.",
-        locationOf(node, context.base),
-      );
+      throw createReadError("assesskit/xml/xinclude-structure", "An xi:fallback must be a child of an xi:include.", {
+        location: locateElement(node, context.base),
+      });
     }
     this.checkDepth(context.depth);
     const children = this.expandNodes(node.children, { ...context, depth: context.depth + 1 });
@@ -112,17 +110,17 @@ class Expander {
 
   /** Returns the href of an include after checking its attributes and children. */
   private checkInclude(include: XmlElement, context: Context): string {
-    const location = locationOf(include, context.base);
+    const location = locateElement(include, context.base);
     const fail = (message: string, code = "assesskit/xml/xinclude-attribute"): ReadError =>
-      readError(code, message, location);
-    if (attributeOf(include, "xpointer") !== undefined) {
+      createReadError(code, message, { location });
+    if (findAttribute(include, "xpointer") !== undefined) {
       throw fail("An xi:include must not have an xpointer attribute.");
     }
-    const parse = attributeOf(include, "parse") ?? "xml";
+    const parse = findAttribute(include, "parse") ?? "xml";
     if (parse !== "xml") {
       throw fail(`An xi:include must include parsed XML, found parse=${JSON.stringify(parse)}.`);
     }
-    const href = attributeOf(include, "href");
+    const href = findAttribute(include, "href");
     if (href === undefined || href === "") {
       throw fail("An xi:include must have a non-empty href attribute.");
     }
@@ -146,7 +144,9 @@ class Expander {
     const key = joinReference(context.base, href);
     if (context.chain.includes(key)) {
       const message = `The xi:include of ${JSON.stringify(href)} includes a document that is already being included.`;
-      throw readError("assesskit/xml/xinclude-cycle", message, locationOf(include, context.base));
+      throw createReadError("assesskit/xml/xinclude-cycle", message, {
+        location: locateElement(include, context.base),
+      });
     }
     if (context.chain.length > this.limits.maxIncludeDepth) {
       const { maxIncludeDepth } = this.limits;
@@ -159,7 +159,7 @@ class Expander {
     } catch (error) {
       // Only a resource error falls back; limits and path rules are not resource errors.
       if (error instanceof SecurityError) throw error;
-      if (fallback === undefined) throw resourceError(href, error, locationOf(include, context.base));
+      if (fallback === undefined) throw resourceError(href, error, locateElement(include, context.base));
       return this.expandNodes(fallback.children, context);
     }
     return this.expandNode(checkTarget(returned), { base: key, chain: [...context.chain, key], depth: context.depth });
@@ -177,7 +177,7 @@ function checkTarget(target: XmlElement): XmlElement {
 function resourceError(href: string, error: unknown, location: IssueLocation): ReadError {
   const reason = error instanceof Error ? error.message : describe(error);
   const message = `The document ${JSON.stringify(href)} of an xi:include cannot be read and the include has no xi:fallback: ${reason}`;
-  return readError("assesskit/xml/xinclude-resource", message, location);
+  return createReadError("assesskit/xml/xinclude-resource", message, { location });
 }
 
 /**
@@ -220,7 +220,7 @@ export function resolveIncludes(
   const key = joinReference("", base);
   const [expanded, ...others] = expander.expandNode(root, { base: key, chain: [key], depth: 1 });
   if (expanded?.kind !== "element" || others.length > 0) {
-    throw readError(
+    throw createReadError(
       "assesskit/xml/xinclude-structure",
       "The root of a document must be replaced by exactly one element.",
     );

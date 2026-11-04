@@ -2,16 +2,16 @@ import { DataError } from "../errors.js";
 import {
   BASE_TYPES,
   type BaseType,
+  buildContainer,
+  buildRecord,
+  buildSingle,
   type Cardinality,
-  container,
   formatPrimitive,
   normalizeValue,
   type Primitive,
-  parseIsoDuration,
+  parseDuration,
   parsePrimitive,
-  record,
   type SingleValue,
-  single,
   type Value,
 } from "../values/index.js";
 import { buildElement, type ElementReader, type XmlElement } from "../xml/index.js";
@@ -57,7 +57,7 @@ const toIdentifier = (text: string): string => parsePrimitive(text, "identifier"
  */
 function readPrimitive(text: string, baseType: BaseType): Primitive {
   const token = text.trim();
-  if (baseType === "duration" && ISO_DURATION_START.test(token)) return parseIsoDuration(token);
+  if (baseType === "duration" && ISO_DURATION_START.test(token)) return parseDuration(token);
   return parsePrimitive(text, baseType);
 }
 
@@ -96,7 +96,7 @@ function readField(item: ValueItem): readonly [string, SingleValue][] {
     const message = "A value of a variable of cardinality record needs the attributes fieldIdentifier and baseType.";
     throw reader.fail("missing-attribute", message);
   }
-  const field = single(baseType, primitiveOf(item, baseType));
+  const field = buildSingle(baseType, primitiveOf(item, baseType));
   return field === null ? [] : [[fieldIdentifier, field]];
 }
 
@@ -114,7 +114,7 @@ export function readValue(owner: ElementReader, elements: readonly ElementReader
   const items = elements.map(readItem);
   if (type.cardinality === "record") {
     const fields = items.flatMap(readField);
-    return owner.attempt("invalid-value", () => record(fields));
+    return owner.attempt("invalid-value", () => buildRecord(fields));
   }
   const { cardinality, baseType } = type;
   if (cardinality === "single") {
@@ -122,14 +122,14 @@ export function readValue(owner: ElementReader, elements: readonly ElementReader
     if (second !== undefined) {
       throw second.reader.fail("repeated-element", "A variable of cardinality single has at most one value.");
     }
-    return first === undefined ? null : single(baseType, plainPrimitive(first, baseType));
+    return first === undefined ? null : buildSingle(baseType, plainPrimitive(first, baseType));
   }
   const primitives = items.map((item) => plainPrimitive(item, baseType));
-  return owner.attempt("invalid-value", () => container(cardinality, baseType, primitives));
+  return owner.attempt("invalid-value", () => buildContainer(cardinality, baseType, primitives));
 }
 
 const valueElement = (text: string, attributes: Readonly<Record<string, string>> = {}): XmlElement =>
-  buildElement(RESULTS_NAMESPACE, "value", attributes, [text]);
+  buildElement(RESULTS_NAMESPACE, "value", { attributes, children: [text] });
 
 /** Describes a type for a message. */
 const describeType = ({

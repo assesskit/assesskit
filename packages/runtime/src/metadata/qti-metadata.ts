@@ -1,7 +1,7 @@
 import { checkArray, checkBoolean, checkChoice, checkRecord, checkString } from "../checks.js";
 import { DataError } from "../errors.js";
-import { ElementReader, type ReaderRules, termOf, type XmlElement } from "../xml/index.js";
-import { checkReadArguments, expectRoot, takeLeaf, takeLeaves } from "./element-reading.js";
+import { createTermConverter, ElementReader, type ReaderRules, type XmlElement } from "../xml/index.js";
+import { checkReadArguments, expectRoot, type ReadMetadataOptions, takeLeaf, takeLeaves } from "./element-reading.js";
 import { appendLeaf, branch, leaf } from "./element-writing.js";
 import { boundedStringOf, MAX_TOOL_STRING_LENGTH, parseBoolean, parseString } from "./lexical.js";
 import { QTI_METADATA_NAMESPACE } from "./namespaces.js";
@@ -104,7 +104,7 @@ function readPciContext(reader: ElementReader): PciContext {
  * Reads a `qtiMetadata` element. The children come in the order of the schema.
  *
  * @param element - The element.
- * @param path - The path of the document, which the issues name.
+ * @param options - See {@link ReadMetadataOptions}.
  * @returns The metadata; a field that the element omits is `undefined`.
  * @throws `DataError` when an argument has the wrong type.
  * @throws `ReadError` when the element is not a `qtiMetadata` of the QTI metadata namespace, has an element, attribute or
@@ -112,15 +112,16 @@ function readPciContext(reader: ElementReader): PciContext {
  * vocabulary, or a tool string above 256 characters.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/md-bind/ | QTI 3.0 Metadata Binding}
  */
-export function readQtiMetadata(element: XmlElement, path?: string): QtiMetadata {
-  checkReadArguments(element, path);
+export function readQtiMetadata(element: XmlElement, options: ReadMetadataOptions = {}): QtiMetadata {
+  checkReadArguments(element, options);
+  const { path } = options;
   const reader = new ElementReader(element, rulesOf(path));
   expectRoot(reader, QTI_METADATA_NAMESPACE, "qtiMetadata");
   const toolString = boundedStringOf(MAX_TOOL_STRING_LENGTH);
   const itemTemplate = takeLeaf(reader, "itemTemplate", parseBoolean);
   const timeDependent = takeLeaf(reader, "timeDependent", parseBoolean);
   const composite = takeLeaf(reader, "composite", parseBoolean);
-  const interactionTypes = takeLeaves(reader, "interactionType", termOf(INTERACTION_TYPES));
+  const interactionTypes = takeLeaves(reader, "interactionType", createTermConverter(INTERACTION_TYPES));
   const pci = reader.take("portableCustomInteractionContext");
   const portableCustomInteractionContext = pci && readPciContext(pci);
   const metadata: QtiMetadata = {
@@ -129,9 +130,9 @@ export function readQtiMetadata(element: XmlElement, path?: string): QtiMetadata
     composite,
     interactionTypes,
     portableCustomInteractionContext,
-    feedbackType: takeLeaf(reader, "feedbackType", termOf(FEEDBACK_TYPES)),
+    feedbackType: takeLeaf(reader, "feedbackType", createTermConverter(FEEDBACK_TYPES)),
     solutionAvailable: takeLeaf(reader, "solutionAvailable", parseBoolean),
-    scoringModes: takeLeaves(reader, "scoringMode", termOf(SCORING_MODES)),
+    scoringModes: takeLeaves(reader, "scoringMode", createTermConverter(SCORING_MODES)),
     toolName: takeLeaf(reader, "toolName", toolString),
     toolVersion: takeLeaf(reader, "toolVersion", toolString),
     toolVendor: takeLeaf(reader, "toolVendor", toolString),

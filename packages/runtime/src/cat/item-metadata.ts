@@ -36,8 +36,8 @@ export interface CatPoolItem {
   readonly externalMetadata?: readonly CatMetadataFile[];
 }
 
-/** Options of `catMetadata`. */
-export interface CatMetadataOptions {
+/** Options of `buildCatMetadata`. */
+export interface BuildCatMetadataOptions {
   /**
    * The metadata of the section as a whole.
    *
@@ -157,7 +157,7 @@ function itemMetadataOf(item: unknown, index: number, seen: Set<string>): CatIte
  * not bytes, or two items have one identifier.
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, metadata binding}
  */
-export function catMetadata(items: readonly CatPoolItem[], options: CatMetadataOptions = {}): CatMetadata {
+export function buildCatMetadata(items: readonly CatPoolItem[], options: BuildCatMetadataOptions = {}): CatMetadata {
   checkArray(items, "The items must be an array");
   checkOptions(options);
   const { externalMetadata = [] } = options;

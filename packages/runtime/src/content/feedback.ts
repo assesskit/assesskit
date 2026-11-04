@@ -24,7 +24,7 @@ function checkOutcomes(outcomes: unknown): void {
  * @throws `DataError` when an argument has the wrong type.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-modal-feedback}
  */
-export function visibleModalFeedback(
+export function selectModalFeedback(
   item: AssessmentItem,
   outcomes: ReadonlyMap<string, Value | null>,
 ): readonly ModalFeedback[] {
@@ -52,7 +52,7 @@ export function visibleModalFeedback(
  * @throws `DataError` when an argument has the wrong type.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function visibleTestFeedback(
+export function selectTestFeedback(
   feedback: readonly TestFeedback[],
   outcomes: ReadonlyMap<string, Value | null>,
   access: "atEnd" | "during",

@@ -1,7 +1,7 @@
 import { checkArray, checkBoolean, checkRecord, checkString } from "../checks.js";
 import { DataError } from "../errors.js";
 import { ElementReader, type XmlElement } from "../xml/index.js";
-import { checkReadArguments, expectRoot, takeLeaf, takeLeaves } from "./element-reading.js";
+import { checkReadArguments, expectRoot, type ReadMetadataOptions, takeLeaf, takeLeaves } from "./element-reading.js";
 import { appendLeaf, branch, leaf } from "./element-writing.js";
 import { checkOpenTerm, type ExtensionTerm, openTermOf } from "./extension-term.js";
 import { parseBoolean, parseString } from "./lexical.js";
@@ -161,15 +161,16 @@ export interface AccessForAllResource {
  * Reads an `accessForAllResource` element. The children come in the order of the DRD schema.
  *
  * @param element - The element.
- * @param path - The path of the document, which the issues name.
+ * @param options - See {@link ReadMetadataOptions}.
  * @returns The description of the resource.
  * @throws `DataError` when an argument has the wrong type.
  * @throws `ReadError` when the element is not an `accessForAllResource` of the DRD namespace, has an element, attribute or
  * text that the schema does not allow at that place, a boolean that is not `true`, `false`, `1` or `0`, or a term outside
  * its vocabulary that is not an extension term.
  */
-export function readAccessForAllResource(element: XmlElement, path?: string): AccessForAllResource {
-  checkReadArguments(element, path);
+export function readAccessForAllResource(element: XmlElement, options: ReadMetadataOptions = {}): AccessForAllResource {
+  checkReadArguments(element, options);
+  const { path } = options;
   const reader = new ElementReader(element, {
     module: "metadata",
     namespaces: [DRD_NAMESPACE],

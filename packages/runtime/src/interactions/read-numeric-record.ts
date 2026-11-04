@@ -1,6 +1,6 @@
-import { checkString } from "../checks.js";
+import { checkOptions, checkString } from "../checks.js";
 import { DataError } from "../errors.js";
-import { type RecordValue, record, type SingleValue, single } from "../values/index.js";
+import { buildRecord, buildSingle, type RecordValue, type SingleValue } from "../values/index.js";
 
 /**
  * The smallest and the largest number base that a numeric text can be read in: the digits are 0–9 and a–z.
@@ -65,7 +65,17 @@ function significantDigits(digits: string): number {
 type Field = readonly [identifier: string, value: SingleValue];
 
 function integerField(value: number): SingleValue {
-  return single("integer", value);
+  return buildSingle("integer", value);
+}
+
+/** The options of {@link readNumericRecord}. */
+export interface ReadNumericRecordOptions {
+  /**
+   * The number base, from 2 to 36.
+   *
+   * @defaultValue `10`
+   */
+  readonly base?: number;
 }
 
 /**
@@ -90,25 +100,27 @@ function integerField(value: number): SingleValue {
  * is not a number in the base, or that is too large to be a finite float, has `stringValue` only.
  *
  * @param text - The text the candidate typed.
- * @param base - The number base, from 2 to 36; `10` when omitted.
+ * @param options - See {@link ReadNumericRecordOptions}.
  * @returns The record, or `null` for the empty string, which is NULL.
- * @throws `DataError` when `text` is not a string or `base` is not an integer from 2 to 36.
+ * @throws `DataError` when `text` is not a string or the option `base` is not an integer from 2 to 36.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function numericRecord(text: string, base = DECIMAL): RecordValue | null {
+export function readNumericRecord(text: string, options: ReadNumericRecordOptions = {}): RecordValue | null {
   checkString(text, "The text");
+  checkOptions(options);
+  const { base = DECIMAL } = options;
   if (!(Number.isInteger(base) && base >= MIN_BASE && base <= MAX_BASE)) {
     throw new DataError(`The base must be an integer from ${MIN_BASE} to ${MAX_BASE}, found ${String(base)}.`);
   }
-  const stringValue = single("string", text);
+  const stringValue = buildSingle("string", text);
   if (stringValue === null) return null;
   const trimmed = text.trim();
   const number = base === DECIMAL ? readDecimal(trimmed) : readInteger(trimmed, base);
-  if (number === undefined || !Number.isFinite(number.value)) return record([["stringValue", stringValue]]);
+  if (number === undefined || !Number.isFinite(number.value)) return buildRecord([["stringValue", stringValue]]);
   const { value, left, right, isInteger, exponent } = number;
   const fields: Field[] = [
     ["stringValue", stringValue],
-    ["floatValue", single("float", value)],
+    ["floatValue", buildSingle("float", value)],
   ];
   if (isInteger && Number.isSafeInteger(value)) fields.push(["integerValue", integerField(value)]);
   fields.push(
@@ -118,5 +130,5 @@ export function numericRecord(text: string, base = DECIMAL): RecordValue | null 
     ["nsf", integerField(significantDigits(left + right))],
   );
   if (exponent !== undefined) fields.push(["exponent", integerField(exponent)]);
-  return record(fields);
+  return buildRecord(fields);
 }

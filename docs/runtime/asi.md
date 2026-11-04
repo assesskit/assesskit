@@ -38,10 +38,10 @@ flowchart LR
 | `RubricBlock`, `TestRubricBlock`                                                                    | A rubric block wherever it occurs, and the one of a test, test part or section.                                                     |
 | `ElementModel`                                                                                      | The model of any element of the table.                                                                                              |
 | `readScoreCovers(test)`, `buildScoreCoversBlock(…)`                                                 | The covers of externally scored outcomes: read them from a test, build the rubric block that names them.                            |
-| `scoreCoverBlocks(test)`, `SCORE_COVERS_CLASS`                                                      | The covers blocks as written, with what they lack; the class token that marks them.                                                 |
+| `selectScoreCoverBlocks(test)`, `SCORE_COVERS_CLASS`                                                | The covers blocks as written, with what they lack; the class token that marks them.                                                 |
 | `ScoreCover`, `ScoreCoverBlock`, `ScoreCoverEntry`                                                  | One covered response, a block as written, and one list entry of it.                                                                 |
 | `readScoringRubrics(document)`, `buildScoringRubricBlock(…)`                                        | The scoring rubrics of an item or a test: read them, build the rubric block that holds one.                                         |
-| `scoreFromRatings(rubric, ratings)`, `checkScoringRubric(value)`                                    | The score that ratings give under a rubric; the check of a rubric that arrived as JSON.                                             |
+| `rubricScore(rubric, ratings)`, `checkScoringRubric(value)`                                         | The score that ratings give under a rubric; the check of a rubric that arrived as JSON.                                             |
 | `ScoringRubric`, `RubricCriterion`, `RubricLevel`, `RubricKind`, `RubricRating`, `RubricScoreRange` | The rubric, its criteria and levels, its four kinds, and a rating of a criterion.                                                   |
 | `SCORING_RUBRIC_CLASS`, `ScoringRubricBlock`, `RubricContent`                                       | The class token that marks a rubric block; the block that fits an item body and a test; the content that both accept.               |
 | `walkDocument(document, visit)`, `ElementVisit`                                                     | Visits each element of a document with its name, model, attribute definitions and parent.                                           |
@@ -266,12 +266,12 @@ The lists are arrays of their items; `aria-relevant` takes `additions`, `all`, `
 The model is plain data, and `ModelNode` is what every node of it has: the `kind` that names its element. The functions
 below find nodes without knowing which place of which element holds them.
 
-| Function                | Returns                                                                                                                         |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `childNodes(node)`      | The nodes directly below a node, in every place the model keeps them: `children`, a prompt, choices, a content body, and so on. |
-| `descendantNodes(node)` | The nodes at any depth in document order, without the node itself.                                                              |
-| `isModelNode(value)`    | Whether a value is an object with a string `kind`; the check is shallow.                                                        |
-| `isBodyNode(value)`     | The same check, as a guard for a `BodyNode`.                                                                                    |
+| Function                    | Returns                                                                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `listChildNodes(node)`      | The nodes directly below a node, in every place the model keeps them: `children`, a prompt, choices, a content body, and so on. |
+| `listDescendantNodes(node)` | The nodes at any depth in document order, without the node itself.                                                              |
+| `isModelNode(value)`        | Whether a value is an object with a string `kind`; the check is shallow.                                                        |
+| `isBodyNode(value)`         | The same check, as a guard for a `BodyNode`.                                                                                    |
 
 `walkDocument(document, visit)` walks a whole document the way `writeAsi` does, without writing, and calls `visit` for
 each element with an `ElementVisit` before its children. It gives what the `kind` of a model does not: `name`, the element
@@ -328,10 +328,10 @@ read back as one.
 Two conventions of the runtime are rubric blocks for scorers that a class token marks. They are not part of QTI;
 [Conventions](conventions.md) describes both. In the model each is an ordinary rubric block, and nothing is copied out of it.
 
-| Convention     | Functions                                                                                                     | Reads and builds                                                                                             |
-| -------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Covers         | `readScoreCovers`, `scoreCoverBlocks`, `buildScoreCoversBlock`                                                | The responses that an externally scored outcome of a test rates, in a block of the test                      |
-| Scoring rubric | `readScoringRubrics`, `buildScoringRubricBlock`, `checkScoringRubric`, `scoreFromRatings`, `rubricScoreRange` | The criteria, levels and weights of an outcome, in a block of an item or of a test, and the score of ratings |
+| Convention     | Functions                                                                                                | Reads and builds                                                                                             |
+| -------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Covers         | `readScoreCovers`, `selectScoreCoverBlocks`, `buildScoreCoversBlock`                                     | The responses that an externally scored outcome of a test rates, in a block of the test                      |
+| Scoring rubric | `readScoringRubrics`, `buildScoringRubricBlock`, `checkScoringRubric`, `rubricScore`, `rubricScoreRange` | The criteria, levels and weights of an outcome, in a block of an item or of a test, and the score of ratings |
 
 ## The element table
 

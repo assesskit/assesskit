@@ -15,17 +15,17 @@ import {
   type AssessmentItem,
   type AssessmentSection,
   type AssessmentTest,
-  actionToJson,
   additionalTestingTime,
-  ancestry,
   applyItemAction,
   BASE_TYPES,
+  buildContainer,
+  buildRecord,
+  buildSingle,
   type CandidateAction,
   type CandidateView,
   type CatSectionRef,
   type CustomOperator,
   closeItem,
-  container,
   createEngine,
   createRandom,
   DataError,
@@ -34,10 +34,16 @@ import {
   type DeliveryEvent,
   type DeliveryEventType,
   type DeliveryState,
+  deriveItemFeedback,
+  deriveItemResponses,
+  deriveSessionStatus,
   deserializeState,
   type EffectiveSessionControl,
   type Engine,
   type EngineOptions,
+  findNextItem,
+  findPreviousItem,
+  findTestPart,
   type HostAction,
   type ItemAction,
   type ItemKey,
@@ -46,20 +52,15 @@ import {
   type ItemSessionControl,
   type ItemSessionView,
   type ItemStep,
-  itemFeedback,
-  itemResponses,
   type LtiLink,
-  nextItem,
+  listAncestors,
+  listPlanItems,
   type PersonalNeedsProfile,
   type PlannedChild,
   PNP_NAMESPACE,
   ProcessingError,
-  parseCandidateAction,
-  partOf,
-  planItems,
   planTest,
   presentItem,
-  previousItem,
   type Random,
   type Refusal,
   type RefusalCode,
@@ -67,11 +68,13 @@ import {
   type Resolvers,
   type RuleContext,
   readAsi,
+  readCandidateAction,
   readPnp,
-  record,
+  readView,
+  resolveSessionControl,
+  resolveStandaloneSessionControl,
   resolveStructure,
   restoreRandom,
-  resultStatus,
   runOutcomeProcessing,
   SecurityError,
   type SingleValue,
@@ -81,10 +84,7 @@ import {
   type SupportName,
   type SupportSetting,
   serializeState,
-  sessionControl,
-  single,
   stamp,
-  standaloneSessionControl,
   startItemSession,
   suspendItem,
   type TestingTime,
@@ -93,8 +93,8 @@ import {
   type TestStructure,
   timeLimits,
   type Value,
-  viewFromJson,
-  viewToJson,
+  writeCandidateAction,
+  writeView,
 } from "../src/index.js";
 import { identifier as identifierArbitrary, recordValue, valueArbitrary } from "./arbitraries/values.js";
 import { fuzzJson } from "./fuzz.js";
@@ -189,7 +189,7 @@ const shown = (key: ItemKey): string => (key.instance > 1 ? `${key.ref}#${key.in
 
 /** The item instances of a plan, such as `["a", "b#2"]`. */
 const itemsOf = (testPlan: TestPlan, partIdentifier?: string): string[] =>
-  planItems(testPlan, partIdentifier).map(shown);
+  listPlanItems(testPlan, { part: partIdentifier }).map(shown);
 
 function outline(children: readonly PlannedChild[]): string {
   return children
@@ -205,8 +205,8 @@ function outline(children: readonly PlannedChild[]): string {
 const outlineOf = (testPlan: TestPlan): string =>
   testPlan.parts.map((entry) => `${entry.identifier}{${outline(entry.children)}}`).join(" ");
 
-const bool = (value: boolean): SingleValue => single("boolean", value);
-const identifier = (value: string): SingleValue => single("identifier", value);
+const bool = (value: boolean): SingleValue => buildSingle("boolean", value);
+const identifier = (value: string): SingleValue => buildSingle("identifier", value);
 
 const NO_SESSIONS: TestScope = { itemSessions: () => [], itemSession: () => undefined, variable: () => undefined };
 
@@ -215,14 +215,14 @@ function rules(outcomes: Readonly<Record<string, Value | null>> = {}): RuleConte
   return { outcomes: new Map(Object.entries(outcomes)), scope: NO_SESSIONS, context: { random: createRandom(1) } };
 }
 
-/** The item instances that the candidate meets: `nextItem` from the start until it gives none. */
+/** The item instances that the candidate meets: `findNextItem` from the start until it gives none. */
 function walk(structure: TestStructure, testPlan: TestPlan, context: RuleContext = rules()): string[] {
   const met: string[] = [];
-  let at = nextItem(structure, testPlan, undefined, context);
+  let at = findNextItem(structure, testPlan, undefined, context);
   while (at !== undefined) {
     met.push(shown(at));
     if (met.length > 1000) return fail("The walk does not end.");
-    at = nextItem(structure, testPlan, at, context);
+    at = findNextItem(structure, testPlan, at, context);
   }
   return met;
 }
@@ -371,9 +371,9 @@ const NEXT: ItemAction = { type: "next-attempt", item: KEY };
 const outcome = (session: ItemSession, name: string): Value | null => session.variables.outcomes.get(name) ?? null;
 const response = (session: ItemSession, name: string): Value | null => session.variables.responses.get(name) ?? null;
 const attempts = (session: ItemSession): Value | null => response(session, "numAttempts");
-const integer = (value: number): SingleValue => single("integer", value);
-const float = (value: number): SingleValue => single("float", value);
-const text = (value: string): SingleValue => single("string", value) ?? fail("A string value cannot be empty.");
+const integer = (value: number): SingleValue => buildSingle("integer", value);
+const float = (value: number): SingleValue => buildSingle("float", value);
+const text = (value: string): SingleValue => buildSingle("string", value) ?? fail("A string value cannot be empty.");
 
 /** A test from its content: declarations, time limits, parts, outcome processing, in the order of the schema. */
 function testDocument(content: string): AssessmentTest {
@@ -701,7 +701,7 @@ describe("starting a session", () => {
     expect(described(events)).toEqual(["section-entered S@5", "presented a@5"]);
     expect(state.status).toBe("in-progress");
     expect(state.current).toEqual(key("a"));
-    expect(planItems(state.plan).map(shown)).toEqual(["a", "b"]);
+    expect(listPlanItems(state.plan).map(shown)).toEqual(["a", "b"]);
     const skipped = engineOf(`${OUTCOMES}${testPart("P", section("S", itemRef("a", pre(GO))), "linear")}`);
     const ended = begun(skipped);
     expect(described(ended.events)).toEqual(["test-ended T@0"]);
@@ -726,7 +726,7 @@ describe("starting a session", () => {
       // The first item shuffles no choices, so the start draws only the plan.
       expect(state.random).toEqual(random.state());
       expect(begun(engine, { seed }).state).toEqual(state);
-      orders.add(planItems(state.plan).map(shown).join(" "));
+      orders.add(listPlanItems(state.plan).map(shown).join(" "));
     }
     expect(orders.size).toBeGreaterThan(1);
   });
@@ -1062,12 +1062,12 @@ describe("applying actions", () => {
     );
     const seconds = (state: DeliveryState): (Value | null)[] => durations.map((name) => testOutcome(state, name));
     const left = played(engine, begun(engine).state, answer("a", "B", 1_000), moveTo("next", 3_000));
-    expect(seconds(left.state)).toEqual([3, 3, 3, 0].map((value) => single("duration", value)));
+    expect(seconds(left.state)).toEqual([3, 3, 3, 0].map((value) => buildSingle("duration", value)));
     const paused = played(engine, left.state, { type: "suspend", at: 4_000 }, { type: "resume", at: 10_000 });
     const ended = played(engine, paused.state, moveTo("next", 12_000));
     // The test ran from 0 to 4 s and from 10 to 12 s; S2 from 3 to 4 s and from 10 to 12 s.
-    expect(seconds(ended.state)).toEqual([6, 6, 3, 3].map((value) => single("duration", value)));
-    expect(response(sessionOf(ended.state, "b"), "duration")).toEqual(single("duration", 3));
+    expect(seconds(ended.state)).toEqual([6, 6, 3, 3].map((value) => buildSingle("duration", value)));
+    expect(response(sessionOf(ended.state, "b"), "duration")).toEqual(buildSingle("duration", 3));
   });
 
   it("ends an attempt only on an action of the candidate or the end of the test part", () => {
@@ -1257,7 +1257,7 @@ describe("applying actions", () => {
     expect(described(resumed.events)).toEqual(["resumed@9000", "presented a@9000"]);
     expect(played(engine, resumed.state, { type: "resume", at: 9_500 }).events).toEqual([]);
     const submitted = played(engine, resumed.state, on("submit", "a", 10_000));
-    expect(response(sessionOf(submitted.state, "a"), "duration")).toEqual(single("duration", 3));
+    expect(response(sessionOf(submitted.state, "a"), "duration")).toEqual(buildSingle("duration", 3));
   });
 
   it("turns a support that is an option on and off, and records the supports on while an item is presented", () => {
@@ -1693,8 +1693,8 @@ describe("marking an item for review", () => {
   it("is a view that reads back from its JSON", () => {
     const { state } = begun(engine);
     const view = engine.view(played(engine, state, mark("a", true, 1)).state, 2);
-    expect(viewFromJson(throughText(viewToJson(view)))).toEqual(view);
-    expect(marksOf(viewFromJson(throughText(viewToJson(view))))).toEqual(["a"]);
+    expect(readView(throughText(writeView(view)))).toEqual(view);
+    expect(marksOf(readView(throughText(writeView(view))))).toEqual(["a"]);
   });
 });
 
@@ -1753,7 +1753,7 @@ describe("the events of an attempt", () => {
         const result = engine.results(state).itemResults.find(({ identifier }) => identifier === "a");
         const shown = result?.variables.find(({ identifier }) => identifier === "duration");
         const seconds = shown?.kind === "response" ? shown.candidateResponse : null;
-        expect(seconds).toEqual(single("duration", (event.duration ?? Number.NaN) / 1_000));
+        expect(seconds).toEqual(buildSingle("duration", (event.duration ?? Number.NaN) / 1_000));
       }
     }
     expect(state.items[0]?.session.countedAttempts).toBe(2);
@@ -2115,7 +2115,7 @@ describe("a review after the end", () => {
     const reviewing = played(engine, state, review("a", 7_000)).state;
     expect(deserializeState(serializeState(reviewing))).toEqual(reviewing);
     const view = engine.view(reviewing, 7_000);
-    expect(viewFromJson(JSON.parse(JSON.stringify(viewToJson(view))))).toEqual(view);
+    expect(readView(JSON.parse(JSON.stringify(writeView(view))))).toEqual(view);
   });
 
   describe("on a later compile of the form", () => {
@@ -2226,7 +2226,7 @@ describe("deadlines", () => {
 const LEAK = /LEAK-[A-Z-]+/g;
 
 /** The strings of a view, as JSON text, that mark a leak. */
-const leaksIn = (view: CandidateView): string[] => [...new Set(JSON.stringify(viewToJson(view)).match(LEAK) ?? [])];
+const leaksIn = (view: CandidateView): string[] => [...new Set(JSON.stringify(writeView(view)).match(LEAK) ?? [])];
 
 /**
  * An item with everything that a view settles or leaves out: a correct response and a mapping of a text, outcomes and
@@ -2755,7 +2755,7 @@ describe("the view of a state", () => {
     expect(engine.view(paused.state, 1).test.stylesheets).toEqual(expected);
     const ended = played(engine, state, { type: "end-test", at: 1 });
     expect(engine.view(ended.state, 1).test.stylesheets).toEqual(expected);
-    expect(viewFromJson(throughText(viewToJson(engine.view(state, 0)))).test.stylesheets).toEqual(expected);
+    expect(readView(throughText(writeView(engine.view(state, 0)))).test.stylesheets).toEqual(expected);
   });
 
   it("delivers a standalone item, with the resolver of its stimuli when the host gives one", () => {
@@ -2784,7 +2784,7 @@ describe("the view of a state", () => {
         }
       }
     };
-    collect(viewToJson(view));
+    collect(writeView(view));
     for (const forbidden of [
       "correctResponse",
       "mapping",
@@ -3085,7 +3085,7 @@ describe("item actions", () => {
     const states = (state: string, name = "R"): ItemAction => ({
       type: "set-responses",
       item: KEY,
-      responses: new Map([["R", single("string", state)]]),
+      responses: new Map([["R", buildSingle("string", state)]]),
       pciStates: new Map([[name, `{"points":${state}}`]]),
     });
     const session = acts(presented(context), context, states("1"), states("2"));
@@ -3093,7 +3093,7 @@ describe("item actions", () => {
     expect(refused(act(session, context, states("3", "TEXT")))).toMatchObject({
       code: "invalid-response",
     });
-    expect(acts(session, context, respond("TEXT", single("string", "x"))).pciStates).toEqual(session.pciStates);
+    expect(acts(session, context, respond("TEXT", buildSingle("string", "x"))).pciStates).toEqual(session.pciStates);
   });
 
   it("refuses arguments of other types", () => {
@@ -3134,9 +3134,12 @@ describe("item feedback", () => {
     const item = counterItem();
     const context = contextOf(item, { maxAttempts: 2 });
     const hinted = acts(presented(context), context, HINT);
-    expect(itemFeedback(hinted, item, context.control)).toEqual({ outcomes: hinted.variables.outcomes, modal: true });
+    expect(deriveItemFeedback(hinted, item, context.control)).toEqual({
+      outcomes: hinted.variables.outcomes,
+      modal: true,
+    });
     const next = acts(hinted, context, NEXT);
-    const during = itemFeedback(next, item, context.control);
+    const during = deriveItemFeedback(next, item, context.control);
     expect([during.outcomes.get("FEEDBACK"), during.outcomes.get("RUNS"), during.modal]).toEqual([
       identifier("none"),
       integer(0),
@@ -3148,7 +3151,7 @@ describe("item feedback", () => {
     const item = counterItem({ adaptive: true });
     const context = contextOf(item);
     const next = acts(presented(context), context, HINT, NEXT);
-    const during = itemFeedback(next, item, context.control);
+    const during = deriveItemFeedback(next, item, context.control);
     expect([during.outcomes.get("FEEDBACK"), during.modal]).toEqual([identifier("hint"), false]);
   });
 
@@ -3156,22 +3159,22 @@ describe("item feedback", () => {
     const adaptive = counterItem({ adaptive: true });
     const context = contextOf(adaptive, { showSolution: true });
     const closed = acts(presented(context), context, HINT, respond("RESPONSE", identifier("B")), SUBMIT);
-    const atClose = itemFeedback(closed, adaptive, context.control);
+    const atClose = deriveItemFeedback(closed, adaptive, context.control);
     expect([atClose.outcomes.get("FEEDBACK"), atClose.outcomes.get("SCORE"), atClose.modal]).toEqual([
       identifier("none"),
       float(0),
       false,
     ]);
-    expect(itemFeedback(closed, adaptive, controlWith({ showFeedback: true })).outcomes).toBe(
+    expect(deriveItemFeedback(closed, adaptive, controlWith({ showFeedback: true })).outcomes).toBe(
       closed.variables.outcomes,
     );
     const reviewed = acts(closed, context, { type: "review", item: KEY });
-    expect(itemFeedback(reviewed, adaptive, context.control)).toEqual({
+    expect(deriveItemFeedback(reviewed, adaptive, context.control)).toEqual({
       outcomes: reviewed.variables.outcomes,
       modal: true,
     });
     const solved = acts(closed, context, { type: "solution", item: KEY });
-    const hidden = itemFeedback(solved, adaptive, controlWith({ allowReview: false, showSolution: true }));
+    const hidden = deriveItemFeedback(solved, adaptive, controlWith({ allowReview: false, showSolution: true }));
     expect(hidden.outcomes.get("FEEDBACK")).toEqual(identifier("none"));
   });
 
@@ -3179,8 +3182,8 @@ describe("item feedback", () => {
     const item = counterItem();
     const context = contextOf(item);
     const reviewed = acts(presented(context), context, HINT, { type: "review", item: KEY });
-    expect(itemFeedback(reviewed, item, context.control).outcomes.get("FEEDBACK")).toEqual(identifier("none"));
-    expect(itemFeedback(reviewed, item, controlWith({ showFeedback: true })).outcomes.get("FEEDBACK")).toEqual(
+    expect(deriveItemFeedback(reviewed, item, context.control).outcomes.get("FEEDBACK")).toEqual(identifier("none"));
+    expect(deriveItemFeedback(reviewed, item, controlWith({ showFeedback: true })).outcomes.get("FEEDBACK")).toEqual(
       identifier("hint"),
     );
   });
@@ -3188,9 +3191,9 @@ describe("item feedback", () => {
   it("refuses arguments of other types", () => {
     const item = counterItem();
     const session = presented(contextOf(item));
-    expect(() => itemFeedback(json("null"), item, controlWith())).toThrow(DataError);
-    expect(() => itemFeedback(session, json("null"), controlWith())).toThrow(DataError);
-    expect(() => itemFeedback(session, item, json('{"maxAttempts": -1}'))).toThrow(DataError);
+    expect(() => deriveItemFeedback(json("null"), item, controlWith())).toThrow(DataError);
+    expect(() => deriveItemFeedback(session, json("null"), controlWith())).toThrow(DataError);
+    expect(() => deriveItemFeedback(session, item, json('{"maxAttempts": -1}'))).toThrow(DataError);
   });
 });
 
@@ -3198,27 +3201,29 @@ describe("item responses", () => {
   it("shows the correct responses in the solution state, NULL where none is declared, and keeps the candidate's", () => {
     const context = contextOf(counterItem(), { showSolution: true });
     const answered = acts(presented(context), context, respond("RESPONSE", identifier("A")));
-    expect(itemResponses(answered)).toBe(answered.drafts);
+    expect(deriveItemResponses(answered)).toBe(answered.drafts);
     const closed = acts(answered, context, SUBMIT);
-    expect(itemResponses(closed)).toEqual(
+    expect(deriveItemResponses(closed)).toEqual(
       new Map([
         ["RESPONSE", identifier("A")],
         ["HINT", bool(false)],
       ]),
     );
     const solved = acts(closed, context, { type: "solution", item: KEY });
-    expect(itemResponses(solved)).toEqual(
+    expect(deriveItemResponses(solved)).toEqual(
       new Map([
         ["RESPONSE", identifier("B")],
         ["HINT", null],
       ]),
     );
     expect(response(solved, "RESPONSE")).toEqual(identifier("A"));
-    expect(itemResponses(acts(solved, context, { type: "review", item: KEY }))).toEqual(itemResponses(closed));
+    expect(deriveItemResponses(acts(solved, context, { type: "review", item: KEY }))).toEqual(
+      deriveItemResponses(closed),
+    );
   });
 
   it("refuses an argument that is not an item session", () => {
-    expect(() => itemResponses(json('{"status": "initial"}'))).toThrow(DataError);
+    expect(() => deriveItemResponses(json('{"status": "initial"}'))).toThrow(DataError);
   });
 });
 
@@ -3239,7 +3244,7 @@ describe("starting an item session", () => {
     expect(session.variables.responses).toEqual(
       new Map([
         ["numAttempts", integer(0)],
-        ["duration", single("duration", 0)],
+        ["duration", buildSingle("duration", 0)],
         ["RESPONSE", null],
         ["HINT", null],
       ]),
@@ -3296,11 +3301,11 @@ describe("starting an item session", () => {
       <qti-response-processing><qti-set-outcome-value identifier="WHO"><qti-field-value field-identifier="candidateIdentifier"><qti-variable identifier="QTI_CONTEXT"/></qti-field-value></qti-set-outcome-value></qti-response-processing>`,
     );
     const context = contextOf(item);
-    const contextValues = new Map([["QTI_CONTEXT", record([["candidateIdentifier", text("c-7")]])]]);
+    const contextValues = new Map([["QTI_CONTEXT", buildRecord([["candidateIdentifier", text("c-7")]])]]);
     const started = accepted(startItemSession(KEY, 0, context, { contextValues })).session;
-    expect(started.variables.templates.get("SEEN")).toEqual(single("string", "c-7"));
+    expect(started.variables.templates.get("SEEN")).toEqual(buildSingle("string", "c-7"));
     const done = acts(accepted(presentItem(started, 1, context)).session, context, SUBMIT);
-    expect(outcome(done, "WHO")).toEqual(single("string", "c-7"));
+    expect(outcome(done, "WHO")).toEqual(buildSingle("string", "c-7"));
   });
 
   it("keeps the template defaults and reports processing-failed when template processing fails", () => {
@@ -3387,7 +3392,7 @@ describe("presenting an item", () => {
         ["ORDER", [["A", "B", "C"]]],
       ]),
     );
-    expect(session.drafts.get("ORDER")).toEqual(container("ordered", "identifier", ["C", "A", "B"]));
+    expect(session.drafts.get("ORDER")).toEqual(buildContainer("ordered", "identifier", ["C", "A", "B"]));
     const resumed = accepted(presentItem(accepted(suspendItem(session, 1)).session, 2, context)).session;
     expect([resumed.choiceOrders, random.left()]).toEqual([session.choiceOrders, 0]);
   });
@@ -3428,12 +3433,12 @@ describe("suspending an item", () => {
     const context = contextOf(item);
     const suspended = accepted(suspendItem(presented(context, 1000), 2500.5)).session;
     expect([suspended.status, suspended.since, suspended.spent]).toEqual(["suspended", null, 1500.5]);
-    expect(response(suspended, "duration")).toEqual(single("duration", 1.5));
+    expect(response(suspended, "duration")).toEqual(buildSingle("duration", 1.5));
     const resumed = accepted(presentItem(suspended, 9000, context)).session;
     const done = accepted(act(resumed, context, SUBMIT, 9250.25)).session;
     expect([response(done, "duration"), outcome(done, "ELAPSED")]).toEqual([
-      single("duration", 1.75),
-      single("duration", 1.75),
+      buildSingle("duration", 1.75),
+      buildSingle("duration", 1.75),
     ]);
   });
 
@@ -3459,7 +3464,7 @@ describe("closing an item", () => {
       integer(0),
       [],
     ]);
-    expect(resultStatus(step.session, context.item)).toBe("initial");
+    expect(deriveSessionStatus(step.session, context.item)).toBe("initial");
   });
 
   it("ends an open attempt with the drafts when it closes, whatever attempts are left", () => {
@@ -3516,7 +3521,7 @@ describe("the JSON of an item session", () => {
       {
         type: "set-responses",
         item: KEY,
-        responses: new Map([["R", container("multiple", "pair", [["A", "B"]])]]),
+        responses: new Map([["R", buildContainer("multiple", "pair", [["A", "B"]])]]),
         pciStates: new Map([["R", '{"__proto__": 1}']]),
       },
       { type: "comment", item: KEY, text: "Pairs again." },
@@ -3569,7 +3574,7 @@ describe("navigation", () => {
 
   it("ends the test when the plan has no item", () => {
     const structure = nonlinear(section("S", ""));
-    expect(nextItem(structure, plan(structure), undefined, rules())).toBeUndefined();
+    expect(findNextItem(structure, plan(structure), undefined, rules())).toBeUndefined();
   });
 
   it("skips an item whose pre-condition is false, and presents one whose is true", () => {
@@ -3618,7 +3623,7 @@ describe("navigation", () => {
       part("P1", section("A", itemRef("a", pre(NOT_GO))), "linear") + part("P2", section("B", itemRef("b")), "linear"),
     );
     const testPlan = plan(structure);
-    expect(nextItem(structure, testPlan, undefined, GO_TRUE)).toEqual({ ref: "b", instance: 1 });
+    expect(findNextItem(structure, testPlan, undefined, GO_TRUE)).toEqual({ ref: "b", instance: 1 });
   });
 
   it("ignores the pre-conditions of a nonlinear part and of what it holds", () => {
@@ -3819,47 +3824,47 @@ describe("navigation", () => {
     expect(walk(structure, testPlan)).toEqual(["a", "a#2", "a#3"]);
   });
 
-  it("gives an item before another only in a nonlinear part (previousItem)", () => {
+  it("gives an item before another only in a nonlinear part (findPreviousItem)", () => {
     const structure = structureOf(
       part("P1", section("S1", refs("a", "b"))) + part("P2", section("S2", refs("c", "d")), "linear"),
     );
     const testPlan = plan(structure);
     const key = (ref: string): ItemKey => ({ ref, instance: 1 });
-    expect(previousItem(structure, testPlan, key("b"))).toEqual(key("a"));
-    expect(previousItem(structure, testPlan, key("a"))).toBeUndefined();
-    expect(previousItem(structure, testPlan, key("d"))).toBeUndefined();
+    expect(findPreviousItem(structure, testPlan, key("b"))).toEqual(key("a"));
+    expect(findPreviousItem(structure, testPlan, key("a"))).toBeUndefined();
+    expect(findPreviousItem(structure, testPlan, key("d"))).toBeUndefined();
   });
 
   it("refuses an item instance that is not in the plan, and arguments of other types", () => {
     const structure = nonlinear(section("S", refs("a")));
     const testPlan = plan(structure);
-    expect(() => nextItem(structure, testPlan, { ref: "b", instance: 1 }, rules())).toThrow(
+    expect(() => findNextItem(structure, testPlan, { ref: "b", instance: 1 }, rules())).toThrow(
       'The plan has no item instance "b" 1.',
     );
-    expect(() => previousItem(structure, testPlan, { ref: "a", instance: 2 })).toThrow(
+    expect(() => findPreviousItem(structure, testPlan, { ref: "a", instance: 2 })).toThrow(
       'The plan has no item instance "a" 2.',
     );
-    expect(() => nextItem(structure, testPlan, json('{"ref":"a","instance":0}'), rules())).toThrow(
+    expect(() => findNextItem(structure, testPlan, json('{"ref":"a","instance":0}'), rules())).toThrow(
       "The item instance is invalid at instance: expected a value of at least 1, found 0.",
     );
-    expect(() => nextItem(structure, testPlan, json('{"ref":1,"instance":1}'), rules())).toThrow(
+    expect(() => findNextItem(structure, testPlan, json('{"ref":1,"instance":1}'), rules())).toThrow(
       "The item instance is invalid at ref: expected a string, found 1.",
     );
-    expect(() => nextItem(structure, testPlan, json("null"), rules())).toThrow(DataError);
-    expect(() => nextItem(json("null"), testPlan, undefined, rules())).toThrow(DataError);
-    expect(() => nextItem(structure, json('{"parts":1}'), undefined, rules())).toThrow(DataError);
-    expect(() => nextItem(structure, testPlan, undefined, json("null"))).toThrow(DataError);
-    expect(() => previousItem(structure, testPlan, json("null"))).toThrow(DataError);
+    expect(() => findNextItem(structure, testPlan, json("null"), rules())).toThrow(DataError);
+    expect(() => findNextItem(json("null"), testPlan, undefined, rules())).toThrow(DataError);
+    expect(() => findNextItem(structure, json('{"parts":1}'), undefined, rules())).toThrow(DataError);
+    expect(() => findNextItem(structure, testPlan, undefined, json("null"))).toThrow(DataError);
+    expect(() => findPreviousItem(structure, testPlan, json("null"))).toThrow(DataError);
     const reading = linear(section("S", itemRef("a", pre(GO))));
     for (const context of ['{"outcomes":{},"scope":{},"context":{}}', '{"outcomes":null}', "null"]) {
-      expect(() => nextItem(reading, plan(reading), undefined, json(context))).toThrow(DataError);
+      expect(() => findNextItem(reading, plan(reading), undefined, json(context))).toThrow(DataError);
     }
   });
 
   it("refuses a plan that names what the structure does not have", () => {
     const structure = linear(section("S", refs("a")));
     const other = linear(section("T", refs("b")));
-    expect(() => nextItem(structure, plan(other), undefined, rules())).toThrow(
+    expect(() => findNextItem(structure, plan(other), undefined, rules())).toThrow(
       'The plan names "T", which the structure does not have.',
     );
   });
@@ -4065,7 +4070,7 @@ describe("planning a test", () => {
     const random = scripted(0, 0, 0.99, 0, 0, 0.99, 0.99);
     const testPlan = planWith(structure, random);
     expect(outlineOf(testPlan)).toBe("P{S[b a a#2 a#3]}");
-    expect(planItems(testPlan)).toEqual([
+    expect(listPlanItems(testPlan)).toEqual([
       { ref: "b", instance: 1 },
       { ref: "a", instance: 1 },
       { ref: "a", instance: 2 },
@@ -4119,7 +4124,7 @@ describe("planning a test", () => {
     expect(itemsOf(testPlan, "P1")).toEqual(["a", "b", "c"]);
     expect(itemsOf(testPlan, "P2")).toEqual(["d"]);
     expect(itemsOf(testPlan)).toEqual(["a", "b", "c", "d"]);
-    expect(() => planItems(testPlan, "P3")).toThrow('The plan has no test part "P3".');
+    expect(() => listPlanItems(testPlan, { part: "P3" })).toThrow('The plan has no test part "P3".');
   });
 
   it("refuses options and arguments of other types", () => {
@@ -4141,9 +4146,12 @@ describe("planning a test", () => {
       'The limit maxPlanNodes must be a positive integer, found "3".',
     );
     expect(() => planTest(structure, { random, limits: { maxPlanNodes: 0 } })).toThrow(DataError);
-    expect(() => planItems(json("null"))).toThrow(DataError);
-    expect(() => planItems(json('{"parts":{}}'))).toThrow(DataError);
-    expect(() => planItems(plan(structure), json("1"))).toThrow("The test part must be a string, found 1.");
+    expect(() => listPlanItems(json("null"))).toThrow(DataError);
+    expect(() => listPlanItems(json('{"parts":{}}'))).toThrow(DataError);
+    expect(() => listPlanItems(plan(structure), { part: json("1") })).toThrow(
+      "The test part must be a string, found 1.",
+    );
+    expect(() => listPlanItems(plan(structure), json("null"))).toThrow("The options must be an object, found null.");
   });
 
   it("refuses a random source that returns anything but a number in [0, 1)", () => {
@@ -4167,9 +4175,9 @@ describe("the result status of an item", () => {
     const ended = acts(session, context, SUBMIT);
     const next = acts(ended, context, NEXT);
     expect(
-      [started, session, ended, next, acts(next, context, SUBMIT)].map((each) => resultStatus(each, item)),
+      [started, session, ended, next, acts(next, context, SUBMIT)].map((each) => deriveSessionStatus(each, item)),
     ).toEqual(["initial", "pendingSubmission", "final", "pendingSubmission", "final"]);
-    expect(resultStatus(accepted(suspendItem(session, 2)).session, item)).toBe("pendingSubmission");
+    expect(deriveSessionStatus(accepted(suspendItem(session, 2)).session, item)).toBe("pendingSubmission");
   });
 
   it("reports pendingExternalScoring after response processing of an item with an externally scored outcome", () => {
@@ -4180,8 +4188,8 @@ describe("the result status of an item", () => {
       <qti-item-body><qti-extended-text-interaction response-identifier="RESPONSE"/></qti-item-body>`,
     );
     const context = contextOf(item);
-    const closed = acts(presented(context), context, respond("RESPONSE", single("string", "An essay.")), SUBMIT);
-    expect(resultStatus(closed, item)).toBe("pendingExternalScoring");
+    const closed = acts(presented(context), context, respond("RESPONSE", buildSingle("string", "An essay.")), SUBMIT);
+    expect(deriveSessionStatus(closed, item)).toBe("pendingExternalScoring");
   });
 
   /** An item whose response processing fails for the response `X`: it repeats a value beyond `maxContainerSize`. */
@@ -4214,12 +4222,12 @@ describe("the result status of an item", () => {
       "The operator qti-repeat builds a container of 5 values, more than the limit maxContainerSize of 2.",
     );
     expect([outcome(step.session, "STAGE"), outcome(step.session, "SIZE")]).toEqual([integer(-1), integer(0)]);
-    expect([step.session.processingFailed, resultStatus(step.session, item)]).toEqual([
+    expect([step.session.processingFailed, deriveSessionStatus(step.session, item)]).toEqual([
       true,
       "pendingResponseProcessing",
     ]);
     const recovered = acts(step.session, context, respond("RESPONSE", identifier("Y")), SUBMIT);
-    expect([outcome(recovered, "STAGE"), resultStatus(recovered, item)]).toEqual([integer(1), "final"]);
+    expect([outcome(recovered, "STAGE"), deriveSessionStatus(recovered, item)]).toEqual([integer(1), "final"]);
   });
 
   it("reports processing-failed when a custom operator throws in template or response processing", () => {
@@ -4259,7 +4267,7 @@ describe("the result status of an item", () => {
     const context: ItemSessionContext = { ...contextOf(item), limits: { maxContainerSize: 2 } };
     const first = acts(presented(context), context, respond("RESPONSE", identifier("Y")), SUBMIT);
     const failed = acts(first, context, respond("RESPONSE", identifier("X")), SUBMIT);
-    expect([outcome(failed, "STAGE"), failed.status, resultStatus(failed, item)]).toEqual([
+    expect([outcome(failed, "STAGE"), failed.status, deriveSessionStatus(failed, item)]).toEqual([
       integer(1),
       "interacting",
       "pendingResponseProcessing",
@@ -4268,8 +4276,8 @@ describe("the result status of an item", () => {
 
   it("refuses arguments of other types", () => {
     const item = counterItem();
-    expect(() => resultStatus(json("null"), item)).toThrow(DataError);
-    expect(() => resultStatus(presented(contextOf(item)), json("null"))).toThrow(DataError);
+    expect(() => deriveSessionStatus(json("null"), item)).toThrow(DataError);
+    expect(() => deriveSessionStatus(presented(contextOf(item)), json("null"))).toThrow(DataError);
   });
 });
 
@@ -4430,7 +4438,8 @@ describe("selection and ordering", () => {
 
 describe("item session control", () => {
   const control = (attributes: string): string => `<qti-item-session-control ${attributes}/>`;
-  const item = (structure: TestStructure, ref: string) => sessionControl(structure.itemRef(ref) ?? fail(`No ${ref}.`));
+  const item = (structure: TestStructure, ref: string) =>
+    resolveSessionControl(structure.itemRef(ref) ?? fail(`No ${ref}.`));
 
   const nested = structureOf(
     part(
@@ -4514,13 +4523,15 @@ describe("item session control", () => {
   });
 
   it("refuses what is not an item reference of a structure", () => {
-    expect(() => sessionControl(json("null"))).toThrow("The item reference must be an object from resolveStructure");
-    expect(() => sessionControl(json(JSON.stringify({ kind: "section" })))).toThrow(
+    expect(() => resolveSessionControl(json("null"))).toThrow(
+      "The item reference must be an object from resolveStructure",
+    );
+    expect(() => resolveSessionControl(json(JSON.stringify({ kind: "section" })))).toThrow(
       'The item reference must be a node of kind "item-ref", found the kind "section".',
     );
   });
   it("gives an item delivered alone its feedback and review, and applies the control given to it", () => {
-    expect(standaloneSessionControl()).toEqual(controlWith({ showFeedback: true }));
+    expect(resolveStandaloneSessionControl()).toEqual(controlWith({ showFeedback: true }));
     const given = structureOf(
       part(
         "P",
@@ -4529,17 +4540,20 @@ describe("item session control", () => {
         '<qti-item-session-control max-attempts="3" show-feedback="false" show-solution="true"/>',
       ),
     ).part("P")?.model.itemSessionControl;
-    expect(standaloneSessionControl(given)).toEqual(controlWith({ maxAttempts: 3, showSolution: true }));
+    expect(resolveStandaloneSessionControl({ control: given })).toEqual(
+      controlWith({ maxAttempts: 3, showSolution: true }),
+    );
     const item = counterItem();
-    const context: ItemSessionContext = { item, control: standaloneSessionControl(), random: createRandom(1) };
+    const context: ItemSessionContext = { item, control: resolveStandaloneSessionControl(), random: createRandom(1) };
     const closed = acts(presented(context), context, SUBMIT);
-    expect([closed.status, itemFeedback(closed, item, context.control).modal]).toEqual(["closed", true]);
+    expect([closed.status, deriveItemFeedback(closed, item, context.control).modal]).toEqual(["closed", true]);
     expect(acts(closed, context, { type: "review", item: KEY }).status).toBe("review");
   });
 
   it("refuses a control that is not an item session control", () => {
-    expect(() => standaloneSessionControl(json("null"))).toThrow(DataError);
-    expect(() => standaloneSessionControl(json('{"kind": "assessment-item"}'))).toThrow(
+    expect(() => resolveStandaloneSessionControl({ control: json("null") })).toThrow(DataError);
+    expect(() => resolveStandaloneSessionControl(json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => resolveStandaloneSessionControl({ control: json('{"kind": "assessment-item"}') })).toThrow(
       'The item session control must be the model of a qti-item-session-control, found the kind "assessment-item".',
     );
   });
@@ -4570,12 +4584,12 @@ describe("the JSON of a view", () => {
   ];
 
   it("reads back, from the JSON text, the view in every state of a session", () => {
-    for (const view of views()) expect(viewFromJson(throughText(viewToJson(view)))).toEqual(view);
+    for (const view of views()) expect(readView(throughText(writeView(view)))).toEqual(view);
   });
 
   it("writes values as wire values and maps as arrays of entries, NULL as null", () => {
     const current = engine.view(closed.state, 2).current;
-    const written = JSON.parse(JSON.stringify(viewToJson(engine.view(closed.state, 2)))).current;
+    const written = JSON.parse(JSON.stringify(writeView(engine.view(closed.state, 2)))).current;
     expect(written.responses).toEqual([
       ["RESPONSE", { cardinality: "single", baseType: "identifier", value: { base: { identifier: "B" } } }],
       ["TEXT", null],
@@ -4599,16 +4613,16 @@ describe("the JSON of a view", () => {
       type: "set-responses",
       item: key("a"),
       responses: new Map<string, Value | null>([
-        ["__proto__", container("ordered", "identifier", ["B", "A"])],
-        ["MANY", container("multiple", "identifier", ["B", "A"])],
+        ["__proto__", buildContainer("ordered", "identifier", ["B", "A"])],
+        ["MANY", buildContainer("multiple", "identifier", ["B", "A"])],
       ]),
       at: 1,
     });
     const view = one.view(set.state, 1);
-    const read = viewFromJson(throughText(viewToJson(view)));
+    const read = readView(throughText(writeView(view)));
     expect(read).toEqual(view);
-    expect(read.current?.responses.get("__proto__")).toEqual(container("ordered", "identifier", ["B", "A"]));
-    expect(read.current?.responses.get("MANY")).toEqual(container("multiple", "identifier", ["B", "A"]));
+    expect(read.current?.responses.get("__proto__")).toEqual(buildContainer("ordered", "identifier", ["B", "A"]));
+    expect(read.current?.responses.get("MANY")).toEqual(buildContainer("multiple", "identifier", ["B", "A"]));
   });
 
   it("reads back any value of a response, of any cardinality and base type", () => {
@@ -4619,7 +4633,7 @@ describe("the JSON of a view", () => {
         fc.uniqueArray(fc.tuple(identifierArbitrary, anyValue), { selector: ([name]) => name }),
         (entries) => {
           const given: CandidateView = { ...view, current: { ...current, responses: new Map(entries) } };
-          expect(viewFromJson(throughText(viewToJson(given)))).toEqual(given);
+          expect(readView(throughText(writeView(given)))).toEqual(given);
         },
       ),
     );
@@ -4627,15 +4641,15 @@ describe("the JSON of a view", () => {
 
   it("writes the properties of a view and no other, and refuses a view that has another", () => {
     const view = engine.view(state, 0);
-    expect(() => viewToJson(Object.assign({}, view, { correct: "LEAK-X" }))).toThrow(
+    expect(() => writeView(Object.assign({}, view, { correct: "LEAK-X" }))).toThrow(
       /^The view is invalid: unexpected property "correct"\.$/,
     );
     const item = view.current ?? fail("No item.");
-    expect(() => viewToJson({ ...view, current: Object.assign({}, item, { correctResponses: [] }) })).toThrow(
+    expect(() => writeView({ ...view, current: Object.assign({}, item, { correctResponses: [] }) })).toThrow(
       /^The view is invalid at current: unexpected property "correctResponses"\.$/,
     );
     expect(() =>
-      viewToJson({
+      writeView({
         ...view,
         timers: [Object.assign({}, { scope: "test", identifier: "T", late: false } as const, { key: 1 })],
       }),
@@ -4643,34 +4657,34 @@ describe("the JSON of a view", () => {
   });
 
   it("refuses JSON that is not the form of a view", () => {
-    const good = JSON.parse(JSON.stringify(viewToJson(engine.view(state, 0))));
+    const good = JSON.parse(JSON.stringify(writeView(engine.view(state, 0))));
     const change = (edit: (view: Record<string, unknown>) => void): unknown => {
       const copy = JSON.parse(JSON.stringify(good));
       edit(copy);
       return copy;
     };
-    expect(() => viewFromJson(json("null"))).toThrow("The view is invalid: expected an object, found null.");
-    expect(() => viewFromJson(change((view) => delete view.timers))).toThrow(
+    expect(() => readView(json("null"))).toThrow("The view is invalid: expected an object, found null.");
+    expect(() => readView(change((view) => delete view.timers))).toThrow(
       'The view is invalid: missing the property "timers".',
     );
-    expect(() => viewFromJson(change((view) => (view.status = "paused")))).toThrow(
+    expect(() => readView(change((view) => (view.status = "paused")))).toThrow(
       'The view is invalid at status: expected "in-progress", "suspended" or "ended", found "paused".',
     );
-    expect(() => viewFromJson(change((view) => (view.answer = 1)))).toThrow(/unexpected property "answer"\.$/);
-    expect(() => viewFromJson(change((view) => (view.actions = ["time"])))).toThrow(
+    expect(() => readView(change((view) => (view.answer = 1)))).toThrow(/unexpected property "answer"\.$/);
+    expect(() => readView(change((view) => (view.actions = ["time"])))).toThrow(
       /^The view is invalid at actions\[0\]: expected "set-responses", .*, found "time"\.$/,
     );
-    expect(() => viewFromJson(change((view) => (view.rubric = [{ text: "no kind" }])))).toThrow(
+    expect(() => readView(change((view) => (view.rubric = [{ text: "no kind" }])))).toThrow(
       'The view is invalid at rubric[0]: missing the property "kind".',
     );
-    expect(() => viewFromJson(change((view) => (view.rubric = [{ kind: "p", children: [null] }])))).toThrow(
+    expect(() => readView(change((view) => (view.rubric = [{ kind: "p", children: [null] }])))).toThrow(
       /^The view is invalid at rubric: must hold only strings, finite numbers, booleans, arrays and objects, found null\.$/,
     );
     expect(() =>
-      viewFromJson(change((view) => (view.supports = [{ name: "chocolate", state: "option", active: false }]))),
+      readView(change((view) => (view.supports = [{ name: "chocolate", state: "option", active: false }]))),
     ).toThrow("The view is invalid at supports[0].name: The name of a support must be the name of a support of a PNP.");
     expect(() =>
-      viewFromJson(
+      readView(
         change((view) => {
           const item = view.current as { responses: unknown[] };
           item.responses = [item.responses[0], item.responses[0]];
@@ -4678,7 +4692,7 @@ describe("the JSON of a view", () => {
       ),
     ).toThrow('The view is invalid at current.responses: the identifier "RESPONSE" occurs twice.');
     expect(() =>
-      viewFromJson(change((view) => ((view.current as { interactions: unknown[] }).interactions = [{ kind: "x" }]))),
+      readView(change((view) => ((view.current as { interactions: unknown[] }).interactions = [{ kind: "x" }]))),
     ).toThrow(
       /^The view is invalid at current\.interactions\[0\]: The response identifier of an interaction descriptor must be a string/,
     );
@@ -4687,28 +4701,28 @@ describe("the JSON of a view", () => {
   it("refuses content that JSON cannot carry or that nests too deep", () => {
     const view = engine.view(state, 0);
     const node = (value: unknown): CandidateView => ({ ...view, rubric: json(JSON.stringify([{ kind: "p", value }])) });
-    expect(() => viewToJson({ ...view, rubric: [{ kind: "p", value: Number.NaN } as never] })).toThrow(
+    expect(() => writeView({ ...view, rubric: [{ kind: "p", value: Number.NaN } as never] })).toThrow(
       "The view is invalid at rubric: holds NaN, which JSON cannot carry.",
     );
-    expect(() => viewToJson({ ...view, rubric: [{ kind: "p", value: new Map() } as never] })).toThrow(
+    expect(() => writeView({ ...view, rubric: [{ kind: "p", value: new Map() } as never] })).toThrow(
       /^The view is invalid at rubric: must hold only strings, finite numbers, booleans, arrays and objects, found an object\.$/,
     );
     let deep: unknown = "x";
     for (let level = 0; level < 300; level++) deep = [deep];
-    expect(() => viewToJson({ ...view, rubric: [{ kind: "p", deep } as never] })).toThrow(
+    expect(() => writeView({ ...view, rubric: [{ kind: "p", deep } as never] })).toThrow(
       "The view is invalid at rubric: nests deeper than 256 levels.",
     );
-    expect(() => viewFromJson(json('{"__proto__":1}'))).toThrow(/^The view is invalid: /);
+    expect(() => readView(json('{"__proto__":1}'))).toThrow(/^The view is invalid: /);
     expect(node("fine").rubric).toHaveLength(1);
   });
 
   it("refuses a view of other types", () => {
-    expect(() => viewToJson(json("null"))).toThrow("The view must be an object, found null.");
-    expect(() => viewToJson(json('{"status":"in-progress"}'))).toThrow(/^The navigation of the view must be an array/);
+    expect(() => writeView(json("null"))).toThrow("The view must be an object, found null.");
+    expect(() => writeView(json('{"status":"in-progress"}'))).toThrow(/^The navigation of the view must be an array/);
   });
 
   it("reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
-    fuzzJson(viewFromJson, views().map(viewToJson));
+    fuzzJson(readView, views().map(writeView));
   });
 });
 
@@ -4754,14 +4768,15 @@ describe("candidate actions", () => {
     { type: "resume" },
   ];
 
-  it("reads back, from the JSON text, each action of the candidate that actionToJson wrote", () => {
-    for (const action of actions) expect(parseCandidateAction(throughText(actionToJson(action)))).toEqual(action);
+  it("reads back, from the JSON text, each action of the candidate that writeCandidateAction wrote", () => {
+    for (const action of actions)
+      expect(readCandidateAction(throughText(writeCandidateAction(action)))).toEqual(action);
   });
 
   it("writes an action as plain data: values as wire values, maps as entries, and no time", () => {
     const [set] = actions;
     if (set === undefined) return fail("No action.");
-    expect(actionToJson(set)).toEqual({
+    expect(writeCandidateAction(set)).toEqual({
       type: "set-responses",
       item: { ref: "a", instance: 1 },
       responses: [
@@ -4769,8 +4784,11 @@ describe("candidate actions", () => {
         ["TEXT", null],
       ],
     });
-    expect(actionToJson({ type: "move", to: key("b", 3) })).toEqual({ type: "move", to: { ref: "b", instance: 3 } });
-    expect(actionToJson(Object.assign({}, { type: "submit", item } as const, { at: 12 }))).toEqual({
+    expect(writeCandidateAction({ type: "move", to: key("b", 3) })).toEqual({
+      type: "move",
+      to: { ref: "b", instance: 3 },
+    });
+    expect(writeCandidateAction(Object.assign({}, { type: "submit", item } as const, { at: 12 }))).toEqual({
       type: "submit",
       item: { ref: "a", instance: 1 },
     });
@@ -4778,21 +4796,21 @@ describe("candidate actions", () => {
 
   it("refuses the actions of the host, and any action with a time", () => {
     for (const type of ["time", "supply-scores", "cat-response"]) {
-      expect(() => parseCandidateAction({ type, at: 1 })).toThrow(
+      expect(() => readCandidateAction({ type, at: 1 })).toThrow(
         `The type "${type}" is an action of the host, and a candidate does not send it; the type of an action of a candidate is "set-responses",`,
       );
     }
-    expect(() => parseCandidateAction({ type: "submit", item: { ref: "a", instance: 1 }, at: 1 })).toThrow(
+    expect(() => readCandidateAction({ type: "submit", item: { ref: "a", instance: 1 }, at: 1 })).toThrow(
       'The action is invalid: unexpected property "at".',
     );
-    expect(() => parseCandidateAction({ type: "suspend", at: 1 })).toThrow(
+    expect(() => readCandidateAction({ type: "suspend", at: 1 })).toThrow(
       'The action is invalid: unexpected property "at".',
     );
   });
 
   it("refuses input that is not an action, naming what is wrong", () => {
     const refuses = (input: string, message: string | RegExp): void => {
-      expect(() => parseCandidateAction(json(input))).toThrow(message);
+      expect(() => readCandidateAction(json(input))).toThrow(message);
     };
     refuses("null", "The action is invalid: expected an object, found null.");
     refuses("[]", /^The action is invalid at type: expected "set-responses", .* or "resume", found undefined\.$/);
@@ -4875,36 +4893,36 @@ describe("candidate actions", () => {
   });
 
   it("refuses an action larger than the limit maxActionSize, and a PCI state longer than maxPciStateLength", () => {
-    const comment = (text: string): unknown => actionToJson({ type: "comment", item, text });
+    const comment = (text: string): unknown => writeCandidateAction({ type: "comment", item, text });
     expect(DEFAULT_ACTION_LIMITS).toEqual({
       maxActionSize: 4_194_304,
       maxPciStateLength: 1_048_576,
       maxSettingListLength: 256,
     });
-    expect(parseCandidateAction(comment("x".repeat(100)), { limits: { maxActionSize: 200 } })).toMatchObject({
+    expect(readCandidateAction(comment("x".repeat(100)), { limits: { maxActionSize: 200 } })).toMatchObject({
       type: "comment",
     });
-    expect(() => parseCandidateAction(comment("x".repeat(300)), { limits: { maxActionSize: 200 } })).toThrow(
+    expect(() => readCandidateAction(comment("x".repeat(300)), { limits: { maxActionSize: 200 } })).toThrow(
       "The action is larger than the limit maxActionSize of 200.",
     );
-    expect(() => parseCandidateAction(comment("x".repeat(300)), { limits: { maxActionSize: 200 } })).toThrow(
+    expect(() => readCandidateAction(comment("x".repeat(300)), { limits: { maxActionSize: 200 } })).toThrow(
       expect.objectContaining({ name: "SecurityError", limit: "maxActionSize", value: 200 }),
     );
-    expect(() => parseCandidateAction(comment("x".repeat(DEFAULT_ACTION_LIMITS.maxActionSize)))).toThrow(
+    expect(() => readCandidateAction(comment("x".repeat(DEFAULT_ACTION_LIMITS.maxActionSize)))).toThrow(
       "The action is larger than the limit maxActionSize of 4194304.",
     );
     const pci = (state: string): unknown =>
-      actionToJson({ type: "set-responses", item, responses: new Map(), pciStates: new Map([["P", state]]) });
-    expect(parseCandidateAction(pci("x".repeat(10)), { limits: { maxPciStateLength: 10 } })).toMatchObject({
+      writeCandidateAction({ type: "set-responses", item, responses: new Map(), pciStates: new Map([["P", state]]) });
+    expect(readCandidateAction(pci("x".repeat(10)), { limits: { maxPciStateLength: 10 } })).toMatchObject({
       type: "set-responses",
     });
-    expect(() => parseCandidateAction(pci("x".repeat(11)), { limits: { maxPciStateLength: 10 } })).toThrow(
+    expect(() => readCandidateAction(pci("x".repeat(11)), { limits: { maxPciStateLength: 10 } })).toThrow(
       'The PCI state of "P" has 11 code units, more than the limit maxPciStateLength of 10.',
     );
-    expect(() => parseCandidateAction(pci("x".repeat(11)), { limits: { maxPciStateLength: 10 } })).toThrow(
+    expect(() => readCandidateAction(pci("x".repeat(11)), { limits: { maxPciStateLength: 10 } })).toThrow(
       expect.objectContaining({ name: "SecurityError", limit: "maxPciStateLength", value: 10 }),
     );
-    expect(() => parseCandidateAction(pci("x".repeat(DEFAULT_ACTION_LIMITS.maxPciStateLength + 1)))).toThrow(
+    expect(() => readCandidateAction(pci("x".repeat(DEFAULT_ACTION_LIMITS.maxPciStateLength + 1)))).toThrow(
       /more than the limit maxPciStateLength of 1048576\.$/,
     );
     const many = json<unknown>(
@@ -4914,10 +4932,10 @@ describe("candidate actions", () => {
         responses: Array.from({ length: 300 }, (_, at) => [`R${at}`, null]),
       }),
     );
-    expect(() => parseCandidateAction(many, { limits: { maxActionSize: 1_000 } })).toThrow(
+    expect(() => readCandidateAction(many, { limits: { maxActionSize: 1_000 } })).toThrow(
       "The action is larger than the limit maxActionSize of 1000.",
     );
-    expect(parseCandidateAction(many)).toMatchObject({ type: "set-responses" });
+    expect(readCandidateAction(many)).toMatchObject({ type: "set-responses" });
   });
 
   it("refuses a list in the settings of support-settings longer than maxSettingListLength, before it reads the settings", () => {
@@ -4929,18 +4947,18 @@ describe("candidate actions", () => {
         }),
       );
     const names = (count: number): string[] => Array.from({ length: count }, (_, at) => `Font ${at}`);
-    expect(parseCandidateAction(fonts(names(256)))).toMatchObject({ type: "support-settings" });
-    expect(() => parseCandidateAction(fonts(names(257)))).toThrow(
+    expect(readCandidateAction(fonts(names(256)))).toMatchObject({ type: "support-settings" });
+    expect(() => readCandidateAction(fonts(names(257)))).toThrow(
       "A list in the settings of support-settings has 257 entries, more than the limit maxSettingListLength of 256.",
     );
-    expect(() => parseCandidateAction(fonts(names(4)), { limits: { maxSettingListLength: 3 } })).toThrow(
+    expect(() => readCandidateAction(fonts(names(4)), { limits: { maxSettingListLength: 3 } })).toThrow(
       expect.objectContaining({ name: "SecurityError", limit: "maxSettingListLength", value: 3 }),
     );
-    expect(parseCandidateAction(fonts(names(300)), { limits: { maxSettingListLength: 300 } })).toMatchObject({
+    expect(readCandidateAction(fonts(names(300)), { limits: { maxSettingListLength: 300 } })).toMatchObject({
       type: "support-settings",
     });
     // The limit holds before the settings are read: a long list of entries of the wrong type is refused for its length.
-    expect(() => parseCandidateAction(fonts(Array.from({ length: 257 }, () => 5)))).toThrow(SecurityError);
+    expect(() => readCandidateAction(fonts(Array.from({ length: 257 }, () => 5)))).toThrow(SecurityError);
     const spoken = (restrictionTypes: unknown[]): unknown =>
       json(
         JSON.stringify({
@@ -4948,7 +4966,7 @@ describe("candidate actions", () => {
           settings: { name: "spoken", replaceAccessModes: [], restrictionTypes },
         }),
       );
-    expect(() => parseCandidateAction(spoken(Array.from({ length: 257 }, () => "word-by-word")))).toThrow(
+    expect(() => readCandidateAction(spoken(Array.from({ length: 257 }, () => "word-by-word")))).toThrow(
       /maxSettingListLength of 256\.$/,
     );
     const hazards = json(
@@ -4957,7 +4975,7 @@ describe("candidate actions", () => {
         settings: { name: "hazard-avoidance", hazards: Array.from({ length: 257 }, () => "flashing") },
       }),
     );
-    expect(() => parseCandidateAction(hazards)).toThrow(/maxSettingListLength of 256\.$/);
+    expect(() => readCandidateAction(hazards)).toThrow(/maxSettingListLength of 256\.$/);
     const nested = json(
       JSON.stringify({
         type: "support-settings",
@@ -4967,7 +4985,7 @@ describe("candidate actions", () => {
         },
       }),
     );
-    expect(() => parseCandidateAction(nested)).toThrow(/maxSettingListLength of 256\.$/);
+    expect(() => readCandidateAction(nested)).toThrow(/maxSettingListLength of 256\.$/);
     const responses = json(
       JSON.stringify({
         type: "set-responses",
@@ -4975,33 +4993,33 @@ describe("candidate actions", () => {
         responses: Array.from({ length: 300 }, (_, at) => [`R${at}`, null]),
       }),
     );
-    expect(parseCandidateAction(responses)).toMatchObject({ type: "set-responses" });
+    expect(readCandidateAction(responses)).toMatchObject({ type: "set-responses" });
   });
 
   it("counts the size of nested input without recursion, so deep input is refused and never overflows the stack", () => {
     let deep: unknown = [];
     for (let level = 0; level < 200_000; level++) deep = [deep];
-    expect(() => parseCandidateAction(deep)).toThrow(/^The action is invalid at type: /);
+    expect(() => readCandidateAction(deep)).toThrow(/^The action is invalid at type: /);
     const cycle: unknown[] = [];
     cycle.push(cycle);
-    expect(() => parseCandidateAction(cycle, { limits: { maxActionSize: 10_000 } })).toThrow(
+    expect(() => readCandidateAction(cycle, { limits: { maxActionSize: 10_000 } })).toThrow(
       "The action is larger than the limit maxActionSize of 10000.",
     );
   });
 
   it("refuses limits of other types", () => {
-    const input = actionToJson({ type: "end-test" });
-    expect(() => parseCandidateAction(input, json("null"))).toThrow("The options must be an object, found null.");
-    expect(() => parseCandidateAction(input, json('{"limits":null}'))).toThrow(
+    const input = writeCandidateAction({ type: "end-test" });
+    expect(() => readCandidateAction(input, json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => readCandidateAction(input, json('{"limits":null}'))).toThrow(
       "The option limits must be an object, found null.",
     );
-    expect(() => parseCandidateAction(input, json('{"limits":{"maxActionSize":"1"}}'))).toThrow(
+    expect(() => readCandidateAction(input, json('{"limits":{"maxActionSize":"1"}}'))).toThrow(
       'The limit maxActionSize must be a positive integer, found "1".',
     );
-    expect(() => parseCandidateAction(input, { limits: { maxPciStateLength: 0 } })).toThrow(
+    expect(() => readCandidateAction(input, { limits: { maxPciStateLength: 0 } })).toThrow(
       "The limit maxPciStateLength must be a positive integer, found 0.",
     );
-    expect(() => parseCandidateAction(input, json('{"limits":{"maxSettingListLength":null}}'))).toThrow(
+    expect(() => readCandidateAction(input, json('{"limits":{"maxSettingListLength":null}}'))).toThrow(
       "The limit maxSettingListLength must be a positive integer, found null.",
     );
   });
@@ -5009,7 +5027,7 @@ describe("candidate actions", () => {
   it("stamps an action of a client on the server: the time is the server's, never earlier than the session's", () => {
     const engine = engineOf(testPart("P", section("S", refs("a", "b")), "nonlinear"));
     const { state } = played(engine, begun(engine).state, answer("a", "B", 5_000));
-    const received = parseCandidateAction(throughText(actionToJson({ type: "submit", item: key("a") })));
+    const received = readCandidateAction(throughText(writeCandidateAction({ type: "submit", item: key("a") })));
     const stamped = stamp(state, received, 3_000);
     expect(stamped).toEqual({ type: "submit", item: key("a"), at: 5_000 });
     const step = engine.apply(state, stamped);
@@ -5017,26 +5035,31 @@ describe("candidate actions", () => {
   });
 
   it("reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
-    fuzzJson(parseCandidateAction, actions.map(actionToJson));
+    fuzzJson(readCandidateAction, actions.map(writeCandidateAction));
   });
 });
 
 describe("the JSON of an action", () => {
   it("refuses an action of other types", () => {
-    expect(() => actionToJson(json("null"))).toThrow("The action must be an object with a type, found null.");
-    expect(() => actionToJson(json('{"type":"time"}'))).toThrow(
+    expect(() => writeCandidateAction(json("null"))).toThrow("The action must be an object with a type, found null.");
+    expect(() => writeCandidateAction(json('{"type":"time"}'))).toThrow(
       /^The type of the action must be "set-responses", .* or "resume", found "time"\.$/,
     );
-    expect(() => actionToJson(json('{"type":"submit","item":{"ref":"a"}}'))).toThrow(
+    expect(() => writeCandidateAction(json('{"type":"submit","item":{"ref":"a"}}'))).toThrow(
       'The item instance is invalid: missing the property "instance".',
     );
-    expect(() => actionToJson(json('{"type":"set-responses","item":{"ref":"a","instance":1},"responses":{}}'))).toThrow(
-      "The responses of set-responses must be a Map from response identifier to value, found an object.",
-    );
     expect(() =>
-      actionToJson({ type: "set-responses", item: key("a"), responses: new Map(), pciStates: json('{"R":"s"}') }),
+      writeCandidateAction(json('{"type":"set-responses","item":{"ref":"a","instance":1},"responses":{}}')),
+    ).toThrow("The responses of set-responses must be a Map from response identifier to value, found an object.");
+    expect(() =>
+      writeCandidateAction({
+        type: "set-responses",
+        item: key("a"),
+        responses: new Map(),
+        pciStates: json('{"R":"s"}'),
+      }),
     ).toThrow("The pciStates of set-responses must be a Map from response identifier to state, found an object.");
-    expect(() => actionToJson(json('{"type":"comment","item":{"ref":"a","instance":1},"text":5}'))).toThrow(
+    expect(() => writeCandidateAction(json('{"type":"comment","item":{"ref":"a","instance":1},"text":5}'))).toThrow(
       "The action is invalid at text: expected a string, found 5.",
     );
   });
@@ -5410,16 +5433,16 @@ describe("the structure of a test", () => {
   it("lists the nodes that enclose a node from the outermost, and finds its test part", () => {
     const structure = structureOf(part("P", section("outer", section("inner", refs("a")))));
     const item = structure.itemRef("a") ?? fail("No a.");
-    expect(ancestry(item).map((node) => (node.kind === "test" ? "test" : node.model.identifier))).toEqual([
+    expect(listAncestors(item).map((node) => (node.kind === "test" ? "test" : node.model.identifier))).toEqual([
       "test",
       "P",
       "outer",
       "inner",
     ]);
-    expect(ancestry(structure.test)).toEqual([]);
-    expect(partOf(item).model.identifier).toBe("P");
+    expect(listAncestors(structure.test)).toEqual([]);
+    expect(findTestPart(item).model.identifier).toBe("P");
     const top = structure.section("outer") ?? fail("No outer.");
-    expect(partOf(top)).toBe(structure.part("P"));
+    expect(findTestPart(top)).toBe(structure.part("P"));
   });
 
   it("builds the test of an item delivered alone and the item of a link to a tool as readAsi reads their documents", () => {
@@ -5473,11 +5496,11 @@ describe("time limits", () => {
 
   /** The limits of every scope of `timed`. */
   function everywhere(structure: TestStructure, extra?: TestingTime) {
-    const at = (id: "a" | "b") => timeLimits(structure.itemRef(id) ?? fail(`No ${id}.`), extra);
+    const at = (id: "a" | "b") => timeLimits(structure.itemRef(id) ?? fail(`No ${id}.`), { extra });
     return {
-      test: timeLimits(structure.test, extra),
-      part: timeLimits(structure.part("P") ?? fail("No part."), extra),
-      section: timeLimits(structure.section("S") ?? fail("No section."), extra),
+      test: timeLimits(structure.test, { extra }),
+      part: timeLimits(structure.part("P") ?? fail("No part."), { extra }),
+      section: timeLimits(structure.section("S") ?? fail("No section."), { extra }),
       a: at("a"),
       b: at("b"),
     };
@@ -5542,9 +5565,9 @@ describe("time limits", () => {
     );
     const extra: TestingTime = { kind: "fixed-minutes", minutes: 1 };
     const maximum = (id: string): number | undefined =>
-      timeLimits(structure.itemRef(id) ?? fail(`No ${id}.`), extra).maxTime;
+      timeLimits(structure.itemRef(id) ?? fail(`No ${id}.`), { extra }).maxTime;
     const maximumOfSection = (id: string): number | undefined =>
-      timeLimits(structure.section(id) ?? fail(`No ${id}.`), extra).maxTime;
+      timeLimits(structure.section(id) ?? fail(`No ${id}.`), { extra }).maxTime;
     expect([maximumOfSection("S1"), maximum("a"), maximumOfSection("S2"), maximum("b"), maximum("c")]).toEqual([
       160,
       50,
@@ -5572,7 +5595,7 @@ describe("time limits", () => {
       { kind: "fixed-minutes", minutes: 30 },
       { kind: "unlimited" },
     ] as const) {
-      expect(timeLimits(item, extra)).toEqual({ allowLateSubmission: false });
+      expect(timeLimits(item, { extra })).toEqual({ allowLateSubmission: false });
     }
   });
 
@@ -5591,7 +5614,7 @@ describe("time limits", () => {
     const dissolved = structure.section("S") ?? fail("No S.");
     const item = structure.itemRef("a") ?? fail("No a.");
     expect(timeLimits(dissolved)).toEqual({ allowLateSubmission: false });
-    expect(timeLimits(item, { kind: "fixed-minutes", minutes: 1 }).maxTime).toBe(110);
+    expect(timeLimits(item, { extra: { kind: "fixed-minutes", minutes: 1 } }).maxTime).toBe(110);
   });
 
   it("reads the extra time of a profile: a multiplier, fixed minutes or unlimited time", () => {
@@ -5632,17 +5655,21 @@ describe("time limits", () => {
   it("refuses a node and extra time of other types, and a multiplier that is not positive", () => {
     const item = nonlinear(section("S", refs("a"))).itemRef("a") ?? fail("No a.");
     expect(() => timeLimits(json("null"))).toThrow("The node must be an object from resolveStructure, found null.");
-    expect(() => timeLimits(item, json("null"))).toThrow("The extra testing time must be an object, found null.");
-    expect(() => timeLimits(item, json('{"kind":"double"}'))).toThrow(
+    expect(() => timeLimits(item, { extra: json("null") })).toThrow(
+      "The extra testing time must be an object, found null.",
+    );
+    const noOptions = json("null");
+    expect(() => timeLimits(item, noOptions)).toThrow("The options must be an object, found null.");
+    expect(() => timeLimits(item, { extra: json('{"kind":"double"}') })).toThrow(
       'The kind of the extra testing time must be "time-multiplier", "fixed-minutes" or "unlimited", found "double".',
     );
-    expect(() => timeLimits(item, json('{"kind":"time-multiplier","multiplier":"2"}'))).toThrow(
+    expect(() => timeLimits(item, { extra: json('{"kind":"time-multiplier","multiplier":"2"}') })).toThrow(
       'The multiplier of the extra testing time must be a finite number, found "2".',
     );
-    expect(() => timeLimits(item, { kind: "time-multiplier", multiplier: 0 })).toThrow(
+    expect(() => timeLimits(item, { extra: { kind: "time-multiplier", multiplier: 0 } })).toThrow(
       "The multiplier of the extra testing time must be positive, found 0.",
     );
-    expect(() => timeLimits(item, json('{"kind":"fixed-minutes","minutes":-1}'))).toThrow(
+    expect(() => timeLimits(item, { extra: json('{"kind":"fixed-minutes","minutes":-1}') })).toThrow(
       "The minutes of the extra testing time must be a non-negative number, found -1.",
     );
     expect(() => additionalTestingTime(json("null"))).toThrow(DataError);
@@ -5785,7 +5812,7 @@ describe("properties", () => {
     return { structure: nonlinear(section("S", selection + ordering + items.join(""))), select };
   }
 
-  const refsOf = (testPlan: TestPlan): string[] => planItems(testPlan).map((key) => key.ref);
+  const refsOf = (testPlan: TestPlan): string[] => listPlanItems(testPlan).map((key) => key.ref);
 
   it("selects the number asked for, every required child, and repeats a child only with replacement", () => {
     fc.assert(
@@ -6038,7 +6065,7 @@ describe("properties", () => {
             })();
             const minimum = place >= 2 && mode === "nonlinear" ? undefined : declared.min;
             const node = nodes[place] ?? fail("No node.");
-            expect(timeLimits(node, extra)).toEqual({
+            expect(timeLimits(node, { extra })).toEqual({
               ...(minimum === undefined ? {} : { minTime: minimum }),
               ...(maximum === undefined ? {} : { maxTime: maximum }),
               allowLateSubmission: false,
@@ -6072,7 +6099,7 @@ describe("properties", () => {
         const structure = structureOf(
           part("P", section("S", control(middle) + itemRef("a", control(bottom))), "linear", control(top)),
         );
-        const effective = sessionControl(structure.itemRef("a") ?? fail("No a."));
+        const effective = resolveSessionControl(structure.itemRef("a") ?? fail("No a."));
         const nearest = <T>(read: (value: typeof top) => T | undefined, fallback: T): T =>
           read(bottom) ?? read(middle) ?? read(top) ?? fallback;
         expect(effective.showFeedback).toBe(nearest((value) => value.showFeedback, false));
@@ -6231,7 +6258,7 @@ describe("properties", () => {
             }
             expect(after.spent + (after.since === null ? 0 : at - after.since)).toBe(spent);
             if (after.since === null)
-              expect(response(after, "duration")).toEqual(single("duration", Math.floor(after.spent) / 1000));
+              expect(response(after, "duration")).toEqual(buildSingle("duration", Math.floor(after.spent) / 1000));
             expect(itemSessionFromJson(JSON.parse(JSON.stringify(itemSessionToJson(after))))).toEqual(after);
             session = after;
           }
@@ -6355,7 +6382,7 @@ describe("properties", () => {
 
   /** The action of a move in a state: an action on an item names the current item, or now and then another. */
   function actionOf(state: DeliveryState, { move, choice, target }: EngineMove): CandidateAction | HostAction {
-    const planned = planItems(state.plan);
+    const planned = listPlanItems(state.plan);
     const other = planned[target % planned.length] ?? key("none");
     const item = state.current === undefined || target % 3 === 0 ? other : state.current;
     switch (move) {
@@ -6416,8 +6443,9 @@ describe("properties", () => {
   };
 
   const partOf = (state: DeliveryState, at: ItemKey): string | undefined =>
-    state.plan.parts.find((entry) => planItems(state.plan, entry.identifier).some((each) => shown(each) === shown(at)))
-      ?.identifier;
+    state.plan.parts.find((entry) =>
+      listPlanItems(state.plan, { part: entry.identifier }).some((each) => shown(each) === shown(at)),
+    )?.identifier;
 
   it("keeps the rules of a test session over any actions and time, and never throws", () => {
     fc.assert(
@@ -6446,7 +6474,7 @@ describe("properties", () => {
           if (before.current !== undefined && current !== undefined) {
             const part = partOf(before, before.current);
             if (part !== undefined && part === partOf(after, current) && linear.has(part)) {
-              const order = planItems(after.plan).map(shown);
+              const order = listPlanItems(after.plan).map(shown);
               expect(order.indexOf(shown(current))).toBeGreaterThanOrEqual(order.indexOf(shown(before.current)));
             }
           }
@@ -6607,7 +6635,7 @@ describe("properties", () => {
             const states = step.ok ? [before, step.state] : [before];
             for (const state of states) {
               const view = engine.view(state, action.at);
-              expect(viewFromJson(throughText(viewToJson(view)))).toEqual(view);
+              expect(readView(throughText(writeView(view)))).toEqual(view);
               expect(engine.view(deserializeState(serializeState(state)), action.at)).toEqual(view);
               expect(view.status).toBe(engine.view(state, state.at).status === "ended" ? "ended" : view.status);
             }
@@ -6625,7 +6653,7 @@ describe("properties", () => {
         const engine = flowEngine(flow);
         session(engine, seed, moves, (before, action, step) => {
           if (action.type === "time" || action.type === "supply-scores" || action.type === "cat-response") return;
-          const received = parseCandidateAction(throughText(actionToJson(action)));
+          const received = readCandidateAction(throughText(writeCandidateAction(action)));
           const stamped = stamp(before, received, action.at);
           expect(stamped).toEqual(action);
           expect(engine.apply(before, stamped)).toEqual(step);
@@ -6752,7 +6780,7 @@ describe("properties", () => {
         fc.uniqueArray(fc.tuple(identifierArbitrary, anyValue), { selector: ([name]) => name }),
         (entries) => {
           const action: CandidateAction = { type: "set-responses", item: key("a", 2), responses: new Map(entries) };
-          expect(parseCandidateAction(throughText(actionToJson(action)))).toEqual(action);
+          expect(readCandidateAction(throughText(writeCandidateAction(action)))).toEqual(action);
         },
       ),
     );

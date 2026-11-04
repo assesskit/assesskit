@@ -20,7 +20,7 @@ export interface ModuleConfigurationPaths {
  *
  * @remarks
  * The defaults are `modules/module_resolution.js` and `modules/fallback_module_resolution.js`. Read the files and give
- * their `parseModuleResolution` results to `resolvePciModules`.
+ * their `readModuleResolution` results to `resolvePciModules`.
  *
  * @param interaction - The PCI.
  * @returns The `primary-configuration` and the `secondary-configuration` of its `qti-interaction-modules`, or the
@@ -29,7 +29,7 @@ export interface ModuleConfigurationPaths {
  * @see
  * {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, module resolution}
  */
-export function moduleConfigurationPaths(interaction: PortableCustomInteraction): ModuleConfigurationPaths {
+export function resolveModuleConfigurationPaths(interaction: PortableCustomInteraction): ModuleConfigurationPaths {
   checkRecord(interaction, "The interaction must be an object of the model of qti-portable-custom-interaction");
   const modules = interaction.interactionModules;
   return {

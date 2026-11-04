@@ -22,7 +22,7 @@ import { checkSession, type ItemSession } from "./item-session.js";
  * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function resultStatus(session: ItemSession, item: AssessmentItem): SessionStatus {
+export function deriveSessionStatus(session: ItemSession, item: AssessmentItem): SessionStatus {
   checkSession(session);
   checkItem(item);
   if (attemptsOf(session.variables) === 0) return "initial";

@@ -3,18 +3,17 @@ import {
   checkAbortSignal,
   checkChoice,
   checkNonEmptyString,
+  checkOptional,
   checkPositiveInteger,
   checkRecord,
   describe,
   functionSchema,
   methodsSchema,
-  optional,
   parseWith,
+  raceAbort,
   recordSchema,
-  untilAborted,
 } from "@assesskit/runtime/checks";
 import {
-  actionToJson,
   type CandidateAction,
   type CandidateView,
   type DeliveryEvent,
@@ -22,11 +21,12 @@ import {
   deserializeState,
   type Engine,
   type HostAction,
-  parseCandidateAction,
+  readCandidateAction,
   sendCatRequest,
   serializeState,
   stamp,
-  viewToJson,
+  writeCandidateAction,
+  writeView,
 } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { QtiPackage } from "@assesskit/runtime/package";
@@ -104,7 +104,7 @@ const hostOptionsSchema = v.strictObject({
 function checkHostOptions(options: unknown): asserts options is SessionHostOptions {
   const { clock, maxIdle } = parseWith(hostOptionsSchema, options, "The options object");
   checkClock(clock);
-  optional(maxIdle, (value) => checkPositiveInteger(value, "The option maxIdle"));
+  checkOptional(maxIdle, (value) => checkPositiveInteger(value, "The option maxIdle"));
 }
 
 /** Returns the action as the log of a session keeps it: candidate actions in the runtime's JSON form, host actions without their payloads. */
@@ -117,7 +117,7 @@ function loggedAction(action: CandidateAction | HostAction, at: number): string 
     case "cat-response":
       return JSON.stringify({ at, action: { type: action.type, request: action.request } });
     default:
-      return JSON.stringify({ at, action: actionToJson(action) });
+      return JSON.stringify({ at, action: writeCandidateAction(action) });
   }
 }
 
@@ -180,7 +180,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     const view: CandidateView = { ...full, actions: full.actions.filter((type) => allowed.has(type)) };
     return {
       seq,
-      view: viewToJson(view),
+      view: writeView(view),
       assets: await gate.sign(session, collectAssetPrefixes(view, pkg), now, { signal }),
       documents: locateDocuments(view, pkg),
       ...(refusal === undefined ? {} : { refusal }),
@@ -333,7 +333,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     now: number,
     signal: AbortSignal | undefined,
   ): Promise<Attempt<ViewEnvelope>> => {
-    const action = parseCandidateAction(envelope.action, { limits });
+    const action = readCandidateAction(envelope.action, { limits });
     const state = deserializeState(stored.state);
     checkClientAction(policyOf(state), action.type);
     const { step, at } = stepAfterIdle(idle, { state, action, now, maxIdle });
@@ -380,7 +380,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
    * value. The loop takes no signal, so an abort ends this wait and never the loop.
    */
   const serve = async (session: string, signal: AbortSignal | undefined): Promise<CatLoopFailure | undefined> =>
-    cat === undefined ? undefined : untilAborted(loops.join(session, answererOf(session, cat)), signal);
+    cat === undefined ? undefined : raceAbort(loops.join(session, answererOf(session, cat)), { signal });
 
   /**
    * Runs the answer loop after a step of the host, unless one runs: that loop is told to read the pending work once more,
@@ -428,7 +428,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
       checkCaller(caller);
       checkRecord(startOptions, "The options of start must be an object");
       const { signal, ...engineOptions } = startOptions;
-      optional(signal, (value) => checkAbortSignal(value, "The option signal"));
+      checkOptional(signal, (value) => checkAbortSignal(value, "The option signal"));
       const { session, principal } = caller;
       const exists = (): AccessError =>
         new AccessError(

@@ -1,4 +1,4 @@
-import { untilAborted } from "@assesskit/runtime/checks";
+import { raceAbort } from "@assesskit/runtime/checks";
 import {
   type ActionLimits,
   type CandidateAction,
@@ -6,7 +6,7 @@ import {
   DEFAULT_ACTION_LIMITS,
 } from "@assesskit/runtime/delivery";
 import { DataError, SecurityError } from "@assesskit/runtime/errors";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { AUTOSAVE_MS, createRemoteSession, FLUSH_BEFORE_DEADLINE_MS } from "../src/client/index.js";
 import { createLocalSession } from "../src/client/local/index.js";
@@ -48,7 +48,7 @@ async function remote(
     calls.push(envelope);
     signals.push(callOptions?.signal);
     const waiting = options.wait?.(envelope, calls.length);
-    if (waiting !== undefined) await untilAborted(waiting, callOptions?.signal);
+    if (waiting !== undefined) await raceAbort(waiting, { signal: callOptions?.signal });
     const sent = JSON.parse(JSON.stringify(envelope));
     const failure = options.fail?.(envelope, calls.length);
     if (failure === "before") throw new ServiceError("The host could not be reached.", 0, "");
@@ -113,7 +113,7 @@ describe("createRemoteSession", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]).toMatchObject({ seq: 1 });
     expect(one).toBe(two);
-    expect(one.view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "B"));
+    expect(one.view.current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "B"));
     client.close();
   });
 
@@ -121,7 +121,7 @@ describe("createRemoteSession", () => {
     const { client, calls } = await remote();
     const saved = client.dispatch(answer("A"));
     const moved = await client.dispatch({ type: "move", to: "next" });
-    expect((await saved).view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+    expect((await saved).view.current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "A"));
     expect(typesOf(calls)).toEqual(["set-responses", "move"]);
     expect(moved.view.current?.key.ref).toBe("q2");
     client.close();
@@ -131,7 +131,7 @@ describe("createRemoteSession", () => {
   const withState = (length: number): CandidateAction => ({
     type: "set-responses",
     item: Q1,
-    responses: new Map([["RESPONSE", single("identifier", "A")]]),
+    responses: new Map([["RESPONSE", buildSingle("identifier", "A")]]),
     pciStates: new Map([["RESPONSE", "x".repeat(length)]]),
   });
 
@@ -142,7 +142,7 @@ describe("createRemoteSession", () => {
     await expect(oversized).rejects.toThrow(SecurityError);
     await expect(oversized).rejects.toMatchObject({ limit: "maxPciStateLength" });
     const moved = await client.dispatch({ type: "move", to: "next" });
-    expect((await saved).view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "B"));
+    expect((await saved).view.current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "B"));
     expect(typesOf(calls)).toEqual(["set-responses", "move"]);
     expect(moved.view.current?.key.ref).toBe("q2");
     client.close();
@@ -162,7 +162,7 @@ describe("createRemoteSession", () => {
     const other = client.dispatch({
       type: "set-responses",
       item: { ref: "q2", instance: 1 },
-      responses: new Map([["RESPONSE", single("identifier", "B")]]),
+      responses: new Map([["RESPONSE", buildSingle("identifier", "B")]]),
     });
     await Promise.all([first, other]);
     expect(calls.map(({ action }) => (action as { item: { ref: string } }).item.ref)).toEqual(["q1", "q2"]);
@@ -385,7 +385,7 @@ describe("createLocalSession", () => {
     clock.advance(2 * SECOND);
     expect(client.age()).toBe(2 * SECOND);
     const answered = await client.dispatch(answer("A"));
-    expect(answered.view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+    expect(answered.view.current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "A"));
     const submitted = await client.dispatch({ type: "submit", item: Q1 });
     expect(statusOfQ1(submitted.view)).toBe("closed");
     expect(store.saved.get("practice-1")).toHaveLength(3);
@@ -409,7 +409,7 @@ describe("createLocalSession", () => {
     const second = await createLocalSession({ ...options, seed: 99 });
     expect(second.view.current?.key.ref).toBe("q2");
     await second.dispatch({ type: "move", to: "previous" });
-    expect(second.view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "B"));
+    expect(second.view.current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "B"));
     expect(store.saved.get("practice-1")).toHaveLength(4);
     second.close();
   });
@@ -463,7 +463,7 @@ describe("createLocalSession", () => {
     const answered = await client.dispatch({
       type: "set-responses",
       item: client.view.current?.key ?? Q1,
-      responses: new Map([["RESPONSE", single("identifier", "A")]]),
+      responses: new Map([["RESPONSE", buildSingle("identifier", "A")]]),
     });
     expect(answered.refusal).toBeUndefined();
     client.close();
@@ -577,7 +577,7 @@ describe("refresh of a remote session", () => {
     const { client, calls } = await remote();
     void client.dispatch(answer("A"));
     const view = await client.refresh();
-    expect(view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+    expect(view.current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "A"));
     expect(typesOf(calls)).toEqual(["set-responses", "view"]);
     client.close();
   });

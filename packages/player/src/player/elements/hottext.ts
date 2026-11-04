@@ -1,4 +1,4 @@
-import { descendantNodes, type HotText, type HotTextInteraction } from "@assesskit/runtime/asi";
+import { type HotText, type HotTextInteraction, listDescendantNodes } from "@assesskit/runtime/asi";
 import { AssesskitError } from "@assesskit/runtime/errors";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
@@ -32,7 +32,7 @@ export class HotTextInteractionElement extends SelectionElement {
   build(node: HotTextInteraction, renderer: BodyRenderer): void {
     this.prompt = renderPrompt(node.prompt, renderer);
     const passage = renderer.nodes(node.children);
-    const identifiers = node.children.flatMap((child) => [child, ...descendantNodes(child)]).filter(isHotText);
+    const identifiers = node.children.flatMap((child) => [child, ...listDescendantNodes(child)]).filter(isHotText);
     // The renderer drew the hot texts where the text has them and dropped their identifiers, which the model keeps in the same order.
     const elements = elementsNamed(passage, "qti-hottext");
     if (identifiers.length !== elements.length) {

@@ -1,4 +1,4 @@
-import { dependencyClosure, type QtiPackage, type Resource, resourcePath } from "@assesskit/runtime/package";
+import { listDependencies, type QtiPackage, type Resource, resolveResourcePath } from "@assesskit/runtime/package";
 
 /**
  * Returns the resource whose main file is the document, or the variant resource with that identifier, followed by the
@@ -12,7 +12,9 @@ import { dependencyClosure, type QtiPackage, type Resource, resourcePath } from 
 export function dependenciesOf(pkg: QtiPackage, document: string, variant: string | undefined): readonly Resource[] {
   const { manifest } = pkg;
   const resource = manifest.resources.find((each) =>
-    variant === undefined ? document !== "" && resourcePath(manifest, each) === document : each.identifier === variant,
+    variant === undefined
+      ? document !== "" && resolveResourcePath(manifest, each) === document
+      : each.identifier === variant,
   );
-  return resource === undefined ? [] : dependencyClosure(manifest, resource.identifier);
+  return resource === undefined ? [] : listDependencies(manifest, resource.identifier);
 }

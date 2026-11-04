@@ -1,7 +1,7 @@
 import { type AsiDocument, readAsi } from "../asi/index.js";
 import { checkArray, checkFunction, checkOptions, checkRecord, checkString, describe } from "../checks.js";
 import { AssesskitError, DataError, SecurityError } from "../errors.js";
-import { parseXml, readError, resolveIncludes, type XmlElement, type XmlLimits } from "../xml/index.js";
+import { createReadError, parseXml, resolveIncludes, type XmlElement, type XmlLimits } from "../xml/index.js";
 import type { Manifest } from "./manifest.js";
 import type { PackageFiles } from "./package-files.js";
 import { normalizeEntryName, resolveReference } from "./paths.js";
@@ -85,8 +85,10 @@ class OpenedPackage implements QtiPackage {
     this.xmlLimits = xmlLimits;
     const manifest = this.file(MANIFEST_PATH);
     if (manifest === undefined) {
-      throw readError("assesskit/package/no-manifest", `The package has no ${MANIFEST_PATH} at its root.`, {
-        path: MANIFEST_PATH,
+      throw createReadError("assesskit/package/no-manifest", `The package has no ${MANIFEST_PATH} at its root.`, {
+        location: {
+          path: MANIFEST_PATH,
+        },
       });
     }
     this.manifest = readManifest(manifest, { path: MANIFEST_PATH, limits: xmlLimits });
@@ -106,7 +108,7 @@ class OpenedPackage implements QtiPackage {
       const bytes = this.file(target);
       if (bytes === undefined) {
         const message = `The package has no file ${describe(target)}.`;
-        return readError("assesskit/package/missing-file", message, { path: base });
+        return createReadError("assesskit/package/missing-file", message, { location: { path: base } });
       }
       return parseXml(bytes, { path: target, limits: this.xmlLimits });
     } catch (error) {
@@ -144,8 +146,10 @@ class OpenedPackage implements QtiPackage {
     if (cached !== undefined) return cached;
     const bytes = this.file(path);
     if (bytes === undefined) {
-      throw readError("assesskit/package/missing-file", `The package has no file ${describe(path)}.`, {
-        path,
+      throw createReadError("assesskit/package/missing-file", `The package has no file ${describe(path)}.`, {
+        location: {
+          path,
+        },
       });
     }
     const root = parseXml(bytes, { path, limits: this.xmlLimits });

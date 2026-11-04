@@ -1,10 +1,10 @@
 import { checkFunction, checkRecord, checkString } from "../checks.js";
-import { toJsonValue, type Value, type ValueDeclaration } from "../values/index.js";
+import { type Value, type ValueDeclaration, writeJsonValue } from "../values/index.js";
 import { convertFiles } from "./convert-files.js";
 import type { PciFileLoader } from "./file-callbacks.js";
 import type { PciJson } from "./pci-json.js";
 
-/** Turns the file of the JSON of a value, a reference as `toJsonValue` writes it, into the inline file of a PCI. */
+/** Turns the file of the JSON of a value, a reference as `writeJsonValue` writes it, into the inline file of a PCI. */
 function inlineFile(file: unknown, files: PciFileLoader): unknown {
   checkRecord(file, "A file must be an object");
   const { reference, mime, name } = file;
@@ -18,7 +18,7 @@ function inlineFile(file: unknown, files: PciFileLoader): unknown {
  * Writes the value of a variable as the JSON that a portable custom interaction reads.
  *
  * @remarks
- * It is `toJsonValue` with each file as `{ "data", "mime", "name" }`, its bytes read through the host. A duration is
+ * It is `writeJsonValue` with each file as `{ "data", "mime", "name" }`, its bytes read through the host. A duration is
  * `PT<seconds>S` and a float that JSON cannot carry is a string. NULL is `{ "base": null }`, `{ "list": null }` or
  * `{ "record": null }`, by the cardinality of the declaration.
  *
@@ -34,5 +34,5 @@ function inlineFile(file: unknown, files: PciFileLoader): unknown {
 export function encodePciValue(value: Value | null, declaration: ValueDeclaration, files: PciFileLoader): PciJson {
   checkRecord(files, "The files must be an object with a function load");
   checkFunction(files.load, "The files must be an object with a function load");
-  return convertFiles(toJsonValue(value, declaration), (file) => inlineFile(file, files));
+  return convertFiles(writeJsonValue(value, declaration), (file) => inlineFile(file, files));
 }

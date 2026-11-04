@@ -10,7 +10,13 @@ import {
   readCurriculumStandardsSet,
   readResourceMetadata,
 } from "../metadata/index.js";
-import { ElementReader, type ParseXmlOptions, type ReaderRules, termOf, type XmlElement } from "../xml/index.js";
+import {
+  createTermConverter,
+  ElementReader,
+  type ParseXmlOptions,
+  type ReaderRules,
+  type XmlElement,
+} from "../xml/index.js";
 import {
   CPX_NAMESPACE,
   MANIFEST_SCHEMA_VERSION,
@@ -96,7 +102,7 @@ class ManifestReader {
     reader.done();
     this.declared.push({ reader, identifier });
     this.references.push({ reader, identifier: identifierref });
-    return { identifier, identifierref, drd: readAccessForAllResource(drd.element, this.path) };
+    return { identifier, identifierref, drd: readAccessForAllResource(drd.element, { path: this.path }) };
   }
 
   private readResource(reader: ElementReader): Resource {
@@ -116,7 +122,7 @@ class ManifestReader {
       type,
       href,
       base,
-      metadata: metadata && readResourceMetadata(metadata.element, this.path),
+      metadata: metadata && readResourceMetadata(metadata.element, { path: this.path }),
       files,
       dependencies,
       variants,
@@ -124,14 +130,15 @@ class ManifestReader {
   }
 
   private readMetadata(reader: ElementReader): ManifestMetadata {
-    const schema = reader.require("schema").leaf(termOf(MANIFEST_SCHEMAS));
+    const schema = reader.require("schema").leaf(createTermConverter(MANIFEST_SCHEMAS));
     reader.require("schemaversion").leaf(parseSchemaVersion);
     const curriculumStandards = reader.take("curriculumStandardsMetadataSet");
     const lom = reader.take("lom");
     reader.done();
     return {
       schema,
-      curriculumStandards: curriculumStandards && readCurriculumStandardsSet(curriculumStandards.element, this.path),
+      curriculumStandards:
+        curriculumStandards && readCurriculumStandardsSet(curriculumStandards.element, { path: this.path }),
       lom: lom?.element,
     };
   }

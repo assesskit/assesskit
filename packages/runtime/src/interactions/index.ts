@@ -4,8 +4,7 @@
  *
  * @module @assesskit/runtime/interactions
  */
-export { answeredStatus } from "./answered-status.js";
-export { checkBindings } from "./check-bindings.js";
+export { deriveAnsweredStatus } from "./derive-answered-status.js";
 export { describeInteractions } from "./describe.js";
 export type {
   Binding,
@@ -14,8 +13,9 @@ export type {
   InteractionDescriptor,
   InteractionKind,
 } from "./descriptor.js";
-export { initialResponse } from "./initial-response.js";
-export { numericRecord } from "./numeric-record.js";
-export { checkResponse, type ResponseCheck, type ResponseViolation } from "./response-check.js";
+export { deriveInitialResponse } from "./initial-response.js";
+export { type ReadNumericRecordOptions, readNumericRecord } from "./read-numeric-record.js";
+export { type ResponseCheck, type ResponseViolation, validateResponse } from "./response-check.js";
 export type { ResponseStatus } from "./response-status.js";
 export { presentChoices, shuffleChoices } from "./shuffle.js";
+export { validateBindings } from "./validate-bindings.js";

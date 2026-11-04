@@ -1,7 +1,7 @@
 import {
   type AsiDocument,
   type AssessmentItem,
-  descendantNodes,
+  listDescendantNodes,
   type ModelNode,
   type PortableCustomInteraction,
   walkDocument,
@@ -9,13 +9,13 @@ import {
 import { isRecord } from "../checks.js";
 import { DataError } from "../errors.js";
 import {
-  checkPortableInteraction,
   isPackageRelative,
-  moduleConfigurationPaths,
   type PciModule,
   type PciModuleConfiguration,
-  parseModuleResolution,
+  readModuleResolution,
+  resolveModuleConfigurationPaths,
   resolvePciModules,
+  validatePortableInteraction,
 } from "../pci/index.js";
 import type { Findings } from "./findings.js";
 import { elementPath } from "./model-access.js";
@@ -75,7 +75,7 @@ function readConfiguration(
     "qti-portable-custom-interaction",
   );
   try {
-    return parseModuleResolution(new TextDecoder().decode(bytes));
+    return readModuleResolution(new TextDecoder().decode(bytes));
   } catch (error) {
     if (!(error instanceof DataError)) throw error;
     findings.error(
@@ -122,13 +122,13 @@ function checkModuleFiles(contents: Contents, module: PciModule, findings: Findi
  * @param findings - The findings of the document, which receive the issues.
  */
 export function checkPciFiles(contents: Contents, item: AssessmentItem, findings: Findings): void {
-  for (const interaction of descendantNodes(item).filter(isPortableCustomInteraction)) {
-    const paths = moduleConfigurationPaths(interaction);
+  for (const interaction of listDescendantNodes(item).filter(isPortableCustomInteraction)) {
+    const paths = resolveModuleConfigurationPaths(interaction);
     const configuration: PciModuleConfiguration = {
       primary: readConfiguration(contents, paths.primary, findings),
       fallback: readConfiguration(contents, paths.fallback, findings),
     };
-    findings.adopt(checkPortableInteraction(interaction, configuration));
+    findings.adopt(validatePortableInteraction(interaction, configuration));
     // The modules that only a configuration names are loaded when another module requires them, which only the code can say.
     const named = new Set([
       ...(interaction.module === undefined ? [] : [interaction.module]),

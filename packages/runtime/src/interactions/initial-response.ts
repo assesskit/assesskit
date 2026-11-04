@@ -17,7 +17,7 @@ import type { InteractionDescriptor } from "./descriptor.js";
  * @throws `DataError` when `descriptor` is not a descriptor.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function initialResponse(descriptor: InteractionDescriptor, defaultValue: Value | null): Value | null {
+export function deriveInitialResponse(descriptor: InteractionDescriptor, defaultValue: Value | null): Value | null {
   checkDescriptor(descriptor);
   return startingResponse(descriptor, defaultValue);
 }

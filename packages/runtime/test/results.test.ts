@@ -2,13 +2,13 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
   type AssessmentResult,
-  container,
+  buildContainer,
+  buildRecord,
+  buildSingle,
   DataError,
   type ItemResult,
   RESULTS_NAMESPACE,
   readResults,
-  record,
-  single,
   writeResults,
   XSI_NAMESPACE,
 } from "../src/index.js";
@@ -104,10 +104,16 @@ describe("reading results", () => {
           identifier: "duration",
           cardinality: "single",
           baseType: "duration",
-          candidateResponse: single("duration", 100),
+          candidateResponse: buildSingle("duration", 100),
           extensions: [],
         },
-        { kind: "outcome", identifier: "SCORE", cardinality: "single", baseType: "float", value: single("float", 0) },
+        {
+          kind: "outcome",
+          identifier: "SCORE",
+          cardinality: "single",
+          baseType: "float",
+          value: buildSingle("float", 0),
+        },
       ],
       supports: [{ name: "spoken", assignment: "assigned" }],
     });
@@ -164,8 +170,8 @@ describe("reading results", () => {
       choiceSequence: ["D", "B", "C", "A"],
       scoreStatus: "scored",
       answeredStatus: "answered",
-      correctResponse: { value: single("identifier", "A") },
-      candidateResponse: single("identifier", "A"),
+      correctResponse: { value: buildSingle("identifier", "A") },
+      candidateResponse: buildSingle("identifier", "A"),
       extensions: [],
     });
   });
@@ -175,7 +181,7 @@ describe("reading results", () => {
       '<responseVariable identifier="R" cardinality="multiple" baseType="identifier"><correctResponse interpretation="the odd ones"><value>A</value><value>C</value></correctResponse><candidateResponse/></responseVariable>',
     ).variables;
     expect(variable).toMatchObject({
-      correctResponse: { interpretation: "the odd ones", value: container("multiple", "identifier", ["A", "C"]) },
+      correctResponse: { interpretation: "the odd ones", value: buildContainer("multiple", "identifier", ["A", "C"]) },
       candidateResponse: null,
     });
   });
@@ -188,12 +194,12 @@ describe("reading results", () => {
       return variable !== undefined && variable.kind === "response" ? variable.candidateResponse : undefined;
     };
     expect(candidate("single", "integer", "")).toBeNull();
-    expect(candidate("single", "integer", "<value>5</value>")).toEqual(single("integer", 5));
+    expect(candidate("single", "integer", "<value>5</value>")).toEqual(buildSingle("integer", 5));
     expect(candidate("multiple", "identifier", "<value>B</value><value>A</value><value>B</value>")).toEqual(
-      container("multiple", "identifier", ["B", "A", "B"]),
+      buildContainer("multiple", "identifier", ["B", "A", "B"]),
     );
     expect(candidate("ordered", "point", "<value>1 2</value><value>3 4</value>")).toEqual(
-      container("ordered", "point", [
+      buildContainer("ordered", "point", [
         [1, 2],
         [3, 4],
       ]),
@@ -206,9 +212,9 @@ describe("reading results", () => {
     ).variables;
     expect(variable).toMatchObject({
       cardinality: "record",
-      candidateResponse: record([
-        ["x", nonNull(single("integer", 3))],
-        ["note", nonNull(single("string", "hi there"))],
+      candidateResponse: buildRecord([
+        ["x", nonNull(buildSingle("integer", 3))],
+        ["note", nonNull(buildSingle("string", "hi there"))],
       ]),
     });
   });
@@ -222,7 +228,7 @@ describe("reading results", () => {
       identifier: "SCORE",
       cardinality: "single",
       baseType: "float",
-      value: single("float", 7),
+      value: buildSingle("float", 7),
       view: ["candidate", "scorer"],
       interpretation: "the score",
       longInterpretation: "http://example.com/score",
@@ -260,13 +266,19 @@ describe("reading results", () => {
       '<templateVariable identifier="T" cardinality="single" baseType="integer"><value>4</value></templateVariable><contextVariable identifier="C" cardinality="ordered" baseType="string"><value>a</value><value>b</value></contextVariable>',
     );
     expect(variables).toEqual([
-      { kind: "template", identifier: "T", cardinality: "single", baseType: "integer", value: single("integer", 4) },
+      {
+        kind: "template",
+        identifier: "T",
+        cardinality: "single",
+        baseType: "integer",
+        value: buildSingle("integer", 4),
+      },
       {
         kind: "context",
         identifier: "C",
         cardinality: "ordered",
         baseType: "string",
-        value: container("ordered", "string", ["a", "b"]),
+        value: buildContainer("ordered", "string", ["a", "b"]),
       },
     ]);
   });
@@ -278,17 +290,17 @@ describe("reading results", () => {
       ).variables[0];
       return variable !== undefined && variable.kind === "outcome" ? variable.value : undefined;
     };
-    expect(valueRead("boolean", "1")).toEqual(single("boolean", true));
-    expect(valueRead("integer", " +12 ")).toEqual(single("integer", 12));
-    expect(valueRead("float", "1.5e2")).toEqual(single("float", 150));
-    expect(valueRead("float", "-INF")).toEqual(single("float", Number.NEGATIVE_INFINITY));
-    expect(valueRead("string", "  keeps  space ")).toEqual(single("string", "  keeps  space "));
-    expect(valueRead("identifier", "choice_A")).toEqual(single("identifier", "choice_A"));
-    expect(valueRead("uri", " http://a.b/c ")).toEqual(single("uri", "http://a.b/c"));
-    expect(valueRead("point", "118 184")).toEqual(single("point", [118, 184]));
-    expect(valueRead("pair", "W G1")).toEqual(single("pair", ["W", "G1"]));
-    expect(valueRead("directedPair", "G1 W")).toEqual(single("directedPair", ["G1", "W"]));
-    expect(valueRead("duration", "100")).toEqual(single("duration", 100));
+    expect(valueRead("boolean", "1")).toEqual(buildSingle("boolean", true));
+    expect(valueRead("integer", " +12 ")).toEqual(buildSingle("integer", 12));
+    expect(valueRead("float", "1.5e2")).toEqual(buildSingle("float", 150));
+    expect(valueRead("float", "-INF")).toEqual(buildSingle("float", Number.NEGATIVE_INFINITY));
+    expect(valueRead("string", "  keeps  space ")).toEqual(buildSingle("string", "  keeps  space "));
+    expect(valueRead("identifier", "choice_A")).toEqual(buildSingle("identifier", "choice_A"));
+    expect(valueRead("uri", " http://a.b/c ")).toEqual(buildSingle("uri", "http://a.b/c"));
+    expect(valueRead("point", "118 184")).toEqual(buildSingle("point", [118, 184]));
+    expect(valueRead("pair", "W G1")).toEqual(buildSingle("pair", ["W", "G1"]));
+    expect(valueRead("directedPair", "G1 W")).toEqual(buildSingle("directedPair", ["G1", "W"]));
+    expect(valueRead("duration", "100")).toEqual(buildSingle("duration", 100));
   });
 
   it("reads a file value as a reference with the content type of unknown bytes", () => {
@@ -305,8 +317,8 @@ describe("reading results", () => {
       itemResult(
         `<outcomeVariable identifier="O" cardinality="single" baseType="duration"><value>${text}</value></outcomeVariable>`,
       ).variables[0];
-    expect(duration("PT2M0.049722S")).toMatchObject({ value: single("duration", 120.049722) });
-    expect(duration("PT9.590316S")).toMatchObject({ value: single("duration", 9.590316) });
+    expect(duration("PT2M0.049722S")).toMatchObject({ value: buildSingle("duration", 120.049722) });
+    expect(duration("PT9.590316S")).toMatchObject({ value: buildSingle("duration", 9.590316) });
   });
 
   it("reads the empty string as NULL for a single value and keeps leading and trailing white space of a string", () => {
@@ -499,9 +511,9 @@ describe("writing results", () => {
             answeredStatus: "answered",
             correctResponse: {
               interpretation: "the first two",
-              value: nonNull(container("multiple", "identifier", ["A", "B"])),
+              value: nonNull(buildContainer("multiple", "identifier", ["A", "B"])),
             },
-            candidateResponse: container("multiple", "identifier", ["B", "A"]),
+            candidateResponse: buildContainer("multiple", "identifier", ["B", "A"]),
             extensions: [],
           },
         ],
@@ -528,9 +540,9 @@ describe("writing results", () => {
             kind: "response",
             identifier: "B",
             cardinality: "record",
-            candidateResponse: record([
-              ["x", nonNull(single("integer", 3))],
-              ["y", nonNull(single("string", "a<b"))],
+            candidateResponse: buildRecord([
+              ["x", nonNull(buildSingle("integer", 3))],
+              ["y", nonNull(buildSingle("string", "a<b"))],
             ]),
             extensions: [],
           },
@@ -554,7 +566,7 @@ describe("writing results", () => {
             identifier: "SCORE",
             cardinality: "single",
             baseType: "float",
-            value: single("float", 7),
+            value: buildSingle("float", 7),
             view: ["candidate", "scorer"],
             interpretation: "the score",
             longInterpretation: "http://example.com/score",
@@ -582,7 +594,7 @@ describe("writing results", () => {
             identifier: "T",
             cardinality: "single",
             baseType: "integer",
-            value: single("integer", 4),
+            value: buildSingle("integer", 4),
           },
           { kind: "context", identifier: "C", cardinality: "single", baseType: "integer", value: null },
         ],
@@ -594,7 +606,11 @@ describe("writing results", () => {
   });
 
   it("writes a file value as its reference alone, without its content type or name", () => {
-    const file = single("file", { reference: "uploads/essay.pdf", mimeType: "application/pdf", fileName: "essay.pdf" });
+    const file = buildSingle("file", {
+      reference: "uploads/essay.pdf",
+      mimeType: "application/pdf",
+      fileName: "essay.pdf",
+    });
     const text = written([
       item({ variables: [{ kind: "outcome", identifier: "F", cardinality: "single", baseType: "file", value: file }] }),
     ]);
@@ -612,16 +628,22 @@ describe("writing results", () => {
             identifier: "D",
             cardinality: "single",
             baseType: "duration",
-            value: single("duration", 120.049722),
+            value: buildSingle("duration", 120.049722),
           },
           {
             kind: "outcome",
             identifier: "N",
             cardinality: "single",
             baseType: "float",
-            value: single("float", Number.NaN),
+            value: buildSingle("float", Number.NaN),
           },
-          { kind: "outcome", identifier: "Z", cardinality: "single", baseType: "float", value: single("float", -0) },
+          {
+            kind: "outcome",
+            identifier: "Z",
+            cardinality: "single",
+            baseType: "float",
+            value: buildSingle("float", -0),
+          },
         ],
       }),
     ]);
@@ -631,7 +653,7 @@ describe("writing results", () => {
   });
 
   it("writes the newlines of an essay as they are, which a schema-aware consumer reads as spaces", () => {
-    const essay = nonNull(single("string", "line one\nline two"));
+    const essay = nonNull(buildSingle("string", "line one\nline two"));
     const text = written([
       item({
         variables: [{ kind: "outcome", identifier: "E", cardinality: "single", baseType: "string", value: essay }],
@@ -852,10 +874,12 @@ describe("errors", () => {
   it("refuses a value that is not of the type its variable declares, and a type without a base type", () => {
     const variable = (cardinality: string, baseType: string | undefined, value: unknown): ItemResult =>
       item({ variables: json(JSON.stringify([{ kind: "template", identifier: "T", cardinality, baseType, value }])) });
-    expect(() => written([variable("single", "float", single("integer", 1))])).toThrow(
+    expect(() => written([variable("single", "float", buildSingle("integer", 1))])).toThrow(
       'The value of the template variable "T" is single integer, but the variable declares single float.',
     );
-    expect(() => written([variable("multiple", "integer", single("integer", 1))])).toThrow("declares multiple integer");
+    expect(() => written([variable("multiple", "integer", buildSingle("integer", 1))])).toThrow(
+      "declares multiple integer",
+    );
     expect(() => written([variable("single", undefined, null)])).toThrow(
       'The base type of the template variable "T" is missing: only a variable of cardinality record may leave it out.',
     );
@@ -890,7 +914,7 @@ describe("errors", () => {
   });
 
   it("refuses text that XML 1.0 cannot carry", () => {
-    const text = nonNull(single("string", "bell\u0007"));
+    const text = nonNull(buildSingle("string", "bell\u0007"));
     expect(() =>
       written([
         item({

@@ -1,12 +1,12 @@
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import {
+  buildContainer,
+  buildSingle,
   type Cardinality,
-  container,
   type FileValue,
   type Pair,
   type Point,
   type Primitive,
-  single,
   type Value,
 } from "@assesskit/runtime/values";
 import { isFileValue } from "../internal.js";
@@ -92,9 +92,9 @@ export function responseOf(
   if (values.length === 0) return null;
   const [first] = values;
   if (!ordered && first !== undefined && values.length === 1 && cardinalityOf(descriptor) === "single") {
-    return single(baseType, first);
+    return buildSingle(baseType, first);
   }
-  return container(ordered ? "ordered" : "multiple", baseType, values);
+  return buildContainer(ordered ? "ordered" : "multiple", baseType, values);
 }
 
 /**

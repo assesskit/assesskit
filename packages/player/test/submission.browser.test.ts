@@ -1,13 +1,13 @@
 import type { ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import {
-  container,
+  buildContainer,
+  buildRecord,
+  buildSingle,
   type FileValue,
-  record,
-  single,
-  toWireValue,
   type Value,
   type ValueDeclaration,
+  writeWireValue,
 } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it } from "vitest";
 import { ID_MESSAGES } from "../src/messages/id/index.js";
@@ -40,10 +40,10 @@ function wire(value: Value | null): SubmissionValue {
     value.cardinality === "record"
       ? { cardinality: "record" }
       : { cardinality: value.cardinality, baseType: value.baseType };
-  return toWireValue(value, declaration);
+  return writeWireValue(value, declaration);
 }
 
-const text = (value: string): SubmissionValue => wire(single("string", value));
+const text = (value: string): SubmissionValue => wire(buildSingle("string", value));
 
 /** The body of an item as the scorer view gives it: the candidate's content, then the rubric block of the scorer. */
 const ESSAY_BODY =
@@ -74,7 +74,7 @@ function item(overrides: Partial<SubmissionItem> = {}): SubmissionItem {
     title: "Essay about a town",
     presented: true,
     body: ESSAY_BODY,
-    templateValues: [{ identifier: "N", value: wire(single("integer", 4)) }],
+    templateValues: [{ identifier: "N", value: wire(buildSingle("integer", 4)) }],
     correctResponses: [{ identifier: "RESPONSE", value: null }],
     ...overrides,
   };
@@ -207,7 +207,7 @@ describe("mountSubmission", () => {
 
   it("shows the score supplied before, who gave it and when, and nothing of it while the request is pending", () => {
     const supplied = {
-      value: wire(single("float", 7.5)),
+      value: wire(buildSingle("float", 7.5)),
       at: Date.UTC(2026, 9, 30, 13, 30, 0),
       scorer: "externalMachine",
     } as const;
@@ -328,7 +328,7 @@ describe("mountSubmission", () => {
         items: [
           item({
             correctResponses: [
-              { identifier: "RESPONSE", value: wire(single("identifier", "B")) },
+              { identifier: "RESPONSE", value: wire(buildSingle("identifier", "B")) },
               { identifier: "OTHER", value: null },
             ],
           }),
@@ -343,16 +343,18 @@ describe("mountSubmission", () => {
   });
 
   it("shows a container as a list that keeps the order, and a record as names and values", () => {
-    const ordered = show(submission({ parts: [part({ value: wire(container("ordered", "integer", [3, 1, 2])) })] }));
+    const ordered = show(
+      submission({ parts: [part({ value: wire(buildContainer("ordered", "integer", [3, 1, 2])) })] }),
+    );
     const list = el(ordered.shadow, "li.ak-submission-part ol.ak-submission-list");
     expect([...list.querySelectorAll("li")].map((entry) => entry.textContent)).toEqual(["3", "1", "2"]);
     const multiple = show(
-      submission({ parts: [part({ value: wire(container("multiple", "identifier", ["A", "C"])) })] }),
+      submission({ parts: [part({ value: wire(buildContainer("multiple", "identifier", ["A", "C"])) })] }),
     );
     expect(multiple.shadow.querySelectorAll("li.ak-submission-part ul.ak-submission-list > li")).toHaveLength(2);
-    const fields = record([
-      ["a", single("integer", 1)],
-      ["b", single("boolean", true)],
+    const fields = buildRecord([
+      ["a", buildSingle("integer", 1)],
+      ["b", buildSingle("boolean", true)],
     ]);
     const named = show(submission({ parts: [part({ value: wire(fields) })] }));
     const dl = el(named.shadow, "li.ak-submission-part dl.ak-submission-fields");
@@ -361,11 +363,11 @@ describe("mountSubmission", () => {
 
   it("shows the other base types in their lexical form", () => {
     const cases: readonly (readonly [Value, string])[] = [
-      [single("point", [10, 20]), "10 20"],
-      [single("directedPair", ["A", "B"]), "A B"],
-      [single("float", 2.5), "2.5"],
-      [single("duration", 90), "90"],
-      [single("uri", "http://example.org/x"), "http://example.org/x"],
+      [buildSingle("point", [10, 20]), "10 20"],
+      [buildSingle("directedPair", ["A", "B"]), "A B"],
+      [buildSingle("float", 2.5), "2.5"],
+      [buildSingle("duration", 90), "90"],
+      [buildSingle("uri", "http://example.org/x"), "http://example.org/x"],
     ];
     for (const [value, expected] of cases) {
       expect(answer(show(submission({ parts: [part({ value: wire(value) })] })).shadow)).toBe(expected);
@@ -380,7 +382,7 @@ describe("mountSubmission", () => {
     });
     const files = { url: (value: FileValue) => `${ASSETS}${value.reference}` };
     const shown = (value: FileValue): Element => {
-      const { shadow } = show(submission({ parts: [part({ value: wire(single("file", value)) })] }), { files });
+      const { shadow } = show(submission({ parts: [part({ value: wire(buildSingle("file", value)) })] }), { files });
       return el(shadow, "li.ak-submission-part .ak-submission-value > *");
     };
     const image = shown(file("image/png", "drawing.png"));
@@ -411,14 +413,14 @@ describe("mountSubmission", () => {
 
   it("shows a file as its name when the host gives no way to open it", () => {
     const file = { reference: "uploads/1", mimeType: "audio/wav", fileName: "speech.wav" };
-    const { shadow } = show(submission({ parts: [part({ value: wire(single("file", file)) })] }));
+    const { shadow } = show(submission({ parts: [part({ value: wire(buildSingle("file", file)) })] }));
     expect(answer(shadow)).toBe("speech.wav");
     expect(shadow.querySelector("li.ak-submission-part a, li.ak-submission-part audio")).toBeNull();
   });
 
   it("refuses a file URL that is not an http or https URL, and one that is not a string", () => {
     const file = { reference: "uploads/1", mimeType: "image/png" };
-    const withFile = submission({ parts: [part({ value: wire(single("file", file)) })] });
+    const withFile = submission({ parts: [part({ value: wire(buildSingle("file", file)) })] });
     expect(() => show(withFile, { files: { url: () => "javascript:alert(1)" } })).toThrow(
       new DataError('The URL that files.url returned must be an http or https URL, found "javascript:alert(1)".'),
     );
@@ -548,17 +550,17 @@ describe("accessibility", () => {
       mode: "externalMachine",
       lti: true,
       variableIdentifierRef: "http://example.org/ref",
-      supplied: { value: wire(single("float", 6)), at: Date.UTC(2026, 9, 30, 12, 1, 0), scorer: "human" },
+      supplied: { value: wire(buildSingle("float", 6)), at: Date.UTC(2026, 9, 30, 12, 1, 0), scorer: "human" },
       rubric: itemBody("<p>Rate the content once.</p>"),
       parts: [
         part({ label: "Task 1: essay" }),
-        part({ responseIdentifier: "LIST", value: wire(container("ordered", "identifier", ["A", "B"])) }),
-        part({ responseIdentifier: "FIELDS", value: wire(record([["a", single("integer", 1)]])) }),
+        part({ responseIdentifier: "LIST", value: wire(buildContainer("ordered", "identifier", ["A", "B"])) }),
+        part({ responseIdentifier: "FIELDS", value: wire(buildRecord([["a", buildSingle("integer", 1)]])) }),
         part({ responseIdentifier: "NONE", value: null }),
         part({ item: unseen, presented: false, value: null }),
       ],
       items: [
-        item({ correctResponses: [{ identifier: "RESPONSE", value: wire(single("identifier", "B")) }] }),
+        item({ correctResponses: [{ identifier: "RESPONSE", value: wire(buildSingle("identifier", "B")) }] }),
         item({ key: unseen, title: "Not shown", presented: false, body: [], templateValues: [], correctResponses: [] }),
       ],
     });

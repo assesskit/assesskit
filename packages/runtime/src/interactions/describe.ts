@@ -1,9 +1,9 @@
 import {
   type AssessmentItem,
-  descendantNodes,
   type Gap,
   type HotText,
   type Interaction,
+  listDescendantNodes,
   type ModelNode,
 } from "../asi/index.js";
 import { withDescendants } from "../asi/internal.js";
@@ -298,7 +298,7 @@ function partsOf(interaction: Interaction, declaration: ValueDeclaration | undef
     case "text-entry-interaction":
       return textParts(interaction);
     case "gap-match-interaction": {
-      const gaps = descendantNodes(interaction).flatMap((node) => (isGap(node) ? [choiceOf(node)] : []));
+      const gaps = listDescendantNodes(interaction).flatMap((node) => (isGap(node) ? [choiceOf(node)] : []));
       // The schema defaults max-associations to 1, but a text with several gaps takes several associations, and the examples of 1EdTech leave the attribute out: an absent attribute is no limit, since each gap
       // takes one choice.
       return pairParts(
@@ -337,7 +337,7 @@ function partsOf(interaction: Interaction, declaration: ValueDeclaration | undef
         interaction.maxChoices,
         DEFAULT_MAXIMUM,
         interaction.minChoices,
-        descendantNodes(interaction).flatMap((node) => (isHotText(node) ? [choiceOf(node)] : [])),
+        listDescendantNodes(interaction).flatMap((node) => (isHotText(node) ? [choiceOf(node)] : [])),
         undefined,
       );
     case "inline-choice-interaction":

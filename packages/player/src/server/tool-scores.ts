@@ -1,7 +1,7 @@
 import { checkFunction, checkRecord } from "@assesskit/runtime/checks";
 import type { ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import type { HostApplyOptions, HostSession, SessionCallOptions } from "../protocol/index.js";
 import { checkCallOptions } from "../protocol/internal.js";
 import type { StepSink } from "./forward.js";
@@ -123,7 +123,7 @@ export function createToolScoreIntake(options: ToolScoreIntakeOptions): ToolScor
       {
         type: "supply-scores",
         request,
-        value: value === undefined ? null : single("float", value),
+        value: value === undefined ? null : buildSingle("float", value),
         scorer: "externalMachine",
       },
       applyOptions,

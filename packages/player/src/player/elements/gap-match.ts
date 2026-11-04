@@ -1,4 +1,4 @@
-import { descendantNodes, type Gap, type GapMatchInteraction } from "@assesskit/runtime/asi";
+import { type Gap, type GapMatchInteraction, listDescendantNodes } from "@assesskit/runtime/asi";
 import { AssesskitError } from "@assesskit/runtime/errors";
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Messages } from "../../messages/index.js";
@@ -49,7 +49,7 @@ export class GapMatchInteractionElement extends DirectedPairElement {
       this.#choices.push(buildChoice(renderer, `qti-${choice.kind}`, choice, content));
     }
     this.#passage = renderer.nodes(node.children);
-    const identifiers = node.children.flatMap((child) => [child, ...descendantNodes(child)]).filter(isGap);
+    const identifiers = node.children.flatMap((child) => [child, ...listDescendantNodes(child)]).filter(isGap);
     // The renderer drew the gaps where the text has them and dropped their identifiers, which the model keeps in the same order.
     const elements = elementsNamed(this.#passage, "qti-gap");
     if (identifiers.length !== elements.length) {

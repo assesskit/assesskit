@@ -20,7 +20,7 @@ const TEST_KIND = "assessment-test";
  *
  * @param test - The test, as `readAsi` reads it, with its includes resolved.
  * @param base - The path of the test document, against which its references resolve; named in the location of its issues.
- * @param resolvers - Resolvers for the references of the test, such as those of `packageResolvers`. They may throw an
+ * @param resolvers - Resolvers for the references of the test, such as those of `createPackageResolvers`. They may throw an
  * error of the runtime for a reference that cannot be resolved.
  * @param options - See {@link ValidateOptions}; its `path` is not used: issues name the file each document is at.
  * @returns The issues, document by document: those of the test, then of the sections, items and stimuli it names.

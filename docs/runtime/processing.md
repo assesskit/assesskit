@@ -28,14 +28,14 @@ flowchart LR
 | `ItemVariables`, `CreateItemVariablesOptions`                  | The six maps of an item session's variables, and the context values of a new session.                                                        |
 | `ProcessingContext`, `CustomOperator`, …                       | The random source, custom operators, template resolver and limits that every run takes.                                                      |
 | `TestScope`, `ItemSessionView`, `ItemSessionFilter`            | What outcome processing reads from the delivery engine: item sessions and the test's variables.                                              |
-| `STANDARD_TEMPLATES`, `standardTemplateUri(uri)`               | The six standard templates as models, and the normalization of their URIs.                                                                   |
+| `STANDARD_TEMPLATES`, `findStandardTemplate(uri)`              | The six standard templates as models, and the normalization of their URIs.                                                                   |
 | `OPERATOR_SIGNATURES`                                          | The operand and result types of the 64 expressions.                                                                                          |
 | `DEFAULT_PROCESSING_LIMITS`, `ProcessingLimits`                | The limit on the size of containers that expressions build.                                                                                  |
 | `fitsBaseType(valueType, variableType)`, `VariableType`        | Whether a value of a base type fits a variable of another, with the promotion of an integer, and the type of a variable.                     |
 | `describeType(type)`, `describeCount`, `describeOperand`       | A type, an operand count and an operand signature as text for a message.                                                                     |
-| `operandsOf(expression)`                                       | The operand expressions of an expression, in order.                                                                                          |
-| `declaredValue`, `readPrimitive`                               | The value that a declaration's `qti-value`s give, and one lexical form of a base type.                                                       |
-| `isQti2TemplateUri(uri)`, `itemIdentifier(ref, name)`          | Whether a template address is a QTI 2.x one, and the item's name for a variable of an item ref.                                              |
+| `listOperands(expression)`                                     | The operand expressions of an expression, in order.                                                                                          |
+| `readDeclaredValue`, `readPrimitive`                           | The value that a declaration's `qti-value`s give, and one lexical form of a base type.                                                       |
+| `isQti2TemplateUri(uri)`, `resolveItemIdentifier(ref, name)`   | Whether a template address is a QTI 2.x one, and the item's name for a variable of an item ref.                                              |
 | `BUILT_IN_RESPONSES`, `BUILT_IN_OUTCOMES`, `BUILT_IN_CONTEXTS` | The built-in variables with their types; `NUM_ATTEMPTS`, `DURATION`, `COMPLETION_STATUS`, `COMPLETION_STATUSES` and `QTI_CONTEXT` name them. |
 | `DEFAULT_RANDOM_MIN`, `DEFAULT_RANDOM_STEP`                    | 0 and 1: the `min` and `step` of the random expressions when absent.                                                                         |
 
@@ -45,7 +45,7 @@ flowchart LR
 import { createRandom } from "@assesskit/runtime";
 import { readAsi } from "@assesskit/runtime/asi";
 import { createItemVariables, runResponseProcessing, runTemplateProcessing } from "@assesskit/runtime/processing";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 
 const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
     identifier="sum" title="Sum" time-dependent="false">
@@ -70,7 +70,7 @@ const context = { random: createRandom(42) };
 const instance = runTemplateProcessing(item, createItemVariables(item), context);
 instance.templates.get("A"); // => { cardinality: "single", baseType: "integer", value: 6 }
 instance.correctResponses.get("RESPONSE"); // => { cardinality: "single", baseType: "integer", value: 8 }
-const submitted = { ...instance, responses: new Map(instance.responses).set("RESPONSE", single("integer", 8)) };
+const submitted = { ...instance, responses: new Map(instance.responses).set("RESPONSE", buildSingle("integer", 8)) };
 runResponseProcessing(item, submitted, context).outcomes.get("SCORE"); // => { cardinality: "single", baseType: "float", value: 1 }
 ```
 
@@ -146,14 +146,14 @@ is the pattern itself when there is no such variable. A NULL variable makes the 
 
 `STANDARD_TEMPLATES` holds `match_correct`, `map_response`, `map_response_point`, `CC2_match`, `CC2_match_basic` and
 `CC2_map_response` as the models of the published files, keyed by `https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/<name>.xml`.
-`standardTemplateUri` gives that key for `http` or `https`, `purl.imsglobal.org/spec/qti/v3p0/rptemplates/` or
+`findStandardTemplate` gives that key for `http` or `https`, `purl.imsglobal.org/spec/qti/v3p0/rptemplates/` or
 `www.imsglobal.org/question/qti_v3p0/rptemplates/`, with `.xml` or without; a QTI 2.0, 2.1 or 2.2 URI names the template
 of the same algorithm.
 
 ```ts
-import { standardTemplateUri } from "@assesskit/runtime/processing";
+import { findStandardTemplate } from "@assesskit/runtime/processing";
 
-standardTemplateUri("http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_response");
+findStandardTemplate("http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_response");
 // => "https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/map_response.xml"
 ```
 

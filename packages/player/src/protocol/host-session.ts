@@ -1,9 +1,9 @@
 import {
   checkAbortSignal,
   checkNonEmptyString,
+  checkOptional,
   checkProperties,
   checkRecord,
-  optional,
 } from "@assesskit/runtime/checks";
 import type { DeliveryEvent, HostAction, PendingWork, Refusal, ScorerView } from "@assesskit/runtime/delivery";
 import type { AssessmentResult } from "@assesskit/runtime/results";
@@ -99,7 +99,7 @@ export function checkCallOptions(options: unknown): asserts options is SessionCa
   if (options === undefined) return;
   checkRecord(options, "The options must be an object");
   checkProperties(options, "The options", CALL_OPTIONS);
-  optional(options.signal, (value) => checkAbortSignal(value, "The option signal"));
+  checkOptional(options.signal, (value) => checkAbortSignal(value, "The option signal"));
 }
 
 /**
@@ -112,6 +112,6 @@ export function checkHostApplyOptions(options: unknown): asserts options is Host
   if (options === undefined) return;
   checkRecord(options, "The options must be an object");
   checkProperties(options, "The options", HOST_APPLY_OPTIONS);
-  optional(options.signal, (value) => checkAbortSignal(value, "The option signal"));
-  optional(options.scoredBy, (value) => checkNonEmptyString(value, "The option scoredBy"));
+  checkOptional(options.signal, (value) => checkAbortSignal(value, "The option signal"));
+  checkOptional(options.scoredBy, (value) => checkNonEmptyString(value, "The option scoredBy"));
 }

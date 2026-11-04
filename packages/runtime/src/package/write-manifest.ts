@@ -41,11 +41,11 @@ const PREFIXES: ReadonlyMap<string, string> = new Map([
 type Children = readonly (XmlElement | string)[];
 
 function cp(name: string, children: Children = [], attributes: ElementAttributes = {}): XmlElement {
-  return buildElement(CP_NAMESPACE, name, attributes, children);
+  return buildElement(CP_NAMESPACE, name, { attributes, children });
 }
 
 function cpx(name: string, children: Children, attributes: ElementAttributes = {}): XmlElement {
-  return { ...buildElement(CPX_NAMESPACE, name, attributes, children), prefix: "cpx" };
+  return { ...buildElement(CPX_NAMESPACE, name, { attributes, children }), prefix: "cpx" };
 }
 
 function checkIdentifier(value: unknown, label: string): asserts value is string {

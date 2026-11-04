@@ -2,7 +2,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
   DataError,
-  extensionName,
+  deriveExtensionName,
   isColorTheme,
   isSetSupportName,
   isSupportName,
@@ -111,14 +111,16 @@ describe("support names", () => {
   });
 
   it("names a custom support by ext: and the local name of its element", () => {
-    expect(extensionName("kxztesting-illustrated-glossary-on-screen")).toBe(
+    expect(deriveExtensionName("kxztesting-illustrated-glossary-on-screen")).toBe(
       "ext:kxztesting-illustrated-glossary-on-screen",
     );
     expect(isSupportName("ext:kxztesting-illustrated-glossary-on-screen")).toBe(true);
     expect(isSupportName("spoken")).toBe(true);
     for (const name of ["ext:", "Spoken", "", "spoken ", json("null"), json("5")])
       expect(isSupportName(name), String(name)).toBe(false);
-    expect(() => extensionName(json("5"))).toThrow("The local name of a custom support must be a string, found 5.");
+    expect(() => deriveExtensionName(json("5"))).toThrow(
+      "The local name of a custom support must be a string, found 5.",
+    );
   });
 });
 
@@ -1073,7 +1075,7 @@ describe("properties", () => {
           ...model.activateAsOption,
           ...model.activateAtInitialization,
           ...model.prohibited,
-          ...model.extensions.map(({ name }) => extensionName(name)),
+          ...model.extensions.map(({ name }) => deriveExtensionName(name)),
         ]);
         expect(new Set(states.keys())).toEqual(mentioned);
         for (const name of model.prohibited) expect(states.get(name)).toBe("prohibited");

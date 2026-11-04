@@ -1,10 +1,16 @@
-import { checkArray, checkRecord, describe } from "../checks.js";
+import { checkArray, checkOptions, checkRecord, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import { formatPrimitive, parsePrimitive } from "../values/index.js";
 import { xmlTokens } from "../values/internal.js";
 import type { XmlAttribute } from "../xml/index.js";
 import type { RubricBlock } from "./body.js";
-import { attributeOf, entryText, type ListEntry, OUTCOME_ATTRIBUTE, type RubricContent } from "./convention-markup.js";
+import {
+  attributeOf,
+  entryText,
+  type ListEntry,
+  OUTCOME_ATTRIBUTE,
+  type RubricBlockOptions,
+} from "./convention-markup.js";
 import { SCORE_COVERS_CLASS } from "./covers.js";
 import type { AssessmentItem, AssessmentTest, ElementModel, TestRubricBlock } from "./model.js";
 import { isModelNode, type ModelNode, withDescendants } from "./nodes.js";
@@ -305,16 +311,15 @@ function criterionEntry({ identifier, weight, description, levels }: RubricCrite
  * left to the default.
  *
  * @param rubric - The scoring rubric.
- * @param notes - Content for the scorers before the criteria, such as instructions. Default: `[]`.
+ * @param options - See {@link RubricBlockOptions}.
  * @returns The rubric block, which fits an item body and the rubric blocks of a test.
  * @throws `DataError` when the rubric fails {@link checkScoringRubric}, or a note is an `ol` or not a node.
  * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/conventions.md | Conventions of the runtime, scoring rubrics}
  */
-export function buildScoringRubricBlock(
-  rubric: ScoringRubric,
-  notes: readonly RubricContent[] = [],
-): ScoringRubricBlock {
+export function buildScoringRubricBlock(rubric: ScoringRubric, options: RubricBlockOptions = {}): ScoringRubricBlock {
   checkScoringRubric(rubric);
+  checkOptions(options);
+  const { notes = [] } = options;
   checkArray(notes, "The notes must be an array");
   if (!notes.every(isModelNode)) {
     throw new DataError(`The notes must be nodes of body content, found ${describe(notes)}.`);

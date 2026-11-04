@@ -1,5 +1,5 @@
 import type { ReadError } from "../errors.js";
-import { locationOf, readError, type XmlElement } from "../xml/index.js";
+import { createReadError, locateElement, type XmlElement } from "../xml/index.js";
 
 /** Where the reader is: the path of the document and the names of the elements around the one it reads. */
 export interface ReadContext {
@@ -10,7 +10,7 @@ export interface ReadContext {
 }
 
 /**
- * Builds the `ReadError` for one problem in an element, as `readError` of `xml` does for every reader: the issue carries
+ * Builds the `ReadError` for one problem in an element, as `createReadError` of `xml` does for every reader: the issue carries
  * the message as given and the position of the element; the error's message adds the position.
  *
  * @param context - Where the reader is.
@@ -20,5 +20,7 @@ export interface ReadContext {
  * @returns The error.
  */
 export function asiError(context: ReadContext, element: XmlElement, code: string, message: string): ReadError {
-  return readError(code, message, locationOf(element, context.path, context.trail.join("/")));
+  return createReadError(code, message, {
+    location: locateElement(element, context.path, { trail: context.trail.join("/") }),
+  });
 }

@@ -8,7 +8,7 @@ export interface ActionEnvelope {
    * so a retry changes nothing.
    */
   readonly seq: number;
-  /** The action as the runtime's `actionToJson` writes it. Untrusted until the runtime's `parseCandidateAction` has read it. */
+  /** The action as the runtime's `writeCandidateAction` writes it. Untrusted until the runtime's `readCandidateAction` has read it. */
   readonly action: unknown;
 }
 
@@ -21,7 +21,7 @@ const actionEnvelopeSchema: Schema<ActionEnvelope> = v.strictObject({
  * Checks the shape of an action envelope that arrived as JSON.
  *
  * @remarks
- * The action is not read here: the runtime's `parseCandidateAction` reads it, with its size limits.
+ * The action is not read here: the runtime's `readCandidateAction` reads it, with its size limits.
  *
  * @param value - The parsed JSON.
  * @throws `DataError` when it is not an object with the properties `seq` and `action` only, `seq` a non-negative integer.

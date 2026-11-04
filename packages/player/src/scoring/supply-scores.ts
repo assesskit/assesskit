@@ -2,7 +2,7 @@ import { checkChoice, checkNonEmptyString, checkRecord } from "@assesskit/runtim
 import type { Scorer, ScoringRequest } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { describeType, fitsBaseType } from "@assesskit/runtime/processing";
-import { normalizeValue, promote, single, type Value } from "@assesskit/runtime/values";
+import { buildSingle, normalizeValue, promote, type Value } from "@assesskit/runtime/values";
 import { checkDeclaration, SCORERS } from "../protocol/internal.js";
 
 /**
@@ -55,7 +55,7 @@ function typedScore(request: ScoringTarget, score: ScoreInput): Value | null {
       `The outcome ${outcome} is ${describeType(declaration)}, which a ${typeof score} does not fit: give a value that the values of the runtime build.`,
     );
   }
-  return single(declaration.baseType, score);
+  return buildSingle(declaration.baseType, score);
 }
 
 /**

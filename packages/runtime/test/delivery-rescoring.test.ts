@@ -5,6 +5,7 @@ import {
   ASI_NAMESPACE,
   type AssessmentItem,
   type AssessmentResult,
+  buildSingle,
   createItemVariables,
   createRandom,
   DataError,
@@ -21,7 +22,6 @@ import {
   readTestInputs,
   runOutcomeProcessing,
   runResponseProcessing,
-  single,
   type TestStructure,
   type Value,
   validateResults,
@@ -134,11 +134,12 @@ interface Sitting {
  */
 function sit(items: Readonly<Record<string, AssessmentItem>>, count: number, seed = 4): Sitting {
   const engine = engineOf(CONTENT, { items });
-  let { state } = begun(engine, { seed, context: new Map([["SITE", single("string", "jkt")]]) });
+  let { state } = begun(engine, { seed, context: new Map([["SITE", buildSingle("string", "jkt")]]) });
   for (let turn = 0; turn < count; turn += 1) {
     const current = state.current ?? fail("The session has no item.");
     const at = 1000 * (turn + 1);
-    const response = current.ref === "d1" ? single("integer", 5) : single("identifier", turn % 2 === 0 ? "B" : "C");
+    const response =
+      current.ref === "d1" ? buildSingle("integer", 5) : buildSingle("identifier", turn % 2 === 0 ? "B" : "C");
     state = played(
       engine,
       state,
@@ -215,7 +216,7 @@ function jumped(): Sitting {
   const answer = (instance: number, choice: string, at: number): Action => ({
     type: "set-responses",
     item: key("q1", instance),
-    responses: new Map([["RESPONSE", single("identifier", choice)]]),
+    responses: new Map([["RESPONSE", buildSingle("identifier", choice)]]),
     at,
   });
   const { state } = played(
@@ -279,7 +280,7 @@ describe("the results of the instances not presented", () => {
         identifier: "numAttempts",
         cardinality: "single",
         baseType: "integer",
-        candidateResponse: single("integer", 0),
+        candidateResponse: buildSingle("integer", 0),
         extensions: [],
       },
       {
@@ -287,7 +288,7 @@ describe("the results of the instances not presented", () => {
         identifier: "duration",
         cardinality: "single",
         baseType: "duration",
-        candidateResponse: single("duration", 0),
+        candidateResponse: buildSingle("duration", 0),
         extensions: [],
       },
     ]);
@@ -304,9 +305,9 @@ describe("the results of the instances not presented", () => {
     const report = engine.results(state);
     expect(report.itemResults.map(({ sequenceIndex }) => sequenceIndex)).toEqual([1, 3, 2]);
     expect(report.itemResults.map((result) => response(result, "RESPONSE").candidateResponse)).toEqual([
-      single("identifier", "C"),
-      single("identifier", "C"),
-      single("identifier", "B"),
+      buildSingle("identifier", "C"),
+      buildSingle("identifier", "C"),
+      buildSingle("identifier", "B"),
     ]);
   });
 
@@ -358,7 +359,7 @@ describe("the key that template processing set", () => {
       {
         type: "set-responses",
         item: key("d1"),
-        responses: new Map([["RESPONSE", single("integer", 4)]]),
+        responses: new Map([["RESPONSE", buildSingle("integer", 4)]]),
         at: 2,
       },
       act("submit", "d1", 3),
@@ -421,48 +422,57 @@ const MIXED = itemOf(
 
 /** The variables that a result of {@link MIXED} holds after an attempt. */
 const STORED: ItemResult["variables"] = [
-  responseVar("numAttempts", "integer", single("integer", 1)),
-  responseVar("duration", "duration", single("duration", 12.5)),
+  responseVar("numAttempts", "integer", buildSingle("integer", 1)),
+  responseVar("duration", "duration", buildSingle("duration", 12.5)),
   {
-    ...responseVar("RESPONSE", "identifier", single("identifier", "A")),
-    correctResponse: { value: single("identifier", "C") },
+    ...responseVar("RESPONSE", "identifier", buildSingle("identifier", "A")),
+    correctResponse: { value: buildSingle("identifier", "C") },
   },
-  { ...responseVar("NUMBER", "integer", single("integer", 4)), correctResponse: { value: single("integer", 6) } },
-  { kind: "template", identifier: "N", cardinality: "single", baseType: "integer", value: single("integer", 6) },
-  { kind: "context", identifier: "LEVEL", cardinality: "single", baseType: "integer", value: single("integer", 3) },
-  outcomeVar("completionStatus", "identifier", single("identifier", "unknown")),
-  outcomeVar("SCORE", "float", single("float", 9)),
-  outcomeVar("LEFT", "integer", single("integer", 1)),
-  outcomeVar("RATING", "float", single("float", 4)),
+  {
+    ...responseVar("NUMBER", "integer", buildSingle("integer", 4)),
+    correctResponse: { value: buildSingle("integer", 6) },
+  },
+  { kind: "template", identifier: "N", cardinality: "single", baseType: "integer", value: buildSingle("integer", 6) },
+  {
+    kind: "context",
+    identifier: "LEVEL",
+    cardinality: "single",
+    baseType: "integer",
+    value: buildSingle("integer", 3),
+  },
+  outcomeVar("completionStatus", "identifier", buildSingle("identifier", "unknown")),
+  outcomeVar("SCORE", "float", buildSingle("float", 9)),
+  outcomeVar("LEFT", "integer", buildSingle("integer", 1)),
+  outcomeVar("RATING", "float", buildSingle("float", 4)),
 ];
 
 describe("readItemVariables", () => {
   const read = readItemVariables(MIXED, { variables: STORED });
 
   it("takes the responses, attempts, duration, template and context variables and completion from the result", () => {
-    expect(read.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
-    expect(read.responses.get("NUMBER")).toEqual(single("integer", 4));
-    expect(read.responses.get("numAttempts")).toEqual(single("integer", 1));
-    expect(read.responses.get("duration")).toEqual(single("duration", 12.5));
-    expect(read.templates.get("N")).toEqual(single("integer", 6));
-    expect(read.contexts.get("LEVEL")).toEqual(single("integer", 3));
-    expect(read.outcomes.get("completionStatus")).toEqual(single("identifier", "unknown"));
+    expect(read.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "A"));
+    expect(read.responses.get("NUMBER")).toEqual(buildSingle("integer", 4));
+    expect(read.responses.get("numAttempts")).toEqual(buildSingle("integer", 1));
+    expect(read.responses.get("duration")).toEqual(buildSingle("duration", 12.5));
+    expect(read.templates.get("N")).toEqual(buildSingle("integer", 6));
+    expect(read.contexts.get("LEVEL")).toEqual(buildSingle("integer", 3));
+    expect(read.outcomes.get("completionStatus")).toEqual(buildSingle("identifier", "unknown"));
   });
 
   it("resets the outcomes that processing sets, as the engine does, and keeps the ones that a scorer sets", () => {
-    expect(read.outcomes.get("SCORE")).toEqual(single("float", 0));
-    expect(read.outcomes.get("LEFT")).toEqual(single("integer", 7));
-    expect(read.outcomes.get("RATING")).toEqual(single("float", 4));
+    expect(read.outcomes.get("SCORE")).toEqual(buildSingle("float", 0));
+    expect(read.outcomes.get("LEFT")).toEqual(buildSingle("integer", 7));
+    expect(read.outcomes.get("RATING")).toEqual(buildSingle("float", 4));
   });
 
   it("takes the declared key, and the result's key for a variable that qti-set-correct-response sets", () => {
-    expect(read.correctResponses.get("RESPONSE")).toEqual(single("identifier", "B"));
-    expect(read.correctResponses.get("NUMBER")).toEqual(single("integer", 6));
+    expect(read.correctResponses.get("RESPONSE")).toEqual(buildSingle("identifier", "B"));
+    expect(read.correctResponses.get("NUMBER")).toEqual(buildSingle("integer", 6));
   });
 
   it("takes the declared defaults, which a result does not hold", () => {
-    expect(read.defaults.get("LEVEL")).toEqual(single("integer", 1));
-    expect(read.defaults.get("LEFT")).toEqual(single("integer", 7));
+    expect(read.defaults.get("LEVEL")).toEqual(buildSingle("integer", 1));
+    expect(read.defaults.get("LEFT")).toEqual(buildSingle("integer", 7));
   });
 
   it("starts a variable that the result omits as the item declares it, as for an instance not presented", () => {
@@ -475,8 +485,8 @@ describe("readItemVariables", () => {
     const more = readItemVariables(MIXED, {
       variables: [
         ...STORED,
-        responseVar("EXTRA", "integer", single("integer", 1)),
-        outcomeVar("TALLY", "integer", single("integer", 2)),
+        responseVar("EXTRA", "integer", buildSingle("integer", 1)),
+        outcomeVar("TALLY", "integer", buildSingle("integer", 2)),
       ],
     });
     expect([...more.responses.keys()].sort()).toEqual(["NUMBER", "RESPONSE", "duration", "numAttempts"]);
@@ -495,8 +505,8 @@ describe("readItemVariables", () => {
     const context = { random: createRandom(1) };
     const scored = runResponseProcessing(MIXED, readItemVariables(MIXED, { variables: STORED }), context);
     // RESPONSE A against the declared key B scores 0; the other response variable has no processing
-    expect(scored.outcomes.get("SCORE")).toEqual(single("float", 0));
-    expect(scored.outcomes.get("RATING")).toEqual(single("float", 4));
+    expect(scored.outcomes.get("SCORE")).toEqual(buildSingle("float", 0));
+    expect(scored.outcomes.get("RATING")).toEqual(buildSingle("float", 4));
   });
 
   it("refuses an adaptive item, whose outcomes depend on every attempt", () => {
@@ -506,7 +516,7 @@ describe("readItemVariables", () => {
   });
 
   it("refuses a value that does not fit the declaration, as when the fix changed the declaration", () => {
-    const changed = [...STORED, responseVar("RESPONSE", "integer", single("integer", 2))];
+    const changed = [...STORED, responseVar("RESPONSE", "integer", buildSingle("integer", 2))];
     expect(() => readItemVariables(MIXED, { variables: changed })).toThrow(DataError);
     expect(() => readItemVariables(MIXED, { variables: changed })).toThrow(/RESPONSE.*the item mixed/);
   });
@@ -578,14 +588,14 @@ describe("readTestInputs", () => {
   it("reads only the declared outcomes that a scorer sets, as the report holds them", () => {
     const inputs = readTestInputs(
       STRUCTURE,
-      withTestVariable(report, outcomeVar("THETA", "float", single("float", 2.5))),
+      withTestVariable(report, outcomeVar("THETA", "float", buildSingle("float", 2.5))),
       ITEM_MAP,
     );
-    expect([...inputs.outcomes]).toEqual([["THETA", single("float", 2.5)]]);
+    expect([...inputs.outcomes]).toEqual([["THETA", buildSingle("float", 2.5)]]);
   });
 
   it("leaves out an outcome that no declaration takes, as a CAT engine's extras are", () => {
-    const extra = withTestVariable(report, outcomeVar("EXTRA", "float", single("float", 1)));
+    const extra = withTestVariable(report, outcomeVar("EXTRA", "float", buildSingle("float", 1)));
     expect(readTestInputs(STRUCTURE, extra, ITEM_MAP).outcomes.has("EXTRA")).toBe(false);
     expect(rescored(extra, ITEM_MAP).has("EXTRA")).toBe(false);
   });
@@ -603,7 +613,7 @@ describe("readTestInputs", () => {
 
   it("gives ITEM.n the nth result of the reference, and nothing for an instance the report lacks", () => {
     const { scope } = readTestInputs(STRUCTURE, report, ITEM_MAP);
-    expect(scope.itemSession("q1", 2)?.variables.outcomes.get("SCORE")).toEqual(single("float", 0));
+    expect(scope.itemSession("q1", 2)?.variables.outcomes.get("SCORE")).toEqual(buildSingle("float", 0));
     expect(scope.itemSession("q1", 4)).toBeUndefined();
     expect(scope.itemSession("q1", 0)).toBeUndefined();
     expect(scope.itemSession("q2", 1)).toBeUndefined();
@@ -612,11 +622,11 @@ describe("readTestInputs", () => {
 
   it("reads the durations, the context variables and the item references as the engine's scope does", () => {
     const { scope } = readTestInputs(STRUCTURE, report, ITEM_MAP);
-    expect(scope.variable("duration")).toEqual(single("duration", 4));
-    expect(scope.variable("P.duration")).toEqual(single("duration", 4));
-    expect(scope.variable("S.duration")).toEqual(single("duration", 4));
+    expect(scope.variable("duration")).toEqual(buildSingle("duration", 4));
+    expect(scope.variable("P.duration")).toEqual(buildSingle("duration", 4));
+    expect(scope.variable("S.duration")).toEqual(buildSingle("duration", 4));
     expect(scope.variable("elsewhere.duration")).toBeUndefined();
-    expect(scope.variable("SITE")).toEqual(single("string", "jkt"));
+    expect(scope.variable("SITE")).toEqual(buildSingle("string", "jkt"));
     expect(scope.variable("QTI_CONTEXT")).toBeNull();
     expect(scope.variable("q1.SCORE")).toBeNull();
     expect(scope.variable("elsewhere")).toBeUndefined();
@@ -627,7 +637,7 @@ describe("readTestInputs", () => {
     const variables = test.variables.filter(({ identifier }) => !identifier.endsWith("duration"));
     const { scope } = readTestInputs(STRUCTURE, { ...report, testResult: { ...test, variables } }, ITEM_MAP);
     for (const name of ["duration", "P.duration", "S.duration"])
-      expect(scope.variable(name)).toEqual(single("duration", 0));
+      expect(scope.variable(name)).toEqual(buildSingle("duration", 0));
   });
 
   it("starts a context variable that the report omits from its declared default", () => {
@@ -654,24 +664,24 @@ describe("readTestInputs", () => {
 
     it("reads the result with the latest datestamp among those with an attempt", () => {
       // The stored scores of the three results of q1 are 1, 0 and 1.
-      expect(latest(dated(times))).toEqual(single("float", 0));
+      expect(latest(dated(times))).toEqual(buildSingle("float", 0));
     });
 
     it("reads the later result when datestamps tie", () => {
       expect(latest(dated(["2026-01-01T00:00:01Z", "2026-01-01T00:00:01Z", "2026-01-01T00:00:01Z"]))).toEqual(
-        single("float", 1),
+        buildSingle("float", 1),
       );
     });
 
     it("skips a result that is pending submission, whose responses were never submitted", () => {
       expect(latest(dated(times, (position) => (position === 1 ? "pendingSubmission" : "final")))).toEqual(
-        single("float", 1),
+        buildSingle("float", 1),
       );
     });
 
     it("compares datestamps as instants, whatever their offsets", () => {
       const stamps = ["2026-01-01T05:00:00+05:00", "2026-01-01T00:00:00Z", "2025-12-31T23:59:59Z"];
-      expect(latest(dated(stamps))).toEqual(single("float", 0));
+      expect(latest(dated(stamps))).toEqual(buildSingle("float", 0));
     });
 
     it("reads the last result of the reference when none has an attempt", () => {
@@ -679,26 +689,26 @@ describe("readTestInputs", () => {
         ...result,
         variables: result.variables.map((each) =>
           each.kind === "response" && each.identifier === "numAttempts"
-            ? { ...each, candidateResponse: single("integer", 0) }
+            ? { ...each, candidateResponse: buildSingle("integer", 0) }
             : each,
         ),
       }));
       const marked = changed(none, (result, position) =>
         position === 2
-          ? withOutcome(result, "SCORE", single("float", 1))
-          : withOutcome(result, "SCORE", single("float", 0)),
+          ? withOutcome(result, "SCORE", buildSingle("float", 1))
+          : withOutcome(result, "SCORE", buildSingle("float", 0)),
       );
-      expect(latest(marked)).toEqual(single("float", 1));
+      expect(latest(marked)).toEqual(buildSingle("float", 1));
     });
   });
 
   describe("the option variables", () => {
     it("replaces the variables of the report at the positions given", () => {
       const first = readItemVariables(ITEMS.q1 ?? fail("No q1."), report.itemResults[0] ?? fail("No result."));
-      const scored = { ...first, outcomes: new Map(first.outcomes).set("SCORE", single("float", 5)) };
+      const scored = { ...first, outcomes: new Map(first.outcomes).set("SCORE", buildSingle("float", 5)) };
       const { scope } = readTestInputs(STRUCTURE, report, ITEM_MAP, { variables: new Map([[0, scored]]) });
       expect(scope.itemSession("q1", 1)?.variables).toBe(scored);
-      expect(scope.itemSession("q1", 2)?.variables.outcomes.get("SCORE")).toEqual(single("float", 0));
+      expect(scope.itemSession("q1", 2)?.variables.outcomes.get("SCORE")).toEqual(buildSingle("float", 0));
     });
 
     it("refuses a position that is not one of the item results", () => {
@@ -737,7 +747,7 @@ describe("readTestInputs", () => {
               ...result,
               variables: result.variables.map((each) =>
                 each.kind === "response" && each.identifier === "RESPONSE"
-                  ? { ...each, candidateResponse: single("integer", 1) }
+                  ? { ...each, candidateResponse: buildSingle("integer", 1) }
                   : each,
               ),
             }
@@ -783,7 +793,7 @@ describe("rescoring a report", () => {
 
   it("gives the outcomes of a part that submits its items together, after jumps between the instances of an item", () => {
     const { engine, state } = jumped();
-    expect(state.outcomes.get("LATEST")).toEqual(single("float", 1));
+    expect(state.outcomes.get("LATEST")).toEqual(buildSingle("float", 1));
     const structure = structureOf(TOGETHER);
     expect(rescored(engine.results(state), ITEM_MAP, { structure })).toEqual(state.outcomes);
     expect(rescored(engine.results(state), ITEM_MAP, { structure, corrected: new Set() })).toEqual(state.outcomes);
@@ -808,44 +818,44 @@ describe("rescoring a report", () => {
     const number =
       template?.kind === "template" && template.value?.cardinality === "single" ? template.value.value : undefined;
     // q1 scores 1, 0, 1 for the answers B, C, B; the answer 5 to d1 scores when the draw was 5.
-    expect(rescored(report, ITEM_MAP).get("TOTAL")).toEqual(single("float", number === 5 ? 3 : 2));
+    expect(rescored(report, ITEM_MAP).get("TOTAL")).toEqual(buildSingle("float", number === 5 ? 3 : 2));
     const fixed = rescored(report, ITEM_MAP, {
       fix: (variables, result) =>
         result.identifier === "d1"
           ? {
               ...variables,
-              correctResponses: new Map(variables.correctResponses).set("RESPONSE", single("integer", 5)),
+              correctResponses: new Map(variables.correctResponses).set("RESPONSE", buildSingle("integer", 5)),
             }
           : variables,
     });
-    expect(fixed.get("TOTAL")).toEqual(single("float", 3));
+    expect(fixed.get("TOTAL")).toEqual(buildSingle("float", 3));
   });
 
   it("keeps an outcome that a scorer set, and takes the new value that the caller sets first", () => {
     const { engine, state } = sit(ITEMS, 2);
-    const report = withTestVariable(engine.results(state), outcomeVar("THETA", "float", single("float", 2.5)));
-    expect(rescored(report, ITEM_MAP).get("THETA")).toEqual(single("float", 2.5));
-    const set = rescored(report, ITEM_MAP, { outcomes: (kept) => new Map(kept).set("THETA", single("float", 1)) });
-    expect(set.get("THETA")).toEqual(single("float", 1));
+    const report = withTestVariable(engine.results(state), outcomeVar("THETA", "float", buildSingle("float", 2.5)));
+    expect(rescored(report, ITEM_MAP).get("THETA")).toEqual(buildSingle("float", 2.5));
+    const set = rescored(report, ITEM_MAP, { outcomes: (kept) => new Map(kept).set("THETA", buildSingle("float", 1)) });
+    expect(set.get("THETA")).toEqual(buildSingle("float", 1));
   });
 
   it("starts every other outcome from its default, as the specification resets them", () => {
     const { engine, state } = sit(ITEMS, 2);
-    const stale = withTestVariable(engine.results(state), outcomeVar("BONUS", "float", single("float", 99)));
-    expect(rescored(stale, ITEM_MAP).get("BONUS")).toEqual(single("float", 5));
+    const stale = withTestVariable(engine.results(state), outcomeVar("BONUS", "float", buildSingle("float", 99)));
+    expect(rescored(stale, ITEM_MAP).get("BONUS")).toEqual(buildSingle("float", 5));
   });
 
   it("reads the duration of the test from the end of the session, which the last outcome processing may precede", () => {
     const { engine, state } = sit(ITEMS, 2);
-    expect(state.outcomes.get("TIME")).toEqual(single("duration", 2.3));
-    expect(rescored(engine.results(state), ITEM_MAP).get("TIME")).toEqual(single("duration", 3));
+    expect(state.outcomes.get("TIME")).toEqual(buildSingle("duration", 2.3));
+    expect(rescored(engine.results(state), ITEM_MAP).get("TIME")).toEqual(buildSingle("duration", 3));
   });
 
   it("scores an instance not reached as the engine counts it, selected and nothing else", () => {
     const { engine, state } = sit(ITEMS, 1);
     const outcomes = rescored(engine.results(state), ITEM_MAP);
-    expect(outcomes.get("SELECTED")).toEqual(single("integer", 4));
-    expect(outcomes.get("TOTAL")).toEqual(single("float", 1));
+    expect(outcomes.get("SELECTED")).toEqual(buildSingle("integer", 4));
+    expect(outcomes.get("TOTAL")).toEqual(buildSingle("float", 1));
   });
 
   it("scores a rescoring that runs a corrected item with fresh draws from the random source of the caller", () => {

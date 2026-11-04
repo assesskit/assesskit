@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import { describe, type Schema } from "../checks.js";
 import type { Value } from "../values/index.js";
-import { toWireValue, type WireValue } from "../values/index.js";
+import { type WireValue, writeWireValue } from "../values/index.js";
 import { wireValueSchema } from "../values/internal.js";
 
 /** A value in the JSON form of a session: its wire value, or `null` for NULL. */
@@ -10,7 +10,7 @@ export type ValueJson = WireValue | null;
 /** Writes a value with its own type; NULL needs none, because its variable is declared. */
 export function valueToJson(value: Value | null): ValueJson {
   if (value === null) return null;
-  return toWireValue(
+  return writeWireValue(
     value,
     value.cardinality === "record"
       ? { cardinality: "record" }

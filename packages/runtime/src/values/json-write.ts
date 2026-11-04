@@ -64,7 +64,7 @@ function describeKind(value: Declared | Value): string {
  * @throws `DataError` when `value` is not a value or `null`, `declaration` is not a declaration, or they differ.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, JSON binding}
  */
-export function toJsonValue(value: Value | null, declaration: ValueDeclaration): JsonValue {
+export function writeJsonValue(value: Value | null, declaration: ValueDeclaration): JsonValue {
   const declared = readDeclaration(declaration);
   if (value === null) return nullJson(declared.cardinality);
   const checked = normalizeValue(value);

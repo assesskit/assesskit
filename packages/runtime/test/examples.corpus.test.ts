@@ -7,12 +7,12 @@ import {
   type CandidateAction,
   createEngine,
   createItemVariables,
+  createPackageResolvers,
   createRandom,
   type DeliveryState,
   type Engine,
   type Issue,
-  packageResolvers,
-  planItems,
+  listPlanItems,
   planTest,
   type QtiPackage,
   ReadError,
@@ -101,7 +101,7 @@ describe("the 1EdTech example packages", () => {
       const errors = validatePackage(pkg).filter(({ severity }: Issue) => severity === "error");
       expect(errors.length > 0, "errors").toBe(DEFECTIVE.includes(path));
 
-      const resolvers = packageResolvers(pkg);
+      const resolvers = createPackageResolvers(pkg);
       for (const href of testsOf(pkg)) {
         const document = pkg.document(href);
         if (document.kind !== "test") throw new Error(`${href} is not a test.`);
@@ -115,7 +115,7 @@ describe("the 1EdTech example packages", () => {
         const engine = createEngine({ kind: "test", test: document.test, base: href, resolvers });
         const structure = resolveStructure(document.test, href, resolvers);
         const items = new Map<string, AssessmentItem>();
-        for (const key of planItems(planTest(structure, { random: createRandom(1) }))) {
+        for (const key of listPlanItems(planTest(structure, { random: createRandom(1) }))) {
           const node = structure.itemRef(key.ref);
           const resolved = node === undefined ? undefined : resolvers.items(node.model.href, node.base).deliverable;
           if (resolved?.kind === "qti") items.set(key.ref, resolved.item);

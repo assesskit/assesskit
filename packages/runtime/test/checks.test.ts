@@ -18,11 +18,11 @@ import {
   checkSeed,
   checkString,
   definedSchema,
+  describeIssue,
   describe as describeValue,
   finiteSchema,
   functionSchema,
   isRecord,
-  issueText,
   looseRecord,
   mapSchema,
   methodsSchema,
@@ -32,10 +32,10 @@ import {
   parseWith,
   positiveIntegerSchema,
   positiveSchema,
+  raceAbort,
   recordSchema,
   strictRecord,
   transformWith,
-  untilAborted,
 } from "../src/checks.js";
 import { DataError } from "../src/index.js";
 
@@ -164,18 +164,19 @@ describe("checkAbortSignal", () => {
   });
 });
 
-describe("untilAborted", () => {
+describe("raceAbort", () => {
   it("gives the promise itself when the caller has no signal", async () => {
     const promise = Promise.resolve(7);
-    expect(untilAborted(promise, undefined)).toBe(promise);
-    await expect(untilAborted(promise, undefined)).resolves.toBe(7);
+    expect(raceAbort(promise)).toBe(promise);
+    expect(raceAbort(promise, {})).toBe(promise);
+    await expect(raceAbort(promise)).resolves.toBe(7);
   });
 
   it("gives what the promise gives and leaves no listener on the signal", async () => {
     const signal = new AbortController().signal;
     const removed = vi.spyOn(signal, "removeEventListener");
-    await expect(untilAborted(Promise.resolve(7), signal)).resolves.toBe(7);
-    await expect(untilAborted(Promise.reject(new Error("The promise fails.")), signal)).rejects.toThrow(
+    await expect(raceAbort(Promise.resolve(7), { signal })).resolves.toBe(7);
+    await expect(raceAbort(Promise.reject(new Error("The promise fails.")), { signal })).rejects.toThrow(
       "The promise fails.",
     );
     expect(removed).toHaveBeenCalledTimes(2);
@@ -187,7 +188,7 @@ describe("untilAborted", () => {
     const promise = new Promise<number>((resolve) => {
       finish = resolve;
     });
-    const waiting = untilAborted(promise, controller.signal);
+    const waiting = raceAbort(promise, { signal: controller.signal });
     const reason = new Error("The caller left.");
     controller.abort(reason);
     await expect(waiting).rejects.toBe(reason);
@@ -197,7 +198,7 @@ describe("untilAborted", () => {
 
   it("rejects at once for a signal that has aborted", async () => {
     const reason = new Error("Too late.");
-    await expect(untilAborted(new Promise(() => undefined), AbortSignal.abort(reason))).rejects.toBe(reason);
+    await expect(raceAbort(new Promise(() => undefined), { signal: AbortSignal.abort(reason) })).rejects.toBe(reason);
   });
 });
 
@@ -388,11 +389,11 @@ describe("strictRecord and looseRecord", () => {
   });
 });
 
-describe("issueText", () => {
+describe("describeIssue", () => {
   it("gives the text of an issue with its path", () => {
     const schema = v.strictObject({ items: v.array(v.strictObject({ id: v.string() })) });
     const [issue] = v.safeParse(schema, { items: [{ id: 1 }] }).issues ?? [];
-    expect(issue === undefined ? "" : issueText(issue)).toBe("items[0].id: expected a string, found 1");
+    expect(issue === undefined ? "" : describeIssue(issue)).toBe("items[0].id: expected a string, found 1");
   });
 });
 

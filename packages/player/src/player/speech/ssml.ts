@@ -142,12 +142,10 @@ export function ssmlElement(
   const safe = Object.fromEntries(
     Object.entries(attributes).map(([key, value]) => [key, value === undefined ? undefined : xmlSafe(value)]),
   );
-  return buildElement(
-    SSML_NAMESPACE,
-    name,
-    safe,
-    children.map((child) => (typeof child === "string" ? xmlSafe(child) : child)),
-  );
+  return buildElement(SSML_NAMESPACE, name, {
+    attributes: safe,
+    children: children.map((child) => (typeof child === "string" ? xmlSafe(child) : child)),
+  });
 }
 
 /**

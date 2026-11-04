@@ -5,6 +5,7 @@ import { expect, test } from "vitest";
 import {
   type Action,
   type AssessmentItem,
+  buildSingle,
   createRandom,
   type DeliveryState,
   deserializeState,
@@ -13,7 +14,6 @@ import {
   readTestInputs,
   runOutcomeProcessing,
   serializeState,
-  single,
 } from "../src/index.js";
 import { BENCH_OPTIONS, BUDGETS, compareRow, expectWithin, RESCORING_BUDGET } from "./budgets.js";
 import {
@@ -127,7 +127,7 @@ test("plans a test of 100 sections, and runs its outcome processing after a subm
   const submitted = engine.apply(drafted, submission);
   if (!submitted.ok) fail(`The submission was refused: ${submitted.refusal.code}.`);
   // One point for each item answered rightly, the one submitted included.
-  expect(submitted.state.outcomes.get("TOTAL")).toEqual(single("float", done + 1));
+  expect(submitted.state.outcomes.get("TOTAL")).toEqual(buildSingle("float", done + 1));
   expect(submitted.events.map((event) => event.type)).toContain("outcome-processed");
 
   const planned = await bench("start", () => engine.start(options)).run(BENCH_OPTIONS);
@@ -219,7 +219,7 @@ test("reads the inputs of a report of 200 items and runs the outcome processing 
 });
 
 /**
- * Reads a `support-settings` action of {@link FONT_NAMES} font names with the build of `parseCandidateAction`, in a worker
+ * Reads a `support-settings` action of {@link FONT_NAMES} font names with the build of `readCandidateAction`, in a worker
  * whose old generation holds at most `megabytes`, and answers how it ended: `read`, the name of the error it threw, or
  * `ERR_WORKER_OUT_OF_MEMORY` when the reading took more heap.
  */
@@ -227,11 +227,11 @@ function readSettingsInHeap(megabytes: number, limits: object): Promise<string> 
   const delivery = pathToFileURL(resolve(import.meta.dirname, "../dist/delivery/index.js")).href;
   const program = `
     const { parentPort, workerData } = require("node:worker_threads");
-    import(workerData.delivery).then(({ parseCandidateAction }) => {
+    import(workerData.delivery).then(({ readCandidateAction }) => {
       const fontFace = { fontNames: new Array(workerData.names).fill("") };
       const action = { type: "support-settings", settings: { name: "text-appearance", replaceAccessModes: [], fontFace } };
       try {
-        parseCandidateAction(action, { limits: workerData.limits });
+        readCandidateAction(action, { limits: workerData.limits });
         parentPort.postMessage("read");
       } catch (error) {
         parentPort.postMessage(error.name);

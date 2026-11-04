@@ -1,4 +1,4 @@
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import { type Fetch, ServiceError } from "@interopkit/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type EventJobOptions, runEventJob } from "../src/index.ts";
@@ -17,7 +17,7 @@ const supply = (ctx: Rig, scoredBy?: string) =>
   ctx.host
     .session(SESSION)
     .apply(
-      { type: "supply-scores", request: "item:essay:1:SCORE", value: single("float", 8), scorer: "human" },
+      { type: "supply-scores", request: "item:essay:1:SCORE", value: buildSingle("float", 8), scorer: "human" },
       scoredBy === undefined ? {} : { scoredBy },
     );
 

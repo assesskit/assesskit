@@ -1,7 +1,11 @@
 import type { Interaction, PortableCustomInteraction } from "@assesskit/runtime/asi";
 import type { CandidateItem, ItemKey, PciView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import { moduleConfigurationPaths, type PciModuleConfiguration, parseModuleResolution } from "@assesskit/runtime/pci";
+import {
+  type PciModuleConfiguration,
+  readModuleResolution,
+  resolveModuleConfigurationPaths,
+} from "@assesskit/runtime/pci";
 import type { Value, ValueDeclaration } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer, InteractionRenderer } from "../content/index.js";
@@ -100,7 +104,7 @@ async function loadConfiguration(context: PciContext, path: string): Promise<Pci
   const response = await context.fetch(context.assets(path), { credentials: "omit", referrerPolicy: "no-referrer" });
   if (!response.ok) return undefined;
   try {
-    return parseModuleResolution(await response.text());
+    return readModuleResolution(await response.text());
   } catch (error) {
     if (error instanceof DataError) return undefined;
     throw error;
@@ -154,7 +158,7 @@ export function createPciHost(context: PciContext): PciHost {
       ({ responseIdentifier }) => responseIdentifier === interaction.responseIdentifier,
     );
     const declaration = descriptor?.declaration;
-    const paths = moduleConfigurationPaths(interaction);
+    const paths = resolveModuleConfigurationPaths(interaction);
     const [primary, fallback] = await Promise.all([
       loadConfiguration(context, paths.primary),
       loadConfiguration(context, paths.fallback),

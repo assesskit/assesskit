@@ -1,6 +1,6 @@
 import type { MediaInteraction } from "@assesskit/runtime/asi";
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
 import { appendAll, html } from "../internal.js";
@@ -102,7 +102,7 @@ export class MediaInteractionElement extends InteractionElement {
     this.notes?.element.before(bar.element);
     this.#playback ??= new Playback(media, this.#rules(settings, node), {
       plays: () => this.#plays(),
-      started: () => this.respond(single("integer", this.#plays() + 1)),
+      started: () => this.respond(buildSingle("integer", this.#plays() + 1)),
       notify: (notice) => {
         this.#notice = notice;
         this.#refresh();

@@ -1,5 +1,5 @@
 import { DataError } from "@assesskit/runtime/errors";
-import { attributeOf, parseXml } from "@assesskit/runtime/xml";
+import { findAttribute, parseXml } from "@assesskit/runtime/xml";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES } from "../src/index.js";
@@ -94,7 +94,7 @@ describe("data-ssml", () => {
       '<p data-ssml="{&#x00022;sub&#x00022;:{&#x00022;alias&#x00022;:&#x00022;x&#x00022;}}"/>',
       '<p data-ssml="{&#34;sub&#34;:{&#34;alias&#34;:&#34;x&#34;}}"/>',
     ];
-    const values = serializations.map((xml) => attributeOf(parseXml(xml), "data-ssml") ?? "");
+    const values = serializations.map((xml) => findAttribute(parseXml(xml), "data-ssml") ?? "");
     expect(new Set(values).size).toBe(1);
     expect(read(values[0] ?? "")?.get("sub")).toEqual({ alias: "x" });
   });

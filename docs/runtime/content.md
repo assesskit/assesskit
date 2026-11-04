@@ -18,23 +18,23 @@ flowchart LR
   resolve --> out
   resolve -. "feedback, template content, choices" .-> shown["isShown"]
   resolve -. "qti-printed-variable" .-> printed["formatPrintedVariable"]
-  resolve -. "qti-rubric-block" .-> rubric["rubricBlocksFor"]
+  resolve -. "qti-rubric-block" .-> rubric["selectRubricBlocks"]
   resolve -. "param, mi, ci" .-> substitution["template values"]
 ```
 
-| Function                                            | Does                                                                                             |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `resolveContent(nodes, variables, item, options)`   | Returns the nodes with hidden content removed, variables printed and template values substituted |
-| `isShown(showHide, identifier, value)`              | Tells whether feedback, template content or a choice is visible                                  |
-| `formatPrintedVariable(printed, value, variables)`  | Writes the text of a `qti-printed-variable`                                                      |
-| `visibleModalFeedback(item, outcomes)`              | Returns the modal feedback an item shows                                                         |
-| `visibleTestFeedback(feedback, outcomes, access)`   | Returns the test feedback of one access, `during` or `atEnd`                                     |
-| `rubricBlocksFor(blocks, view)`                     | Returns the rubric blocks whose `view` lists the view                                            |
-| `testRubricBlocks(position, view)`                  | Returns the rubric of a test, its part and its sections, in the order the candidate meets it     |
-| `selectCard(catalog, support, language?, braille?)` | Returns the content of the card for a support, by language and the preferences of braille        |
-| `catalogsFor(item, node)`                           | Returns the catalogs that `data-catalog-idref` of a node names                                   |
-| `checkCatalog(catalog)`                             | Returns `Issue`s for a catalog that breaks the rules of cards                                    |
-| `hazardExposure(hazards, profile?)`                 | Returns the hazards of a resource in the terms of a PNP, each marked avoided or not              |
+| Function                                           | Does                                                                                             |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `resolveContent(nodes, variables, item, options)`  | Returns the nodes with hidden content removed, variables printed and template values substituted |
+| `isShown(showHide, identifier, value)`             | Tells whether feedback, template content or a choice is visible                                  |
+| `formatPrintedVariable(printed, value, variables)` | Writes the text of a `qti-printed-variable`                                                      |
+| `selectModalFeedback(item, outcomes)`              | Returns the modal feedback an item shows                                                         |
+| `selectTestFeedback(feedback, outcomes, access)`   | Returns the test feedback of one access, `during` or `atEnd`                                     |
+| `selectRubricBlocks(blocks, view)`                 | Returns the rubric blocks whose `view` lists the view                                            |
+| `selectTestRubricBlocks(position, view)`           | Returns the rubric of a test, its part and its sections, in the order the candidate meets it     |
+| `selectCard(catalog, support, options?)`           | Returns the content of the card for a support, by `language` and the preferences of `braille`    |
+| `listCatalogs(item, node)`                         | Returns the catalogs that `data-catalog-idref` of a node names                                   |
+| `validateCatalog(catalog)`                         | Returns `Issue`s for a catalog that breaks the rules of cards                                    |
+| `deriveHazardExposure(hazards, options?)`          | Returns the hazards of a resource in the terms of a PNP, each marked avoided or not              |
 
 `HAZARD_TERMS` maps a DRD hazard term to the PNP term, and `VIEWS` lists the six views. The types are `ContentVariables`, `View`,
 `TestPosition`, `CardContent`, `HazardExposure`, `DrdHazardTerm`, `PnpHazardTerm` and `ResolveContentOptions`.
@@ -58,10 +58,10 @@ engine decides.
 
 ```ts
 import { isShown } from "@assesskit/runtime/content";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 
-isShown("show", "right", single("identifier", "right")); // => true
-isShown("hide", "right", single("identifier", "right")); // => false
+isShown("show", "right", buildSingle("identifier", "right")); // => true
+isShown("hide", "right", buildSingle("identifier", "right")); // => false
 isShown("show", "right", null); // => false
 ```
 
@@ -91,7 +91,7 @@ as `x y` and a pair as `a b`; a NULL variable, a container or a file leaves the 
 import { readAsi } from "@assesskit/runtime/asi";
 import { resolveContent } from "@assesskit/runtime/content";
 import { createItemVariables } from "@assesskit/runtime/processing";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 
 const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
     identifier="result" title="Result" time-dependent="false">
@@ -107,9 +107,9 @@ const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/x
 </qti-assessment-item>`);
 const variables = createItemVariables(item);
 const outcomes = new Map(variables.outcomes)
-  .set("SCORE", single("float", 0.7))
-  .set("FEEDBACK", single("identifier", "right"));
-const templates = new Map(variables.templates).set("N", single("integer", 4));
+  .set("SCORE", buildSingle("float", 0.7))
+  .set("FEEDBACK", buildSingle("identifier", "right"));
+const templates = new Map(variables.templates).set("N", buildSingle("integer", 4));
 const resolved = resolveContent(item.body.children, { outcomes, templates }, item, { view: "candidate" });
 resolved.map(({ kind }) => kind); // => ["p", "feedback-block"]
 ```
@@ -149,7 +149,7 @@ NULL is the empty string, a file is its name, a point is `x y` and a pair `a b`.
 
 ## Rubric
 
-`rubricBlocksFor` keeps the blocks whose `view` lists the view. `testRubricBlocks` joins the rubric of the test, its test part and
+`selectRubricBlocks` keeps the blocks whose `view` lists the view. `selectTestRubricBlocks` joins the rubric of the test, its test part and
 the sections from the top section down, each level in its own order. A rubric block cannot contain an interaction or another
 rubric block: the reader refuses it.
 
@@ -165,12 +165,12 @@ rubric block: the reader refuses it.
 ## Catalogs and cards
 
 `selectCard` takes the card of the support. A card without card entries gives its own content; with entries it gives the entry
-whose `xml:lang` is the language, ignoring case, then the first entry with the same primary language (`fr` for `fr-CA`), then the
-entry marked `default`. The content is HTML or references to files in the package. `catalogsFor` finds the catalog that
+whose `xml:lang` is the option `language`, ignoring case, then the first entry with the same primary language (`fr` for `fr-CA`), then the
+entry marked `default`. The content is HTML or references to files in the package. `listCatalogs` finds the catalog that
 `data-catalog-idref` names wherever the item keeps it.
 
 The best practices guide tells braille and tactile files apart by attributes of the card entries, the parameters of the PNP with
-`data-` before them. With the candidate's `braille` settings, `selectCard` chooses among them:
+`data-` before them. With the candidate's `braille` settings as the option `braille`, `selectCard` chooses among them:
 
 | Attribute of the entry                | Setting of `braille` |
 | ------------------------------------- | -------------------- |
@@ -186,7 +186,7 @@ The best practices guide tells braille and tactile files apart by attributes of 
 The guide names the grade `braille-grade` where the PNP names it `grade`, and says nothing of the choice: [spec gaps](spec-gaps.md),
 G52.
 
-`checkCatalog` returns `Issue`s:
+`validateCatalog` returns `Issue`s:
 
 | Code                                        | Reported when                                                    |
 | ------------------------------------------- | ---------------------------------------------------------------- |
@@ -205,14 +205,14 @@ A resource lists its hazards in the terms of the DRD, and a PNP lists the hazard
 | `olfactoryHazard`  | `olfactory-hazard`  |
 | `motionSimulation` | `motion-simulation` |
 
-`hazardExposure(hazards, profile)` returns each hazard of the resource in the PNP term with `avoided` set when the profile lists
+`deriveHazardExposure(hazards, { profile })` returns each hazard of the resource in the PNP term with `avoided` set when the profile lists
 it under `hazard-avoidance`. A candidate who avoids a hazard should not be exposed to content that has it: the delivery engine
 picks a variant without the hazard and flags the hazards it cannot avoid.
 
 ```ts
-import { hazardExposure } from "@assesskit/runtime/content";
+import { deriveHazardExposure } from "@assesskit/runtime/content";
 
-hazardExposure(["flashing", "olfactoryHazard"]);
+deriveHazardExposure(["flashing", "olfactoryHazard"]);
 // => [{ hazard: "flashing", avoided: false }, { hazard: "olfactory-hazard", avoided: false }]
 ```
 
@@ -224,7 +224,7 @@ hazardExposure(["flashing", "olfactoryHazard"]);
 | A `view`, an `access` or a `show-hide` that is not a term              | `DataError` that lists the terms                         |
 | A hazard that is not a DRD term                                        | `DataError` that lists the terms                         |
 | A `format` that is not one specifier                                   | No error: the default format is used                     |
-| A catalog that breaks the rules of cards                               | `Issue`s from `checkCatalog`                             |
+| A catalog that breaks the rules of cards                               | `Issue`s from `validateCatalog`                          |
 
 ## Not included
 

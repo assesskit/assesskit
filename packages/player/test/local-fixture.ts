@@ -1,5 +1,5 @@
 import type { CandidateAction, CandidateView, DeliveryEvent } from "@assesskit/runtime/delivery";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import type { createLocalSession, LocalStore } from "../src/client/local/index.js";
 import type { SessionCallOptions } from "../src/protocol/index.js";
 import { examDefinition, fakeClock } from "./exam-fixture.js";
@@ -14,7 +14,7 @@ export const Q1 = { ref: "q1", instance: 1 };
 export const answer = (identifier: string): CandidateAction => ({
   type: "set-responses",
   item: Q1,
-  responses: new Map([["RESPONSE", single("identifier", identifier)]]),
+  responses: new Map([["RESPONSE", buildSingle("identifier", identifier)]]),
 });
 
 /** The state of q1 in the navigation of a view. */

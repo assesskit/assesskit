@@ -2,14 +2,14 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   type AssessmentItem,
+  buildSingle,
   type CandidateAction,
   createEngine,
   createItemVariables,
+  createPackageResolvers,
   type DeliveryState,
   type Engine,
-  packageResolvers,
   readResults,
-  single,
   validateAsi,
   writeResults,
 } from "../src/index.js";
@@ -23,7 +23,7 @@ async function deliveryOf(directory: string, path: string) {
   const pkg = await readPackageFile(join(packages, directory));
   const document = pkg.document(path);
   if (document.kind !== "test") throw new Error(`${path} is not a test.`);
-  const resolvers = packageResolvers(pkg);
+  const resolvers = createPackageResolvers(pkg);
   const engine = createEngine({ kind: "test", test: document.test, base: path, resolvers });
   return { engine, resolvers, test: document.test };
 }
@@ -82,7 +82,7 @@ describe("the pending work of the examples", () => {
     );
     expect(results.itemResults.every(({ sessionStatus }) => sessionStatus === "final")).toBe(true);
     const outcome = (name: string) => results.testResult?.variables.find(({ identifier }) => identifier === name);
-    expect(outcome("SCORE")).toMatchObject({ kind: "outcome", value: single("float", 24) });
+    expect(outcome("SCORE")).toMatchObject({ kind: "outcome", value: buildSingle("float", 24) });
     expect(readResults(writeResults(results))).toEqual(results);
   });
 
@@ -121,14 +121,14 @@ describe("the pending work of the examples", () => {
       const step = engine.apply(state, {
         type: "supply-scores",
         request: request.id,
-        value: single("float", value),
+        value: buildSingle("float", value),
         scorer: "externalMachine",
         at,
       });
       if (!step.ok) throw new Error(step.refusal.message);
       state = step.state;
     }
-    expect(state.outcomes.get("TEST_total")).toEqual(single("float", 6));
+    expect(state.outcomes.get("TEST_total")).toEqual(buildSingle("float", 6));
     expect(engine.pending(state)).toEqual({ scoring: [], cat: [] });
     const results = engine.results(state);
     expect(results.itemResults.map(({ identifier, sessionStatus }) => [identifier, sessionStatus])).toEqual([
@@ -149,7 +149,7 @@ describe("the pending work of the examples", () => {
     const answered = engine.apply(started.state, {
       type: "set-responses",
       item,
-      responses: new Map([["RESPONSE", single("string", "Line one\nLine two")]]),
+      responses: new Map([["RESPONSE", buildSingle("string", "Line one\nLine two")]]),
       at: 1,
     });
     if (!answered.ok) throw new Error(answered.refusal.message);
@@ -157,11 +157,11 @@ describe("the pending work of the examples", () => {
     if (!submitted.ok) throw new Error(submitted.refusal.message);
     const [request] = engine.pending(submitted.state).scoring;
     expect(request).toMatchObject({ scope: "item", outcome: "SCORE", mode: "human" });
-    expect(request?.covers.map(({ response }) => response)).toEqual([single("string", "Line one\nLine two")]);
+    expect(request?.covers.map(({ response }) => response)).toEqual([buildSingle("string", "Line one\nLine two")]);
     expect(engine.results(submitted.state).itemResults[0]?.sessionStatus).toBe("pendingExternalScoring");
     const view = engine.scorerView(submitted.state, request?.id ?? "");
     expect(view.items.map(({ responses }) => [...responses.values()])).toEqual([
-      [single("string", "Line one\nLine two")],
+      [buildSingle("string", "Line one\nLine two")],
     ]);
   });
 

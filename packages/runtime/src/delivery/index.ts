@@ -53,11 +53,12 @@ export type {
   Step,
 } from "./delivery-state.js";
 export { STATE_VERSION } from "./delivery-state.js";
+export { deriveSessionStatus } from "./derive-session-status.js";
 export { type DrainCatOptions, drainCat, type SendCatRequestOptions, sendCatRequest } from "./drain-cat.js";
 export { createEngine, type Engine, type StartOptions } from "./engine.js";
 export type { DeliveryEvent, DeliveryEventType } from "./events.js";
 export { applyItemAction, type ItemAction } from "./item-action.js";
-export { type ItemFeedback, itemFeedback, itemResponses } from "./item-display.js";
+export { deriveItemFeedback, deriveItemResponses, type ItemFeedback } from "./item-display.js";
 export {
   closeItem,
   presentItem,
@@ -66,24 +67,24 @@ export {
   suspendItem,
 } from "./item-lifecycle.js";
 export type { ItemSession, ItemSessionContext, ItemSessionStatus, ItemStep } from "./item-session.js";
-export { nextItem, previousItem, type RuleContext } from "./navigation.js";
+export { findNextItem, findPreviousItem, type RuleContext } from "./navigation.js";
 export type { CatRequest, CatRequestBase, PendingWork } from "./pending-work.js";
 export {
   DEFAULT_PLAN_LIMITS,
   type ItemKey,
+  type ListPlanItemsOptions,
+  listPlanItems,
   type PlanLimits,
   type PlannedChild,
   type PlannedItem,
   type PlannedPart,
   type PlannedSection,
   type PlanOptions,
-  planItems,
   planTest,
   type TestPlan,
 } from "./plan.js";
 export type { Refusal, RefusalCode } from "./refusal.js";
 export { type ReadTestInputsOptions, readTestInputs, type TestInputs } from "./result-scope.js";
-export { resultStatus } from "./result-status.js";
 export { readItemVariables } from "./result-variables.js";
 export type { ScorerItem, ScorerView } from "./scorer-view.js";
 export type {
@@ -93,28 +94,33 @@ export type {
   ScoringRequest,
   SuppliedScore,
 } from "./scoring.js";
-export { type EffectiveSessionControl, sessionControl, standaloneSessionControl } from "./session-control.js";
+export {
+  type EffectiveSessionControl,
+  type ResolveStandaloneSessionControlOptions,
+  resolveSessionControl,
+  resolveStandaloneSessionControl,
+} from "./session-control.js";
 export { stamp } from "./stamp.js";
 export { deserializeState, serializeState } from "./state-json.js";
 export {
-  ancestry,
   type ContentNode,
+  findTestPart,
   type ItemRefNode,
+  listAncestors,
   type PartNode,
-  partOf,
   resolveStructure,
   type SectionNode,
   type StructureNode,
   type TestNode,
   type TestStructure,
 } from "./structure.js";
-export { additionalTestingTime, type EffectiveTimeLimits, timeLimits } from "./time-limits.js";
+export { additionalTestingTime, type EffectiveTimeLimits, type TimeLimitsOptions, timeLimits } from "./time-limits.js";
 export {
   type ActionLimits,
-  actionToJson,
   DEFAULT_ACTION_LIMITS,
-  type ParseCandidateActionOptions,
-  parseCandidateAction,
-  viewFromJson,
-  viewToJson,
+  type ReadCandidateActionOptions,
+  readCandidateAction,
+  readView,
+  writeCandidateAction,
+  writeView,
 } from "./wire.js";

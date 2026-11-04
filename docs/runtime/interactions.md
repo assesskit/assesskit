@@ -14,24 +14,24 @@ flowchart LR
   response["Candidate's response"]
   check["ResponseCheck<br/>status and reasons"]
   item -- "describeInteractions" --> descriptors
-  item -- "checkBindings" --> issues["Issues"]
+  item -- "validateBindings" --> issues["Issues"]
   descriptors -- "shuffleChoices" --> order
   order -- "presentChoices" --> presented
   presented --> check
-  response -- "checkResponse" --> check
-  check -- "answeredStatus" --> status["Status of the item"]
+  response -- "validateResponse" --> check
+  check -- "deriveAnsweredStatus" --> status["Status of the item"]
 ```
 
-| Function                                 | Does                                                                                                |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `describeInteractions(item)`             | Returns the `InteractionDescriptor` of each interaction of the item, in document order              |
-| `checkBindings(item)`                    | Returns `Issue`s for response variables that the interactions do not accept                         |
-| `checkResponse(descriptor, response)`    | Returns the `ResponseStatus` of a response and the `ResponseViolation`s it has                      |
-| `answeredStatus(descriptors, responses)` | Returns the status of an item from the responses to all its interactions                            |
-| `initialResponse(descriptor, default)`   | Returns the response an interaction starts with, given the default value of its variable            |
-| `shuffleChoices(descriptor, random)`     | Returns the initial order of the choices, one list of identifiers for each set of choices           |
-| `presentChoices(descriptor, orders)`     | Returns the descriptor with the choices in the given orders, and without those the orders leave out |
-| `numericRecord(text, base?)`             | Returns the record that a text interaction bound to a record gives for the text a candidate typed   |
+| Function                                       | Does                                                                                                |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `describeInteractions(item)`                   | Returns the `InteractionDescriptor` of each interaction of the item, in document order              |
+| `validateBindings(item)`                       | Returns `Issue`s for response variables that the interactions do not accept                         |
+| `validateResponse(descriptor, response)`       | Returns the `ResponseStatus` of a response and the `ResponseViolation`s it has                      |
+| `deriveAnsweredStatus(descriptors, responses)` | Returns the status of an item from the responses to all its interactions                            |
+| `deriveInitialResponse(descriptor, default)`   | Returns the response an interaction starts with, given the default value of its variable            |
+| `shuffleChoices(descriptor, random)`           | Returns the initial order of the choices, one list of identifiers for each set of choices           |
+| `presentChoices(descriptor, orders)`           | Returns the descriptor with the choices in the given orders, and without those the orders leave out |
+| `readNumericRecord(text, options?)`            | Returns the record that a text interaction bound to a record gives for the text a candidate typed   |
 
 The types are `InteractionKind` (the 22 kinds of interaction, such as `"choice-interaction"`), `Binding`, `ChoiceDescriptor`,
 `InteractionConstraints`, `InteractionDescriptor`, `ResponseCheck`, `ResponseStatus` and `ResponseViolation`.
@@ -39,8 +39,13 @@ The types are `InteractionKind` (the 22 kinds of interaction, such as `"choice-i
 ```ts
 import { createRandom } from "@assesskit/runtime";
 import { readAsi } from "@assesskit/runtime/asi";
-import { checkResponse, describeInteractions, presentChoices, shuffleChoices } from "@assesskit/runtime/interactions";
-import { container } from "@assesskit/runtime/values";
+import {
+  validateResponse,
+  describeInteractions,
+  presentChoices,
+  shuffleChoices,
+} from "@assesskit/runtime/interactions";
+import { buildContainer } from "@assesskit/runtime/values";
 
 const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
     identifier="capital" title="Capital" time-dependent="false">
@@ -63,10 +68,10 @@ presentChoices(descriptor, [orders[0].filter((identifier) => identifier !== "Nic
   ({ identifier }) => identifier,
 );
 // => ["Metz", "Lyon", "Paris"]
-checkResponse(descriptor, container("multiple", "identifier", ["Paris", "Nice", "Metz"]));
+validateResponse(descriptor, buildContainer("multiple", "identifier", ["Paris", "Nice", "Metz"]));
 // => { status: "attempted", reasons: ["max-choices"] }
-checkResponse(descriptor, container("multiple", "identifier", ["Paris"])); // => { status: "answered", reasons: [] }
-checkResponse(descriptor, null); // => { status: "presented", reasons: ["min-choices"] }
+validateResponse(descriptor, buildContainer("multiple", "identifier", ["Paris"])); // => { status: "answered", reasons: [] }
+validateResponse(descriptor, null); // => { status: "presented", reasons: ["min-choices"] }
 ```
 
 ## Descriptors
@@ -127,7 +132,7 @@ needs a container, and so do several gaps. A gap match or graphic gap match inte
 where the schema's default is 1 (see [spec gaps](spec-gaps.md)): the examples of 1EdTech leave it out with several gaps, and each
 gap takes one choice.
 
-`checkBindings(item)` returns an `Issue` for each violation:
+`validateBindings(item)` returns an `Issue` for each violation:
 
 | Code                                          | Reported when                                                                           |
 | --------------------------------------------- | --------------------------------------------------------------------------------------- |
@@ -138,7 +143,7 @@ gap takes one choice.
 
 ## Validity
 
-`checkResponse` applies the rules of validity to the descriptor of the interaction as it is presented: give it the descriptor that
+`validateResponse` applies the rules of validity to the descriptor of the interaction as it is presented: give it the descriptor that
 `presentChoices` returns, so that hidden choices are not demanded.
 
 | Reason             | The response ...                                                                      |
@@ -176,10 +181,10 @@ gap takes one choice.
 | `attempted` | The response breaks a rule; for an item, a response exists and an interaction's response is invalid                  |
 | `answered`  | The response breaks no rule; for an item, it has a response and every interaction is valid                           |
 
-`answeredStatus` gives the item's status. A blank optional interaction is valid, and the end attempt interaction does not count.
+`deriveAnsweredStatus` gives the item's status. A blank optional interaction is valid, and the end attempt interaction does not count.
 `notpresented`, for an item that was never shown, is the engine's to report.
 
-`initialResponse` gives the response an interaction starts with: the default value, except for a choice interaction, which starts
+`deriveInitialResponse` gives the response an interaction starts with: the default value, except for a choice interaction, which starts
 with nothing selected, and an end attempt interaction, which ignores its default. The default of an order interaction overrides
 the initial order of its choices, so shuffle the choices of an order only when its default is NULL.
 
@@ -201,7 +206,7 @@ engine stores give the same descriptor again when a session resumes.
 
 ## Numeric text
 
-`numericRecord(text, base?)` reads a typed number into the fields of a record. `base` is 2 to 36 and 10 when omitted.
+`readNumericRecord(text, options?)` reads a typed number into the fields of a record. The option `base` is 2 to 36 and 10 when omitted.
 
 | Field          | Value                                                                                               |
 | -------------- | --------------------------------------------------------------------------------------------------- |
@@ -222,12 +227,12 @@ fractions has one of three shapes: a `string` response that lists the accepted s
 with `1/2` and `2/4`, say), two boxes for the numerator and the denominator, or a custom operator that reads the fraction.
 
 ```ts
-import { numericRecord } from "@assesskit/runtime/interactions";
+import { readNumericRecord } from "@assesskit/runtime/interactions";
 
-[...numericRecord("12.50e-3").fields].map(([name, field]) => [name, field.value]);
+[...readNumericRecord("12.50e-3").fields].map(([name, field]) => [name, field.value]);
 // => [["stringValue", "12.50e-3"], ["floatValue", 0.0125], ["leftDigits", 2], ["rightDigits", 2], ["ndp", 5], ["nsf", 4], ["exponent", -3]]
-[...numericRecord("1/2").fields].map(([name, field]) => [name, field.value]); // => [["stringValue", "1/2"]]
-numericRecord(""); // => null
+[...readNumericRecord("1/2").fields].map(([name, field]) => [name, field.value]); // => [["stringValue", "1/2"]]
+readNumericRecord(""); // => null
 ```
 
 ## Errors
@@ -239,7 +244,7 @@ numericRecord(""); // => null
 | Orders that do not name the choices of the sets                       | `DataError`                                            |
 | A `base` that is not an integer from 2 to 36                          | `DataError`                                            |
 | A response that breaks a rule of validity                             | `ResponseCheck` with the reasons; no error             |
-| A response variable that the interactions do not accept               | `Issue`s from `checkBindings`                          |
+| A response variable that the interactions do not accept               | `Issue`s from `validateBindings`                       |
 
 ## Not included
 

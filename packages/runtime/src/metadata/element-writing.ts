@@ -18,7 +18,7 @@ export function branch(
   attributes: Readonly<Record<string, string | undefined>> = {},
 ): XmlElement {
   const { namespace, prefix } = qualified;
-  return { ...buildElement(namespace, name, attributes, children), prefix };
+  return { ...buildElement(namespace, name, { attributes, children }), prefix };
 }
 
 /**

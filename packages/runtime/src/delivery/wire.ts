@@ -10,10 +10,10 @@
 export type { CandidateAction } from "./action.js";
 export {
   type ActionLimits,
-  actionToJson,
   DEFAULT_ACTION_LIMITS,
-  type ParseCandidateActionOptions,
-  parseCandidateAction,
+  type ReadCandidateActionOptions,
+  readCandidateAction,
+  writeCandidateAction,
 } from "./action-json.js";
 export type {
   CandidateItem,
@@ -31,4 +31,4 @@ export type {
   TimerView,
   VariantView,
 } from "./candidate-view.js";
-export { viewFromJson, viewToJson } from "./view-json.js";
+export { readView, writeView } from "./view-json.js";

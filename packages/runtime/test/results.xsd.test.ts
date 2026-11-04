@@ -6,12 +6,12 @@ import { requireCorpus } from "../../../scripts/corpus.js";
 import { requireSchemas } from "../../../scripts/schemas.js";
 import {
   type AssessmentResult,
-  container,
+  buildContainer,
+  buildRecord,
+  buildSingle,
   type ItemResult,
   RESULTS_NAMESPACE,
   readResults,
-  record,
-  single,
   writeResults,
 } from "../src/index.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
@@ -56,14 +56,14 @@ const everything: AssessmentResult = {
         identifier: "duration",
         cardinality: "single",
         baseType: "duration",
-        candidateResponse: single("duration", 100),
+        candidateResponse: buildSingle("duration", 100),
         extensions: [],
       },
       {
         kind: "context",
         identifier: "QTI_CONTEXT",
         cardinality: "record",
-        value: record([["x", nonNull(single("integer", 1))]]),
+        value: buildRecord([["x", nonNull(buildSingle("integer", 1))]]),
       },
     ],
     supports: [{ name: "additional-testing-time", assignment: "universal" }],
@@ -85,9 +85,9 @@ const everything: AssessmentResult = {
           answeredStatus: "attempted",
           correctResponse: {
             interpretation: "the order",
-            value: nonNull(container("ordered", "directedPair", [["A", "B"]])),
+            value: nonNull(buildContainer("ordered", "directedPair", [["A", "B"]])),
           },
-          candidateResponse: container("ordered", "directedPair", [["B", "A"]]),
+          candidateResponse: buildContainer("ordered", "directedPair", [["B", "A"]]),
           extensions: [],
         },
         {
@@ -95,7 +95,7 @@ const everything: AssessmentResult = {
           identifier: "SCORE",
           cardinality: "single",
           baseType: "float",
-          value: single("float", 0.5),
+          value: buildSingle("float", 0.5),
           view: ["candidate", "tutor"],
           interpretation: "points",
           longInterpretation: "http://example.com/points",
@@ -111,14 +111,14 @@ const everything: AssessmentResult = {
           identifier: "TV",
           cardinality: "multiple",
           baseType: "point",
-          value: container("multiple", "point", [[1, 2]]),
+          value: buildContainer("multiple", "point", [[1, 2]]),
         },
         {
           kind: "context",
           identifier: "CV",
           cardinality: "single",
           baseType: "file",
-          value: single("file", { reference: "f.pdf", mimeType: "application/octet-stream" }),
+          value: buildSingle("file", { reference: "f.pdf", mimeType: "application/octet-stream" }),
         },
       ],
       candidateComment: "unclear",
@@ -195,7 +195,7 @@ describe("writeResults", () => {
       identifier: `O_${baseType}`,
       cardinality: "single" as const,
       baseType,
-      value: single(baseType, value as never),
+      value: buildSingle(baseType, value as never),
     }));
     const item: ItemResult = {
       identifier: "Q",

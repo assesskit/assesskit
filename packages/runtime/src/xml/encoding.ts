@@ -1,4 +1,4 @@
-import { documentName, readError } from "./read-error.js";
+import { createReadError, documentName } from "./read-error.js";
 
 /** The XML declaration is ASCII and short, so its encoding declaration is looked for in this many bytes. */
 const DECLARATION_LENGTH = 256;
@@ -80,7 +80,9 @@ function decode(bytes: Uint8Array, encoding: string, path: string | undefined): 
   try {
     return new TextDecoder(encoding, { fatal: true }).decode(bytes);
   } catch {
-    throw readError("assesskit/xml/encoding", `${documentName(path)} is not valid ${encoding}.`, { path });
+    throw createReadError("assesskit/xml/encoding", `${documentName(path)} is not valid ${encoding}.`, {
+      location: { path },
+    });
   }
 }
 
@@ -90,7 +92,7 @@ function decodeMarked(bytes: Uint8Array, mark: ByteOrderMark, path: string | und
   const label = declaredLabel(text.slice(0, DECLARATION_LENGTH));
   if (label !== undefined && family(encodingOf(label)) !== family(mark.encoding)) {
     const message = `${documentName(path)} starts with a ${mark.encoding} byte order mark but declares the encoding ${JSON.stringify(label)}.`;
-    throw readError("assesskit/xml/encoding", message, { path });
+    throw createReadError("assesskit/xml/encoding", message, { location: { path } });
   }
   return text;
 }
@@ -120,7 +122,7 @@ export function decodeXml(bytes: Uint8Array, path: string | undefined): string {
   if (encoding === undefined || encoding.startsWith("utf-16")) {
     const reason = encoding === undefined ? "this runtime does not support it" : "UTF-16 needs a byte order mark";
     const message = `${documentName(path)} declares the encoding ${JSON.stringify(label)}, but ${reason}.`;
-    throw readError("assesskit/xml/encoding", message, { path });
+    throw createReadError("assesskit/xml/encoding", message, { location: { path } });
   }
   return decode(bytes, encoding, path);
 }

@@ -1,4 +1,4 @@
-import { childNodes, type ModelNode } from "@assesskit/runtime/asi";
+import { listChildNodes, type ModelNode } from "@assesskit/runtime/asi";
 import type { RenderContext } from "./context.js";
 import { canAnimate } from "./embed.js";
 
@@ -20,8 +20,8 @@ const isFallback = (node: ModelNode): boolean => node.kind !== "source" && node.
  * @see {@link https://www.w3.org/TR/WCAG22/#pause-stop-hide | WCAG 2.2, pause, stop, hide}
  */
 export function renderPlayer(node: ModelNode, context: RenderContext): Node[] {
-  if (context.withholdMedia) return context.nodes(childNodes(node).filter(isFallback));
-  const element = context.element(node.kind, node, context.nodes(childNodes(node)));
+  if (context.withholdMedia) return context.nodes(listChildNodes(node).filter(isFallback));
+  const element = context.element(node.kind, node, context.nodes(listChildNodes(node)));
   element.setAttribute("controls", "");
   return [element];
 }

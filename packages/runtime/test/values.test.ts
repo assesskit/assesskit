@@ -6,10 +6,12 @@ import { DataError } from "../src/index.js";
 import {
   BASE_TYPES,
   type BaseType,
+  buildContainer,
+  buildRecord,
+  buildSingle,
   CARDINALITIES,
   type Cardinality,
   compileXsdRegex,
-  container,
   DEFAULT_XSD_REGEX_LIMITS,
   decodeBase64,
   decodeBase64Url,
@@ -18,8 +20,6 @@ import {
   formatIdentifierList,
   formatIntegerList,
   formatPrimitive,
-  fromJsonValue,
-  fromWireValue,
   isBaseType,
   isCardinality,
   isIdentifier,
@@ -28,17 +28,17 @@ import {
   matchValues,
   normalizeValue,
   type Primitive,
+  parseDuration,
   parseIdentifierList,
   parseIntegerList,
-  parseIsoDuration,
   parsePrimitive,
   promote,
-  record,
-  single,
-  toJsonValue,
-  toWireValue,
+  readJsonValue,
+  readWireValue,
   type Value,
   type ValueDeclaration,
+  writeJsonValue,
+  writeWireValue,
   type XsdPattern,
 } from "../src/values/index.js";
 import { mutateText, mutationsOf } from "./arbitraries/xml.js";
@@ -141,7 +141,7 @@ describe("identifiers", () => {
   it("tells identifiers that differ in case apart, as they are compared case-sensitively", () => {
     expect(isIdentifier("id")).toBe(true);
     expect(isIdentifier("ID")).toBe(true);
-    expect(matchValues(single("identifier", "id"), single("identifier", "ID"))).toBe(false);
+    expect(matchValues(buildSingle("identifier", "id"), buildSingle("identifier", "ID"))).toBe(false);
   });
 
   it("rejects values that are not strings", () => {
@@ -151,13 +151,13 @@ describe("identifiers", () => {
 
 describe("building values", () => {
   it("builds a single value", () => {
-    expect(single("integer", 5)).toEqual({ cardinality: "single", baseType: "integer", value: 5 });
-    expect(single("identifier", "a")).toEqual({ cardinality: "single", baseType: "identifier", value: "a" });
-    expect(single("point", [1, 2])).toEqual({ cardinality: "single", baseType: "point", value: [1, 2] });
+    expect(buildSingle("integer", 5)).toEqual({ cardinality: "single", baseType: "integer", value: 5 });
+    expect(buildSingle("identifier", "a")).toEqual({ cardinality: "single", baseType: "identifier", value: "a" });
+    expect(buildSingle("point", [1, 2])).toEqual({ cardinality: "single", baseType: "point", value: [1, 2] });
   });
 
   it("builds a multiple container that keeps repeated values", () => {
-    expect(container("multiple", "string", ["b", "a", "b"])).toEqual({
+    expect(buildContainer("multiple", "string", ["b", "a", "b"])).toEqual({
       cardinality: "multiple",
       baseType: "string",
       values: ["b", "a", "b"],
@@ -165,7 +165,7 @@ describe("building values", () => {
   });
 
   it("builds an ordered container that keeps the order", () => {
-    expect(container("ordered", "integer", [3, 1, 2])).toEqual({
+    expect(buildContainer("ordered", "integer", [3, 1, 2])).toEqual({
       cardinality: "ordered",
       baseType: "integer",
       values: [3, 1, 2],
@@ -173,9 +173,9 @@ describe("building values", () => {
   });
 
   it("builds a record whose fields have their own base types, in insertion order", () => {
-    const built = record([
-      ["rock", single("boolean", true)],
-      ["paper", nonNull(single("string", "Four score"))],
+    const built = buildRecord([
+      ["rock", buildSingle("boolean", true)],
+      ["paper", nonNull(buildSingle("string", "Four score"))],
     ]);
     expect(built?.cardinality).toBe("record");
     expect([...(built?.fields ?? [])]).toEqual([
@@ -185,54 +185,62 @@ describe("building values", () => {
   });
 
   it("keeps a field named like a property of Object.prototype as data", () => {
-    const built = record([["__proto__", single("integer", 1)]]);
-    expect(built?.fields.get("__proto__")).toEqual(single("integer", 1));
+    const built = buildRecord([["__proto__", buildSingle("integer", 1)]]);
+    expect(built?.fields.get("__proto__")).toEqual(buildSingle("integer", 1));
     expect(Object.getPrototypeOf(built?.fields)).toBe(Map.prototype);
     expect(({} as Record<string, unknown>).integer).toBeUndefined();
   });
 
   it("rejects a field that is not an identifier, a field twice and a field that is not a single value", () => {
-    expect(() => record([["not an identifier", single("integer", 1)]])).toThrow(DataError);
+    expect(() => buildRecord([["not an identifier", buildSingle("integer", 1)]])).toThrow(DataError);
     expect(() =>
-      record([
-        ["a", single("integer", 1)],
-        ["a", single("integer", 2)],
+      buildRecord([
+        ["a", buildSingle("integer", 1)],
+        ["a", buildSingle("integer", 2)],
       ]),
     ).toThrow("twice");
-    expect(() => record([["a", json('{"cardinality":"single","baseType":"integer","value":1.5}')]])).toThrow(DataError);
-    expect(() => record([["a", json('{"cardinality":"multiple","baseType":"integer","values":[1]}')]])).toThrow(
+    expect(() => buildRecord([["a", json('{"cardinality":"single","baseType":"integer","value":1.5}')]])).toThrow(
+      DataError,
+    );
+    expect(() => buildRecord([["a", json('{"cardinality":"multiple","baseType":"integer","values":[1]}')]])).toThrow(
       "must be a single value",
     );
-    expect(() => record([["a", nonNull(single("string", "x"))], json('["b"]')])).toThrow(DataError);
+    expect(() => buildRecord([["a", nonNull(buildSingle("string", "x"))], json('["b"]')])).toThrow(DataError);
   });
 
   it("represents NULL as null: an empty string, an empty container and an empty record", () => {
-    expect(single("string", "")).toBeNull();
-    expect(container("multiple", "integer", [])).toBeNull();
-    expect(container("ordered", "string", [])).toBeNull();
-    expect(record([])).toBeNull();
+    expect(buildSingle("string", "")).toBeNull();
+    expect(buildContainer("multiple", "integer", [])).toBeNull();
+    expect(buildContainer("ordered", "string", [])).toBeNull();
+    expect(buildRecord([])).toBeNull();
   });
 
   it("treats the empty string as NULL for string only", () => {
-    expect(single("uri", "")).toEqual({ cardinality: "single", baseType: "uri", value: "" });
-    expect(() => single("identifier", "")).toThrow(DataError);
-    expect(() => container("multiple", "string", ["a", ""])).toThrow("empty string");
+    expect(buildSingle("uri", "")).toEqual({ cardinality: "single", baseType: "uri", value: "" });
+    expect(() => buildSingle("identifier", "")).toThrow(DataError);
+    expect(() => buildContainer("multiple", "string", ["a", ""])).toThrow("empty string");
   });
 
   it("keeps white space in a string", () => {
-    expect(nonNull(single("string", " a  b ")).value).toBe(" a  b ");
+    expect(nonNull(buildSingle("string", " a  b ")).value).toBe(" a  b ");
   });
 
   it("turns an integer -0 into 0 and keeps the sign of a float", () => {
-    expect(Object.is(single("integer", -0).value, 0)).toBe(true);
-    expect(Object.is(single("float", -0).value, -0)).toBe(true);
-    expect(single("point", [-0, 0]).value).toEqual([0, 0]);
+    expect(Object.is(buildSingle("integer", -0).value, 0)).toBe(true);
+    expect(Object.is(buildSingle("float", -0).value, -0)).toBe(true);
+    expect(buildSingle("point", [-0, 0]).value).toEqual([0, 0]);
   });
 
   it("copies a file to its reference, content type and name", () => {
     const given = { reference: "files/1", mimeType: "text/plain", fileName: "a.txt", bytes: "AAAA" };
-    expect(single("file", given).value).toEqual({ reference: "files/1", mimeType: "text/plain", fileName: "a.txt" });
-    expect(single("file", { reference: "files/2", mimeType: "image/png", fileName: undefined }).value).toStrictEqual({
+    expect(buildSingle("file", given).value).toEqual({
+      reference: "files/1",
+      mimeType: "text/plain",
+      fileName: "a.txt",
+    });
+    expect(
+      buildSingle("file", { reference: "files/2", mimeType: "image/png", fileName: undefined }).value,
+    ).toStrictEqual({
       reference: "files/2",
       mimeType: "image/png",
     });
@@ -241,8 +249,8 @@ describe("building values", () => {
   it("copies what it is given, so that later changes do not reach the value", () => {
     const point = [1, 2];
     const values = [3, 4];
-    const built = single("point", point as unknown as Primitive);
-    const list = container("ordered", "integer", values);
+    const built = buildSingle("point", point as unknown as Primitive);
+    const list = buildContainer("ordered", "integer", values);
     point[0] = 99;
     values[0] = 99;
     expect(built.value).toEqual([1, 2]);
@@ -250,17 +258,17 @@ describe("building values", () => {
   });
 
   it("rejects an integer that is not a safe integer", () => {
-    expect(() => single("integer", 2 ** 53)).toThrow(
+    expect(() => buildSingle("integer", 2 ** 53)).toThrow(
       "A value of base type integer must be a safe integer, found 9007199254740992.",
     );
-    expect(() => single("integer", 1.5)).toThrow(DataError);
-    expect(() => single("integer", Number.NaN)).toThrow(DataError);
-    expect(() => container("ordered", "integer", [1, 2 ** 60])).toThrow(DataError);
+    expect(() => buildSingle("integer", 1.5)).toThrow(DataError);
+    expect(() => buildSingle("integer", Number.NaN)).toThrow(DataError);
+    expect(() => buildContainer("ordered", "integer", [1, 2 ** 60])).toThrow(DataError);
   });
 
   it("rejects an identifier that is not one", () => {
-    expect(() => single("identifier", "1a")).toThrow("A value of base type identifier must be an identifier");
-    expect(() => single("pair", ["a", "b c"])).toThrow(DataError);
+    expect(() => buildSingle("identifier", "1a")).toThrow("A value of base type identifier must be an identifier");
+    expect(() => buildSingle("pair", ["a", "b c"])).toThrow(DataError);
   });
 
   it("rejects a value that is not of the base type", () => {
@@ -278,7 +286,7 @@ describe("building values", () => {
       ["file", { reference: "r", mimeType: "a/b", fileName: 1 }],
       ["file", "r"],
     ] as const) {
-      expect(() => single(baseType, json(JSON.stringify(value))), `${baseType} ${JSON.stringify(value)}`).toThrow(
+      expect(() => buildSingle(baseType, json(JSON.stringify(value))), `${baseType} ${JSON.stringify(value)}`).toThrow(
         DataError,
       );
     }
@@ -286,9 +294,9 @@ describe("building values", () => {
 
   it("checks a value deeply and returns a copy of it", () => {
     const values = [
-      nonNull(single("integer", 5)),
-      nonNull(container("ordered", "string", ["a", "b"])),
-      nonNull(record([["x", nonNull(single("boolean", true))]])),
+      nonNull(buildSingle("integer", 5)),
+      nonNull(buildContainer("ordered", "string", ["a", "b"])),
+      nonNull(buildRecord([["x", nonNull(buildSingle("boolean", true))]])),
     ];
     for (const value of values) {
       const copy = normalizeValue(value);
@@ -306,19 +314,19 @@ describe("building values", () => {
   });
 
   it("rejects arguments of other types", () => {
-    expect(() => single(json('"unknown"'), json("1"))).toThrow('The base type must be "boolean"');
-    expect(() => single(json("null"), json("1"))).toThrow(DataError);
-    expect(() => container(json('"single"'), "integer", [1])).toThrow(
+    expect(() => buildSingle(json('"unknown"'), json("1"))).toThrow('The base type must be "boolean"');
+    expect(() => buildSingle(json("null"), json("1"))).toThrow(DataError);
+    expect(() => buildContainer(json('"single"'), "integer", [1])).toThrow(
       'The cardinality of a container must be "multiple" or "ordered", found "single".',
     );
-    expect(() => container("multiple", json('"unknown"'), [1])).toThrow(DataError);
-    expect(() => container("multiple", "integer", json('{"0":1}'))).toThrow(
+    expect(() => buildContainer("multiple", json('"unknown"'), [1])).toThrow(DataError);
+    expect(() => buildContainer("multiple", "integer", json('{"0":1}'))).toThrow(
       "The values of a container must be an array, found an object.",
     );
-    expect(() => container("multiple", "integer", json("null"))).toThrow(DataError);
-    expect(() => record(json("null"))).toThrow("The fields of a record must be an iterable");
-    expect(() => record(json("5"))).toThrow(DataError);
-    expect(() => record(json("[1]"))).toThrow("A field of a record must be an array");
+    expect(() => buildContainer("multiple", "integer", json("null"))).toThrow(DataError);
+    expect(() => buildRecord(json("null"))).toThrow("The fields of a record must be an iterable");
+    expect(() => buildRecord(json("5"))).toThrow(DataError);
+    expect(() => buildRecord(json("[1]"))).toThrow("A field of a record must be an array");
   });
 });
 
@@ -540,42 +548,42 @@ describe("XML Schema dates and times", () => {
 
 describe("ISO 8601 durations", () => {
   it("reads the durations of an example result of 1EdTech", () => {
-    expect(parseIsoDuration("PT2M0.049722S")).toBe(120.049722);
-    expect(parseIsoDuration("PT9.590316S")).toBe(9.590316);
-    expect(parseIsoDuration("-P1DT1H")).toBe(-90_000);
+    expect(parseDuration("PT2M0.049722S")).toBe(120.049722);
+    expect(parseDuration("PT9.590316S")).toBe(9.590316);
+    expect(parseDuration("-P1DT1H")).toBe(-90_000);
   });
 
   it("reads weeks, days, hours, minutes and seconds, and a fraction of the seconds", () => {
-    expect(parseIsoDuration("PT1H30M")).toBe(5400);
-    expect(parseIsoDuration("P1DT4H30M25S")).toBe(102_625);
-    expect(parseIsoDuration("P1D")).toBe(86_400);
-    expect(parseIsoDuration("P2W")).toBe(1_209_600);
-    expect(parseIsoDuration("PT0.25S")).toBe(0.25);
-    expect(parseIsoDuration("PT1M30.5S")).toBe(90.5);
-    expect(parseIsoDuration("PT1M")).toBe(60);
-    expect(parseIsoDuration("-PT5S")).toBe(-5);
+    expect(parseDuration("PT1H30M")).toBe(5400);
+    expect(parseDuration("P1DT4H30M25S")).toBe(102_625);
+    expect(parseDuration("P1D")).toBe(86_400);
+    expect(parseDuration("P2W")).toBe(1_209_600);
+    expect(parseDuration("PT0.25S")).toBe(0.25);
+    expect(parseDuration("PT1M30.5S")).toBe(90.5);
+    expect(parseDuration("PT1M")).toBe(60);
+    expect(parseDuration("-PT5S")).toBe(-5);
   });
 
   it("refuses years and months, which have no fixed length, as in the example P10Y3M20DT4H30M25S of the binding", () => {
-    expect(() => parseIsoDuration("P10Y3M20DT4H30M25S")).toThrow(
+    expect(() => parseDuration("P10Y3M20DT4H30M25S")).toThrow(
       'The duration "P10Y3M20DT4H30M25S" has years or months, which have no fixed length in seconds',
     );
-    expect(() => parseIsoDuration("P1Y")).toThrow("years or months");
-    expect(() => parseIsoDuration("P1M")).toThrow("years or months");
+    expect(() => parseDuration("P1Y")).toThrow("years or months");
+    expect(() => parseDuration("P1M")).toThrow("years or months");
   });
 
   it("refuses text that is not a duration", () => {
     for (const text of ["", "P", "PT", "1H", "P1H", "PT1.5H", "PT1S2M", "pt1s", "PT-1S", "PT1,5S", "P1DT", "5"]) {
-      expect(() => parseIsoDuration(text), text).toThrow(DataError);
+      expect(() => parseDuration(text), text).toThrow(DataError);
     }
   });
 
   it("refuses a duration that is too long to be a number of seconds", () => {
-    expect(() => parseIsoDuration(`PT${"9".repeat(400)}S`)).toThrow("too long");
+    expect(() => parseDuration(`PT${"9".repeat(400)}S`)).toThrow("too long");
   });
 
   it("rejects an argument of another type", () => {
-    expect(() => parseIsoDuration(json("5"))).toThrow("The duration must be a string, found 5.");
+    expect(() => parseDuration(json("5"))).toThrow("The duration must be a string, found 5.");
   });
 });
 
@@ -629,48 +637,48 @@ describe("identifier and integer lists", () => {
 
 describe("matching values", () => {
   const ids = (cardinality: "multiple" | "ordered", ...values: string[]): Value => {
-    const built = container(cardinality, "identifier", values);
+    const built = buildContainer(cardinality, "identifier", values);
     if (built === null) throw new Error("empty");
     return built;
   };
 
   it("matches single values of the same base type and value", () => {
-    expect(matchValues(single("integer", 5), single("integer", 5))).toBe(true);
-    expect(matchValues(single("integer", 5), single("integer", 6))).toBe(false);
-    expect(matchValues(nonNull(single("string", "a")), nonNull(single("string", "A")))).toBe(false);
-    expect(matchValues(single("boolean", true), single("boolean", false))).toBe(false);
+    expect(matchValues(buildSingle("integer", 5), buildSingle("integer", 5))).toBe(true);
+    expect(matchValues(buildSingle("integer", 5), buildSingle("integer", 6))).toBe(false);
+    expect(matchValues(nonNull(buildSingle("string", "a")), nonNull(buildSingle("string", "A")))).toBe(false);
+    expect(matchValues(buildSingle("boolean", true), buildSingle("boolean", false))).toBe(false);
   });
 
   it("never matches values of another base type or cardinality", () => {
-    expect(matchValues(single("integer", 1), single("float", 1))).toBe(false);
-    expect(matchValues(single("identifier", "a"), nonNull(single("string", "a")))).toBe(false);
-    expect(matchValues(single("identifier", "a"), ids("ordered", "a"))).toBe(false);
-    expect(matchValues(ids("ordered", "a"), single("identifier", "a"))).toBe(false);
+    expect(matchValues(buildSingle("integer", 1), buildSingle("float", 1))).toBe(false);
+    expect(matchValues(buildSingle("identifier", "a"), nonNull(buildSingle("string", "a")))).toBe(false);
+    expect(matchValues(buildSingle("identifier", "a"), ids("ordered", "a"))).toBe(false);
+    expect(matchValues(ids("ordered", "a"), buildSingle("identifier", "a"))).toBe(false);
     expect(matchValues(ids("multiple", "a"), ids("ordered", "a"))).toBe(false);
-    expect(matchValues(ids("ordered", "a"), nonNull(record([["a", single("identifier", "a")]])))).toBe(false);
+    expect(matchValues(ids("ordered", "a"), nonNull(buildRecord([["a", buildSingle("identifier", "a")]])))).toBe(false);
   });
 
   it("compares floats as SameValueZero: NaN matches NaN and 0 matches -0", () => {
-    expect(matchValues(single("float", Number.NaN), single("float", Number.NaN))).toBe(true);
-    expect(matchValues(single("float", 0), single("float", -0))).toBe(true);
-    expect(matchValues(single("float", 0.1 + 0.2), single("float", 0.3))).toBe(false);
+    expect(matchValues(buildSingle("float", Number.NaN), buildSingle("float", Number.NaN))).toBe(true);
+    expect(matchValues(buildSingle("float", 0), buildSingle("float", -0))).toBe(true);
+    expect(matchValues(buildSingle("float", 0.1 + 0.2), buildSingle("float", 0.3))).toBe(false);
   });
 
   it("ignores the order of a pair and keeps the order of a directed pair", () => {
-    expect(matchValues(single("pair", ["A", "B"]), single("pair", ["B", "A"]))).toBe(true);
-    expect(matchValues(single("pair", ["A", "B"]), single("pair", ["A", "C"]))).toBe(false);
-    expect(matchValues(single("directedPair", ["A", "B"]), single("directedPair", ["A", "B"]))).toBe(true);
-    expect(matchValues(single("directedPair", ["A", "B"]), single("directedPair", ["B", "A"]))).toBe(false);
+    expect(matchValues(buildSingle("pair", ["A", "B"]), buildSingle("pair", ["B", "A"]))).toBe(true);
+    expect(matchValues(buildSingle("pair", ["A", "B"]), buildSingle("pair", ["A", "C"]))).toBe(false);
+    expect(matchValues(buildSingle("directedPair", ["A", "B"]), buildSingle("directedPair", ["A", "B"]))).toBe(true);
+    expect(matchValues(buildSingle("directedPair", ["A", "B"]), buildSingle("directedPair", ["B", "A"]))).toBe(false);
   });
 
   it("matches points by both coordinates", () => {
-    expect(matchValues(single("point", [1, 2]), single("point", [1, 2]))).toBe(true);
-    expect(matchValues(single("point", [1, 2]), single("point", [2, 1]))).toBe(false);
+    expect(matchValues(buildSingle("point", [1, 2]), buildSingle("point", [1, 2]))).toBe(true);
+    expect(matchValues(buildSingle("point", [1, 2]), buildSingle("point", [2, 1]))).toBe(false);
   });
 
   it("matches files by reference, content type and name", () => {
     const file = (reference: string, mimeType: string, fileName?: string): Value =>
-      single("file", fileName === undefined ? { reference, mimeType } : { reference, mimeType, fileName });
+      buildSingle("file", fileName === undefined ? { reference, mimeType } : { reference, mimeType, fileName });
     expect(matchValues(file("r", "a/b", "n"), file("r", "a/b", "n"))).toBe(true);
     expect(matchValues(file("r", "a/b"), file("r", "a/b"))).toBe(true);
     expect(matchValues(file("r", "a/b", "n"), file("r", "a/b"))).toBe(false);
@@ -689,7 +697,7 @@ describe("matching values", () => {
   });
 
   it("matches the pairs of a multiple container whatever the order inside each pair", () => {
-    const pairs = (...values: [string, string][]): Value => nonNull(container("multiple", "pair", values));
+    const pairs = (...values: [string, string][]): Value => nonNull(buildContainer("multiple", "pair", values));
     expect(matchValues(pairs(["A", "B"], ["C", "D"]), pairs(["D", "C"], ["B", "A"]))).toBe(true);
     expect(matchValues(pairs(["A", "B"], ["C", "D"]), pairs(["A", "C"], ["B", "D"]))).toBe(false);
   });
@@ -701,58 +709,58 @@ describe("matching values", () => {
   });
 
   it("matches records with the same fields and values, whatever their order", () => {
-    const fields = (...entries: [string, Value][]): Value => nonNull(record(entries as [string, never][]));
-    const rock = single("boolean", true);
-    const paper = nonNull(single("string", "x"));
+    const fields = (...entries: [string, Value][]): Value => nonNull(buildRecord(entries as [string, never][]));
+    const rock = buildSingle("boolean", true);
+    const paper = nonNull(buildSingle("string", "x"));
     expect(matchValues(fields(["rock", rock], ["paper", paper]), fields(["paper", paper], ["rock", rock]))).toBe(true);
     expect(matchValues(fields(["rock", rock]), fields(["rock", rock], ["paper", paper]))).toBe(false);
-    expect(matchValues(fields(["rock", rock]), fields(["rock", single("boolean", false)]))).toBe(false);
+    expect(matchValues(fields(["rock", rock]), fields(["rock", buildSingle("boolean", false)]))).toBe(false);
     expect(matchValues(fields(["rock", rock]), fields(["scissors", rock]))).toBe(false);
-    expect(matchValues(fields(["n", single("integer", 1)]), fields(["n", single("float", 1)]))).toBe(false);
+    expect(matchValues(fields(["n", buildSingle("integer", 1)]), fields(["n", buildSingle("float", 1)]))).toBe(false);
   });
 
   it("rejects arguments of other types", () => {
-    expect(() => matchValues(json("null"), single("integer", 1))).toThrow(
+    expect(() => matchValues(json("null"), buildSingle("integer", 1))).toThrow(
       "The first value must be an object, found null.",
     );
-    expect(() => matchValues(single("integer", 1), json('"x"'))).toThrow(DataError);
+    expect(() => matchValues(buildSingle("integer", 1), json('"x"'))).toThrow(DataError);
   });
 });
 
 describe("promoting values", () => {
   it("turns an integer into a float and keeps its number, as weighted outcomes need", () => {
-    expect(promote(single("integer", 3), "float")).toEqual(single("float", 3));
+    expect(promote(buildSingle("integer", 3), "float")).toEqual(buildSingle("float", 3));
   });
 
   it("turns an integer into a duration, as assignment to a duration variable does", () => {
-    expect(promote(single("integer", 90), "duration")).toEqual(single("duration", 90));
+    expect(promote(buildSingle("integer", 90), "duration")).toEqual(buildSingle("duration", 90));
   });
 
   it("promotes every value of a container and keeps its order and cardinality", () => {
-    expect(promote(nonNull(container("ordered", "integer", [3, 1, 3])), "float")).toEqual(
-      container("ordered", "float", [3, 1, 3]),
+    expect(promote(nonNull(buildContainer("ordered", "integer", [3, 1, 3])), "float")).toEqual(
+      buildContainer("ordered", "float", [3, 1, 3]),
     );
-    expect(promote(nonNull(container("multiple", "integer", [2])), "float")).toEqual(
-      container("multiple", "float", [2]),
+    expect(promote(nonNull(buildContainer("multiple", "integer", [2])), "float")).toEqual(
+      buildContainer("multiple", "float", [2]),
     );
   });
 
   it("returns a value that has the target base type as it is", () => {
-    const value = single("float", 1.5);
+    const value = buildSingle("float", 1.5);
     expect(promote(value, "float")).toBe(value);
   });
 
   it("refuses every other conversion", () => {
-    expect(() => promote(single("float", 1.5), "duration")).toThrow(
+    expect(() => promote(buildSingle("float", 1.5), "duration")).toThrow(
       "Only a value of base type integer can be promoted to duration, found base type float.",
     );
-    expect(() => promote(nonNull(single("string", "a")), "float")).toThrow(DataError);
-    expect(() => promote(nonNull(record([["a", single("integer", 1)]])), "float")).toThrow("found a record");
+    expect(() => promote(nonNull(buildSingle("string", "a")), "float")).toThrow(DataError);
+    expect(() => promote(nonNull(buildRecord([["a", buildSingle("integer", 1)]])), "float")).toThrow("found a record");
   });
 
   it("rejects arguments of other types", () => {
     expect(() => promote(json("null"), "float")).toThrow(DataError);
-    expect(() => promote(single("integer", 1), json('"integer"'))).toThrow(
+    expect(() => promote(buildSingle("integer", 1), json('"integer"'))).toThrow(
       'The base type to promote to must be "float" or "duration", found "integer".',
     );
   });
@@ -778,55 +786,55 @@ const BINDING_EXAMPLES: readonly BindingRow[] = [
   {
     name: "boolean",
     declaration: declare("single", "boolean"),
-    value: single("boolean", true),
+    value: buildSingle("boolean", true),
     json: { base: { boolean: true } },
   },
   {
     name: "integer",
     declaration: declare("single", "integer"),
-    value: single("integer", 123),
+    value: buildSingle("integer", 123),
     json: { base: { integer: 123 } },
   },
   {
     name: "float",
     declaration: declare("single", "float"),
-    value: single("float", 23.23),
+    value: buildSingle("float", 23.23),
     json: { base: { float: 23.23 } },
   },
   {
     name: "string",
     declaration: declare("single", "string"),
-    value: nonNull(single("string", "string")),
+    value: nonNull(buildSingle("string", "string")),
     json: { base: { string: "string" } },
   },
   {
     name: "point",
     declaration: declare("single", "point"),
-    value: single("point", [10, 20]),
+    value: buildSingle("point", [10, 20]),
     json: { base: { point: [10, 20] } },
   },
   {
     name: "pair",
     declaration: declare("single", "pair"),
-    value: single("pair", ["A", "B"]),
+    value: buildSingle("pair", ["A", "B"]),
     json: { base: { pair: ["A", "B"] } },
   },
   {
     name: "directedPair",
     declaration: declare("single", "directedPair"),
-    value: single("directedPair", ["a", "b"]),
+    value: buildSingle("directedPair", ["a", "b"]),
     json: { base: { directedPair: ["a", "b"] } },
   },
   {
     name: "uri",
     declaration: declare("single", "uri"),
-    value: single("uri", "file:///somewhere.txt"),
+    value: buildSingle("uri", "file:///somewhere.txt"),
     json: { base: { uri: "file:///somewhere.txt" } },
   },
   {
     name: "identifier",
     declaration: declare("single", "identifier"),
-    value: single("identifier", "_identifier"),
+    value: buildSingle("identifier", "_identifier"),
     json: { base: { identifier: "_identifier" } },
   },
   // Multiple and ordered cardinality
@@ -834,31 +842,31 @@ const BINDING_EXAMPLES: readonly BindingRow[] = [
   {
     name: "boolean list",
     declaration: declare("multiple", "boolean"),
-    value: container("multiple", "boolean", [true, false, true, true]),
+    value: buildContainer("multiple", "boolean", [true, false, true, true]),
     json: { list: { boolean: [true, false, true, true] } },
   },
   {
     name: "integer list",
     declaration: declare("ordered", "integer"),
-    value: container("ordered", "integer", [2, 3, 5, 7, 11, 13]),
+    value: buildContainer("ordered", "integer", [2, 3, 5, 7, 11, 13]),
     json: { list: { integer: [2, 3, 5, 7, 11, 13] } },
   },
   {
     name: "float list",
     declaration: declare("multiple", "float"),
-    value: container("multiple", "float", BINDING_FLOATS),
+    value: buildContainer("multiple", "float", BINDING_FLOATS),
     json: { list: { float: BINDING_FLOATS } },
   },
   {
     name: "string list",
     declaration: declare("multiple", "string"),
-    value: container("multiple", "string", ["Another", "And Another"]),
+    value: buildContainer("multiple", "string", ["Another", "And Another"]),
     json: { list: { string: ["Another", "And Another"] } },
   },
   {
     name: "point list",
     declaration: declare("multiple", "point"),
-    value: container("multiple", "point", [
+    value: buildContainer("multiple", "point", [
       [123, 456],
       [640, 480],
     ]),
@@ -874,7 +882,7 @@ const BINDING_EXAMPLES: readonly BindingRow[] = [
   {
     name: "pair list",
     declaration: declare("multiple", "pair"),
-    value: container("multiple", "pair", [
+    value: buildContainer("multiple", "pair", [
       ["A", "B"],
       ["D", "C"],
     ]),
@@ -890,7 +898,7 @@ const BINDING_EXAMPLES: readonly BindingRow[] = [
   {
     name: "directedPair list",
     declaration: declare("ordered", "directedPair"),
-    value: container("ordered", "directedPair", [
+    value: buildContainer("ordered", "directedPair", [
       ["A", "B"],
       ["C", "D"],
     ]),
@@ -906,13 +914,13 @@ const BINDING_EXAMPLES: readonly BindingRow[] = [
   {
     name: "uri list",
     declaration: declare("multiple", "uri"),
-    value: container("multiple", "uri", ["file:///aFile.txt", "file:///abc.txt"]),
+    value: buildContainer("multiple", "uri", ["file:///aFile.txt", "file:///abc.txt"]),
     json: { list: { uri: ["file:///aFile.txt", "file:///abc.txt"] } },
   },
   {
     name: "identifier list",
     declaration: declare("multiple", "identifier"),
-    value: container("multiple", "identifier", ["_id1", "id2", "ID3"]),
+    value: buildContainer("multiple", "identifier", ["_id1", "id2", "ID3"]),
     json: { list: { identifier: ["_id1", "id2", "ID3"] } },
   },
   // Record cardinality
@@ -922,8 +930,8 @@ const BINDING_EXAMPLES: readonly BindingRow[] = [
 describe("the JSON of a value", () => {
   for (const { name, declaration, value, json: expected } of BINDING_EXAMPLES) {
     it(`writes and reads ${name} as the binding shows`, () => {
-      expect(toJsonValue(value, declaration)).toEqual(expected);
-      expect(fromJsonValue(expected, declaration)).toEqual(value);
+      expect(writeJsonValue(value, declaration)).toEqual(expected);
+      expect(readJsonValue(expected, declaration)).toEqual(value);
     });
   }
 
@@ -936,49 +944,49 @@ describe("the JSON of a value", () => {
         { name: "foo", base: null },
       ],
     };
-    const decoded = fromJsonValue(appendix, { cardinality: "record" });
+    const decoded = readJsonValue(appendix, { cardinality: "record" });
     expect(decoded).toEqual(
-      record([
-        ["rock", single("boolean", true)],
-        ["paper", nonNull(single("string", "Four score and seven years ago..."))],
-        ["scissors", single("integer", 4)],
+      buildRecord([
+        ["rock", buildSingle("boolean", true)],
+        ["paper", nonNull(buildSingle("string", "Four score and seven years ago..."))],
+        ["scissors", buildSingle("integer", 4)],
       ]),
     );
-    expect(toJsonValue(decoded, { cardinality: "record" })).toEqual({ record: appendix.record.slice(0, 3) });
+    expect(writeJsonValue(decoded, { cardinality: "record" })).toEqual({ record: appendix.record.slice(0, 3) });
   });
 
   it("reads a record whose fields are all NULL as NULL, and an empty record too", () => {
-    expect(fromJsonValue({ record: [{ name: "a", base: null }] }, { cardinality: "record" })).toBeNull();
-    expect(fromJsonValue({ record: [{ name: "a", base: { string: "" } }] }, { cardinality: "record" })).toBeNull();
-    expect(fromJsonValue({ record: [] }, { cardinality: "record" })).toBeNull();
+    expect(readJsonValue({ record: [{ name: "a", base: null }] }, { cardinality: "record" })).toBeNull();
+    expect(readJsonValue({ record: [{ name: "a", base: { string: "" } }] }, { cardinality: "record" })).toBeNull();
+    expect(readJsonValue({ record: [] }, { cardinality: "record" })).toBeNull();
   });
 
   it("keeps a field named __proto__ as data", () => {
-    const decoded = fromJsonValue(JSON.parse('{"record":[{"name":"__proto__","base":{"integer":1}}]}'), {
+    const decoded = readJsonValue(JSON.parse('{"record":[{"name":"__proto__","base":{"integer":1}}]}'), {
       cardinality: "record",
     });
-    expect(decoded).toEqual(record([["__proto__", single("integer", 1)]]));
+    expect(decoded).toEqual(buildRecord([["__proto__", buildSingle("integer", 1)]]));
   });
 
   it("reads an empty string and an empty list as NULL", () => {
-    expect(fromJsonValue({ base: { string: "" } }, declare("single", "string"))).toBeNull();
-    expect(fromJsonValue({ list: { integer: [] } }, declare("multiple", "integer"))).toBeNull();
+    expect(readJsonValue({ base: { string: "" } }, declare("single", "string"))).toBeNull();
+    expect(readJsonValue({ list: { integer: [] } }, declare("multiple", "integer"))).toBeNull();
   });
 
   it("reads intOrIdentifier as the declared integer or identifier", () => {
-    expect(fromJsonValue({ base: { intOrIdentifier: 123456 } }, declare("single", "integer"))).toEqual(
-      single("integer", 123456),
+    expect(readJsonValue({ base: { intOrIdentifier: 123456 } }, declare("single", "integer"))).toEqual(
+      buildSingle("integer", 123456),
     );
-    expect(fromJsonValue({ base: { intOrIdentifier: "_id" } }, declare("single", "identifier"))).toEqual(
-      single("identifier", "_id"),
+    expect(readJsonValue({ base: { intOrIdentifier: "_id" } }, declare("single", "identifier"))).toEqual(
+      buildSingle("identifier", "_id"),
     );
-    expect(fromJsonValue({ list: { intOrIdentifier: [2, 3] } }, declare("ordered", "integer"))).toEqual(
-      container("ordered", "integer", [2, 3]),
+    expect(readJsonValue({ list: { intOrIdentifier: [2, 3] } }, declare("ordered", "integer"))).toEqual(
+      buildContainer("ordered", "integer", [2, 3]),
     );
   });
 
   it("reads intOrIdentifier in a record by its JSON type: a number is an integer, a string an identifier", () => {
-    const decoded = fromJsonValue(
+    const decoded = readJsonValue(
       {
         record: [
           { name: "n", base: { intOrIdentifier: 7 } },
@@ -988,47 +996,47 @@ describe("the JSON of a value", () => {
       { cardinality: "record" },
     );
     expect(decoded).toEqual(
-      record([
-        ["n", single("integer", 7)],
-        ["i", single("identifier", "x")],
+      buildRecord([
+        ["n", buildSingle("integer", 7)],
+        ["i", buildSingle("identifier", "x")],
       ]),
     );
   });
 
   it("refuses intOrIdentifier for another declaration and a list that mixes both", () => {
-    expect(() => fromJsonValue({ base: { intOrIdentifier: 1 } }, declare("single", "float"))).toThrow(DataError);
-    expect(() => fromJsonValue({ base: { intOrIdentifier: "x" } }, declare("single", "integer"))).toThrow(DataError);
-    expect(() => fromJsonValue({ list: { intOrIdentifier: [2, "_id"] } }, declare("multiple", "integer"))).toThrow(
+    expect(() => readJsonValue({ base: { intOrIdentifier: 1 } }, declare("single", "float"))).toThrow(DataError);
+    expect(() => readJsonValue({ base: { intOrIdentifier: "x" } }, declare("single", "integer"))).toThrow(DataError);
+    expect(() => readJsonValue({ list: { intOrIdentifier: [2, "_id"] } }, declare("multiple", "integer"))).toThrow(
       DataError,
     );
   });
 
   it("writes a file as its reference with the content type and name, and reads it back", () => {
-    const file = single("file", { reference: "files/1", mimeType: "text/plain", fileName: "helloworld.txt" });
+    const file = buildSingle("file", { reference: "files/1", mimeType: "text/plain", fileName: "helloworld.txt" });
     const written = { base: { file: { reference: "files/1", mime: "text/plain", name: "helloworld.txt" } } };
-    expect(toJsonValue(file, declare("single", "file"))).toEqual(written);
-    expect(fromJsonValue(written, declare("single", "file"))).toEqual(file);
-    const unnamed = single("file", { reference: "files/2", mimeType: "image/png" });
-    expect(toJsonValue(unnamed, declare("single", "file"))).toStrictEqual({
+    expect(writeJsonValue(file, declare("single", "file"))).toEqual(written);
+    expect(readJsonValue(written, declare("single", "file"))).toEqual(file);
+    const unnamed = buildSingle("file", { reference: "files/2", mimeType: "image/png" });
+    expect(writeJsonValue(unnamed, declare("single", "file"))).toStrictEqual({
       base: { file: { reference: "files/2", mime: "image/png" } },
     });
   });
 
   it("refuses a file with its bytes inline, as the binding shows it", () => {
     const inline = { base: { file: { data: "cGxlYXN1cmUu", mime: "text/plain", name: "helloworld.txt" } } };
-    expect(() => fromJsonValue(inline, declare("single", "file"))).toThrow(
+    expect(() => readJsonValue(inline, declare("single", "file"))).toThrow(
       'A file must be a reference, not inline "data"',
     );
     expect(() =>
-      fromJsonValue({ base: { file: { reference: "r", mime: "a/b", size: 1 } } }, declare("single", "file")),
+      readJsonValue({ base: { file: { reference: "r", mime: "a/b", size: 1 } } }, declare("single", "file")),
     ).toThrow(DataError);
-    expect(() => fromJsonValue({ base: { file: { reference: "r" } } }, declare("single", "file"))).toThrow(DataError);
-    expect(() => fromJsonValue({ base: { file: "r" } }, declare("single", "file"))).toThrow(DataError);
+    expect(() => readJsonValue({ base: { file: { reference: "r" } } }, declare("single", "file"))).toThrow(DataError);
+    expect(() => readJsonValue({ base: { file: "r" } }, declare("single", "file"))).toThrow(DataError);
   });
 
   it("writes a duration as PT<seconds>S with the shortest decimal", () => {
     const duration = (seconds: number): unknown =>
-      toJsonValue(single("duration", seconds), declare("single", "duration"));
+      writeJsonValue(buildSingle("duration", seconds), declare("single", "duration"));
     expect(duration(0)).toEqual({ base: { duration: "PT0S" } });
     expect(duration(90)).toEqual({ base: { duration: "PT90S" } });
     expect(duration(1.5)).toEqual({ base: { duration: "PT1.5S" } });
@@ -1039,11 +1047,11 @@ describe("the JSON of a value", () => {
   });
 
   it("refuses a duration with years or months, and a duration that is not a string", () => {
-    const decode = (duration: unknown): unknown => fromJsonValue({ base: { duration } }, declare("single", "duration"));
+    const decode = (duration: unknown): unknown => readJsonValue({ base: { duration } }, declare("single", "duration"));
     expect(() => decode("P10Y3M20DT4H30M25S")).toThrow(
       'The duration "P10Y3M20DT4H30M25S" has years or months, which have no fixed length in seconds',
     );
-    expect(() => fromJsonValue({ list: { duration: ["PT1S", "P1M"] } }, declare("ordered", "duration"))).toThrow(
+    expect(() => readJsonValue({ list: { duration: ["PT1S", "P1M"] } }, declare("ordered", "duration"))).toThrow(
       "years or months",
     );
     expect(() => decode(5)).toThrow(DataError);
@@ -1058,28 +1066,28 @@ describe("the JSON of a value", () => {
         [Number.NEGATIVE_INFINITY, "-INF"],
         [-0, "-0"],
       ] as const) {
-        const written = toJsonValue(single(baseType, number), declaration);
+        const written = writeJsonValue(buildSingle(baseType, number), declaration);
         expect(written, `${baseType} ${spelling}`).toEqual({ base: { [baseType]: spelling } });
-        const read = fromJsonValue(written, declaration) as { value: number };
+        const read = readJsonValue(written, declaration) as { value: number };
         expect(Object.is(read.value, number)).toBe(true);
       }
     }
-    expect(() => fromJsonValue({ base: { float: "abc" } }, declare("single", "float"))).toThrow(
+    expect(() => readJsonValue({ base: { float: "abc" } }, declare("single", "float"))).toThrow(
       'A float must be a number or one of "NaN", "INF", "-INF" and "-0", found "abc".',
     );
-    expect(() => fromJsonValue({ base: { float: true } }, declare("single", "float"))).toThrow(DataError);
+    expect(() => readJsonValue({ base: { float: true } }, declare("single", "float"))).toThrow(DataError);
   });
 
   it("refuses a JSON integer that is not a safe integer", () => {
-    expect(() => fromJsonValue({ base: { integer: 1.5 } }, declare("single", "integer"))).toThrow(DataError);
+    expect(() => readJsonValue({ base: { integer: 1.5 } }, declare("single", "integer"))).toThrow(DataError);
     expect(() =>
-      fromJsonValue(JSON.parse('{"base":{"integer":9007199254740993}}'), declare("single", "integer")),
+      readJsonValue(JSON.parse('{"base":{"integer":9007199254740993}}'), declare("single", "integer")),
     ).toThrow(DataError);
-    expect(() => fromJsonValue({ base: { integer: "1" } }, declare("single", "integer"))).toThrow(DataError);
+    expect(() => readJsonValue({ base: { integer: "1" } }, declare("single", "integer"))).toThrow(DataError);
   });
 
   it("refuses JSON of another shape than its declaration", () => {
-    const decode = (value: unknown, declaration: ValueDeclaration): unknown => fromJsonValue(value, declaration);
+    const decode = (value: unknown, declaration: ValueDeclaration): unknown => readJsonValue(value, declaration);
     expect(() => decode({ list: null }, declare("single", "integer"))).toThrow(
       'The JSON of a single value is invalid: missing the property "base".',
     );
@@ -1108,7 +1116,7 @@ describe("the JSON of a value", () => {
   });
 
   it("refuses a record of another shape", () => {
-    const decode = (value: unknown): unknown => fromJsonValue({ record: value }, { cardinality: "record" });
+    const decode = (value: unknown): unknown => readJsonValue({ record: value }, { cardinality: "record" });
     expect(() => decode({})).toThrow("A record is invalid: expected an array, found an object.");
     expect(() => decode([5])).toThrow(DataError);
     expect(() => decode([{ name: "a" }])).toThrow('A record is invalid at [0]: missing the property "base".');
@@ -1126,37 +1134,42 @@ describe("the JSON of a value", () => {
   });
 
   it("refuses a value that differs from its declaration, and a value that is not one", () => {
-    expect(() => toJsonValue(single("integer", 1), declare("single", "float"))).toThrow(
+    expect(() => writeJsonValue(buildSingle("integer", 1), declare("single", "float"))).toThrow(
       "The value is single integer, but the declaration says single float.",
     );
-    expect(() => toJsonValue(single("integer", 1), declare("multiple", "integer"))).toThrow(DataError);
-    expect(() => toJsonValue(single("integer", 1), { cardinality: "record" })).toThrow("says a record");
-    expect(() => toJsonValue(container("ordered", "integer", [1]), declare("multiple", "integer"))).toThrow(DataError);
-    expect(() =>
-      toJsonValue(json('{"cardinality":"single","baseType":"integer","value":"x"}'), declare("single", "integer")),
-    ).toThrow(DataError);
-    expect(() =>
-      toJsonValue(json('{"cardinality":"single","baseType":"string","value":""}'), declare("single", "string")),
-    ).toThrow("empty string");
-    expect(() =>
-      toJsonValue(json('{"cardinality":"multiple","baseType":"integer","values":[]}'), declare("multiple", "integer")),
-    ).toThrow(DataError);
-    expect(() => toJsonValue(json('{"cardinality":"record","fields":{}}'), { cardinality: "record" })).toThrow(
+    expect(() => writeJsonValue(buildSingle("integer", 1), declare("multiple", "integer"))).toThrow(DataError);
+    expect(() => writeJsonValue(buildSingle("integer", 1), { cardinality: "record" })).toThrow("says a record");
+    expect(() => writeJsonValue(buildContainer("ordered", "integer", [1]), declare("multiple", "integer"))).toThrow(
       DataError,
     );
-    expect(() => toJsonValue(json("{}"), declare("single", "integer"))).toThrow(DataError);
-    expect(() => toJsonValue(json('"x"'), declare("single", "integer"))).toThrow(DataError);
+    expect(() =>
+      writeJsonValue(json('{"cardinality":"single","baseType":"integer","value":"x"}'), declare("single", "integer")),
+    ).toThrow(DataError);
+    expect(() =>
+      writeJsonValue(json('{"cardinality":"single","baseType":"string","value":""}'), declare("single", "string")),
+    ).toThrow("empty string");
+    expect(() =>
+      writeJsonValue(
+        json('{"cardinality":"multiple","baseType":"integer","values":[]}'),
+        declare("multiple", "integer"),
+      ),
+    ).toThrow(DataError);
+    expect(() => writeJsonValue(json('{"cardinality":"record","fields":{}}'), { cardinality: "record" })).toThrow(
+      DataError,
+    );
+    expect(() => writeJsonValue(json("{}"), declare("single", "integer"))).toThrow(DataError);
+    expect(() => writeJsonValue(json('"x"'), declare("single", "integer"))).toThrow(DataError);
   });
 
   it("ignores a base type declared for a record and refuses a declaration that is not one", () => {
-    expect(toJsonValue(null, { cardinality: "record", baseType: "integer" })).toEqual({ record: null });
-    expect(() => toJsonValue(null, { cardinality: "record", baseType: json('"unknown"') })).toThrow(DataError);
-    expect(() => toJsonValue(null, json("null"))).toThrow(
+    expect(writeJsonValue(null, { cardinality: "record", baseType: "integer" })).toEqual({ record: null });
+    expect(() => writeJsonValue(null, { cardinality: "record", baseType: json('"unknown"') })).toThrow(DataError);
+    expect(() => writeJsonValue(null, json("null"))).toThrow(
       "The declaration is invalid: expected an object, found null.",
     );
-    expect(() => toJsonValue(null, json('{"cardinality":"list","baseType":"integer"}'))).toThrow(DataError);
-    expect(() => toJsonValue(null, json('{"cardinality":"single"}'))).toThrow(DataError);
-    expect(() => fromJsonValue({ base: null }, json("5"))).toThrow(DataError);
+    expect(() => writeJsonValue(null, json('{"cardinality":"list","baseType":"integer"}'))).toThrow(DataError);
+    expect(() => writeJsonValue(null, json('{"cardinality":"single"}'))).toThrow(DataError);
+    expect(() => readJsonValue({ base: null }, json("5"))).toThrow(DataError);
   });
 
   it("reads or refuses arbitrary JSON with a DataError, and nothing else, whatever the declaration", () => {
@@ -1167,26 +1180,26 @@ describe("the JSON of a value", () => {
       [declare("single", "file"), { base: { file: { reference: "r", mime: "text/plain" } } }],
       [{ cardinality: "record" }, { record: [{ name: "a", base: { integer: 1 } }] }],
     ];
-    for (const [declaration, example] of declarations) fuzzJson((json) => fromJsonValue(json, declaration), [example]);
+    for (const [declaration, example] of declarations) fuzzJson((json) => readJsonValue(json, declaration), [example]);
   });
 });
 
 describe("wire values", () => {
   it("keeps a string exactly, line breaks included, so that an essay travels in state as written", () => {
-    const essay = nonNull(single("string", "Dear Ana,\r\n\n  I arrived.\t"));
-    const wire = toWireValue(essay, declare("single", "string"));
-    expect(fromWireValue(JSON.parse(JSON.stringify(wire)))).toEqual(essay);
+    const essay = nonNull(buildSingle("string", "Dear Ana,\r\n\n  I arrived.\t"));
+    const wire = writeWireValue(essay, declare("single", "string"));
+    expect(readWireValue(JSON.parse(JSON.stringify(wire)))).toEqual(essay);
   });
 
   it("wraps the JSON of a value in its cardinality and base type", () => {
-    expect(toWireValue(single("integer", 5), declare("single", "integer"))).toEqual({
+    expect(writeWireValue(buildSingle("integer", 5), declare("single", "integer"))).toEqual({
       cardinality: "single",
       baseType: "integer",
       value: { base: { integer: 5 } },
     });
     expect(
-      toWireValue(
-        container("ordered", "point", [
+      writeWireValue(
+        buildContainer("ordered", "point", [
           [1, 2],
           [3, 4],
         ]),
@@ -1207,75 +1220,75 @@ describe("wire values", () => {
   });
 
   it("has no base type for a record", () => {
-    const wire = toWireValue(record([["a", single("integer", 1)]]), { cardinality: "record" });
+    const wire = writeWireValue(buildRecord([["a", buildSingle("integer", 1)]]), { cardinality: "record" });
     expect(wire).toStrictEqual({ cardinality: "record", value: { record: [{ name: "a", base: { integer: 1 } }] } });
   });
 
   it("keeps the type of a NULL: the wire value of NULL has null for its value", () => {
-    expect(toWireValue(null, declare("multiple", "float"))).toStrictEqual({
+    expect(writeWireValue(null, declare("multiple", "float"))).toStrictEqual({
       cardinality: "multiple",
       baseType: "float",
       value: null,
     });
-    expect(fromWireValue({ cardinality: "multiple", baseType: "float", value: null })).toBeNull();
-    expect(fromWireValue({ cardinality: "single", baseType: "integer", value: { base: null } })).toBeNull();
+    expect(readWireValue({ cardinality: "multiple", baseType: "float", value: null })).toBeNull();
+    expect(readWireValue({ cardinality: "single", baseType: "integer", value: { base: null } })).toBeNull();
   });
 
   it("tells multiple from ordered, which the JSON binding does not", () => {
-    const ordered = container("ordered", "identifier", ["a", "b"]);
-    const multiple = container("multiple", "identifier", ["a", "b"]);
-    expect(toJsonValue(ordered, declare("ordered", "identifier"))).toEqual(
-      toJsonValue(multiple, declare("multiple", "identifier")),
+    const ordered = buildContainer("ordered", "identifier", ["a", "b"]);
+    const multiple = buildContainer("multiple", "identifier", ["a", "b"]);
+    expect(writeJsonValue(ordered, declare("ordered", "identifier"))).toEqual(
+      writeJsonValue(multiple, declare("multiple", "identifier")),
     );
-    expect(fromWireValue(toWireValue(ordered, declare("ordered", "identifier")))).toEqual(ordered);
-    expect(fromWireValue(toWireValue(multiple, declare("multiple", "identifier")))).toEqual(multiple);
+    expect(readWireValue(writeWireValue(ordered, declare("ordered", "identifier")))).toEqual(ordered);
+    expect(readWireValue(writeWireValue(multiple, declare("multiple", "identifier")))).toEqual(multiple);
   });
 
   it("refuses a duration with years or months", () => {
     expect(() =>
-      fromWireValue({ cardinality: "single", baseType: "duration", value: { base: { duration: "P1Y2M" } } }),
+      readWireValue({ cardinality: "single", baseType: "duration", value: { base: { duration: "P1Y2M" } } }),
     ).toThrow("years or months");
   });
 
   it("refuses what is not a wire value", () => {
-    expect(() => fromWireValue(json("null"))).toThrow("A wire value is invalid: expected an object, found null.");
-    expect(() => fromWireValue(json("[]"))).toThrow(DataError);
-    expect(() => fromWireValue({ baseType: "integer", value: null })).toThrow(DataError);
-    expect(() => fromWireValue({ cardinality: "list", baseType: "integer", value: null })).toThrow(DataError);
-    expect(() => fromWireValue({ cardinality: "single", value: null })).toThrow(DataError);
-    expect(() => fromWireValue({ cardinality: "single", baseType: "unknown", value: null })).toThrow(DataError);
-    expect(() => fromWireValue({ cardinality: "record", baseType: "integer", value: null })).toThrow(
+    expect(() => readWireValue(json("null"))).toThrow("A wire value is invalid: expected an object, found null.");
+    expect(() => readWireValue(json("[]"))).toThrow(DataError);
+    expect(() => readWireValue({ baseType: "integer", value: null })).toThrow(DataError);
+    expect(() => readWireValue({ cardinality: "list", baseType: "integer", value: null })).toThrow(DataError);
+    expect(() => readWireValue({ cardinality: "single", value: null })).toThrow(DataError);
+    expect(() => readWireValue({ cardinality: "single", baseType: "unknown", value: null })).toThrow(DataError);
+    expect(() => readWireValue({ cardinality: "record", baseType: "integer", value: null })).toThrow(
       'A wire value is invalid: unexpected property "baseType".',
     );
-    expect(() => fromWireValue({ cardinality: "single", baseType: "integer" })).toThrow(
+    expect(() => readWireValue({ cardinality: "single", baseType: "integer" })).toThrow(
       'A wire value is invalid: missing the property "value".',
     );
-    expect(() => fromWireValue({ cardinality: "single", baseType: "integer", value: null, extra: 1 })).toThrow(
+    expect(() => readWireValue({ cardinality: "single", baseType: "integer", value: null, extra: 1 })).toThrow(
       DataError,
     );
-    expect(() => fromWireValue({ cardinality: "single", baseType: "integer", value: { base: { float: 1 } } })).toThrow(
+    expect(() => readWireValue({ cardinality: "single", baseType: "integer", value: { base: { float: 1 } } })).toThrow(
       DataError,
     );
-    expect(() => fromWireValue({ cardinality: "single", baseType: "integer", value: { list: null } })).toThrow(
+    expect(() => readWireValue({ cardinality: "single", baseType: "integer", value: { list: null } })).toThrow(
       DataError,
     );
     expect(() =>
-      fromWireValue({ cardinality: "ordered", baseType: "integer", value: { base: { integer: 1 } } }),
+      readWireValue({ cardinality: "ordered", baseType: "integer", value: { base: { integer: 1 } } }),
     ).toThrow(DataError);
   });
 
   it("refuses a value that differs from its declaration", () => {
-    expect(() => toWireValue(single("integer", 1), declare("single", "string"))).toThrow(DataError);
-    expect(() => toWireValue(null, json("{}"))).toThrow(DataError);
+    expect(() => writeWireValue(buildSingle("integer", 1), declare("single", "string"))).toThrow(DataError);
+    expect(() => writeWireValue(null, json("{}"))).toThrow(DataError);
   });
 
   it("reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
-    fuzzJson(fromWireValue, [
-      toWireValue(single("integer", 1), declare("single", "integer")),
-      toWireValue(container("ordered", "identifier", ["a", "b"]), declare("ordered", "identifier")),
-      toWireValue(record([["a", single("float", 1.5)]]), { cardinality: "record" }),
-      toWireValue(single("duration", 2.5), declare("single", "duration")),
-      toWireValue(null, declare("multiple", "float")),
+    fuzzJson(readWireValue, [
+      writeWireValue(buildSingle("integer", 1), declare("single", "integer")),
+      writeWireValue(buildContainer("ordered", "identifier", ["a", "b"]), declare("ordered", "identifier")),
+      writeWireValue(buildRecord([["a", buildSingle("float", 1.5)]]), { cardinality: "record" }),
+      writeWireValue(buildSingle("duration", 2.5), declare("single", "duration")),
+      writeWireValue(null, declare("multiple", "float")),
     ]);
   });
 });
@@ -1845,17 +1858,19 @@ describe("properties", () => {
   };
   const baseType = fc.constantFrom(...BASE_TYPES);
 
-  const singleValue = baseType.chain((type) => primitives[type].map((value) => nonNull(single(type, value as never))));
+  const singleValue = baseType.chain((type) =>
+    primitives[type].map((value) => nonNull(buildSingle(type, value as never))),
+  );
   const containerValue = fc
     .tuple(baseType, fc.constantFrom("multiple", "ordered"))
     .chain(([type, cardinality]) =>
       fc
         .array(primitives[type], { minLength: 1, maxLength: 6 })
-        .map((values) => nonNull(container(cardinality, type, values))),
+        .map((values) => nonNull(buildContainer(cardinality, type, values))),
     );
   const recordValue = fc
     .uniqueArray(fc.tuple(identifier, singleValue), { minLength: 1, maxLength: 4, selector: ([name]) => name })
-    .map((fields) => nonNull(record(fields as [string, never][])));
+    .map((fields) => nonNull(buildRecord(fields as [string, never][])));
   const value = fc.oneof(singleValue, containerValue, recordValue);
 
   describe("bytes", () => {
@@ -1945,7 +1960,7 @@ describe("properties", () => {
       fc.assert(
         fc.property(value, (built) => {
           const declaration = declarationOf(built);
-          expect(fromJsonValue(toJsonValue(built, declaration), declaration)).toStrictEqual(built);
+          expect(readJsonValue(writeJsonValue(built, declaration), declaration)).toStrictEqual(built);
         }),
       );
     });
@@ -1953,9 +1968,9 @@ describe("properties", () => {
     it("reads back the wire value that it writes, with no declaration, also after it went through JSON text", () => {
       fc.assert(
         fc.property(value, (built) => {
-          const wire = toWireValue(built, declarationOf(built));
-          expect(fromWireValue(wire)).toStrictEqual(built);
-          expect(fromWireValue(JSON.parse(JSON.stringify(wire)))).toStrictEqual(built);
+          const wire = writeWireValue(built, declarationOf(built));
+          expect(readWireValue(wire)).toStrictEqual(built);
+          expect(readWireValue(JSON.parse(JSON.stringify(wire)))).toStrictEqual(built);
         }),
       );
     });
@@ -1967,9 +1982,9 @@ describe("properties", () => {
           baseType,
           (cardinality, type) => {
             const declaration = { cardinality, baseType: type };
-            const wire = JSON.parse(JSON.stringify(toWireValue(null, declaration)));
+            const wire = JSON.parse(JSON.stringify(writeWireValue(null, declaration)));
             expect(wire).toEqual({ cardinality, baseType: type, value: null });
-            expect(fromWireValue(wire)).toBeNull();
+            expect(readWireValue(wire)).toBeNull();
           },
         ),
       );
@@ -1979,8 +1994,8 @@ describe("properties", () => {
       fc.assert(
         fc.property(double, (seconds) => {
           const declaration: ValueDeclaration = { cardinality: "single", baseType: "duration" };
-          const written = toJsonValue(single("duration", seconds), declaration);
-          const read = fromJsonValue(written, declaration) as { value: number };
+          const written = writeJsonValue(buildSingle("duration", seconds), declaration);
+          const read = readJsonValue(written, declaration) as { value: number };
           expect(Object.is(read.value, seconds)).toBe(true);
           const text = (written as { base: { duration: string } }).base.duration;
           expect(/^-?PT[0-9]+(\.[0-9]+)?S$|^(NaN|-?INF|-0)$/.test(text), text).toBe(true);
@@ -1994,11 +2009,11 @@ describe("properties", () => {
       const sample = fc.array(fc.constantFrom("A", "B", "C"), { minLength: 1, maxLength: 8 });
       fc.assert(
         fc.property(sample, sample, (left, right) => {
-          const a = nonNull(container("multiple", "identifier", left));
-          const b = nonNull(container("multiple", "identifier", right));
+          const a = nonNull(buildContainer("multiple", "identifier", left));
+          const b = nonNull(buildContainer("multiple", "identifier", right));
           const sorted = (items: string[]): string => items.toSorted().join();
           expect(matchValues(a, b)).toBe(sorted(left) === sorted(right));
-          expect(matchValues(a, nonNull(container("multiple", "identifier", left.toReversed())))).toBe(true);
+          expect(matchValues(a, nonNull(buildContainer("multiple", "identifier", left.toReversed())))).toBe(true);
         }),
       );
     });
@@ -2007,8 +2022,8 @@ describe("properties", () => {
       const sample = fc.array(fc.constantFrom("A", "B"), { minLength: 1, maxLength: 6 });
       fc.assert(
         fc.property(sample, sample, (left, right) => {
-          const a = nonNull(container("ordered", "identifier", left));
-          const b = nonNull(container("ordered", "identifier", right));
+          const a = nonNull(buildContainer("ordered", "identifier", left));
+          const b = nonNull(buildContainer("ordered", "identifier", right));
           expect(matchValues(a, b)).toBe(left.join() === right.join());
         }),
       );
@@ -2017,10 +2032,10 @@ describe("properties", () => {
     it("matches a pair whichever way round and a directed pair only the same way round", () => {
       fc.assert(
         fc.property(identifier, identifier, (first, second) => {
-          expect(matchValues(single("pair", [first, second]), single("pair", [second, first]))).toBe(true);
-          expect(matchValues(single("directedPair", [first, second]), single("directedPair", [second, first]))).toBe(
-            first === second,
-          );
+          expect(matchValues(buildSingle("pair", [first, second]), buildSingle("pair", [second, first]))).toBe(true);
+          expect(
+            matchValues(buildSingle("directedPair", [first, second]), buildSingle("directedPair", [second, first])),
+          ).toBe(first === second);
         }),
       );
     });
@@ -2030,7 +2045,7 @@ describe("properties", () => {
       const kind = fc.constantFrom("multiple", "ordered");
       fc.assert(
         fc.property(kind, small, small, small, (cardinality, x, y, z) => {
-          const [a, b, c] = [x, y, z].map((items) => nonNull(container(cardinality, "identifier", items)));
+          const [a, b, c] = [x, y, z].map((items) => nonNull(buildContainer(cardinality, "identifier", items)));
           if (a === undefined || b === undefined || c === undefined) return;
           expect(matchValues(a, b)).toBe(matchValues(b, a));
           if (matchValues(a, b) && matchValues(b, c)) expect(matchValues(a, c)).toBe(true);
@@ -2046,8 +2061,8 @@ describe("properties", () => {
           fc.constantFrom("multiple", "ordered"),
           fc.constantFrom("float", "duration"),
           (items, cardinality, target) => {
-            const promoted = promote(nonNull(container(cardinality, "integer", items)), target);
-            expect(promoted).toEqual(container(cardinality, target, items));
+            const promoted = promote(nonNull(buildContainer(cardinality, "integer", items)), target);
+            expect(promoted).toEqual(buildContainer(cardinality, target, items));
             expect(promote(promoted, target)).toBe(promoted);
           },
         ),

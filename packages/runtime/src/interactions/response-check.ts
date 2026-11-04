@@ -335,7 +335,7 @@ function violationsOf(descriptor: InteractionDescriptor, value: Value | null): R
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
  */
-export function checkResponse(descriptor: InteractionDescriptor, response: Value | null): ResponseCheck {
+export function validateResponse(descriptor: InteractionDescriptor, response: Value | null): ResponseCheck {
   checkDescriptor(descriptor);
   const value = response === null ? null : normalizeValue(response);
   const reasons = [...new Set(violationsOf(descriptor, value))];

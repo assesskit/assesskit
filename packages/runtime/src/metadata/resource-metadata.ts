@@ -1,12 +1,12 @@
 import { checkRecord } from "../checks.js";
 import { DataError } from "../errors.js";
-import { ElementReader, locationOf, readError, type XmlElement } from "../xml/index.js";
+import { createReadError, ElementReader, locateElement, type XmlElement } from "../xml/index.js";
 import {
   type CurriculumStandardsSet,
   readCurriculumStandardsSet,
   writeCurriculumStandardsSet,
 } from "./curriculum-standards.js";
-import { checkReadArguments, expectRoot } from "./element-reading.js";
+import { checkReadArguments, expectRoot, type ReadMetadataOptions } from "./element-reading.js";
 import { CP_NAMESPACE, CSM_NAMESPACE, LOM_NAMESPACE, QTI_METADATA_NAMESPACE } from "./namespaces.js";
 import { type QtiMetadata, readQtiMetadata, writeQtiMetadata } from "./qti-metadata.js";
 
@@ -16,7 +16,7 @@ import { type QtiMetadata, readQtiMetadata, writeQtiMetadata } from "./qti-metad
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding, content packages}
  */
 export interface ResourceMetadata {
-  /** The `lom` element, kept as XML: the runtime types only its category `general` (see {@link lomGeneral}). */
+  /** The `lom` element, kept as XML: the runtime types only its category `general` (see {@link readLomGeneral}). */
   readonly lom?: XmlElement;
   /** The QTI metadata of the resource. */
   readonly qti?: QtiMetadata;
@@ -43,8 +43,8 @@ function readContainer(element: XmlElement, path: string | undefined): ResourceM
   if (lom !== undefined) expectRoot(lom, LOM_NAMESPACE, "lom");
   return {
     lom: lom?.element,
-    qti: qti && readQtiMetadata(qti.element, path),
-    curriculumStandards: curriculumStandards && readCurriculumStandardsSet(curriculumStandards.element, path),
+    qti: qti && readQtiMetadata(qti.element, { path }),
+    curriculumStandards: curriculumStandards && readCurriculumStandardsSet(curriculumStandards.element, { path }),
   };
 }
 
@@ -61,7 +61,9 @@ function onlyChild(
   const [first, second] = found;
   if (second !== undefined) {
     const message = `The metadata file must contain at most one ${name} element.`;
-    throw readError("assesskit/metadata/duplicate-element", message, locationOf(second, path, element.name));
+    throw createReadError("assesskit/metadata/duplicate-element", message, {
+      location: locateElement(second, path, { trail: element.name }),
+    });
   }
   return first;
 }
@@ -73,8 +75,8 @@ function readExternal(element: XmlElement, path: string | undefined): ResourceMe
   const rest = element.children.filter((child) => child !== qti && child !== curriculumStandards);
   return {
     lom: { ...element, children: rest },
-    qti: qti && readQtiMetadata(qti, path),
-    curriculumStandards: curriculumStandards && readCurriculumStandardsSet(curriculumStandards, path),
+    qti: qti && readQtiMetadata(qti, { path }),
+    curriculumStandards: curriculumStandards && readCurriculumStandardsSet(curriculumStandards, { path }),
   };
 }
 
@@ -86,7 +88,7 @@ function readExternal(element: XmlElement, path: string | undefined): ResourceMe
  * The `metadata` element has `qtiMetadata`, `curriculumStandardsMetadataSet` and `lom` in that order.
  *
  * @param element - The `metadata` element, or the `lom` root.
- * @param path - The path of the document, which the issues name.
+ * @param options - See {@link ReadMetadataOptions}.
  * @returns The parts of the metadata: the LOM, the QTI metadata and the curriculum standards.
  * @throws `DataError` when an argument has the wrong type.
  * @throws `ReadError` when a `metadata` element has anything but those three elements in that order, or one of the parts
@@ -94,8 +96,9 @@ function readExternal(element: XmlElement, path: string | undefined): ResourceMe
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding}
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
  */
-export function readResourceMetadata(element: XmlElement, path?: string): ResourceMetadata {
-  checkReadArguments(element, path);
+export function readResourceMetadata(element: XmlElement, options: ReadMetadataOptions = {}): ResourceMetadata {
+  checkReadArguments(element, options);
+  const { path } = options;
   return isLom(element) ? readExternal(element, path) : readContainer(element, path);
 }
 

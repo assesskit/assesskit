@@ -6,8 +6,18 @@ import type { XmlElement } from "./tree.js";
  * @param element - The element.
  * @returns Its child elements.
  */
-export function childElements(element: XmlElement): readonly XmlElement[] {
+export function listChildElements(element: XmlElement): readonly XmlElement[] {
   return element.children.filter((child): child is XmlElement => child.kind === "element");
+}
+
+/** The options of {@link findAttribute}. */
+export interface FindAttributeOptions {
+  /**
+   * The namespace URI of the attribute; the empty string is an attribute without a prefix.
+   *
+   * @defaultValue `""`
+   */
+  readonly namespace?: string;
 }
 
 /**
@@ -15,11 +25,15 @@ export function childElements(element: XmlElement): readonly XmlElement[] {
  *
  * @param element - The element.
  * @param name - The local name of the attribute.
- * @param namespace - The namespace URI of the attribute; the empty string is an attribute without a prefix.
- * @defaultValue `""`
+ * @param options - See {@link FindAttributeOptions}.
  * @returns The value of the attribute.
  */
-export function attributeOf(element: XmlElement, name: string, namespace = ""): string | undefined {
+export function findAttribute(
+  element: XmlElement,
+  name: string,
+  options: FindAttributeOptions = {},
+): string | undefined {
+  const { namespace = "" } = options;
   return element.attributes.find((attribute) => attribute.namespace === namespace && attribute.name === name)?.value;
 }
 
@@ -29,7 +43,7 @@ export function attributeOf(element: XmlElement, name: string, namespace = ""): 
  * @param element - The element.
  * @returns The text.
  */
-export function textOf(element: XmlElement): string {
+export function collectText(element: XmlElement): string {
   let text = "";
   for (const child of element.children) if (child.kind === "text" || child.kind === "cdata") text += child.value;
   return text;

@@ -4,16 +4,16 @@ import { dirname, join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
 import {
-  dependencyClosure,
+  createPackageResolvers,
+  listDependencies,
   type Manifest,
-  packageResolvers,
   parseXml,
   type QtiPackage,
   ReadError,
   readLtiLink,
   readManifest,
   readPackage,
-  resourcePath,
+  resolveResourcePath,
   writeManifest,
   writePackage,
 } from "../src/index.js";
@@ -137,7 +137,7 @@ describe("the 1EdTech example packages", () => {
       const pkg = readPackage(read(path));
       for (const resource of pkg.manifest.resources) {
         for (const file of resource.files) {
-          const target = resourcePath(pkg.manifest, resource, file.href);
+          const target = resolveResourcePath(pkg.manifest, resource, { href: file.href });
           if (target === undefined || !pkg.paths.includes(target))
             missing.push(`${path} ${resource.identifier} ${file.href}`);
         }
@@ -168,11 +168,12 @@ describe("the 1EdTech example packages", () => {
   it("resolve every item of every package to a document, as a QTI item or an LTI link, except the two that the schema rejects", () => {
     for (const path of profileZips) {
       const pkg = readPackage(read(path));
-      const resolvers = packageResolvers(pkg);
+      const resolvers = createPackageResolvers(pkg);
       for (const resource of pkg.manifest.resources.filter(
         ({ type }) => type === "imsqti_item_xmlv3p0" || type === "imsbasiclti_xmlv1p3",
       )) {
-        const target = resourcePath(pkg.manifest, resource, resource.href ?? resource.files[0]?.href) ?? "";
+        const target =
+          resolveResourcePath(pkg.manifest, resource, { href: resource.href ?? resource.files[0]?.href }) ?? "";
         if (SCHEMA_INVALID.has(`${path} ${resource.identifier}`)) {
           expect(() => resolvers.items(target, ""), `${path} ${resource.identifier}`).toThrow(ReadError);
           continue;
@@ -182,9 +183,10 @@ describe("the 1EdTech example packages", () => {
         expect(resolved.deliverable.kind).toBe(resource.type === "imsqti_item_xmlv3p0" ? "qti" : "lti");
       }
       for (const resource of pkg.manifest.resources.filter(({ type }) => type === "imsqti_test_xmlv3p0")) {
-        expect(pkg.document(resourcePath(pkg.manifest, resource) ?? "").kind, `${path} ${resource.identifier}`).toBe(
-          "test",
-        );
+        expect(
+          pkg.document(resolveResourcePath(pkg.manifest, resource) ?? "").kind,
+          `${path} ${resource.identifier}`,
+        ).toBe("test");
       }
     }
   });
@@ -207,7 +209,7 @@ describe("the ASI documents of the example packages", () => {
       for (const resource of pkg.manifest.resources) {
         const kind = Kinds.get(resource.type);
         if (kind === undefined) continue;
-        const target = resourcePath(pkg.manifest, resource, resource.href ?? resource.files[0]?.href);
+        const target = resolveResourcePath(pkg.manifest, resource, { href: resource.href ?? resource.files[0]?.href });
         if (SCHEMA_INVALID.has(`${path} ${resource.identifier}`)) {
           expect(() => pkg.document(target ?? ""), `${path} ${resource.identifier}`).toThrow(ReadError);
           continue;
@@ -230,7 +232,7 @@ describe("the ASI documents of the example packages", () => {
     for (const path of profileZips) {
       const pkg = readPackage(read(path));
       for (const resource of pkg.manifest.resources.filter(({ type }) => type === "imsqti_item_xmlv3p0")) {
-        const types = dependencyClosure(pkg.manifest, resource.identifier)
+        const types = listDependencies(pkg.manifest, resource.identifier)
           .slice(1)
           .map(({ type }) => type)
           .filter((type) => type === "imsqti_outcomes_xmlv3p0" || type === "imsqti_rptemplate_xmlv3p0");
@@ -291,7 +293,7 @@ describe("the LTI example packages", () => {
 
   it("resolve the item references of the test to LTI deliverables and a QTI item", () => {
     const pkg = readPackage(read("packaging/testWithLti/testWithLti.zip"));
-    const resolvers = packageResolvers(pkg);
+    const resolvers = createPackageResolvers(pkg);
     const kinds = ["links/Choicesingle_853928446.xml", "links/item1.xml", "elements.xml"].map(
       (href) => resolvers.items(href, "assessment.xml").deliverable.kind,
     );
@@ -308,7 +310,7 @@ describe("the shared stimulus example package", () => {
       ["Item2", "exemplar04.xml"],
       ["Item3", "exemplar05.xml"],
     ] as const) {
-      expect(dependencyClosure(pkg.manifest, item).map(({ identifier }) => identifier)).toEqual([item, "Stimulus1"]);
+      expect(listDependencies(pkg.manifest, item).map(({ identifier }) => identifier)).toEqual([item, "Stimulus1"]);
       const root = parseXml(pkg.file(file) ?? new Uint8Array());
       const reference = root.children.find(
         (child) => child.kind === "element" && child.name === "qti-assessment-stimulus-ref",
@@ -318,7 +320,7 @@ describe("the shared stimulus example package", () => {
           ? reference.attributes.find((attribute) => attribute.name === "href")?.value
           : undefined;
       expect(href).toBe("passages/unbelievableNight.xml");
-      expect(packageResolvers(pkg).stimuli(href ?? "", file).identifier).toBe(
+      expect(createPackageResolvers(pkg).stimuli(href ?? "", file).identifier).toBe(
         parseXml(pkg.file("passages/unbelievableNight.xml") ?? new Uint8Array()).attributes.find(
           (attribute) => attribute.name === "identifier",
         )?.value,
@@ -331,7 +333,7 @@ describe("the closure of the example tests", () => {
   it("reaches the items of a test and what they depend on", () => {
     const pkg: QtiPackage = readPackage(read("packaging/externalMetadata/externalMetadata.zip"));
     const test = pkg.manifest.resources.find(({ type }) => type === "imsqti_test_xmlv3p0");
-    const closure = dependencyClosure(pkg.manifest, test?.identifier ?? "").map(({ identifier }) => identifier);
+    const closure = listDependencies(pkg.manifest, test?.identifier ?? "").map(({ identifier }) => identifier);
     expect(closure).toEqual([
       "res_-TX_G06SAMP_000",
       "res_-TX_G06SAMP_001",

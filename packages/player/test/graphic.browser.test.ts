@@ -1,4 +1,4 @@
-import { container, single } from "@assesskit/runtime/values";
+import { buildContainer, buildSingle } from "@assesskit/runtime/values";
 import { describe, expect, it } from "vitest";
 import { userEvent } from "vitest/browser";
 import { EN_MESSAGES } from "../src/index.js";
@@ -110,11 +110,11 @@ describe("hotspot", () => {
   it("selects one hotspot by its face and gives a single identifier", async () => {
     const shown = await show(HOTSPOT('max-choices="1"'), declare("single", "identifier"));
     await userEvent.click(face(shown, "B"));
-    expect(shown.values).toEqual([single("identifier", "B")]);
+    expect(shown.values).toEqual([buildSingle("identifier", "B")]);
     expect(control(shown, "B").checked).toBe(true);
     expect(control(shown, "B").type).toBe("radio");
     await userEvent.click(face(shown, "A"));
-    expect(shown.values.at(-1)).toEqual(single("identifier", "A"));
+    expect(shown.values.at(-1)).toEqual(buildSingle("identifier", "A"));
     expect(control(shown, "B").checked).toBe(false);
   });
 
@@ -122,30 +122,30 @@ describe("hotspot", () => {
     const shown = await show(HOTSPOT('max-choices="1"'), declare("single", "identifier"));
     await userEvent.click(face(shown, "B"));
     await userEvent.click(face(shown, "B"));
-    expect(shown.values).toEqual([single("identifier", "B"), null]);
+    expect(shown.values).toEqual([buildSingle("identifier", "B"), null]);
     expect(control(shown, "B").checked).toBe(false);
     await userEvent.click(face(shown, "B"));
-    expect(shown.values.at(-1)).toEqual(single("identifier", "B"));
+    expect(shown.values.at(-1)).toEqual(buildSingle("identifier", "B"));
   });
 
   it("selects several hotspots, and says what to change when there are more than the maximum", async () => {
     const shown = await show(HOTSPOT('max-choices="2"'), declare("multiple", "identifier"));
     await userEvent.click(face(shown, "A"));
     await userEvent.click(face(shown, "B"));
-    expect(shown.values.at(-1)).toEqual(container("multiple", "identifier", ["A", "B"]));
+    expect(shown.values.at(-1)).toEqual(buildContainer("multiple", "identifier", ["A", "B"]));
     expect(hinted(shown)).toBe("");
     await userEvent.click(face(shown, "C"));
-    expect(shown.values.at(-1)).toEqual(container("multiple", "identifier", ["A", "B", "C"]));
+    expect(shown.values.at(-1)).toEqual(buildContainer("multiple", "identifier", ["A", "B", "C"]));
     expect(hinted(shown)).toBe("Select at most 2.");
     expect(control(shown, "C").getAttribute("aria-invalid")).toBe("true");
     await userEvent.click(face(shown, "A"));
-    expect(shown.values.at(-1)).toEqual(container("multiple", "identifier", ["B", "C"]));
+    expect(shown.values.at(-1)).toEqual(buildContainer("multiple", "identifier", ["B", "C"]));
     expect(hinted(shown)).toBe("");
   });
 
   it("shows the response it is given and ignores the candidate while it is disabled", async () => {
     const shown = await show(HOTSPOT('max-choices="2"'), declare("multiple", "identifier"));
-    shown.setValue("RESPONSE", container("multiple", "identifier", ["A", "C"]));
+    shown.setValue("RESPONSE", buildContainer("multiple", "identifier", ["A", "C"]));
     expect(shown.findAll<HTMLInputElement>("input.ak-control").map((input) => input.checked)).toEqual([
       true,
       false,
@@ -171,7 +171,7 @@ describe("hotspot", () => {
     const shown = await show(HOTSPOT('max-choices="2"'), declare("multiple", "identifier"));
     await userEvent.type(control(shown, "A"), " ");
     await userEvent.keyboard("{Tab}{Tab}{ }");
-    expect(shown.values.at(-1)).toEqual(container("multiple", "identifier", ["A", "C"]));
+    expect(shown.values.at(-1)).toEqual(buildContainer("multiple", "identifier", ["A", "C"]));
   });
 
   it("gives a hotspot drawn smaller than a target a target of 24 pixels", async () => {
@@ -189,9 +189,9 @@ describe("hotspot", () => {
   it("has no violation of WCAG 2.2 A and AA in any state", async () => {
     const shown = await show(HOTSPOT('max-choices="2"'), declare("multiple", "identifier"));
     expect(await axeViolations(shown.host)).toEqual([]);
-    shown.setValue("RESPONSE", container("multiple", "identifier", ["A", "B"]));
+    shown.setValue("RESPONSE", buildContainer("multiple", "identifier", ["A", "B"]));
     expect(await axeViolations(shown.host)).toEqual([]);
-    shown.setValue("RESPONSE", container("multiple", "identifier", ["A", "B", "C"]));
+    shown.setValue("RESPONSE", buildContainer("multiple", "identifier", ["A", "B", "C"]));
     expect(await axeViolations(shown.host)).toEqual([]);
     shown.interaction().disabled = true;
     expect(await axeViolations(shown.host)).toEqual([]);
@@ -205,7 +205,7 @@ describe("select point", () => {
   it("marks the point under a click, in the units of the image", async () => {
     const shown = await show(SELECT_POINT('max-choices="1"'), declare("single", "point"));
     await clickImage(shown, 120, 40);
-    expect(shown.values).toEqual([single("point", [120, 40])]);
+    expect(shown.values).toEqual([buildSingle("point", [120, 40])]);
     const box = inLayer(shown, shown.find(".ak-marker"));
     near(box.x + box.width / 2, 120);
     near(box.y + box.height / 2, 40);
@@ -226,7 +226,7 @@ describe("select point", () => {
     const one = await show(SELECT_POINT('max-choices="1"'), declare("single", "point"));
     await clickImage(one, 20, 20);
     await clickImage(one, 60, 60);
-    expect(one.values.at(-1)).toEqual(single("point", [60, 60]));
+    expect(one.values.at(-1)).toEqual(buildSingle("point", [60, 60]));
     expect(one.findAll(".ak-marker")).toHaveLength(1);
     const two = await show(SELECT_POINT('max-choices="2"'), declare("multiple", "point"));
     await clickImage(two, 20, 20);
@@ -242,7 +242,7 @@ describe("select point", () => {
     await clickImage(shown, 20, 20);
     await clickImage(shown, 60, 60);
     await userEvent.click(shown.findAll(".ak-marker")[0] as HTMLElement);
-    expect(shown.values.at(-1)).toEqual(container("multiple", "point", [[60, 60]]));
+    expect(shown.values.at(-1)).toEqual(buildContainer("multiple", "point", [[60, 60]]));
     expect(shown.root.activeElement).toBe(shown.find(".ak-surface"));
     await userEvent.click(shown.find(".ak-marker"));
     expect(shown.values.at(-1)).toBeNull();
@@ -258,7 +258,7 @@ describe("select point", () => {
     await userEvent.keyboard("{ArrowRight}{ArrowDown}{Enter}");
     await userEvent.keyboard("{Shift>}{ArrowLeft}{ArrowLeft}{/Shift}{ }");
     expect(shown.values.at(-1)).toEqual(
-      container("multiple", "point", [
+      buildContainer("multiple", "point", [
         [100, 50],
         [105, 55],
         [103, 55],
@@ -304,7 +304,7 @@ describe("graphic order", () => {
     await userEvent.click(face(shown, "B"));
     await userEvent.click(face(shown, "C"));
     await userEvent.click(face(shown, "A"));
-    expect(shown.values.at(-1)).toEqual(container("ordered", "identifier", ["B", "C", "A"]));
+    expect(shown.values.at(-1)).toEqual(buildContainer("ordered", "identifier", ["B", "C", "A"]));
     // The hotspots stand in document order: A is third, B first, C second.
     expect(["A", "B", "C"].map((identifier) => badge(shown, identifier).textContent)).toEqual([
       "Position 3",
@@ -325,7 +325,7 @@ describe("graphic order", () => {
     const shown = await show(ORDER(), declare("ordered", "identifier"));
     for (const identifier of ["A", "B", "C"]) await userEvent.click(face(shown, identifier));
     await userEvent.click(face(shown, "A"));
-    expect(shown.values.at(-1)).toEqual(container("ordered", "identifier", ["B", "C"]));
+    expect(shown.values.at(-1)).toEqual(buildContainer("ordered", "identifier", ["B", "C"]));
     expect(badge(shown, "C").textContent).toBe("Position 2");
     expect(badge(shown, "A").hidden).toBe(true);
   });
@@ -333,7 +333,7 @@ describe("graphic order", () => {
   it("says what to change when there are more hotspots than the maximum", async () => {
     const shown = await show(ORDER('min-choices="1" max-choices="2"'), declare("ordered", "identifier"));
     for (const identifier of ["A", "B", "C"]) await userEvent.click(face(shown, identifier));
-    expect(shown.values.at(-1)).toEqual(container("ordered", "identifier", ["A", "B", "C"]));
+    expect(shown.values.at(-1)).toEqual(buildContainer("ordered", "identifier", ["A", "B", "C"]));
     expect(hinted(shown)).toBe("Place at most 2.");
   });
 
@@ -341,7 +341,7 @@ describe("graphic order", () => {
     const shown = await show(ORDER(), declare("ordered", "identifier"));
     await userEvent.type(control(shown, "C"), " ");
     await userEvent.keyboard("{Shift>}{Tab}{/Shift}{Shift>}{Tab}{/Shift} ");
-    expect(shown.values.at(-1)).toEqual(container("ordered", "identifier", ["C", "A"]));
+    expect(shown.values.at(-1)).toEqual(buildContainer("ordered", "identifier", ["C", "A"]));
     expect(await axeViolations(shown.host)).toEqual([]);
   });
 });
@@ -372,7 +372,7 @@ describe("graphic associate", () => {
     expect(pressed(shown, "A")).toBe("true");
     expect(announced(shown)).toBe(EN_MESSAGES.graphicChooseSecond);
     await choose(shown, "B");
-    expect(shown.values).toEqual([container("multiple", "pair", [["A", "B"]])]);
+    expect(shown.values).toEqual([buildContainer("multiple", "pair", [["A", "B"]])]);
     expect(pressed(shown, "A")).toBe("false");
     expect(announced(shown)).toBe(EN_MESSAGES.graphicJoined);
   });
@@ -428,17 +428,17 @@ describe("graphic associate", () => {
     const shown = await show(ASSOCIATE('max-associations="1"'), declare("single", "pair"));
     await choose(shown, "B");
     await choose(shown, "C");
-    expect(shown.values).toEqual([single("pair", ["B", "C"])]);
+    expect(shown.values).toEqual([buildSingle("pair", ["B", "C"])]);
   });
 
   it("shows the pairs it is given and is operated by the keyboard alone", async () => {
     const shown = await show(ASSOCIATE(), declare("multiple", "pair"));
-    shown.setValue("RESPONSE", container("multiple", "pair", [["A", "B"]]));
+    shown.setValue("RESPONSE", buildContainer("multiple", "pair", [["A", "B"]]));
     expect(shown.findAll(".ak-links line")).toHaveLength(2);
     await userEvent.type(control(shown, "B"), " ");
     await userEvent.keyboard("{Tab} ");
     expect(shown.values.at(-1)).toEqual(
-      container("multiple", "pair", [
+      buildContainer("multiple", "pair", [
         ["A", "B"],
         ["B", "C"],
       ]),
@@ -489,7 +489,7 @@ describe("graphic gap match", () => {
     expect(interaction.hasAttribute("data-ak-placing")).toBe(true);
     await userEvent.click(drop(shown, "H1"));
     // The choices are the source of each directed pair and the gaps the target.
-    expect(shown.values).toEqual([container("multiple", "directedPair", [["X", "H1"]])]);
+    expect(shown.values).toEqual([buildContainer("multiple", "directedPair", [["X", "H1"]])]);
     expect(interaction.hasAttribute("data-ak-placing")).toBe(false);
     expect(within(area(shown, "H1"), ".ak-chip-button").textContent).toBe("ex");
   });
@@ -506,7 +506,7 @@ describe("graphic gap match", () => {
     expect(area(shown, "H2").querySelector(".ak-drop")).toBeNull();
     await userEvent.click(within(area(shown, "H2"), ".ak-remove"));
     expect(shown.values.at(-1)).toEqual(
-      container("multiple", "directedPair", [
+      buildContainer("multiple", "directedPair", [
         ["X", "H1"],
         ["Y", "H2"],
       ]),
@@ -535,9 +535,9 @@ describe("graphic gap match", () => {
   it("drags a choice onto a gap, and a placed choice to another gap", async () => {
     const shown = await show(GAP_MATCH(), declare("multiple", "directedPair"));
     await userEvent.dragAndDrop(token(shown, "X"), drop(shown, "H1"));
-    expect(shown.values).toEqual([container("multiple", "directedPair", [["X", "H1"]])]);
+    expect(shown.values).toEqual([buildContainer("multiple", "directedPair", [["X", "H1"]])]);
     await userEvent.dragAndDrop(within(area(shown, "H1"), ".ak-chip-button"), drop(shown, "H2"));
-    expect(shown.values.at(-1)).toEqual(container("multiple", "directedPair", [["X", "H2"]]));
+    expect(shown.values.at(-1)).toEqual(buildContainer("multiple", "directedPair", [["X", "H2"]]));
     expect(within(area(shown, "H2"), ".ak-chip-button").textContent).toBe("ex");
   });
 
@@ -559,14 +559,14 @@ describe("graphic gap match", () => {
     const shown = await show(GAP_MATCH(), declare("multiple", "directedPair"));
     await userEvent.type(token(shown, "Y"), " ");
     await userEvent.type(drop(shown, "H2"), " ");
-    expect(shown.values).toEqual([container("multiple", "directedPair", [["Y", "H2"]])]);
+    expect(shown.values).toEqual([buildContainer("multiple", "directedPair", [["Y", "H2"]])]);
     await userEvent.type(within<HTMLButtonElement>(area(shown, "H2"), ".ak-remove"), "{Enter}");
     expect(shown.values.at(-1)).toBeNull();
   });
 
   it("shows the pairs it is given", async () => {
     const shown = await show(GAP_MATCH(), declare("multiple", "directedPair"));
-    shown.setValue("RESPONSE", container("multiple", "directedPair", [["Z", "H1"]]));
+    shown.setValue("RESPONSE", buildContainer("multiple", "directedPair", [["Z", "H1"]]));
     expect(within(area(shown, "H1"), ".ak-chip-button img")).toBeDefined();
     expect(area(shown, "Z").hidden).toBe(true);
     expect(shown.values).toEqual([]);
@@ -604,7 +604,7 @@ describe("position object", () => {
     await userEvent.click(hand(shown));
     expect(hand(shown).getAttribute("aria-pressed")).toBe("true");
     await clickImage(shown, 120, 40);
-    expect(shown.values).toEqual([container("multiple", "point", [[120, 40]])]);
+    expect(shown.values).toEqual([buildContainer("multiple", "point", [[120, 40]])]);
     await settle();
     // The center of a 16 by 16 image is its middle, so the object stands from (112, 32) to (128, 48).
     expect(inLayer(shown, shown.find(".ak-object"))).toMatchObject({ x: 112, y: 32, width: 16, height: 16 });
@@ -616,7 +616,7 @@ describe("position object", () => {
     const shown = await show(POSITION('max-choices="1" center-point="0 0"'), declare("single", "point", "R0"));
     await userEvent.click(hand(shown));
     await clickImage(shown, 120, 40);
-    expect(shown.values).toEqual([single("point", [120, 40])]);
+    expect(shown.values).toEqual([buildSingle("point", [120, 40])]);
     await settle();
     expect(inLayer(shown, shown.find(".ak-object"))).toMatchObject({ x: 120, y: 40 });
   });
@@ -627,7 +627,7 @@ describe("position object", () => {
       await userEvent.click(hand(one));
       await clickImage(one, x, 50);
     }
-    expect(one.values.at(-1)).toEqual(single("point", [60, 50]));
+    expect(one.values.at(-1)).toEqual(buildSingle("point", [60, 50]));
     expect(one.findAll(".ak-object")).toHaveLength(1);
     const two = await show(POSITION('max-choices="2"'), declare("multiple", "point", "R0"));
     for (const x of [20, 60, 100]) {
@@ -643,12 +643,12 @@ describe("position object", () => {
     await userEvent.dragAndDrop(hand(shown), shown.find("qti-position-object-stage > img"), {
       targetPosition: { x: 100, y: 50 },
     });
-    expect(shown.values).toEqual([container("multiple", "point", [[100, 50]])]);
+    expect(shown.values).toEqual([buildContainer("multiple", "point", [[100, 50]])]);
     await settle();
     await userEvent.dragAndDrop(shown.find(".ak-object"), shown.find("qti-position-object-stage > img"), {
       targetPosition: { x: 40, y: 20 },
     });
-    expect(shown.values.at(-1)).toEqual(container("multiple", "point", [[40, 20]]));
+    expect(shown.values.at(-1)).toEqual(buildContainer("multiple", "point", [[40, 20]]));
     expect(shown.values).toHaveLength(2);
   });
 
@@ -677,7 +677,7 @@ describe("position object", () => {
     expect(shown.root.activeElement).toBe(shown.find(".ak-surface"));
     expect(shown.find(".ak-crosshair").hidden).toBe(false);
     await userEvent.keyboard("{ArrowRight}{ArrowRight}{ArrowDown}{Enter}");
-    expect(shown.values).toEqual([container("multiple", "point", [[110, 55]])]);
+    expect(shown.values).toEqual([buildContainer("multiple", "point", [[110, 55]])]);
     expect(shown.root.activeElement).toBe(hand(shown));
   });
 
@@ -699,7 +699,7 @@ describe("position object", () => {
     );
     await userEvent.click(shown.findAll<HTMLElement>("button.ak-pick")[1] as HTMLElement);
     await clickImage(shown, 150, 30, ".ak-surface[tabindex='0']");
-    expect(shown.responses).toEqual([{ responseIdentifier: "R1", value: single("point", [150, 30]) }]);
+    expect(shown.responses).toEqual([{ responseIdentifier: "R1", value: buildSingle("point", [150, 30]) }]);
     expect(shown.findAll("qti-position-object-stage").length).toBe(1);
   });
 
@@ -898,7 +898,7 @@ describe("drawing", () => {
   it("shows a stored drawing that the player gives as the picture to draw on, and draws on it", async () => {
     const shown = await show(DRAWING(), declare("single", "file"));
     const earlier = picture(200, 100, "#2e7d32");
-    shown.setValue("RESPONSE", single("file", { reference: earlier, mimeType: "image/png" }));
+    shown.setValue("RESPONSE", buildSingle("file", { reference: earlier, mimeType: "image/png" }));
     await settle();
     expect(shown.find("img").getAttribute("src")).toBe(earlier);
     await drag(shown, [20, 20], [120, 20]);
@@ -916,7 +916,7 @@ describe("drawing", () => {
     const shown = await show(DRAWING(), declare("single", "file"));
     // Bytes that are no image: the browser loads the file and cannot decode it.
     const broken = `data:image/png;base64,${btoa("not an image")}`;
-    shown.setValue("RESPONSE", single("file", { reference: broken, mimeType: "image/png" }));
+    shown.setValue("RESPONSE", buildSingle("file", { reference: broken, mimeType: "image/png" }));
     await waitFor(() => expect(shown.find(".ak-hint").textContent).toBe(EN_MESSAGES.drawLoadFailed));
     expect(shown.find(".ak-surface").getAttribute("aria-invalid")).toBe("true");
     expect(shown.find(".ak-surface").getAttribute("aria-describedby")).toContain(shown.find(".ak-hint").id);

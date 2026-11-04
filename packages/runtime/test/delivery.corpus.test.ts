@@ -7,43 +7,43 @@ import {
   type AssessmentItem,
   type AssessmentTest,
   applyItemAction,
+  buildContainer,
+  buildSingle,
   type CandidateAction,
-  container,
   createEngine,
   createItemVariables,
+  createPackageResolvers,
   createRandom,
   type DeliveryState,
+  deriveItemFeedback,
+  deriveSessionStatus,
   deserializeState,
   type Engine,
+  findNextItem,
   type ItemAction,
   type ItemKey,
   type ItemSession,
   type ItemSessionContext,
   type ItemSessionView,
   type ItemStep,
-  itemFeedback,
-  nextItem,
-  packageResolvers,
-  parseCandidateAction,
-  planItems,
+  listPlanItems,
   planTest,
   presentItem,
   readAsi,
+  readCandidateAction,
+  readView,
+  resolveSessionControl,
+  resolveStandaloneSessionControl,
   resolveStructure,
-  resultStatus,
+  selectModalFeedback,
   serializeState,
-  sessionControl,
-  single,
-  standaloneSessionControl,
   startItemSession,
   type TestScope,
   type TestStructure,
   timeLimits,
   type Value,
   validateAsi,
-  viewFromJson,
-  viewToJson,
-  visibleModalFeedback,
+  writeView,
 } from "../src/index.js";
 import { readPackageFile } from "../src/node/index.js";
 import { exampleItems } from "./corpus-items.js";
@@ -94,7 +94,7 @@ function answers(structure: TestStructure, given: Readonly<Record<string, string
     const answer = given[ref];
     const responses = new Map(variables.responses).set(
       "RESPONSE",
-      answer === undefined ? null : single("identifier", answer),
+      answer === undefined ? null : buildSingle("identifier", answer),
     );
     return { ref: node.model, item: ITEM, variables: { ...variables, responses } };
   };
@@ -110,9 +110,9 @@ function walk(structure: TestStructure, given: Readonly<Record<string, string>>)
   const plan = planTest(structure, { random: createRandom(1) });
   const met: string[] = [];
   for (
-    let at = nextItem(structure, plan, undefined, rules);
+    let at = findNextItem(structure, plan, undefined, rules);
     at !== undefined;
-    at = nextItem(structure, plan, at, rules)
+    at = findNextItem(structure, plan, at, rules)
   ) {
     met.push(shown(at));
   }
@@ -150,7 +150,7 @@ function turn(
       type: "set-responses",
       item: KEY,
       responses: new Map(
-        Object.entries(responses).map(([identifier, choice]) => [identifier, single("identifier", choice)]),
+        Object.entries(responses).map(([identifier, choice]) => [identifier, buildSingle("identifier", choice)]),
       ),
       at,
     },
@@ -175,7 +175,7 @@ describe("the adaptive items of the examples", () => {
     // Its qti-member has the container first, where the information model wants the single value, and for the correct response
     // it sets the multiple FEEDBACK to a single value, so that every run fails.
     const item = itemAt("packaging/items/feedback_adaptive.xml");
-    const context: ItemSessionContext = { item, control: standaloneSessionControl(), random: createRandom(1) };
+    const context: ItemSessionContext = { item, control: resolveStandaloneSessionControl(), random: createRandom(1) };
     const member =
       "The operator qti-member takes multiple or ordered boolean or directedPair or file or float or identifier or integer or pair or point or string or uri operands, found a single identifier.";
     const details: (string | undefined)[] = [];
@@ -186,14 +186,14 @@ describe("the adaptive items of the examples", () => {
       session = step.session;
       expect(step.events.map(({ type }) => type)).toEqual(["attempt-ended", "processing-failed"]);
       details.push(step.events[1]?.detail);
-      expect([session.status, session.variables.responses.get("numAttempts"), resultStatus(session, item)]).toEqual([
-        "interacting",
-        single("integer", attempt + 1),
-        "pendingResponseProcessing",
-      ]);
+      expect([
+        session.status,
+        session.variables.responses.get("numAttempts"),
+        deriveSessionStatus(session, item),
+      ]).toEqual(["interacting", buildSingle("integer", attempt + 1), "pendingResponseProcessing"]);
       expect([outcomeOf(session, "SCORE"), outcomeOf(session, "completionStatus")]).toEqual([
-        single("float", 0),
-        single("identifier", "unknown"),
+        buildSingle("float", 0),
+        buildSingle("identifier", "unknown"),
       ]);
     }
     expect(details).toEqual([
@@ -206,11 +206,11 @@ describe("the adaptive items of the examples", () => {
 
   it("gives the hint of hint.xml through its end attempt interaction, and scores the next attempt", () => {
     const item = itemAt("packaging/items/hint.xml");
-    const context: ItemSessionContext = { item, control: standaloneSessionControl(), random: createRandom(1) };
+    const context: ItemSessionContext = { item, control: resolveStandaloneSessionControl(), random: createRandom(1) };
     const hinted = accepted(turn(sessionOf(context), context, {}, "HINTREQUEST"));
     expect([hinted.variables.responses.get("HINTREQUEST"), outcomeOf(hinted, "FEEDBACK")]).toEqual([
-      single("boolean", true),
-      single("identifier", "HINT"),
+      buildSingle("boolean", true),
+      buildSingle("identifier", "HINT"),
     ]);
     const answered = accepted(turn(hinted, context, { RESPONSE: "MGH001C" }));
     expect([
@@ -220,27 +220,27 @@ describe("the adaptive items of the examples", () => {
       answered.variables.responses.get("numAttempts"),
       answered.status,
     ]).toEqual([
-      single("boolean", false),
-      single("identifier", "NOHINT"),
-      single("float", 1),
-      single("integer", 2),
+      buildSingle("boolean", false),
+      buildSingle("identifier", "NOHINT"),
+      buildSingle("float", 1),
+      buildSingle("integer", 2),
       "interacting",
     ]);
   });
 
   it("plays the Monty Hall game of adaptive.xml to completion: the switch wins and the strategy is asked", () => {
     const item = itemAt("packaging/items/adaptive.xml");
-    const context: ItemSessionContext = { item, control: standaloneSessionControl(), random: createRandom(3) };
+    const context: ItemSessionContext = { item, control: resolveStandaloneSessionControl(), random: createRandom(3) };
     const first = accepted(turn(sessionOf(context), context, { DOOR: "DoorA" }));
     const revealed = outcomeOf(first, "REVEALED");
     if (revealed?.cardinality !== "single") throw new Error("Monty reveals one door.");
     const other = ["DoorB", "DoorC"].find((door) => door !== revealed.value) ?? "";
     expect([outcomeOf(first, "STORY"), outcomeOf(first, "FIRSTDOOR"), outcomeOf(first, "completionStatus")]).toEqual([
-      single("identifier", "tempter"),
-      single("identifier", "DoorA"),
-      single("identifier", "incomplete"),
+      buildSingle("identifier", "tempter"),
+      buildSingle("identifier", "DoorA"),
+      buildSingle("identifier", "incomplete"),
     ]);
-    expect(outcomeOf(first, "CLOSED")).toEqual(container("multiple", "identifier", ["DoorA", other]));
+    expect(outcomeOf(first, "CLOSED")).toEqual(buildContainer("multiple", "identifier", ["DoorA", other]));
     const second = accepted(turn(first, context, { DOOR: other }));
     expect([
       outcomeOf(second, "STORY"),
@@ -248,19 +248,19 @@ describe("the adaptive items of the examples", () => {
       outcomeOf(second, "SCORE"),
       outcomeOf(second, "FEEDBACK"),
     ]).toEqual([
-      single("identifier", "prize"),
-      single("identifier", other),
-      single("float", 1),
-      single("identifier", "poser"),
+      buildSingle("identifier", "prize"),
+      buildSingle("identifier", other),
+      buildSingle("float", 1),
+      buildSingle("identifier", "poser"),
     ]);
     const last = accepted(turn(second, context, { RESPONSE: "switchStrategy" }));
     expect([last.status, outcomeOf(last, "SCORE"), outcomeOf(last, "completionStatus")]).toEqual([
       "closed",
-      single("float", 3),
-      single("identifier", "completed"),
+      buildSingle("float", 3),
+      buildSingle("identifier", "completed"),
     ]);
-    const feedback = itemFeedback(last, item, context.control);
-    expect(visibleModalFeedback(item, feedback.outcomes).map(({ identifier }) => identifier)).toEqual([
+    const feedback = deriveItemFeedback(last, item, context.control);
+    expect(selectModalFeedback(item, feedback.outcomes).map(({ identifier }) => identifier)).toEqual([
       "switchStrategy",
     ]);
   });
@@ -273,7 +273,7 @@ describe("the tests of the examples", () => {
       const structure = structureAt(path);
       for (let seed = 1; seed <= 20; seed++) {
         const plan = planTest(structure, { random: createRandom(seed) });
-        const keys = planItems(plan);
+        const keys = listPlanItems(plan);
         expect(keys.length, path).toBeGreaterThan(0);
         for (const key of keys) expect(structure.itemRef(key.ref), path).toBeDefined();
         const counts = new Map<string, number>();
@@ -358,7 +358,7 @@ describe("the tests of the examples", () => {
     const structure = structureAt("tests/complete.xml");
     const item = structure.itemRef("A1");
     if (item === undefined) throw new Error("No A1.");
-    expect(sessionControl(item)).toEqual({
+    expect(resolveSessionControl(item)).toEqual({
       maxAttempts: 1,
       showFeedback: true,
       allowReview: false,
@@ -375,10 +375,13 @@ describe("the tests of the examples", () => {
     if (part === undefined) throw new Error("No part.");
     expect(timeLimits(structure.test)).toEqual({ minTime: 600, maxTime: 3600, allowLateSubmission: false });
     expect(timeLimits(part)).toEqual({ maxTime: 3600, allowLateSubmission: false });
-    expect(timeLimits(structure.test, { kind: "time-multiplier", multiplier: 1.25 }).maxTime).toBe(4500);
-    expect(timeLimits(structure.test, { kind: "fixed-minutes", minutes: 15 }).maxTime).toBe(4500);
-    expect(timeLimits(part, { kind: "fixed-minutes", minutes: 15 }).maxTime).toBe(3600);
-    expect(timeLimits(structure.test, { kind: "unlimited" })).toEqual({ minTime: 600, allowLateSubmission: false });
+    expect(timeLimits(structure.test, { extra: { kind: "time-multiplier", multiplier: 1.25 } }).maxTime).toBe(4500);
+    expect(timeLimits(structure.test, { extra: { kind: "fixed-minutes", minutes: 15 } }).maxTime).toBe(4500);
+    expect(timeLimits(part, { extra: { kind: "fixed-minutes", minutes: 15 } }).maxTime).toBe(3600);
+    expect(timeLimits(structure.test, { extra: { kind: "unlimited" } })).toEqual({
+      minTime: 600,
+      allowLateSubmission: false,
+    });
   });
 });
 
@@ -387,11 +390,11 @@ async function deliveryOf(directory: string, path: string) {
   const pkg = await readPackageFile(join(examples, "packaging", directory));
   const document = pkg.document(path);
   if (document.kind !== "test") throw new Error(`${path} is not a test.`);
-  const resolvers = packageResolvers(pkg);
+  const resolvers = createPackageResolvers(pkg);
   const engine = createEngine({ kind: "test", test: document.test, base: path, resolvers });
   const items = new Map<string, AssessmentItem>();
   const structure = resolveStructure(document.test, path, resolvers);
-  for (const key of planItems(planTest(structure, { random: createRandom(1) }))) {
+  for (const key of listPlanItems(planTest(structure, { random: createRandom(1) }))) {
     const node = structure.itemRef(key.ref);
     const resolved = node === undefined ? undefined : resolvers.items(node.model.href, node.base).deliverable;
     if (resolved?.kind === "qti") items.set(key.ref, resolved.item);
@@ -412,7 +415,7 @@ describe("the engine on the examples", () => {
       if (!step.ok) throw new Error(`${action.type} was refused: ${step.refusal.message}`);
       state = step.state;
       const view = engine.view(state, at);
-      expect(viewFromJson(JSON.parse(JSON.stringify(viewToJson(view))))).toEqual(view);
+      expect(readView(JSON.parse(JSON.stringify(writeView(view))))).toEqual(view);
     };
     for (let current = state.current; current !== undefined; current = state.current) {
       const item = items.get(current.ref);
@@ -436,8 +439,8 @@ describe("the engine on the examples", () => {
     const { engine, items } = await deliveryOf("englishBasicLevelV2", "Test_258641331.xml");
     const state = answerAll(engine, items, false);
     expect(state.status).toBe("ended");
-    expect(state.outcomes.get("SCORE")).toEqual(single("float", 24));
-    expect(state.outcomes.get("MAXSCORE")).toEqual(single("float", 24));
+    expect(state.outcomes.get("SCORE")).toEqual(buildSingle("float", 24));
+    expect(state.outcomes.get("MAXSCORE")).toEqual(buildSingle("float", 24));
   });
 
   it("scores the correct answers of interactionMixSaxonyV3, submitted one by one", async () => {
@@ -446,8 +449,8 @@ describe("the engine on the examples", () => {
     expect(state.status).toBe("ended");
     // Of its MAXSCORE of 18, the 3 points of the item with three text entries come from a mapping, and that item
     // declares no correct response, so the correct responses score 15.
-    expect(state.outcomes.get("MAXSCORE")).toEqual(single("float", 18));
-    expect(state.outcomes.get("SCORE")).toEqual(single("float", 15));
+    expect(state.outcomes.get("MAXSCORE")).toEqual(buildSingle("float", 18));
+    expect(state.outcomes.get("SCORE")).toEqual(buildSingle("float", 15));
   });
 
   it("delivers the links to tools of testWithLti as items with the outcomes SCORE and MAXSCORE", async () => {
@@ -459,7 +462,7 @@ describe("the engine on the examples", () => {
     const link = ended.state.items[0]?.session;
     expect(link?.key).toEqual({ ref: "i853928446", instance: 1 });
     expect([...(link?.variables.outcomes.keys() ?? [])]).toEqual(["completionStatus", "SCORE", "MAXSCORE"]);
-    expect(ended.state.outcomes.get("TEST_total")).toEqual(single("float", 0));
+    expect(ended.state.outcomes.get("TEST_total")).toEqual(buildSingle("float", 0));
   });
 
   it("delivers alone every example item that the static checks accept, and plays it without throwing", () => {
@@ -526,8 +529,8 @@ describe("the engine on the examples", () => {
       });
       for (const state of [started.state, closed.ok ? closed.state : started.state]) {
         const view = engine.view(state, 5);
-        const written = viewToJson(view);
-        expect(viewFromJson(JSON.parse(JSON.stringify(written))), path).toEqual(view);
+        const written = writeView(view);
+        expect(readView(JSON.parse(JSON.stringify(written))), path).toEqual(view);
         const names = namesIn(written, new Set());
         for (const forbidden of KeyNames) expect(names.has(forbidden), `${path}: ${forbidden}`).toBe(false);
       }
@@ -539,7 +542,7 @@ describe("the engine on the examples", () => {
 // 1.x release reads it, goes on from it, and reaches what a replay from the seed reaches. A change of the meaning of a
 // field makes a new format version, which adds a file of its own and keeps this one.
 describe("a state that an earlier release wrote", () => {
-  const actions: readonly Action[] = written.actions.map(({ at, action }) => ({ ...parseCandidateAction(action), at }));
+  const actions: readonly Action[] = written.actions.map(({ at, action }) => ({ ...readCandidateAction(action), at }));
 
   /** The engine of the test, and the states that replaying the actions from the seed reaches, the first before any. */
   async function replay() {

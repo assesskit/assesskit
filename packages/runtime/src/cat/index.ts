@@ -5,17 +5,17 @@
  *
  * @module @assesskit/runtime/cat
  */
-export { checkPool } from "./check-pool.js";
+
 export {
+  type BuildCatMetadataOptions,
+  buildCatMetadata,
   type CatExternalMetadata,
   type CatItemMetadata,
   type CatMetadata,
   type CatMetadataFile,
-  type CatMetadataOptions,
   type CatPoolItem,
-  catMetadata,
 } from "./item-metadata.js";
-export { isSessionEnd, itemStageFromJson } from "./item-stage.js";
+export { isSessionEnd, readItemStage } from "./item-stage.js";
 export type {
   CatResponse,
   CreateSectionResponse,
@@ -29,6 +29,7 @@ export type {
   SubmitResultsResponse,
 } from "./model.js";
 export type { CatPort, CatSessionPort } from "./port.js";
-export { assessmentResultFromJson } from "./result-json-read.js";
-export { assessmentResultToJson } from "./result-json-write.js";
-export { type SectionFiles, sectionData } from "./section-data.js";
+export { readResultsJson } from "./result-json-read.js";
+export { writeResultsJson } from "./result-json-write.js";
+export { buildSectionData, type SectionFiles } from "./section-data.js";
+export { validatePool } from "./validate-pool.js";

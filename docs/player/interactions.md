@@ -18,7 +18,7 @@ sequenceDiagram
   H->>E: descriptor, value, disabled
   E->>E: builds the controls and the limits
   C->>E: responds
-  E->>E: checks the response with the runtime's checkResponse
+  E->>E: checks the response with the runtime's validateResponse
   E->>H: ak-response with the new value
   H->>E: value of the next view, ignored while it equals the element's own
 ```
@@ -123,7 +123,7 @@ the same value.
 | `ak-end-attempt` | `{ responseIdentifier }`        | The candidate pressed the button of an end attempt interaction. It bubbles.                                                                         |
 
 The events are typed for `addEventListener` on elements and shadow roots. The element does not validate the response against
-the item's rules; the runtime's `checkResponse` does, and the element says what is wrong ([hints](#hints-and-limits)).
+the item's rules; the runtime's `validateResponse` does, and the element says what is wrong ([hints](#hints-and-limits)).
 
 ## The kinds
 
@@ -178,12 +178,12 @@ have a name (WCAG 4.1.2).
 
 ### Text
 
-| Binding of the variable            | The response                                                                                                                                                                    |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `string`                           | The text; the empty text is NULL.                                                                                                                                               |
-| `integer`, `float`                 | The number that the runtime's `numericRecord` reads in the `base` of the interaction. Text that is not one gives NULL and the hint "Enter a number." or "Enter a whole number." |
-| `record`                           | The record of `numericRecord`: `stringValue`, `floatValue` and the rest.                                                                                                        |
-| a container (`extended-text` only) | The texts that are not empty, in a container of strings, up to `max-strings`, one field each.                                                                                   |
+| Binding of the variable            | The response                                                                                                                                                                        |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `string`                           | The text; the empty text is NULL.                                                                                                                                                   |
+| `integer`, `float`                 | The number that the runtime's `readNumericRecord` reads in the `base` of the interaction. Text that is not one gives NULL and the hint "Enter a number." or "Enter a whole number." |
+| `record`                           | The record of `readNumericRecord`: `stringValue`, `floatValue` and the rest.                                                                                                        |
+| a container (`extended-text` only) | The texts that are not empty, in a container of strings, up to `max-strings`, one field each.                                                                                       |
 
 A text entry or extended text with `string-identifier` also sends the text as typed for that variable, and shows it again
 from the property `typed`: "3.50" stays "3.50" although the response is 3.5. A field keeps what the candidate typed while
@@ -227,7 +227,7 @@ it. `coords` is not read: the player does not place the recording.
 
 ### Upload and recording
 
-The picker accepts the item's types (`accept`). A file of another type is not sent: the runtime's `checkResponse` says the type is
+The picker accepts the item's types (`accept`). A file of another type is not sent: the runtime's `validateResponse` says the type is
 not accepted, and the element tells which types are. An accepted file goes through `files.upload`, and the reference it gives
 is the response, with its name; a recording plays from `files.url`. A file the browser gives no type for is sent as
 `application/octet-stream`. A failure of the host is said and gives no response.
@@ -327,12 +327,12 @@ the host's; a start tied to the end of a prompt, since `data-ak-record-start` is
 the page and has its descriptor:
 
 ```ts
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 
 const hook = (interaction, host, set, state) => {
   const button = document.createElement("button");
   button.textContent = state.disabled ? "Closed" : "Say hello";
-  button.addEventListener("click", () => set(single("string", "hello")));
+  button.addEventListener("click", () => set(buildSingle("string", "hello")));
   host.append(button);
   return () => button.remove();
 };
@@ -354,7 +354,7 @@ leaves the page.
 
 ## Hints and limits
 
-A response that the runtime's `checkResponse` finds `attempted`, that is, given but breaking a rule, gets a hint in text, in a
+A response that the runtime's `validateResponse` finds `attempted`, that is, given but breaking a rule, gets a hint in text, in a
 `role="status"` region that is never focused (WCAG 3.3.1, 4.1.3). The controls get `aria-invalid="true"` and are described by
 the hint (`aria-describedby`), and the invalid ones have a thicker border, so that color is not the only cue (WCAG 1.4.1).
 NULL gets no hint: the candidate has not begun. The hint says how to fix the response (WCAG 3.3.3): the item's own text where it

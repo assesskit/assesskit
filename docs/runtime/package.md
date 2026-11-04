@@ -13,33 +13,33 @@ flowchart LR
   zip -- "readPackage<br/>security checks, limits" --> pkg
   files -- "openPackage" --> pkg
   pkg -- "document(path)<br/>xi:include inside the package" --> asi["ASI document"]
-  pkg -- "packageResolvers" --> engine
+  pkg -- "createPackageResolvers" --> engine
   manifest["Manifest"] -- "writePackage" --> zip
   pkg -- "manifest" --> manifest
 ```
 
-| Export                                           | Purpose                                                                          |
-| ------------------------------------------------ | -------------------------------------------------------------------------------- |
-| `readPackage(zip, options?)`                     | Reads a ZIP archive into a `QtiPackage`.                                         |
-| `openPackage(files, options?)`                   | Builds a `QtiPackage` from any `PackageFiles`: an archive, a directory, a store. |
-| `QtiPackage`                                     | `manifest`, `paths`, `file(path)`, `document(path)`, `resolve(base, href)`.      |
-| `writePackage(manifest, files)`                  | Writes a manifest and files as a ZIP archive.                                    |
-| `readManifest(input, options?)`, `writeManifest` | The manifest, `Manifest`, `Resource`, `ResourceFile` and `Variant`.              |
-| `resourcePath(manifest, resource, href?)`        | The path in the package that an href of a resource names.                        |
-| `resolveReference(base, href)`                   | `resolve` of a `QtiPackage` without the package.                                 |
-| `dependencyClosure(manifest, identifier)`        | A resource with the resources it depends on.                                     |
-| `packageResolvers(pkg)`                          | The `Resolvers` of the engine: items with their variants, sections and stimuli.  |
-| `readLtiLink(input, options?)`, `LtiLink`        | The `cartridge_basiclti_link` document of an LTI resource.                       |
-| `ltiLaunchUrl(link)`                             | The URL that launches the tool of a link.                                        |
-| `DEFAULT_ZIP_LIMITS`, `ZipLimits`                | The limits on archives and directories.                                          |
-| `RESOURCE_TYPES`, `MANIFEST_SCHEMAS`             | The vocabularies of the manifest.                                                |
+| Export                                              | Purpose                                                                          |
+| --------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `readPackage(zip, options?)`                        | Reads a ZIP archive into a `QtiPackage`.                                         |
+| `openPackage(files, options?)`                      | Builds a `QtiPackage` from any `PackageFiles`: an archive, a directory, a store. |
+| `QtiPackage`                                        | `manifest`, `paths`, `file(path)`, `document(path)`, `resolve(base, href)`.      |
+| `writePackage(manifest, files)`                     | Writes a manifest and files as a ZIP archive.                                    |
+| `readManifest(input, options?)`, `writeManifest`    | The manifest, `Manifest`, `Resource`, `ResourceFile` and `Variant`.              |
+| `resolveResourcePath(manifest, resource, options?)` | The path in the package that an href of a resource names.                        |
+| `resolveReference(base, href)`                      | `resolve` of a `QtiPackage` without the package.                                 |
+| `listDependencies(manifest, identifier)`            | A resource with the resources it depends on.                                     |
+| `createPackageResolvers(pkg)`                       | The `Resolvers` of the engine: items with their variants, sections and stimuli.  |
+| `readLtiLink(input, options?)`, `LtiLink`           | The `cartridge_basiclti_link` document of an LTI resource.                       |
+| `resolveLaunchUrl(link)`                            | The URL that launches the tool of a link.                                        |
+| `DEFAULT_ZIP_LIMITS`, `ZipLimits`                   | The limits on archives and directories.                                          |
+| `RESOURCE_TYPES`, `MANIFEST_SCHEMAS`                | The vocabularies of the manifest.                                                |
 
 ## Example
 
 ```ts
 import {
-  dependencyClosure,
-  packageResolvers,
+  listDependencies,
+  createPackageResolvers,
   readManifest,
   readPackage,
   writePackage,
@@ -57,7 +57,7 @@ const manifest = readManifest(`<manifest xmlns="http://www.imsglobal.org/xsd/qti
     </resource>
   </resources>
 </manifest>`);
-dependencyClosure(manifest, "test").map(({ identifier }) => identifier); // => ["test", "capital"]
+listDependencies(manifest, "test").map(({ identifier }) => identifier); // => ["test", "capital"]
 
 const text = new TextEncoder();
 const zip = writePackage(
@@ -83,7 +83,7 @@ const pkg = readPackage(zip);
 pkg.paths; // => ["imsmanifest.xml", "test.xml", "items/capital.xml", "media/map.png"]
 pkg.resolve("items/capital.xml", "../media/map.png"); // => "media/map.png"
 pkg.resolve("items/capital.xml", "http://example.com/x.png"); // => undefined
-packageResolvers(pkg).items("items/capital.xml", "test.xml").deliverable.kind; // => "qti"
+createPackageResolvers(pkg).items("items/capital.xml", "test.xml").deliverable.kind; // => "qti"
 ```
 
 ## The manifest
@@ -145,7 +145,7 @@ The result is `undefined` for a reference outside the package: one with a scheme
 `/` or `//`, one that leaves the root with `..`, and one with a backslash, a drive letter, a control character (NUL included) or an
 invalid percent-encoding in a segment. It does not say whether the file exists.
 
-`resourcePath(manifest, resource, href?)` resolves the `href` of a resource, or the `href` it is given (such as one of its files),
+`resolveResourcePath(manifest, resource, options?)` resolves the `href` of a resource, or the option `href` (such as one of its files),
 against the `xml:base` of the manifest, of `resources` and of the resource, each against the one before.
 
 ## Archives
@@ -175,7 +175,7 @@ output as it comes.
 
 `@zip.js/zip.js` 2.24.0, which interopkit's `course-launch` reads cmi5 packages with, recovers a count that wrapped past
 65,535, but its reader is asynchronous: the entries and the bytes of each come through promises. `readPackage` is synchronous
-(`package.ts`), and so are the resolvers that `packageResolvers` builds over `file(path)` (`Resolvers`), which the engine calls
+(`package.ts`), and so are the resolvers that `createPackageResolvers` builds over `file(path)` (`Resolvers`), which the engine calls
 inside `start` and `apply`: the engine is a synchronous reducer, and an asynchronous reader would make every step of it
 asynchronous. The reader stays, with the inflater of `fflate`.
 
@@ -215,7 +215,7 @@ with `readAsi` of [asi](asi.md). The manifest and the documents use the `xmlLimi
 
 ## Resolvers
 
-`packageResolvers(pkg)` returns the three functions that the delivery engine takes. Each takes the `href` as written and the path of
+`createPackageResolvers(pkg)` returns the three functions that the delivery engine takes. Each takes the `href` as written and the path of
 the document that holds it.
 
 | Function               | Resolves to                                                                             |
@@ -241,7 +241,7 @@ They are synchronous, as the package holds its files; a resolver that a host wri
 
 ## Dependencies
 
-`dependencyClosure(manifest, identifier)` returns the resource, then each resource it depends on once, depth first in the order of
+`listDependencies(manifest, identifier)` returns the resource, then each resource it depends on once, depth first in the order of
 the `dependency` elements; a cycle ends where it closes. A test depends on its items, an item on a shared stimulus, an item on
 a separate outcome declaration or response processing template resource. Variants are not part of the closure.
 
@@ -254,7 +254,7 @@ and in the relative namespace `/xsd/imslticc_v1p0` that the 1EdTech examples dec
 without a name or with a repeated name, or a vendor without a code is a `ReadError` (`assesskit/package/lti-link`,
 `assesskit/package/lti-property`). Launching the tool belongs to the host, through the player's port `LtiLogin`.
 
-`ltiLaunchUrl(link)` returns the URL that launches the tool: the `secureLaunchUrl` when the link has one, else the `launchUrl`
+`resolveLaunchUrl(link)` returns the URL that launches the tool: the `secureLaunchUrl` when the link has one, else the `launchUrl`
 (BPIG section 6.2.9). A link that names only a vendor has neither, and the function throws `DataError`: the platform could
 only look the tool up, which no QTI rule describes. The URL is not checked further; whether it must be `https` is the rule of the
 platform that launches it.
@@ -269,14 +269,14 @@ platform that launches it.
 
 ## Not included
 
-| Not included                                             | Why                                                                                                                               |
-| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Reading files and directories                            | [node](node.md) reads them; `openPackage` takes any `PackageFiles`                                                                |
-| Organizations in the manifest                            | The QTI profile of content packaging prohibits them                                                                               |
-| Archives in several parts, other compression, encryption | Content packages do not use them, and encrypted entries are refused                                                               |
-| ZIP64 when writing                                       | `writePackage` writes the classic format, which holds 65,534 files and 4 GiB; the reader accepts larger packages up to its limits |
-| Choosing a variant                                       | The resolvers return the variants; the delivery engine chooses                                                                    |
-| Launching an LTI tool                                    | Launching belongs to the host, through the player's `LtiLogin`; `readLtiLink` reads the document and `ltiLaunchUrl` names the URL |
+| Not included                                             | Why                                                                                                                                   |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Reading files and directories                            | [node](node.md) reads them; `openPackage` takes any `PackageFiles`                                                                    |
+| Organizations in the manifest                            | The QTI profile of content packaging prohibits them                                                                                   |
+| Archives in several parts, other compression, encryption | Content packages do not use them, and encrypted entries are refused                                                                   |
+| ZIP64 when writing                                       | `writePackage` writes the classic format, which holds 65,534 files and 4 GiB; the reader accepts larger packages up to its limits     |
+| Choosing a variant                                       | The resolvers return the variants; the delivery engine chooses                                                                        |
+| Launching an LTI tool                                    | Launching belongs to the host, through the player's `LtiLogin`; `readLtiLink` reads the document and `resolveLaunchUrl` names the URL |
 
 ## Files
 

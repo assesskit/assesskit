@@ -1,7 +1,7 @@
 import { readAsi } from "@assesskit/runtime/asi";
 import { DataError } from "@assesskit/runtime/errors";
 import type { PciModuleConfiguration } from "@assesskit/runtime/pci";
-import { container, single, type Value, type ValueDeclaration } from "@assesskit/runtime/values";
+import { buildContainer, buildSingle, type Value, type ValueDeclaration } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES } from "../src/index.js";
@@ -80,16 +80,16 @@ function memoryFiles(stored: ReadonlyMap<string, Uint8Array> = new Map()) {
 
 describe("checkVariable", () => {
   it("accepts a value with its declaration, and NULL", () => {
-    expect(() => checkVariable({ value: single("integer", 3), declaration: INTEGER })).not.toThrow();
+    expect(() => checkVariable({ value: buildSingle("integer", 3), declaration: INTEGER })).not.toThrow();
     expect(() => checkVariable({ value: null, declaration: INTEGER })).not.toThrow();
   });
 
   it("rejects what is not a variable, and a value that is not of its declaration", () => {
     expect(() => checkVariable(json("null"))).toThrow("A variable must be an object with a value and a declaration");
-    expect(() => checkVariable({ value: single("string", "a"), declaration: INTEGER })).toThrow(DATA_ERROR);
-    expect(() => checkVariable({ value: single("integer", 1), declaration: json('{"cardinality":"many"}') })).toThrow(
-      DATA_ERROR,
-    );
+    expect(() => checkVariable({ value: buildSingle("string", "a"), declaration: INTEGER })).toThrow(DATA_ERROR);
+    expect(() =>
+      checkVariable({ value: buildSingle("integer", 1), declaration: json('{"cardinality":"many"}') }),
+    ).toThrow(DATA_ERROR);
     expect(() => checkVariable({ value: json('{"cardinality":"single"}'), declaration: INTEGER })).toThrow(DATA_ERROR);
   });
 });
@@ -97,14 +97,14 @@ describe("checkVariable", () => {
 describe("encodeVariable", () => {
   it("writes a value as the JSON of the portable custom interaction binding", async () => {
     const { files } = memoryFiles();
-    expect(await encodeVariable({ value: single("integer", 3), declaration: INTEGER }, files)).toEqual({
+    expect(await encodeVariable({ value: buildSingle("integer", 3), declaration: INTEGER }, files)).toEqual({
       base: { integer: 3 },
     });
     expect(await encodeVariable({ value: null, declaration: INTEGER }, files)).toEqual({ base: null });
     expect(
       await encodeVariable(
         {
-          value: container("multiple", "integer", [3, 4]),
+          value: buildContainer("multiple", "integer", [3, 4]),
           declaration: { cardinality: "multiple", baseType: "integer" },
         },
         files,
@@ -114,7 +114,7 @@ describe("encodeVariable", () => {
 
   it("reads the bytes of a file from the host and writes them inline as base64, as App. C.1 shows", async () => {
     const { files } = memoryFiles(new Map([["stored-1", PLEASURE.bytes]]));
-    const value = single("file", { reference: "stored-1", mimeType: "text/plain", fileName: "helloworld.txt" });
+    const value = buildSingle("file", { reference: "stored-1", mimeType: "text/plain", fileName: "helloworld.txt" });
     expect(await encodeVariable({ value, declaration: FILE }, files)).toEqual({
       base: { file: { data: PLEASURE.base64, mime: "text/plain", name: "helloworld.txt" } },
     });
@@ -127,7 +127,7 @@ describe("encodeVariable", () => {
         ["b", new TextEncoder().encode("b")],
       ]),
     );
-    const list = container("multiple", "file", [
+    const list = buildContainer("multiple", "file", [
       { reference: "a", mimeType: "text/plain" },
       { reference: "b", mimeType: "text/plain" },
     ]);
@@ -148,7 +148,7 @@ describe("encodeVariable", () => {
       read: () => Promise.reject(new Error("The storage is down.")),
       upload: async () => ({ reference: "", mimeType: "" }),
     };
-    const value = single("file", { reference: "stored-1", mimeType: "text/plain" });
+    const value = buildSingle("file", { reference: "stored-1", mimeType: "text/plain" });
     await expect(encodeVariable({ value, declaration: FILE }, files)).rejects.toThrow("The storage is down.");
   });
 });
@@ -184,9 +184,9 @@ describe("createResponseDecoder", () => {
 
   it("reads the JSON of a response as a value of the declaration", async () => {
     const decode = createResponseDecoder(memoryFiles().files);
-    expect(await decode({ base: { integer: 3 } }, INTEGER)).toEqual(single("integer", 3));
+    expect(await decode({ base: { integer: 3 } }, INTEGER)).toEqual(buildSingle("integer", 3));
     expect(await decode({ list: { integer: [3, 4] } }, { cardinality: "multiple", baseType: "integer" })).toEqual(
-      container("multiple", "integer", [3, 4]),
+      buildContainer("multiple", "integer", [3, 4]),
     );
   });
 
@@ -200,7 +200,9 @@ describe("createResponseDecoder", () => {
     const { files, uploads } = memoryFiles();
     const decode = createResponseDecoder(files);
     const value = await decode(inline(PLEASURE.base64), FILE);
-    expect(value).toEqual(single("file", { reference: "file-1", mimeType: "text/plain", fileName: "helloworld.txt" }));
+    expect(value).toEqual(
+      buildSingle("file", { reference: "file-1", mimeType: "text/plain", fileName: "helloworld.txt" }),
+    );
     expect(uploads).toEqual([{ bytes: PLEASURE.bytes, mimeType: "text/plain", fileName: "helloworld.txt" }]);
   });
 
@@ -225,7 +227,7 @@ describe("createResponseDecoder", () => {
       { cardinality: "multiple", baseType: "file" },
     );
     expect(value).toEqual(
-      container("multiple", "file", [
+      buildContainer("multiple", "file", [
         { reference: "file-1", mimeType: "text/plain" },
         { reference: "file-2", mimeType: "text/plain" },
       ]),
@@ -241,7 +243,9 @@ describe("createResponseDecoder", () => {
     const other = await decode(inline("YQ=="), FILE);
     expect(again).toEqual(first);
     expect(uploads).toHaveLength(2);
-    expect(other).toEqual(single("file", { reference: "file-2", mimeType: "text/plain", fileName: "helloworld.txt" }));
+    expect(other).toEqual(
+      buildSingle("file", { reference: "file-2", mimeType: "text/plain", fileName: "helloworld.txt" }),
+    );
     await decode(inline(PLEASURE.base64), FILE);
     expect(uploads).toHaveLength(3);
   });
@@ -403,7 +407,7 @@ const MINIMAL: PciFrameOptions = {
   markup: "",
   stylesheets: [],
   status: "interacting",
-  response: { value: single("integer", 0), declaration: INTEGER },
+  response: { value: buildSingle("integer", 0), declaration: INTEGER },
   files: memoryFiles().files,
   onEvent: () => undefined,
 };
@@ -417,7 +421,7 @@ describe("checkPciFrameOptions", () => {
     expect(() =>
       check({
         origins: ["https://cdn.example", "http://localhost:8080"],
-        templateVariables: new Map([["X", { value: single("integer", 1), declaration: INTEGER }]]),
+        templateVariables: new Map([["X", { value: buildSingle("integer", 1), declaration: INTEGER }]]),
         contextVariables: new Map(),
         state: "{}",
         prompt: "Tap the picture.",
@@ -481,7 +485,7 @@ describe("checkPciFrameOptions", () => {
     expect(() => check({ response: json("null") })).toThrow(
       "A variable must be an object with a value and a declaration",
     );
-    expect(() => check({ response: { value: single("string", "a"), declaration: INTEGER } })).toThrow(DATA_ERROR);
+    expect(() => check({ response: { value: buildSingle("string", "a"), declaration: INTEGER } })).toThrow(DATA_ERROR);
     expect(() => check({ templateVariables: json("{}") })).toThrow(
       "The option templateVariables must be a Map, found an object.",
     );
@@ -542,13 +546,13 @@ describe("describeFrame", () => {
   it("writes the response, the template variables and the context variables as JSON", async () => {
     const { prepare } = describeFrame({
       ...MINIMAL,
-      response: { value: single("integer", 2), declaration: INTEGER },
-      templateVariables: new Map([["X", { value: single("integer", 3), declaration: INTEGER }]]),
+      response: { value: buildSingle("integer", 2), declaration: INTEGER },
+      templateVariables: new Map([["X", { value: buildSingle("integer", 3), declaration: INTEGER }]]),
       contextVariables: new Map([
         [
           "LIMITS",
           {
-            value: container("multiple", "float", [1.5, 2.5]),
+            value: buildContainer("multiple", "float", [1.5, 2.5]),
             declaration: { cardinality: "multiple", baseType: "float" },
           },
         ],
@@ -569,7 +573,11 @@ describe("describeFrame", () => {
 
   it("reads the bytes of the files that go to the interaction", async () => {
     const { files } = memoryFiles(new Map([["stored-1", PLEASURE.bytes]]));
-    const value: Value = single("file", { reference: "stored-1", mimeType: "text/plain", fileName: "helloworld.txt" });
+    const value: Value = buildSingle("file", {
+      reference: "stored-1",
+      mimeType: "text/plain",
+      fileName: "helloworld.txt",
+    });
     const { prepare } = describeFrame({ ...MINIMAL, response: { value, declaration: FILE }, files });
     expect((await prepare()).boundTo).toEqual({
       base: { file: { data: PLEASURE.base64, mime: "text/plain", name: "helloworld.txt" } },
@@ -821,11 +829,11 @@ describe("properties", () => {
         fc.constantFrom("text/plain", "image/png"),
         async (bytes, mimeType) => {
           const stored = new Map([["stored-1", bytes]]);
-          const value = single("file", { reference: "stored-1", mimeType, fileName: "f.bin" });
+          const value = buildSingle("file", { reference: "stored-1", mimeType, fileName: "f.bin" });
           const written = await encodeVariable({ value, declaration: FILE }, memoryFiles(stored).files);
           const { files, uploads } = memoryFiles();
           const read = await createResponseDecoder(files)(written, FILE);
-          expect(read).toEqual(single("file", { reference: "file-1", mimeType, fileName: "f.bin" }));
+          expect(read).toEqual(buildSingle("file", { reference: "file-1", mimeType, fileName: "f.bin" }));
           expect(uploads[0]?.bytes).toEqual(bytes);
         },
       ),

@@ -1,5 +1,5 @@
 import type { ResponseProcessing, ResponseRule } from "../asi/index.js";
-import { isQti2TemplateUri, STANDARD_TEMPLATES, standardTemplateUri } from "../processing/index.js";
+import { findStandardTemplate, isQti2TemplateUri, STANDARD_TEMPLATES } from "../processing/index.js";
 import type { Findings } from "./findings.js";
 
 /** The response processing of an item as it runs: its own rules, or the rules of the template it names. */
@@ -39,7 +39,7 @@ export function responseRulesOf(
     const message = `The response processing template ${JSON.stringify(template)} is a QTI 2.x address; the runtime applies the standard QTI 3.0 template of the same algorithm. Use a QTI 3.0 address.`;
     findings.warning("assesskit/validate/legacy-template", message, element);
   }
-  const standard = template === undefined ? undefined : STANDARD_TEMPLATES.get(standardTemplateUri(template) ?? "");
+  const standard = template === undefined ? undefined : STANDARD_TEMPLATES.get(findStandardTemplate(template) ?? "");
   if (standard !== undefined) return { rules: standard.rules, element, complete: true };
   const location = processing.templateLocation ?? template;
   if (location === undefined) return { rules: [], element, complete: true };

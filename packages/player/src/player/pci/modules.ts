@@ -3,8 +3,8 @@ import { DataError } from "@assesskit/runtime/errors";
 import {
   DEFAULT_WAIT_SECONDS,
   isPackageRelative,
-  moduleConfigurationPaths,
   type PciModuleConfiguration,
+  resolveModuleConfigurationPaths,
   resolvePciModules,
 } from "@assesskit/runtime/pci";
 import type { PciModules } from "./protocol.js";
@@ -79,7 +79,7 @@ function namesToLoad(interaction: PortableCustomInteraction): readonly string[] 
  * of the module, under the same prefix, and so do the `url()`s of the stylesheets it adds.
  *
  * @param interaction - The `qti-portable-custom-interaction`.
- * @param configuration - The module resolution files that `moduleConfigurationPaths` names, parsed; a file that the
+ * @param configuration - The module resolution files that `resolveModuleConfigurationPaths` names, parsed; a file that the
  * package lacks is left out. The `waitSeconds` of the primary file is the timeout.
  * @param assets - Gives the URL of a path in the package, absolute or relative to the page. A location that ends in `.js`
  * is the same as one without it.
@@ -129,7 +129,7 @@ export function pciModules(
     (location) => location !== undefined && isPackageRelative(location),
   );
   return {
-    baseUrl: new URL(".", absolute(assets(home ?? moduleConfigurationPaths(interaction).primary))).href,
+    baseUrl: new URL(".", absolute(assets(home ?? resolveModuleConfigurationPaths(interaction).primary))).href,
     paths,
     waitSeconds: configuration.primary?.waitSeconds ?? DEFAULT_WAIT_SECONDS,
     load,

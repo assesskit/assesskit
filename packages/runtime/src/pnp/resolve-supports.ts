@@ -1,6 +1,6 @@
 import type { PersonalNeedsProfile, SupportState } from "./model.js";
 import { checkProfile } from "./profile-checks.js";
-import { extensionName, type SupportName } from "./support-names.js";
+import { deriveExtensionName, type SupportName } from "./support-names.js";
 
 /**
  * Resolves what a profile says about each support it mentions.
@@ -21,7 +21,7 @@ export function resolveSupports(profile: PersonalNeedsProfile): ReadonlyMap<Supp
   checkProfile(profile);
   const states = new Map<SupportName, SupportState>();
   for (const name of profile.supports.keys()) states.set(name, "assigned");
-  for (const extension of profile.extensions) states.set(extensionName(extension.name), "assigned");
+  for (const extension of profile.extensions) states.set(deriveExtensionName(extension.name), "assigned");
   for (const name of profile.activateAsOption) states.set(name, "option");
   for (const name of profile.activateAtInitialization) states.set(name, "active");
   for (const name of profile.prohibited) states.set(name, "prohibited");

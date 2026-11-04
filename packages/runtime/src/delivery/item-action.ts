@@ -1,6 +1,6 @@
 import type { AssessmentItem, ResponseDeclaration } from "../asi/index.js";
 import { checkChoice, checkRecord, checkString, describe, isRecord } from "../checks.js";
-import { checkResponse, describeInteractions } from "../interactions/index.js";
+import { describeInteractions, validateResponse } from "../interactions/index.js";
 import { describeType } from "../processing/index.js";
 import { fitValue } from "../processing/internal.js";
 import { matchValues, normalizeValue, type Value } from "../values/index.js";
@@ -278,7 +278,7 @@ function invalidResponses(session: ItemSession, context: ItemSessionContext): re
     .filter(
       (descriptor) =>
         descriptor.kind !== "end-attempt-interaction" &&
-        checkResponse(descriptor, session.drafts.get(descriptor.responseIdentifier) ?? null).reasons.length > 0,
+        validateResponse(descriptor, session.drafts.get(descriptor.responseIdentifier) ?? null).reasons.length > 0,
     )
     .map((descriptor) => descriptor.responseIdentifier);
 }

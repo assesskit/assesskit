@@ -49,7 +49,7 @@ function pathsOf(
  * the rest to its loader as paths, with `waitSeconds` of the primary configuration as the timeout.
  *
  * @param interaction - The PCI.
- * @param configuration - The configuration files that `moduleConfigurationPaths` names, parsed; a file that the package
+ * @param configuration - The configuration files that `resolveModuleConfigurationPaths` names, parsed; a file that the package
  * lacks is left out.
  * @returns One entry for each module id, each id once.
  * @throws `DataError` when an argument has the wrong type.

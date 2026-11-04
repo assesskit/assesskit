@@ -1,4 +1,4 @@
-import { attributeOf, childElements, textOf, XML_NAMESPACE, type XmlElement } from "../xml/index.js";
+import { collectText, findAttribute, listChildElements, XML_NAMESPACE, type XmlElement } from "../xml/index.js";
 import { LOM_NAMESPACE } from "./namespaces.js";
 
 /** A string of a LOM `LangString`, with the language it is in. */
@@ -18,7 +18,7 @@ export interface LomGeneral {
 }
 
 function lomChildren(parent: XmlElement, name: string): readonly XmlElement[] {
-  return childElements(parent).filter((child) => child.namespace === LOM_NAMESPACE && child.name === name);
+  return listChildElements(parent).filter((child) => child.namespace === LOM_NAMESPACE && child.name === name);
 }
 
 /**
@@ -29,17 +29,17 @@ function lomChildren(parent: XmlElement, name: string): readonly XmlElement[] {
  * @returns Empty lists when the element has no `general`.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/md-bind/ | QTI 3.0 Metadata Binding}
  */
-export function lomGeneral(lom: XmlElement): LomGeneral {
+export function readLomGeneral(lom: XmlElement): LomGeneral {
   const [general] = lomChildren(lom, "general");
   if (general === undefined) return { identifiers: [], titles: [] };
   const [title] = lomChildren(general, "title");
   return {
     identifiers: lomChildren(general, "identifier").flatMap((identifier) =>
-      lomChildren(identifier, "entry").map(textOf),
+      lomChildren(identifier, "entry").map(collectText),
     ),
     titles: (title === undefined ? [] : lomChildren(title, "string")).map((string) => ({
-      language: attributeOf(string, "language") ?? attributeOf(string, "lang", XML_NAMESPACE),
-      text: textOf(string),
+      language: findAttribute(string, "language") ?? findAttribute(string, "lang", { namespace: XML_NAMESPACE }),
+      text: collectText(string),
     })),
   };
 }

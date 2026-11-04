@@ -3,7 +3,7 @@ import type { Caller } from "@assesskit/player/protocol";
 import type { SessionHost, ToolScore } from "@assesskit/player/server";
 import type { ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import { type LtiLink, ltiLaunchUrl } from "@assesskit/runtime/package";
+import { type LtiLink, resolveLaunchUrl } from "@assesskit/runtime/package";
 import type {
   MessageInput,
   PlatformLoginOptions,
@@ -57,7 +57,7 @@ export function toolLaunch(caller: Caller, item: ItemKey, link: LtiLink, tool: L
     messageType: "LtiResourceLinkRequest",
     clientId: tool.clientId,
     deploymentId: tool.deploymentId,
-    targetLinkUri: ltiLaunchUrl(link),
+    targetLinkUri: resolveLaunchUrl(link),
     user: { subject: caller.principal },
     roles: [LEARNER],
     context: { id: caller.session },

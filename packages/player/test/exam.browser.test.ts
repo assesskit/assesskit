@@ -1,5 +1,5 @@
 import { DataError } from "@assesskit/runtime/errors";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it } from "vitest";
 import { commands } from "vitest/browser";
 import { createRemoteSession, type Transport } from "../src/client/index.js";
@@ -267,13 +267,13 @@ describe("the player over the exam server", () => {
     const { client, who } = await mountExam(session);
     await client.dispatch({ type: "move", to: { ref: "q3", instance: 1 } });
     await waitFor(async () => commands.clickInFrame("Press the button", "#press"), { timeout: 20_000 });
-    await waitFor(() => expect(client.view.current?.responses.get("PCI")).toEqual(single("integer", 1)), {
+    await waitFor(() => expect(client.view.current?.responses.get("PCI")).toEqual(buildSingle("integer", 1)), {
       timeout: 15_000,
     });
     expect(client.view.current?.pci.get("PCI")?.state).toBe('{"count":1}');
     const view = (await who.read(await who.post("view"))) as ViewEnvelope;
     const second = createRemoteSession(who.transport(), view);
-    expect(second.view.current?.responses.get("PCI")).toEqual(single("integer", 1));
+    expect(second.view.current?.responses.get("PCI")).toEqual(buildSingle("integer", 1));
     expect(second.view.current?.pci.get("PCI")?.state).toBe('{"count":1}');
     second.close();
   });

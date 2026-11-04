@@ -13,9 +13,9 @@ import {
   stamp,
 } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import { packageResolvers, type QtiPackage } from "@assesskit/runtime/package";
+import { createPackageResolvers, type QtiPackage } from "@assesskit/runtime/package";
 import type { AssessmentResult, ResultVariable } from "@assesskit/runtime/results";
-import { single, type Value } from "@assesskit/runtime/values";
+import { buildSingle, type Value } from "@assesskit/runtime/values";
 import { createRandom, DataError as MeasurekitDataError } from "@measurekit/psychometrics";
 import {
   adaptiveTest,
@@ -249,7 +249,7 @@ describe("response", () => {
   const item: TestItem = { id: "q", model: generalizedPartialCredit, parameters: { a: 1, b: [-1, 0.5] } };
 
   it("takes the SCORE of the item as its category", () => {
-    expect(scoreCategory("q", new Map<string, Value | null>([["SCORE", single("float", 2)]]))).toBe(2);
+    expect(scoreCategory("q", new Map<string, Value | null>([["SCORE", buildSingle("float", 2)]]))).toBe(2);
     expect(responseTo(item, resultsOf(new Map([["q", 2]])), scoreCategory)).toBe(2);
   });
 
@@ -304,11 +304,13 @@ describe("response", () => {
       ),
     );
     expect(() => scoreCategory("q", new Map())).toThrow(/response category, found none\.$/);
-    expect(() => responseTo(item, withScore(single("string", "a")), scoreCategory)).toThrow(DataError);
-    expect(() => responseTo(item, withScore(single("float", 0.5)), scoreCategory)).toThrow(
+    expect(() => responseTo(item, withScore(buildSingle("string", "a")), scoreCategory)).toThrow(DataError);
+    expect(() => responseTo(item, withScore(buildSingle("float", 0.5)), scoreCategory)).toThrow(
       new DataError('The response category of the item "q" must be a whole number from 0 to 2, found 0.5.'),
     );
-    expect(() => responseTo(item, withScore(single("float", 3)), scoreCategory)).toThrow(/from 0 to 2, found 3\.$/);
+    expect(() => responseTo(item, withScore(buildSingle("float", 3)), scoreCategory)).toThrow(
+      /from 0 to 2, found 3\.$/,
+    );
     expect(() => responseTo(item, resultsOf(new Map([["other", 1]])), scoreCategory)).toThrow(
       new DataError('The assessmentResult has no result for the item "q", which the session presented.'),
     );
@@ -981,7 +983,7 @@ async function examEngine(
     kind: "test",
     test: document.test,
     base: "test.xml",
-    resolvers: packageResolvers(pkg),
+    resolvers: createPackageResolvers(pkg),
     catSections,
   });
   return { engine, catSections };
@@ -1000,7 +1002,7 @@ describe("a local session over measurekit", () => {
         kind: "test",
         test: document.test,
         base: "test.xml",
-        resolvers: packageResolvers(pkg),
+        resolvers: createPackageResolvers(pkg),
         catSections: await deployCatSections(pkg, () => port),
       },
       cat: port,
@@ -1015,7 +1017,7 @@ describe("a local session over measurekit", () => {
     const presented: string[] = [];
     for (let item = client.view.current?.key; item !== undefined; item = client.view.current?.key) {
       presented.push(item.ref);
-      const responses = new Map([["RESPONSE", single("identifier", "B")]]);
+      const responses = new Map([["RESPONSE", buildSingle("identifier", "B")]]);
       await client.dispatch({ type: "set-responses", item, responses });
       await client.dispatch({ type: "submit", item });
       if ((await client.dispatch({ type: "move", to: "next" })).refusal !== undefined) break;
@@ -1096,7 +1098,7 @@ async function sit(
       state = act(state, {
         type: "set-responses",
         item,
-        responses: new Map([["RESPONSE", single("identifier", choice)]]),
+        responses: new Map([["RESPONSE", buildSingle("identifier", choice)]]),
       });
       state = act(state, { type: "submit", item });
     }

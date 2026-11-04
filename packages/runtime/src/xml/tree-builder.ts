@@ -2,7 +2,7 @@ import type { SaxesTagNS } from "saxes";
 import { NC_NAME_RE } from "xmlchars/xmlns/1.0/ed3.js";
 import { SecurityError } from "../errors.js";
 import type { XmlLimits } from "./limits.js";
-import { documentName, readError } from "./read-error.js";
+import { createReadError, documentName } from "./read-error.js";
 import { XMLNS_NAMESPACE, type XmlAttribute, type XmlElement, type XmlNode } from "./tree.js";
 
 /** An element that is still open: its tag and position, the children so far and the text not yet made a node. */
@@ -59,7 +59,7 @@ export class TreeBuilder {
    */
   get root(): XmlElement {
     if (this.result === undefined) {
-      throw readError("assesskit/xml/not-well-formed", `${this.name} has no root element.`);
+      throw createReadError("assesskit/xml/not-well-formed", `${this.name} has no root element.`);
     }
     return this.result;
   }
@@ -100,13 +100,13 @@ export class TreeBuilder {
     if (unqualified !== undefined) {
       const written = unqualified.prefix === "" ? unqualified.local : `${unqualified.prefix}:${unqualified.local}`;
       const message = `${this.name} has the name ${JSON.stringify(written)}, which is not a qualified name: the parts around its colon must be names without a colon.`;
-      throw readError("assesskit/xml/not-well-formed", message, { path: this.path, line, column });
+      throw createReadError("assesskit/xml/not-well-formed", message, { location: { path: this.path, line, column } });
     }
     for (const { uri, value, prefix, local } of attributes) {
       if (uri !== XMLNS_NAMESPACE || value === value.trim()) continue;
       const declaration = prefix === "" ? local : `${prefix}:${local}`;
       const message = `${this.name} declares the namespace ${JSON.stringify(value)} in ${declaration}, which has white space at its start or end; a namespace name is a URI reference and has none.`;
-      throw readError("assesskit/xml/namespace", message, { path: this.path, line, column });
+      throw createReadError("assesskit/xml/namespace", message, { location: { path: this.path, line, column } });
     }
   }
 

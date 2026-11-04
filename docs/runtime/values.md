@@ -11,10 +11,10 @@ flowchart LR
   wire["Wire value<br/>state, views and actions"]
   xml -- "parsePrimitive" --> model
   model -- "formatPrimitive" --> xml
-  model -- "toJsonValue" --> pci
-  pci -- "fromJsonValue" --> model
-  model -- "toWireValue" --> wire
-  wire -- "fromWireValue" --> model
+  model -- "writeJsonValue" --> pci
+  pci -- "readJsonValue" --> model
+  model -- "writeWireValue" --> wire
+  wire -- "readWireValue" --> model
   model -- "matchValues, promote" --> model
 ```
 
@@ -41,27 +41,27 @@ flowchart LR
 ## The model
 
 A value is a `SingleValue`, a `ContainerValue` (cardinality `multiple` or `ordered`) or a `RecordValue`. NULL, the absence
-of a value, is `null`: no `Value` is empty. Build values with `single`, `container` and `record`. They check their
+of a value, is `null`: no `Value` is empty. Build values with `buildSingle`, `buildContainer` and `buildRecord`. They check their
 arguments, copy them, and return `null` for what is NULL: the empty string, a container with no values and a record with no
 fields.
 
 ```ts
-import { container, matchValues, single } from "@assesskit/runtime/values";
+import { buildContainer, matchValues, buildSingle } from "@assesskit/runtime/values";
 
-const a = container("multiple", "identifier", ["A", "B", "B"]);
-const b = container("multiple", "identifier", ["B", "A", "B"]);
+const a = buildContainer("multiple", "identifier", ["A", "B", "B"]);
+const b = buildContainer("multiple", "identifier", ["B", "A", "B"]);
 a !== null && b !== null && matchValues(a, b); // => true
-single("string", ""); // => null
+buildSingle("string", ""); // => null
 ```
 
-| Function                      | Does                                                                                                               |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `single(baseType, value)`     | Builds a single value, or `null` for the empty string                                                              |
-| `container(cardinality, ...)` | Builds a `multiple` or `ordered` value of one base type, or `null` for no values                                   |
-| `record(fields)`              | Builds a record from pairs of an identifier and a single value, or `null` for no fields                            |
-| `normalizeValue(value)`       | Checks untrusted data deeply and returns a copy, for values that a host or a client passes in                      |
-| `isBaseType`, `isCardinality` | Tell whether a string is a term of `BaseTypeEnum` or `CardinalityEnum`; `BASE_TYPES` and `CARDINALITIES` list them |
-| `isIdentifier(text)`          | Tells whether text is an identifier: an `NCName`, compared case-sensitively                                        |
+| Function                           | Does                                                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `buildSingle(baseType, value)`     | Builds a single value, or `null` for the empty string                                                              |
+| `buildContainer(cardinality, ...)` | Builds a `multiple` or `ordered` value of one base type, or `null` for no values                                   |
+| `buildRecord(fields)`              | Builds a record from pairs of an identifier and a single value, or `null` for no fields                            |
+| `normalizeValue(value)`            | Checks untrusted data deeply and returns a copy, for values that a host or a client passes in                      |
+| `isBaseType`, `isCardinality`      | Tell whether a string is a term of `BaseTypeEnum` or `CardinalityEnum`; `BASE_TYPES` and `CARDINALITIES` list them |
+| `isIdentifier(text)`               | Tells whether text is an identifier: an `NCName`, compared case-sensitively                                        |
 
 A container holds no empty string, because that is NULL. A record is a `Map`, so a field named `__proto__` is data.
 
@@ -93,18 +93,18 @@ Documents also write dates, durations and lists in forms that are not base types
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `isXsdDateTime(text)`                                     | `YYYY-MM-DDThh:mm:ss` with an optional fraction and time zone, a four-digit year from `0001`, a real day of that month, and `24:00:00` for the end of a day: the `datestamp` of results reporting |
 | `isXsdDate(text)`                                         | `YYYY-MM-DD` with a four-digit year from `0001`, a real day of that month and no time zone: the `lastUpdated` of usage data                                                                       |
-| `parseIsoDuration(text)`                                  | An ISO 8601 duration in seconds. Weeks, days, hours, minutes and seconds only; years and months are a `DataError`                                                                                 |
+| `parseDuration(text)`                                     | An ISO 8601 duration in seconds. Weeks, days, hours, minutes and seconds only; years and months are a `DataError`                                                                                 |
 | `parseIdentifierList(text)`, `formatIdentifierList(list)` | An `IdentifierList`: identifiers separated by whitespace; an empty text is an empty list                                                                                                          |
 | `parseIntegerList(text)`, `formatIntegerList(list)`       | An `IntegerList`: `xs:int` integers, from -2147483648 to 2147483647, separated by whitespace                                                                                                      |
 
 ```ts
-import { isXsdDate, isXsdDateTime, parseIsoDuration } from "@assesskit/runtime/values";
+import { isXsdDate, isXsdDateTime, parseDuration } from "@assesskit/runtime/values";
 
 isXsdDateTime("2020-08-25T18:19:20"); // => true
 isXsdDateTime("2020-08-25"); // => false
 isXsdDate("2004-07-04"); // => true
 isXsdDate("2004-7-4"); // => false
-parseIsoDuration("PT2M0.049722S"); // => 120.049722
+parseDuration("PT2M0.049722S"); // => 120.049722
 ```
 
 ### JSON
@@ -114,22 +114,22 @@ state, views and actions in a second form that adds the types. Both need the car
 write a NULL: they come from its declaration, a `ValueDeclaration` `{ cardinality, baseType }` with no base type for a
 record.
 
-| Functions                      | Form                                                                                                                     |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| `toJsonValue`, `fromJsonValue` | The binding of the guide: `{ "base": ... }`, `{ "list": ... }`, `{ "record": ... }`. Reading needs the declaration       |
-| `toWireValue`, `fromWireValue` | A `WireValue` `{ cardinality, baseType?, value }`, where `value` is that JSON, or `null` for NULL. Reading needs nothing |
+| Functions                         | Form                                                                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `writeJsonValue`, `readJsonValue` | The binding of the guide: `{ "base": ... }`, `{ "list": ... }`, `{ "record": ... }`. Reading needs the declaration       |
+| `writeWireValue`, `readWireValue` | A `WireValue` `{ cardinality, baseType?, value }`, where `value` is that JSON, or `null` for NULL. Reading needs nothing |
 
 A wire value decodes without a declaration and loses nothing through `JSON.stringify` and `JSON.parse`: it keeps `multiple`
 apart from `ordered`, gives a NULL its type, and keeps `NaN`, infinities and `-0`. A record has no `baseType`.
 
 ```ts
-import { fromJsonValue, single, toJsonValue, toWireValue } from "@assesskit/runtime/values";
+import { readJsonValue, buildSingle, writeJsonValue, writeWireValue } from "@assesskit/runtime/values";
 
-toJsonValue(single("duration", 90.5), { cardinality: "single", baseType: "duration" });
+writeJsonValue(buildSingle("duration", 90.5), { cardinality: "single", baseType: "duration" });
 // => { base: { duration: "PT90.5S" } }
-fromJsonValue({ base: { duration: "PT90.5S" } }, { cardinality: "single", baseType: "duration" });
+readJsonValue({ base: { duration: "PT90.5S" } }, { cardinality: "single", baseType: "duration" });
 // => { cardinality: "single", baseType: "duration", value: 90.5 }
-toWireValue(null, { cardinality: "ordered", baseType: "point" });
+writeWireValue(null, { cardinality: "ordered", baseType: "point" });
 // => { cardinality: "ordered", baseType: "point", value: null }
 ```
 
@@ -165,9 +165,9 @@ type promotion of weighted outcomes and of assigning an integer to a `float` or 
 a `DataError`.
 
 ```ts
-import { promote, single } from "@assesskit/runtime/values";
+import { promote, buildSingle } from "@assesskit/runtime/values";
 
-promote(single("integer", 3), "float"); // => { cardinality: "single", baseType: "float", value: 3 }
+promote(buildSingle("integer", 3), "float"); // => { cardinality: "single", baseType: "float", value: 3 }
 ```
 
 ## Base64

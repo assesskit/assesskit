@@ -36,7 +36,7 @@ function itemReferencesOf(section: Readonly<Record<string, unknown>>): Set<strin
  * @throws `DataError` when an argument has the wrong type.
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, item pool}
  */
-export function checkPool(section: AssessmentSection, pool: ItemStage): readonly Issue[] {
+export function validatePool(section: AssessmentSection, pool: ItemStage): readonly Issue[] {
   const input: unknown = section;
   checkRecord(input, "The section must be an object");
   checkStage(pool, "pool");

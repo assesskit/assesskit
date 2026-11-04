@@ -3,7 +3,7 @@ import type { Action } from "./action.js";
 import { type RunningScope, runningScopes } from "./deadlines.js";
 import { applyItemAction, type ItemAction } from "./item-action.js";
 import { suspendItem } from "./item-lifecycle.js";
-import { type Destination, destinationAfter, previousItem } from "./navigation.js";
+import { type Destination, destinationAfter, findPreviousItem } from "./navigation.js";
 import { type ItemKey, sameKey } from "./plan.js";
 import { liesIn, type Placement, planIndex } from "./plan-index.js";
 import { type Refusal, refusal } from "./refusal.js";
@@ -122,7 +122,7 @@ export function move(step: StepContext, to: "next" | "previous" | ItemKey, at: n
   const linear = isLinear(step, here);
   if (to === "previous") {
     if (linear) return backward();
-    const previous = previousItem(step.course.structure, step.state.plan, here.key);
+    const previous = findPreviousItem(step.course.structure, step.state.plan, here.key);
     if (previous === undefined) {
       return refusal("unknown-item", "The test part has no item before the one presented.");
     }

@@ -1,7 +1,7 @@
 import { checkArray, checkRecord, checkString } from "../checks.js";
 import { DataError } from "../errors.js";
 import { ElementReader, type XmlElement } from "../xml/index.js";
-import { checkReadArguments, expectRoot, takeLeaf } from "./element-reading.js";
+import { checkReadArguments, expectRoot, type ReadMetadataOptions, takeLeaf } from "./element-reading.js";
 import { appendLeaf, branch } from "./element-writing.js";
 import { parseString } from "./lexical.js";
 import { CSM_NAMESPACE } from "./namespaces.js";
@@ -78,14 +78,18 @@ function readStandards(reader: ElementReader): CurriculumStandards {
  * Reads a `curriculumStandardsMetadataSet` element. The children come in the order of the schema.
  *
  * @param element - The element.
- * @param path - The path of the document, which the issues name.
+ * @param options - See {@link ReadMetadataOptions}.
  * @returns The standards of the set.
  * @throws `DataError` when an argument has the wrong type.
  * @throws `ReadError` when the element is not a `curriculumStandardsMetadataSet` of the CSM namespace, or has an element,
  * attribute or text that the CSM schema does not allow at that place, or a `labelledGUID` without a `GUID`.
  */
-export function readCurriculumStandardsSet(element: XmlElement, path?: string): CurriculumStandardsSet {
-  checkReadArguments(element, path);
+export function readCurriculumStandardsSet(
+  element: XmlElement,
+  options: ReadMetadataOptions = {},
+): CurriculumStandardsSet {
+  checkReadArguments(element, options);
+  const { path } = options;
   const reader = new ElementReader(element, {
     module: "metadata",
     namespaces: [CSM_NAMESPACE],

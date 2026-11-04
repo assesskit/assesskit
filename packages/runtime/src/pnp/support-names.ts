@@ -154,7 +154,7 @@ export function isSetSupportName(value: unknown): value is SetSupportName {
  * @returns The name of the custom support.
  * @throws `DataError` when `localName` is not a string.
  */
-export function extensionName(localName: string): SupportName {
+export function deriveExtensionName(localName: string): SupportName {
   checkString(localName, "The local name of a custom support");
   return `${EXTENSION_PREFIX}${localName}`;
 }

@@ -145,13 +145,13 @@ const viewSchema: Schema<CandidateView> = v.strictObject({
  * every field, the values as wire values, and the content as plain JSON nodes.
  *
  * @remarks
- * A view that `viewToJson` wrote reads back equal.
+ * A view that `writeView` wrote reads back equal.
  *
  * @param json - The parsed JSON.
  * @returns The view.
  * @throws `DataError` when it is not the JSON form of a view.
  */
-export function viewFromJson(json: unknown): CandidateView {
+export function readView(json: unknown): CandidateView {
   return parseWith(viewSchema, json, "The view");
 }
 
@@ -207,7 +207,7 @@ function itemToJson(item: CandidateItem): unknown {
  * maps are arrays of entries, so that an identifier such as `__proto__` stays data.
  *
  * @remarks
- * The result is read back by {@link viewFromJson} before it is returned, so that what leaves is what a client reads,
+ * The result is read back by {@link readView} before it is returned, so that what leaves is what a client reads,
  * and a view with a property the form does not have is refused. The content nodes are shared with the view.
  *
  * @param view - The view.
@@ -215,7 +215,7 @@ function itemToJson(item: CandidateItem): unknown {
  * @throws `DataError` when the view is not one: it lacks a property of a view or has another, or holds a number that
  * JSON cannot carry.
  */
-export function viewToJson(view: CandidateView): unknown {
+export function writeView(view: CandidateView): unknown {
   checkRecord(view, "The view must be an object");
   checkArray(view.navigation, "The navigation of the view must be an array");
   const json = {
@@ -223,6 +223,6 @@ export function viewToJson(view: CandidateView): unknown {
     navigation: view.navigation.map((entry) => (entry.kind === "item" ? { ...entry, key: keyOf(entry.key) } : entry)),
     ...(view.current === undefined ? {} : { current: itemToJson(view.current) }),
   };
-  viewFromJson(json);
+  readView(json);
   return json;
 }

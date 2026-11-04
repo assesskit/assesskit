@@ -1,6 +1,6 @@
 import { ReadError, SecurityError } from "@assesskit/runtime";
 import { type AssessmentItem, readAsi } from "@assesskit/runtime/asi";
-import { checkResponse, describeInteractions, type InteractionKind } from "@assesskit/runtime/interactions";
+import { describeInteractions, type InteractionKind, validateResponse } from "@assesskit/runtime/interactions";
 import { afterEach, describe, expect, inject, it } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import { EN_MESSAGES } from "../src/index.js";
@@ -95,7 +95,7 @@ describe("the graphic items of the examples of 1EdTech", () => {
         await answerWith(element, descriptor.kind, path);
         await element.settled();
         expect(element.value, `${path}: ${descriptor.kind} took no answer`).not.toBeNull();
-        const { reasons } = checkResponse(descriptor, element.value);
+        const { reasons } = validateResponse(descriptor, element.value);
         expect(reasons, `${path}: ${descriptor.kind}`).not.toContain("binding");
         expect(reasons, `${path}: ${descriptor.kind}`).not.toContain("unknown-choice");
         answered += 1;

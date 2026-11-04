@@ -11,13 +11,13 @@ import {
   type TestScope,
 } from "../processing/index.js";
 import { fitValue } from "../processing/internal.js";
-import { single, type Value } from "../values/index.js";
+import { buildSingle, type Value } from "../values/index.js";
 import { MILLISECONDS_PER_SECOND } from "./attempt.js";
 import { type Course, type CourseItem, candidateOf, itemContextValues } from "./course.js";
 import { type DeliveredItem, type DeliveryState, deliveredLookup, type ScopeClock } from "./delivery-state.js";
 import type { ItemKey } from "./plan.js";
 import { type PlanIndex, planIndex } from "./plan-index.js";
-import { ancestry, type ItemRefNode, type TestStructure } from "./structure.js";
+import { type ItemRefNode, listAncestors, type TestStructure } from "./structure.js";
 
 /**
  * Returns the time a clock shows as the value of a `duration` variable: seconds, truncated to the millisecond.
@@ -26,7 +26,7 @@ import { ancestry, type ItemRefNode, type TestStructure } from "./structure.js";
  */
 export function durationOf(clocks: readonly ScopeClock[], scope: ScopeClock["scope"], identifier: string): Value {
   const spent = clocks.find((clock) => clock.scope === scope && clock.identifier === identifier)?.spent ?? 0;
-  return single("duration", Math.floor(spent) / MILLISECONDS_PER_SECOND);
+  return buildSingle("duration", Math.floor(spent) / MILLISECONDS_PER_SECOND);
 }
 
 /**
@@ -39,7 +39,7 @@ export function keeps(node: ItemRefNode, filter: ItemSessionFilter): boolean {
   const categories = node.model.category ?? [];
   if (
     sectionIdentifier !== undefined &&
-    !ancestry(node).some((outer) => outer.kind === "section" && outer.model.identifier === sectionIdentifier)
+    !listAncestors(node).some((outer) => outer.kind === "section" && outer.model.identifier === sectionIdentifier)
   ) {
     return false;
   }

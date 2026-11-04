@@ -1,5 +1,5 @@
 import { DataError } from "@assesskit/runtime/errors";
-import { container, single, type Value } from "@assesskit/runtime/values";
+import { buildContainer, buildSingle, type Value } from "@assesskit/runtime/values";
 import { describe, expect, it, vi } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import { ID_MESSAGES } from "../src/messages/id/index.js";
@@ -222,17 +222,17 @@ describe("mountPciFrame", () => {
         ),
         language: "id",
         status: "review",
-        templateVariables: new Map([["X", { value: single("integer", 3), declaration: INTEGER }]]),
+        templateVariables: new Map([["X", { value: buildSingle("integer", 3), declaration: INTEGER }]]),
         contextVariables: new Map([
           [
             "LIMIT",
             {
-              value: container("multiple", "float", [1.5, 2.5]),
+              value: buildContainer("multiple", "float", [1.5, 2.5]),
               declaration: { cardinality: "multiple", baseType: "float" },
             },
           ],
         ]),
-        response: { value: single("integer", 2), declaration: INTEGER },
+        response: { value: buildSingle("integer", 2), declaration: INTEGER },
         state: JSON.stringify({ count: 2 }),
       });
       await ready(result);
@@ -291,7 +291,7 @@ describe("mountPciFrame", () => {
       await waitFor(() =>
         expect(eventOf(result.events, "changed")).toEqual({
           type: "changed",
-          response: single("integer", 1),
+          response: buildSingle("integer", 1),
           state: '{"count":1}',
           valid: true,
         }),
@@ -301,17 +301,22 @@ describe("mountPciFrame", () => {
     it("restores the interaction from the state that getState gave", async () => {
       const result = mount({
         state: JSON.stringify({ count: 2 }),
-        response: { value: single("integer", 2), declaration: INTEGER },
+        response: { value: buildSingle("integer", 2), declaration: INTEGER },
       });
       await ready(result);
       await commands.clickInFrame(TITLE, "#press");
-      await waitFor(() => expect(eventOf(result.events, "changed")).toMatchObject({ response: single("integer", 3) }));
+      await waitFor(() =>
+        expect(eventOf(result.events, "changed")).toMatchObject({ response: buildSingle("integer", 3) }),
+      );
     });
 
     it("reads the bytes of a file value before the interaction starts, and writes them inline", async () => {
       const { files } = memoryFiles(new Map([["stored-1", new TextEncoder().encode("pleasure.")]]));
       const result = mount(
-        filesPci(files, single("file", { reference: "stored-1", mimeType: "text/plain", fileName: "helloworld.txt" })),
+        filesPci(
+          files,
+          buildSingle("file", { reference: "stored-1", mimeType: "text/plain", fileName: "helloworld.txt" }),
+        ),
       );
       await ready(result);
       // The data is the base64 of "pleasure." that the best practices guide shows.
@@ -327,7 +332,7 @@ describe("mountPciFrame", () => {
       await commands.clickInFrame(TITLE, "#give");
       await waitFor(() => expect(eventsOf(result, "changed")).toHaveLength(1));
       expect(eventOf(result.events, "changed")).toMatchObject({
-        response: single("file", { reference: "uploaded-1", mimeType: "text/plain", fileName: "f1.txt" }),
+        response: buildSingle("file", { reference: "uploaded-1", mimeType: "text/plain", fileName: "f1.txt" }),
       });
       expect(uploads).toEqual([
         { bytes: new TextEncoder().encode("file 1"), mimeType: "text/plain", fileName: "f1.txt" },
@@ -343,8 +348,8 @@ describe("mountPciFrame", () => {
       await waitFor(() => expect(eventsOf(result, "changed")).toHaveLength(2));
       expect(uploads).toHaveLength(1);
       expect(eventsOf(result, "changed").map((event) => event.response)).toEqual([
-        single("file", { reference: "uploaded-1", mimeType: "text/plain", fileName: "same.txt" }),
-        single("file", { reference: "uploaded-1", mimeType: "text/plain", fileName: "same.txt" }),
+        buildSingle("file", { reference: "uploaded-1", mimeType: "text/plain", fileName: "same.txt" }),
+        buildSingle("file", { reference: "uploaded-1", mimeType: "text/plain", fileName: "same.txt" }),
       ]);
     });
 
@@ -380,7 +385,7 @@ describe("mountPciFrame", () => {
       const result = mount(
         filesPci(
           { read: () => Promise.reject(new Error("The storage is down.")), upload: memoryFiles().files.upload },
-          single("file", { reference: "lost", mimeType: "text/plain" }),
+          buildSingle("file", { reference: "lost", mimeType: "text/plain" }),
         ),
       );
       await waitFor(() => expect(result.events).toEqual([{ type: "failed", reason: "files" }]));
@@ -440,13 +445,13 @@ describe("mountPciFrame", () => {
     it("hands over the response and the state, then calls oncompleted, when the frame goes", async () => {
       const result = mount({
         state: JSON.stringify({ count: 2 }),
-        response: { value: single("integer", 2), declaration: INTEGER },
+        response: { value: buildSingle("integer", 2), declaration: INTEGER },
       });
       await ready(result);
       await result.frame.destroy();
       expect(eventOf(result.events, "completed")).toEqual({
         type: "completed",
-        response: single("integer", 2),
+        response: buildSingle("integer", 2),
         state: '{"count":2}',
       });
       const completed = probeOf(result.probes, "oncompleted");
@@ -467,7 +472,7 @@ describe("mountPciFrame", () => {
         await result.frame.settled();
         expect(eventOf(result.events, "changed")).toEqual({
           type: "changed",
-          response: single("integer", 1),
+          response: buildSingle("integer", 1),
           state: '{"count":1}',
           valid: undefined,
         });

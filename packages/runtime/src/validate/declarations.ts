@@ -9,9 +9,9 @@ import { ProcessingError } from "../errors.js";
 import {
   COMPLETION_STATUS,
   DURATION,
-  declaredValue,
   NUM_ATTEMPTS,
   QTI_CONTEXT,
+  readDeclaredValue,
   readPrimitive,
   type VariableType,
 } from "../processing/index.js";
@@ -100,7 +100,7 @@ function checkValue(findings: Findings, read: () => unknown, here: string): void
 function checkValues(findings: Findings, identifier: string, declaration: Declaration, here: string): void {
   const type = typeOf(declaration);
   const read = (values: readonly ValueElement[] | undefined, what: string): void =>
-    checkValue(findings, () => declaredValue(values, type, `${what} of ${identifier}`), here);
+    checkValue(findings, () => readDeclaredValue(values, type, `${what} of ${identifier}`), here);
   read(declaration.defaultValue?.values, "The default value");
   if (declaration.kind === "outcome-declaration" && declaration.baseType !== undefined) {
     checkLookupTable(findings, declaration, declaration.baseType, here);

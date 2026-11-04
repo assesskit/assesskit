@@ -28,8 +28,8 @@ sequenceDiagram
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
-import { moduleConfigurationPaths, parseModuleResolution } from "@assesskit/runtime/pci";
-import { single } from "@assesskit/runtime/values";
+import { resolveModuleConfigurationPaths, readModuleResolution } from "@assesskit/runtime/pci";
+import { buildSingle } from "@assesskit/runtime/values";
 import { EN_MESSAGES } from "@assesskit/player";
 import { mountPciFrame } from "@assesskit/player/player";
 
@@ -46,8 +46,8 @@ const item = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/i
 const [interaction] = item.kind === "item" ? (item.item.body?.children ?? []) : [];
 if (interaction?.kind !== "portable-custom-interaction") throw new Error("The item has no interaction.");
 
-// The host reads the file at moduleConfigurationPaths(interaction).primary from the package.
-const primary = parseModuleResolution('{"waitSeconds": 60, "paths": {"tap": "modules/tap"}}');
+// The host reads the file at resolveModuleConfigurationPaths(interaction).primary from the package.
+const primary = readModuleResolution('{"waitSeconds": 60, "paths": {"tap": "modules/tap"}}');
 
 const events = [];
 const host = document.createElement("div");
@@ -64,7 +64,7 @@ const frame = mountPciFrame(host, {
   markup: `<qti-interaction-markup><img class="tap" src="${gate}ammonia.svg" alt="Ammonia"></qti-interaction-markup>`,
   stylesheets: [`${gate}styles/item.css`],
   status: "interacting",
-  response: { value: single("integer", 0), declaration: { cardinality: "single", baseType: "integer" } },
+  response: { value: buildSingle("integer", 0), declaration: { cardinality: "single", baseType: "integer" } },
   files: {
     read: async () => new Uint8Array(),
     upload: async (_bytes, mimeType) => ({ reference: "file-1", mimeType }),
@@ -126,7 +126,7 @@ module in the package is on an origin that the frame loads no scripts from.
 
 The type identifier, the response identifier, the `class` and the properties come from the interaction: the
 identifiers as written, the `class` as the `class` of the element that holds the markup in the frame, so that the item's
-stylesheets select its markup as they do in the item, and the properties from `pciProperties` of the runtime, the `data-*`
+stylesheets select its markup as they do in the item, and the properties from `derivePciProperties` of the runtime, the `data-*`
 attributes named as `dataset` names them. Maps keep names such as `__proto__` as data. A stylesheet URL is an absolute
 `http` or `https` URL, and an origin is only a scheme, a host and a port.
 

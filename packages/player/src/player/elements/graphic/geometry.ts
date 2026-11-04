@@ -1,4 +1,4 @@
-import { type AreaShape, coordinateCountFits } from "@assesskit/runtime/asi";
+import { type AreaShape, fitsCoordinateCount } from "@assesskit/runtime/asi";
 import { describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import type { Point } from "@assesskit/runtime/values";
@@ -58,7 +58,7 @@ export function parseArea(shape: AreaShape, coords: string, size: Size): Area {
   const { width, height } = size;
   const tokens = coords.trim() === "" ? [] : coords.split(",").map((token) => token.trim());
   if (shape === "default") return { shape, box: { x: 0, y: 0, width, height }, corners: [] };
-  if (!coordinateCountFits(shape, tokens.length)) {
+  if (!fitsCoordinateCount(shape, tokens.length)) {
     throw new DataError(`A ${shape} cannot have the ${tokens.length} coordinates ${describe(coords)}.`);
   }
   const radius = Math.min(width, height);

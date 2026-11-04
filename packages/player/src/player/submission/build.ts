@@ -1,7 +1,7 @@
 import type { BodyNode } from "@assesskit/runtime/asi";
-import { rubricBlocksFor, type View } from "@assesskit/runtime/content";
+import { selectRubricBlocks, type View } from "@assesskit/runtime/content";
 import type { ItemKey } from "@assesskit/runtime/delivery";
-import { fromWireValue, type Value } from "@assesskit/runtime/values";
+import { readWireValue, type Value } from "@assesskit/runtime/values";
 import type {
   Submission,
   SubmissionItem,
@@ -48,8 +48,8 @@ function timeNode(instant: number): HTMLElement {
   return html("time", { datetime: datestamp }, datestamp);
 }
 
-/** Decodes a value of the submission; `fromWireValue` of the runtime checks it. */
-const decoded = (value: SubmissionValue): Value | null => (value === null ? null : fromWireValue(value));
+/** Decodes a value of the submission; `readWireValue` of the runtime checks it. */
+const decoded = (value: SubmissionValue): Value | null => (value === null ? null : readWireValue(value));
 
 /** Builds a section with a heading of the given level, labelled by it. */
 function section(
@@ -130,7 +130,7 @@ function partNode(part: SubmissionPart, context: DisplayContext): HTMLElement {
 
 /** Whether a node is a rubric block that only the scorer sees: the candidate's blocks are already in the body of an item. */
 const isScorerBlock = (node: BodyNode): boolean =>
-  node.kind === "rubric-block" && rubricBlocksFor([node], "candidate").length === 0;
+  node.kind === "rubric-block" && selectRubricBlocks([node], "candidate").length === 0;
 
 /**
  * Builds the section of a covered item: its title, its body as the candidate saw it, the rubric blocks of the item for

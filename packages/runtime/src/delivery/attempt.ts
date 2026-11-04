@@ -11,7 +11,7 @@ import {
   runResponseProcessing,
 } from "../processing/index.js";
 import { initialOutcome, NOT_ATTEMPTED } from "../processing/internal.js";
-import { single, type Value } from "../values/index.js";
+import { buildSingle, type Value } from "../values/index.js";
 import { valuesToJson } from "./entries-json.js";
 import type { DeliveryEvent } from "./events.js";
 import type { ItemSession, ItemSessionContext } from "./item-session.js";
@@ -123,7 +123,7 @@ function withResponse(variables: ItemVariables, identifier: string, value: Value
 export function timed(session: ItemSession, at: number): ItemSession {
   if (session.since === null) return { ...session, updatedAt: at };
   const spent = session.spent + (at - session.since);
-  const duration = single("duration", Math.floor(spent) / MILLISECONDS_PER_SECOND);
+  const duration = buildSingle("duration", Math.floor(spent) / MILLISECONDS_PER_SECOND);
   return {
     ...session,
     spent,
@@ -145,7 +145,7 @@ export function timed(session: ItemSession, at: number): ItemSession {
  */
 export function startAttempt(session: ItemSession, item: AssessmentItem): ItemSession {
   const numAttempts = attemptsOf(session.variables) + 1;
-  const counted = single("integer", numAttempts);
+  const counted = buildSingle("integer", numAttempts);
   if (numAttempts > 1) {
     return { ...session, attempting: true, variables: withResponse(session.variables, NUM_ATTEMPTS, counted) };
   }
@@ -164,7 +164,7 @@ export function startAttempt(session: ItemSession, item: AssessmentItem): ItemSe
   }
   const outcomes =
     completionOf(variables) === NOT_ATTEMPTED
-      ? new Map(variables.outcomes).set(COMPLETION_STATUS, single("identifier", UNKNOWN))
+      ? new Map(variables.outcomes).set(COMPLETION_STATUS, buildSingle("identifier", UNKNOWN))
       : variables.outcomes;
   return { ...session, attempting: true, drafts, variables: { ...variables, responses, outcomes } };
 }
@@ -245,7 +245,7 @@ export function endAttempt(
     const ended = ending.by === "end-attempt" && ending.interaction === identifier;
     responses.set(
       identifier,
-      endAttempts.has(identifier) ? single("boolean", ended) : (current.drafts.get(identifier) ?? null),
+      endAttempts.has(identifier) ? buildSingle("boolean", ended) : (current.drafts.get(identifier) ?? null),
     );
   }
   const submitted = { ...current.variables, responses };

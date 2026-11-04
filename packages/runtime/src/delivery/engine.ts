@@ -345,7 +345,7 @@ function start(course: Course, options: StartOptions): Step {
  * with the custom operators and the resolver of templates given, and refuses content with an error, so that no session
  * fails on it; then it resolves the section references and every item reference with its variants. An item delivered
  * alone is a test of one nonlinear test part with individual submission, whose item session control is
- * `standaloneSessionControl` of the control given.
+ * `resolveStandaloneSessionControl` of the control given.
  *
  * @param definition - What to deliver; see {@link DeliveryDefinition}.
  * @param options - See {@link EngineOptions}.

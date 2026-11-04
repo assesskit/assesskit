@@ -255,7 +255,7 @@ class Builder {
  *
  * @param test - The test, as `readAsi` reads it, with its includes resolved.
  * @param base - The path of the test document, against which its references resolve.
- * @param resolvers - Only `sections` is called, as `packageResolvers` provides it.
+ * @param resolvers - Only `sections` is called, as `createPackageResolvers` provides it.
  * @returns The structure of the test.
  * @throws `DataError` when an argument has the wrong type; when two test parts, sections or item references share an
  * identifier, which a section reference to one document from two places also does; when a section reference and the
@@ -295,7 +295,7 @@ function parentOf(node: StructureNode): StructureNode | undefined {
  * @param node - A node of the structure.
  * @returns The enclosing nodes, outermost first.
  */
-export function ancestry(node: StructureNode): readonly StructureNode[] {
+export function listAncestors(node: StructureNode): readonly StructureNode[] {
   const chain: StructureNode[] = [];
   for (let at = parentOf(node); at !== undefined; at = parentOf(at)) chain.unshift(at);
   return chain;
@@ -307,7 +307,7 @@ export function ancestry(node: StructureNode): readonly StructureNode[] {
  * @param node - A section or an item reference of the structure.
  * @returns The part.
  */
-export function partOf(node: ContentNode): PartNode {
+export function findTestPart(node: ContentNode): PartNode {
   let at: PartNode | SectionNode = node.parent;
   while (at.kind === "section") at = at.parent;
   return at;

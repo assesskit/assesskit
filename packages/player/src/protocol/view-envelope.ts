@@ -8,7 +8,7 @@ import { refusalSchema } from "./refusal.js";
 export interface ViewEnvelope {
   /** The sequence number of the request this answers. */
   readonly seq: number;
-  /** The view as the runtime's `viewToJson` writes it. Untrusted until the runtime's `viewFromJson` has read it. */
+  /** The view as the runtime's `writeView` writes it. Untrusted until the runtime's `readView` has read it. */
   readonly view: unknown;
   /** Each asset prefix that the view needs, mapped to its base URL; the URL of a package path is the base plus the path. */
   readonly assets: Readonly<Record<string, string>>;
@@ -40,7 +40,7 @@ const viewEnvelopeSchema: Schema<unknown> = v.strictObject({
  * Checks the shape of a view envelope that arrived as JSON.
  *
  * @remarks
- * The view is not read here: the runtime's `viewFromJson` reads it.
+ * The view is not read here: the runtime's `readView` reads it.
  *
  * @param value - The parsed JSON.
  * @throws `DataError` when it is not an object with the properties `seq`, `view`, `assets` and, optionally, `documents`

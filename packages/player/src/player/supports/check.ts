@@ -1,8 +1,8 @@
 import {
   describe,
+  describeIssue,
   finiteSchema,
   guardSchema,
-  issueText,
   looseRecord,
   nonEmptyStringSchema,
   parseWith,
@@ -120,7 +120,7 @@ const supportViewSchema = v.pipe(
       return;
     }
     const result = v.safeParse(SETTING_SCHEMAS.get(name) ?? v.unknown(), settings, { abortEarly: true });
-    if (!result.success) addIssue({ message: `the settings are invalid at ${issueText(result.issues[0])}` });
+    if (!result.success) addIssue({ message: `the settings are invalid at ${describeIssue(result.issues[0])}` });
   }),
 );
 

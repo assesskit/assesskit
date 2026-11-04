@@ -3,7 +3,7 @@ import { type CatFetch, createRestCatPort } from "@assesskit/player/cat-rest";
 import { type CatPort, isSessionEnd } from "@assesskit/runtime/cat";
 import type { AssessmentResult } from "@assesskit/runtime/results";
 import { type ItemStatistic, writeUsageData } from "@assesskit/runtime/usage";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import { DEMO_CREDENTIALS, demoServer } from "./src/demo-server.ts";
 import { measurekitCatPort } from "./src/measurekit-cat-port.ts";
 import { memoryStore } from "./src/memory-store.ts";
@@ -52,7 +52,7 @@ const resultOf = (item: string, score: number): AssessmentResult => ({
           identifier: "SCORE",
           cardinality: "single",
           baseType: "float",
-          value: single("float", score),
+          value: buildSingle("float", score),
         },
       ],
       supports: [],

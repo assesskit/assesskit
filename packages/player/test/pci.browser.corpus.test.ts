@@ -1,6 +1,10 @@
-import { descendantNodes, type PortableCustomInteraction, readAsi } from "@assesskit/runtime/asi";
-import { moduleConfigurationPaths, type PciModuleConfiguration, parseModuleResolution } from "@assesskit/runtime/pci";
-import { single, type ValueDeclaration } from "@assesskit/runtime/values";
+import { listDescendantNodes, type PortableCustomInteraction, readAsi } from "@assesskit/runtime/asi";
+import {
+  type PciModuleConfiguration,
+  readModuleResolution,
+  resolveModuleConfigurationPaths,
+} from "@assesskit/runtime/pci";
+import { buildSingle, type ValueDeclaration } from "@assesskit/runtime/values";
 import { describe, expect, it } from "vitest";
 import { commands } from "vitest/browser";
 import { asset, eventOf, hits, type Mounted, mount, ready, tokenOf } from "./pci-fixture.js";
@@ -23,15 +27,15 @@ async function loadInteraction(example: Example, item: string, index: number) {
   if (source === undefined) throw new Error(`The corpus has no ${item}: run pnpm corpus first.`);
   const document = readAsi(source);
   if (document.kind !== "item") throw new Error(`${item} is no item.`);
-  const interaction = descendantNodes(document.item)
+  const interaction = listDescendantNodes(document.item)
     .filter((node): node is PortableCustomInteraction => node.kind === "portable-custom-interaction")
     .at(index);
   if (interaction === undefined) throw new Error(`${item} has no interaction ${index}.`);
-  const files = moduleConfigurationPaths(interaction);
+  const files = resolveModuleConfigurationPaths(interaction);
   const [primary, fallback] = await Promise.all([text(example, files.primary), text(example, files.fallback)]);
   const configuration: PciModuleConfiguration = {
-    ...(primary === undefined ? {} : { primary: parseModuleResolution(primary) }),
-    ...(fallback === undefined ? {} : { fallback: parseModuleResolution(fallback) }),
+    ...(primary === undefined ? {} : { primary: readModuleResolution(primary) }),
+    ...(fallback === undefined ? {} : { fallback: readModuleResolution(fallback) }),
   };
   // The markup as it stands in the item, with the URLs of its files resolved against the package.
   const markup =
@@ -76,7 +80,7 @@ describe("the PCI examples of 1EdTech", () => {
     // tap.js fires no change event; the player reads its response and state when the frame goes.
     await result.frame.destroy();
     const completed = eventOf(result.events, "completed");
-    expect(completed?.response).toEqual(single("integer", 1));
+    expect(completed?.response).toEqual(buildSingle("integer", 1));
     expect(JSON.parse(completed?.state ?? "null")).toMatchObject({ numReveals: 1 });
     expect(await errorsExcept()).toEqual([]);
   });

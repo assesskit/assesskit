@@ -123,16 +123,19 @@ that the player needs and the runtime lacks is a change in the runtime, with its
 
 ## Deviations from the engineering standards
 
-| Standard                                                            | What the repository does                                                                                                                                                                                              | Reason                                                                                                                                                                                     |
-| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Code that two packages of a family need goes in the family's `core` | The checks of one value and `untilAborted`, which the runtime and the player share, are `@assesskit/runtime/checks`; no `@assesskit/core` exists                                                                      | The family has two packages and the player depends on the runtime already, so a third package would add a release and a boundary for plain functions. Approved by the owner on 2026-11-01. |
-| Names of functions are verbs                                        | A pure accessor, and a constructor of a value, is named for what it returns: `partOf`, `timeLimits`, `lomGeneral`, `rubricScoreRange`, `single`, `container`; a function that builds a block or a document has a verb | The names are those of the terms of QTI and of the types they return, and a verb in front of each would say nothing more. Approved by the owner on 2026-11-01.                             |
+| Standard                                                            | What the repository does                                                                                                                      | Reason                                                                                                                                                                                     |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Code that two packages of a family need goes in the family's `core` | The checks of one value and `raceAbort`, which the runtime and the player share, are `@assesskit/runtime/checks`; no `@assesskit/core` exists | The family has two packages and the player depends on the runtime already, so a third package would add a release and a boundary for plain functions. Approved by the owner on 2026-11-01. |
 
 ## Naming
 
 - QTI names keep their spelling in the model: `qti-assessment-item` becomes `AssessmentItem`, and the attribute `max-attempts`
   becomes `maxAttempts`.
-- Options are `<Name>Options`; limits are `<Name>Limits`, with `DEFAULT_<NAME>_LIMITS` for the defaults.
+- Functions are named by the verbs of STANDARDS section 4: `validate<X>` returns `Issue`s, `check<X>` throws `DataError`, `read<X>`
+  and `write<X>` convert a form that QTI or another standard defines, `build<X>` assembles plain data and `create<X>` returns an
+  object with behavior. A quantity that QTI names keeps its name (`timeLimits`, `rubricScoreRange`).
+- Options are `<Name>Options`, named for the function (`ReadNumericRecordOptions`); limits are `<Name>Limits`, with
+  `DEFAULT_<NAME>_LIMITS` for the defaults. An optional parameter goes in the options, and only a required one is positional.
 - Labels are string unions in kebab-case (`"very-good"`).
 
 ## Code

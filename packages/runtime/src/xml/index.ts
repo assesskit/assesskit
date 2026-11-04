@@ -3,14 +3,24 @@
  *
  * @module @assesskit/runtime/xml
  */
-export { buildElement, type ElementAttributes } from "./build-element.js";
-export { ElementReader, type ReaderRules, termOf } from "./element-reader.js";
+export { type BuildElementOptions, buildElement, type ElementAttributes } from "./build-element.js";
+export {
+  type CreateTermConverterOptions,
+  createTermConverter,
+  ElementReader,
+  type ReaderRules,
+} from "./element-reader.js";
 export { type IncludeResolver, type ResolveIncludesOptions, resolveIncludes } from "./include.js";
 export { isXmlLanguage } from "./language.js";
 export { DEFAULT_XML_LIMITS, type XmlLimits } from "./limits.js";
 export { type ParseXmlOptions, parseXml } from "./parse.js";
-export { attributeOf, childElements, textOf } from "./query.js";
-export { locationOf, readError } from "./read-error.js";
+export { collectText, type FindAttributeOptions, findAttribute, listChildElements } from "./query.js";
+export {
+  type CreateReadErrorOptions,
+  createReadError,
+  type LocateElementOptions,
+  locateElement,
+} from "./read-error.js";
 export { serializeXml } from "./serialize.js";
 export {
   XINCLUDE_NAMESPACE,

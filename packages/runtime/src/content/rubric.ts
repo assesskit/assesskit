@@ -19,7 +19,7 @@ export type View = (typeof VIEWS)[number];
  * @throws `DataError` when `blocks` is not an array of rubric blocks or `view` is not a view.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function rubricBlocksFor<T extends RubricBlock | TestRubricBlock>(
+export function selectRubricBlocks<T extends RubricBlock | TestRubricBlock>(
   blocks: readonly T[],
   view: View,
 ): readonly T[] {
@@ -62,14 +62,14 @@ export interface TestPosition {
  * @returns The `qti-rubric-block`s of the levels whose `view` lists the view.
  * @throws `DataError` when an argument has the wrong type.
  */
-export function testRubricBlocks(position: TestPosition, view: View): readonly TestRubricBlock[] {
+export function selectTestRubricBlocks(position: TestPosition, view: View): readonly TestRubricBlock[] {
   checkRecord(position, "The position must be an object with a test and optionally a part and sections");
   const { test, part, sections = [] } = position;
   checkRecord(test, "The test must be an object of the model of qti-assessment-test");
   checkArray(sections, "The sections must be an array");
   return [
-    ...rubricBlocksFor(test.rubricBlocks, view),
-    ...(part === undefined ? [] : rubricBlocksFor(part.rubricBlocks, view)),
-    ...sections.flatMap((section) => rubricBlocksFor(section.rubricBlocks, view)),
+    ...selectRubricBlocks(test.rubricBlocks, view),
+    ...(part === undefined ? [] : selectRubricBlocks(part.rubricBlocks, view)),
+    ...sections.flatMap((section) => selectRubricBlocks(section.rubricBlocks, view)),
   ];
 }

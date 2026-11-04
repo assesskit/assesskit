@@ -1,4 +1,4 @@
-import { type AreaShape, coordinateCountFits } from "../asi/index.js";
+import { type AreaShape, fitsCoordinateCount } from "../asi/index.js";
 import { ProcessingError } from "../errors.js";
 import type { Point, Value } from "../values/index.js";
 import { asPoint, booleanResult, primitivesOf } from "./operands.js";
@@ -25,7 +25,7 @@ export function parseCoords(shape: AreaShape, coords: string): number[] {
       throw new ProcessingError(`The coordinate ${JSON.stringify(token)} of a ${shape} is ${problem}.`);
     }
   }
-  if (!coordinateCountFits(shape, tokens.length)) {
+  if (!fitsCoordinateCount(shape, tokens.length)) {
     throw new ProcessingError(`A ${shape} cannot have the ${tokens.length} coordinates ${JSON.stringify(coords)}.`);
   }
   return tokens.map(Number);

@@ -2,7 +2,7 @@
 import { type BodyNode, readAsi } from "@assesskit/runtime/asi";
 import { resolveContent } from "@assesskit/runtime/content";
 import { createItemVariables } from "@assesskit/runtime/processing";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import { parseXml, type XmlElement } from "@assesskit/runtime/xml";
 import { afterEach, describe, expect, inject, it } from "vitest";
 import { userEvent } from "vitest/browser";
@@ -440,7 +440,7 @@ describe("objects", () => {
     );
     if (document.kind !== "item" || document.item.body === undefined) throw new Error("not an item");
     const variables = createItemVariables(document.item);
-    const templates = new Map(variables.templates).set("SRC", single("string", "resolved"));
+    const templates = new Map(variables.templates).set("SRC", buildSingle("string", "resolved"));
     const [resolved] = resolveContent(
       document.item.body.children,
       { outcomes: variables.outcomes, templates },
@@ -821,11 +821,11 @@ describe("printed variables", () => {
     '<p>Score <qti-printed-variable identifier="SCORE" format="%.1f"/> of <qti-printed-variable identifier="N"/>, see <qti-printed-variable identifier="LINK"/>: <qti-printed-variable identifier="UPLOAD"/>.</p>';
 
   const variables = {
-    outcomes: new Map([["SCORE", single("float", 0.7)]]),
+    outcomes: new Map([["SCORE", buildSingle("float", 0.7)]]),
     templates: new Map([
-      ["N", single("integer", 4)],
-      ["LINK", single("uri", "files/guide.pdf")],
-      ["UPLOAD", single("file", { reference: "upload-1", mimeType: "text/plain", fileName: "answer.txt" })],
+      ["N", buildSingle("integer", 4)],
+      ["LINK", buildSingle("uri", "files/guide.pdf")],
+      ["UPLOAD", buildSingle("file", { reference: "upload-1", mimeType: "text/plain", fileName: "answer.txt" })],
     ]),
   };
 
@@ -853,7 +853,7 @@ describe("printed variables", () => {
   it("shows a uri that the policy refuses as text, not as a link", () => {
     const hostile = {
       ...variables,
-      templates: new Map([["LINK", single("uri", "javascript:alert(1)")]]),
+      templates: new Map([["LINK", buildSingle("uri", "javascript:alert(1)")]]),
     };
     const content = renderBody(Body, ASSETS, { variables: hostile }, Declarations);
     expect(content.root.querySelector("a")).toBeNull();
@@ -891,8 +891,8 @@ describe("feedback, template content and rubric", () => {
     );
     if (document.kind !== "item" || document.item.body === undefined) throw new Error("not an item");
     const variables = {
-      outcomes: new Map([["FEEDBACK", single("identifier", outcome)]]),
-      templates: new Map([["T", single("identifier", template)]]),
+      outcomes: new Map([["FEEDBACK", buildSingle("identifier", outcome)]]),
+      templates: new Map([["T", buildSingle("identifier", template)]]),
     };
     return resolveContent(document.item.body.children, variables, document.item, { view: "candidate" });
   }

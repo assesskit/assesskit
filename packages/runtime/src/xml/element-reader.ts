@@ -2,7 +2,7 @@ import { checkArray, checkChoice, checkOptions, checkRecord, checkString, descri
 import { DataError, type ReadError } from "../errors.js";
 import { isXmlLanguage } from "./language.js";
 import { type ParseXmlOptions, parseXml } from "./parse.js";
-import { locationOf, readError } from "./read-error.js";
+import { createReadError, locateElement } from "./read-error.js";
 import { XML_NAMESPACE, XMLNS_NAMESPACE, type XmlAttribute, type XmlElement, XSI_NAMESPACE } from "./tree.js";
 
 /** What an {@link ElementReader} needs to know about the documents it reads. */
@@ -19,16 +19,30 @@ export interface ReaderRules {
   readonly path?: string;
 }
 
+/** The options of {@link createTermConverter}. */
+export interface CreateTermConverterOptions {
+  /**
+   * Names the text in the message of the `DataError` that a wrong term gives.
+   *
+   * @defaultValue `"The text"`
+   */
+  readonly label?: string;
+}
+
 /**
  * Returns a conversion for `ElementReader.text` and `ElementReader.attribute`: the text must be one of some terms.
  *
  * @param terms - The terms.
- * @param label - Names the text in the message of the `DataError` that a wrong term gives.
- * @defaultValue `"The text"`
+ * @param options - See {@link CreateTermConverterOptions}.
  * @returns A function that returns its text when it is one of the terms.
  * @throws `DataError` from the returned function when the text is not one of the terms.
  */
-export function termOf<T extends string>(terms: readonly T[], label = "The text"): (text: string) => T {
+export function createTermConverter<T extends string>(
+  terms: readonly T[],
+  options: CreateTermConverterOptions = {},
+): (text: string) => T {
+  checkOptions(options);
+  const { label = "The text" } = options;
   return (text) => {
     checkChoice(text, label, terms);
     return text;
@@ -127,11 +141,9 @@ export class ElementReader {
    * @returns The error, with the position of the element.
    */
   fail(code: string, message: string): ReadError {
-    return readError(
-      `assesskit/${this.rules.module}/${code}`,
-      message,
-      locationOf(this.element, this.rules.path, this.trail),
-    );
+    return createReadError(`assesskit/${this.rules.module}/${code}`, message, {
+      location: locateElement(this.element, this.rules.path, { trail: this.trail }),
+    });
   }
 
   /**

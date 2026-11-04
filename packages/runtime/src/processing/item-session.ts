@@ -19,7 +19,7 @@ const DEFAULT_WEIGHT = 1;
  * @returns The identifier that the item uses.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function itemIdentifier(ref: AssessmentItemRef, identifier: string): string {
+export function resolveItemIdentifier(ref: AssessmentItemRef, identifier: string): string {
   const { variableMappings } = ref;
   // Most item references map nothing, and a test asks for each of its instances.
   if (variableMappings.length === 0) return identifier;

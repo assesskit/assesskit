@@ -83,8 +83,8 @@ export interface ItemSessionContext extends ProcessingContext {
   /** The item, as `readAsi` reads it, with its includes resolved. */
   readonly item: AssessmentItem;
   /**
-   * The item session control in force: {@link sessionControl} of the item reference in a test, or
-   * {@link standaloneSessionControl} for an item delivered alone.
+   * The item session control in force: {@link resolveSessionControl} of the item reference in a test, or
+   * {@link resolveStandaloneSessionControl} for an item delivered alone.
    */
   readonly control: EffectiveSessionControl;
   /**

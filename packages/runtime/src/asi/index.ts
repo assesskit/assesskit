@@ -5,7 +5,7 @@
  * @module @assesskit/runtime/asi
  */
 export * from "./body.js";
-export type { RubricContent } from "./convention-markup.js";
+export type { RubricBlockOptions, RubricContent } from "./convention-markup.js";
 export {
   buildScoreCoversBlock,
   readScoreCovers,
@@ -13,13 +13,13 @@ export {
   type ScoreCover,
   type ScoreCoverBlock,
   type ScoreCoverEntry,
-  scoreCoverBlocks,
+  selectScoreCoverBlocks,
 } from "./covers.js";
 export { type AsiDocument, type ReadAsiOptions, readAsi, walkDocument, writeAsi } from "./document.js";
 export * from "./model.js";
 export { ASI_NAMESPACE } from "./namespace.js";
-export { childNodes, descendantNodes, isBodyNode, isModelNode, type ModelNode } from "./nodes.js";
-export { type RubricRating, type RubricScoreRange, rubricScoreRange, scoreFromRatings } from "./rubric-ratings.js";
+export { isBodyNode, isModelNode, listChildNodes, listDescendantNodes, type ModelNode } from "./nodes.js";
+export { type RubricRating, type RubricScoreRange, rubricScore, rubricScoreRange } from "./rubric-ratings.js";
 export {
   checkScoringRubric,
   type RubricCriterion,
@@ -29,6 +29,6 @@ export {
   type ScoringRubric,
 } from "./scoring-rubric.js";
 export { buildScoringRubricBlock, readScoringRubrics, type ScoringRubricBlock } from "./scoring-rubric-block.js";
-export { type AreaShape, coordinateCountFits } from "./shapes.js";
+export { type AreaShape, fitsCoordinateCount } from "./shapes.js";
 export type { AttributeDef, AttributeType, StringFormat } from "./table.js";
 export type { ElementVisit } from "./walk.js";

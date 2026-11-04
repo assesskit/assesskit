@@ -1,4 +1,4 @@
-import { childNodes, type ModelNode } from "@assesskit/runtime/asi";
+import { listChildNodes, type ModelNode } from "@assesskit/runtime/asi";
 import { isRecord } from "@assesskit/runtime/checks";
 import { declareSize, scaleSize, setCommonAttributes } from "./attributes.js";
 import type { RenderContext } from "./context.js";
@@ -33,7 +33,7 @@ function altOf(node: ModelNode): string | undefined {
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, object}
  */
 export function renderObject(node: ModelNode, context: RenderContext): Node[] {
-  const content = context.nodes(childNodes(node));
+  const content = context.nodes(listChildNodes(node));
   const alt = altOf(node);
   const alternative = alt === undefined ? content : [document.createTextNode(alt)];
   const data = stringOf(node, "data");

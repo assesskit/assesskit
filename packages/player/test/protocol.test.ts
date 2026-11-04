@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { isRecord } from "@assesskit/runtime/checks";
 import {
-  actionToJson,
   type CandidateAction,
   type CandidateView,
   type CatRequest,
@@ -12,10 +11,11 @@ import {
   type HostAction,
   type RefusalCode,
   stamp,
+  writeCandidateAction,
 } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { AssessmentResult } from "@assesskit/runtime/results";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import protocolGuide from "../../../docs/player/protocol.md?raw";
@@ -537,7 +537,7 @@ describe("stepAfterIdle", () => {
   const choose = (identifier: string): CandidateAction => ({
     type: "set-responses",
     item: Q1,
-    responses: new Map([["RESPONSE", single("identifier", identifier)]]),
+    responses: new Map([["RESPONSE", buildSingle("identifier", identifier)]]),
   });
   const types = (events: readonly DeliveryEvent[]): string[] => events.map(({ type }) => type);
 
@@ -944,7 +944,7 @@ describe("the host side of a session host and of a local session", () => {
   const supply = (request: string, value: number): HostAction => ({
     type: "supply-scores",
     request,
-    value: single("float", value),
+    value: buildSingle("float", value),
     scorer: "human",
   });
 
@@ -963,7 +963,7 @@ describe("the host side of a session host and of a local session", () => {
     let seq = 0;
     const candidate = async (action: CandidateAction): Promise<void> => {
       seq += 1;
-      const answered = await host.handle(Alice, { seq, action: actionToJson(action) });
+      const answered = await host.handle(Alice, { seq, action: writeCandidateAction(action) });
       const dispatched = await local.dispatch(action);
       expect(answered.refusal, JSON.stringify(action)).toEqual(dispatched.refusal);
     };
@@ -986,7 +986,7 @@ describe("the host side of a session host and of a local session", () => {
     await candidate({
       type: "set-responses",
       item: Q2,
-      responses: new Map([["RESPONSE", single("string", "A word")]]),
+      responses: new Map([["RESPONSE", buildSingle("string", "A word")]]),
     });
     await candidate({ type: "submit", item: Q2 });
     const [request] = await same();
@@ -1023,7 +1023,7 @@ describe("the option maxIdle of a session host and of a local session", () => {
     let seq = 0;
     const candidate = async (action: CandidateAction): Promise<void> => {
       seq += 1;
-      const answered = await host.handle(Alice, { seq, action: actionToJson(action) });
+      const answered = await host.handle(Alice, { seq, action: writeCandidateAction(action) });
       expect(answered.refusal, JSON.stringify(action)).toEqual((await local.dispatch(action)).refusal);
     };
     const wait = (milliseconds: number): void => {
@@ -1034,7 +1034,7 @@ describe("the option maxIdle of a session host and of a local session", () => {
     const choose: CandidateAction = {
       type: "set-responses",
       item,
-      responses: new Map([["RESPONSE", single("identifier", "B")]]),
+      responses: new Map([["RESPONSE", buildSingle("identifier", "B")]]),
     };
 
     await candidate(choose);
@@ -1080,7 +1080,7 @@ describe("properties", () => {
     const answered: CandidateAction = {
       type: "set-responses",
       item,
-      responses: new Map([["RESPONSE", single("identifier", "B")]]),
+      responses: new Map([["RESPONSE", buildSingle("identifier", "B")]]),
     };
     fc.assert(
       fc.property(

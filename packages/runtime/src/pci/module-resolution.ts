@@ -63,7 +63,7 @@ const resolutionSchema: Schema<ModuleResolution> = v.pipe(
  * @see
  * {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, module resolution}
  */
-export function parseModuleResolution(text: string): ModuleResolution {
+export function readModuleResolution(text: string): ModuleResolution {
   checkString(text, "The module resolution file");
   if (text.length > MAX_LENGTH) {
     throw new DataError(

@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { requireSchemas } from "../../../scripts/schemas.js";
-import { type AssessmentResult, single, writeResults } from "../src/index.js";
+import { type AssessmentResult, buildSingle, writeResults } from "../src/index.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
 import {
   ADAPTIVE,
@@ -51,7 +51,7 @@ describe("results validated against the Results Reporting schema", () => {
     const supplied = played(engine, state, {
       type: "supply-scores",
       request: "item:w:1:SCORE",
-      value: single("float", 8),
+      value: buildSingle("float", 8),
       scorer: "human",
       at: 6000,
     });
@@ -97,13 +97,19 @@ describe("results validated against the Results Reporting schema", () => {
         datestamp: "2026-10-30T12:00:00Z",
         supports: [],
         variables: [
-          { kind: "outcome", identifier: "LEVEL", cardinality: "single", baseType: "float", value: single("float", 2) },
+          {
+            kind: "outcome",
+            identifier: "LEVEL",
+            cardinality: "single",
+            baseType: "float",
+            value: buildSingle("float", 2),
+          },
           {
             kind: "outcome",
             identifier: "THETA",
             cardinality: "single",
             baseType: "float",
-            value: single("float", 0.5),
+            value: buildSingle("float", 0.5),
           },
         ],
       },

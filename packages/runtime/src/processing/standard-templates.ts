@@ -153,7 +153,7 @@ function isTemplateName(name: string | undefined, names: Iterable<TemplateName>)
  * @returns The key, or `undefined`.
  * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
-export function standardTemplateUri(uri: string): string | undefined {
+export function findStandardTemplate(uri: string): string | undefined {
   const qti3 = QTI3_URI.exec(uri)?.[1];
   const qti2 = QTI2_URI.exec(uri)?.[1];
   const name = isTemplateName(qti3, TEMPLATES.keys()) ? qti3 : isTemplateName(qti2, QTI2_TEMPLATES) ? qti2 : undefined;
@@ -170,5 +170,5 @@ export function standardTemplateUri(uri: string): string | undefined {
  * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function isQti2TemplateUri(uri: string): boolean {
-  return standardTemplateUri(uri) !== undefined && QTI2_URI.test(uri);
+  return findStandardTemplate(uri) !== undefined && QTI2_URI.test(uri);
 }

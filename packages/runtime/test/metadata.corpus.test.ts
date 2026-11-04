@@ -4,13 +4,13 @@ import { describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
 import {
   deriveQtiMetadata,
-  lomGeneral,
   parseXml,
   ReadError,
+  readLomGeneral,
   readManifest,
   readPackage,
   readResourceMetadata,
-  resourcePath,
+  resolveResourcePath,
   type XmlElement,
 } from "../src/index.js";
 
@@ -39,7 +39,7 @@ describe("the metadata of the 1EdTech examples", () => {
   });
 
   it("has the identifier and the title of the general category that the metaData manifest spells", () => {
-    expect(choice?.lom && lomGeneral(choice.lom)).toEqual({
+    expect(choice?.lom && readLomGeneral(choice.lom)).toEqual({
       identifiers: ["qti_v2_item_01"],
       titles: [{ language: "en", text: "Metadata Example Item #1" }],
     });
@@ -141,7 +141,7 @@ describe("the metadata that the example items show", () => {
         try {
           document =
             spelled && resource.type === "imsqti_item_xmlv3p0"
-              ? pkg.document(resourcePath(pkg.manifest, resource) ?? "")
+              ? pkg.document(resolveResourcePath(pkg.manifest, resource) ?? "")
               : undefined;
         } catch (error) {
           if (!(error instanceof ReadError)) throw error;

@@ -1,6 +1,6 @@
 import type { Caller } from "@assesskit/player/protocol";
 import type { SessionHost } from "@assesskit/player/server";
-import { viewFromJson } from "@assesskit/runtime/delivery";
+import { readView } from "@assesskit/runtime/delivery";
 import type { HttpRequest } from "@interopkit/core/http";
 import { type AttemptStatus, type ControlAction, LtiError } from "@interopkit/tool-integration";
 import {
@@ -93,7 +93,7 @@ export function createProctoring(options: ProctoringOptions): Proctoring {
   const keyOf = (subject: string, resourceLinkId: string, attemptNumber: number) =>
     JSON.stringify([subject, resourceLinkId, attemptNumber]);
   const statusOf = async (attempt: Attempt): Promise<AttemptStatus> => {
-    const { status } = viewFromJson((await host.view(attempt.caller)).view);
+    const { status } = readView((await host.view(attempt.caller)).view);
     if (status === "in-progress") return "running";
     if (status === "suspended") return "paused";
     return attempt.terminated ? "terminated" : "complete";

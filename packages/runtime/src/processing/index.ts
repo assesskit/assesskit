@@ -18,9 +18,9 @@ export {
 } from "./built-ins.js";
 export { describeCount, describeOperand } from "./check-operands.js";
 export type { CustomOperator, CustomOperatorExpression, ProcessingContext } from "./context.js";
-export { declaredValue, readPrimitive } from "./declared-value.js";
-export { evaluate, operandsOf } from "./evaluate.js";
-export { itemIdentifier } from "./item-session.js";
+export { readDeclaredValue, readPrimitive } from "./declared-value.js";
+export { evaluate, listOperands } from "./evaluate.js";
+export { resolveItemIdentifier } from "./item-session.js";
 export { DEFAULT_PROCESSING_LIMITS, type ProcessingLimits } from "./limits.js";
 export { evaluateTestExpression, runOutcomeProcessing } from "./outcome-processing.js";
 export { DEFAULT_RANDOM_MIN, DEFAULT_RANDOM_STEP } from "./random-values.js";
@@ -31,7 +31,7 @@ export {
   type OperatorSignature,
   type ResultSignature,
 } from "./signatures.js";
-export { isQti2TemplateUri, STANDARD_TEMPLATES, standardTemplateUri } from "./standard-templates.js";
+export { findStandardTemplate, isQti2TemplateUri, STANDARD_TEMPLATES } from "./standard-templates.js";
 export { runTemplateProcessing } from "./template-processing.js";
 export type { ItemSessionFilter, ItemSessionView, TestScope } from "./test-scope.js";
 export { type CreateItemVariablesOptions, createItemVariables, type ItemVariables } from "./variables.js";

@@ -2,7 +2,7 @@ import { readAsi } from "@assesskit/runtime/asi";
 import { AssesskitError, DataError } from "@assesskit/runtime/errors";
 import { describeInteractions } from "@assesskit/runtime/interactions";
 import { INTERACTION_TYPES } from "@assesskit/runtime/metadata";
-import { container, type FileValue, single, type Value } from "@assesskit/runtime/values";
+import { buildContainer, buildSingle, type FileValue, type Value } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { EN_MESSAGES, selectMessages } from "../src/index.js";
@@ -51,9 +51,9 @@ describe("choice", () => {
     expect(inputs.map(({ type }) => type)).toEqual(["radio", "radio", "radio"]);
     expect(scene.interaction().getAttribute("role")).toBe("radiogroup");
     await userEvent.click(inputs[1] ?? scene.host);
-    expect(scene.responses.at(-1)).toEqual({ responseIdentifier: "R", value: single("identifier", "B") });
+    expect(scene.responses.at(-1)).toEqual({ responseIdentifier: "R", value: buildSingle("identifier", "B") });
     await userEvent.click(inputs[2] ?? scene.host);
-    expect(scene.responses.at(-1)?.value).toEqual(single("identifier", "C"));
+    expect(scene.responses.at(-1)?.value).toEqual(buildSingle("identifier", "C"));
     expect(await axeViolations(scene.host)).toEqual([]);
   });
 
@@ -64,7 +64,7 @@ describe("choice", () => {
     expect(scene.interaction().getAttribute("role")).toBe("group");
     await userEvent.click(inputs[2] ?? scene.host);
     await userEvent.click(inputs[0] ?? scene.host);
-    expect(scene.responses.at(-1)?.value).toEqual(container("multiple", "identifier", ["A", "C"]));
+    expect(scene.responses.at(-1)?.value).toEqual(buildContainer("multiple", "identifier", ["A", "C"]));
     await userEvent.click(inputs[0] ?? scene.host);
     await userEvent.click(inputs[2] ?? scene.host);
     expect(scene.responses.at(-1)?.value).toBeNull();
@@ -84,7 +84,7 @@ describe("choice", () => {
 
   it("shows the value that the host sets and locks the controls when it is disabled, without a response", () => {
     const scene = mountScene(declare("multiple", "identifier"), Body('max-choices="0"'));
-    scene.setValue("R", container("multiple", "identifier", ["B", "C"]));
+    scene.setValue("R", buildContainer("multiple", "identifier", ["B", "C"]));
     expect(scene.findAll<HTMLInputElement>("input").map(({ checked }) => checked)).toEqual([false, true, true]);
     scene.interaction().disabled = true;
     expect(scene.findAll<HTMLInputElement>("input").every(({ disabled }) => disabled)).toBe(true);
@@ -143,7 +143,7 @@ describe("choice", () => {
     // focus itself and checks that the keyboard operates what has it.
     await userEvent.type(first(inputs), " ");
     await userEvent.type(first(inputs, 2), " ");
-    expect(scene.responses.at(-1)?.value).toEqual(container("multiple", "identifier", ["A", "C"]));
+    expect(scene.responses.at(-1)?.value).toEqual(buildContainer("multiple", "identifier", ["A", "C"]));
     expect(inputs.every((input) => input.tabIndex === 0)).toBe(true);
   });
 
@@ -181,7 +181,7 @@ describe("hottext", () => {
     expect(inputs.map(({ type }) => type)).toEqual(["checkbox", "checkbox", "checkbox"]);
     await userEvent.click(scene.find("qti-hottext + * , qti-hottext > label"));
     await userEvent.click(inputs[2] ?? scene.host);
-    expect(scene.responses.at(-1)?.value).toEqual(container("multiple", "identifier", ["A", "C"]));
+    expect(scene.responses.at(-1)?.value).toEqual(buildContainer("multiple", "identifier", ["A", "C"]));
     expect(await axeViolations(scene.host)).toEqual([]);
   });
 
@@ -190,7 +190,7 @@ describe("hottext", () => {
     const inputs = scene.findAll<HTMLInputElement>("qti-hottext > input");
     expect(inputs.map(({ type }) => type)).toEqual(["radio", "radio", "radio"]);
     await userEvent.click(inputs[1] ?? scene.host);
-    expect(scene.responses.at(-1)?.value).toEqual(single("identifier", "B"));
+    expect(scene.responses.at(-1)?.value).toEqual(buildSingle("identifier", "B"));
   });
 
   it("draws a passage of more nodes than a call takes as arguments", () => {
@@ -206,7 +206,7 @@ describe("hottext", () => {
 
   it("shows the value of the host", () => {
     const scene = mountScene(declare("multiple", "identifier"), Body('max-choices="2"'));
-    scene.setValue("R", container("multiple", "identifier", ["C"]));
+    scene.setValue("R", buildContainer("multiple", "identifier", ["C"]));
     expect(scene.findAll<HTMLInputElement>("qti-hottext > input").map(({ checked }) => checked)).toEqual([
       false,
       false,
@@ -232,7 +232,7 @@ describe("inline choice", () => {
     expect([...menu.options].map(({ text }) => text)).toEqual(["Pick one", "London", "Paris"]);
     expect(menu.getAttribute("aria-label")).toBe("Pick one");
     await userEvent.selectOptions(menu, "P");
-    expect(scene.responses.at(-1)?.value).toEqual(single("identifier", "P"));
+    expect(scene.responses.at(-1)?.value).toEqual(buildSingle("identifier", "P"));
     await userEvent.selectOptions(menu, "");
     expect(scene.responses.at(-1)?.value).toBeNull();
     expect(scene.find("p").textContent).toContain("The capital of France is ");
@@ -242,7 +242,7 @@ describe("inline choice", () => {
   it("uses a prompt of the interface without data-prompt, and shows the value of the host", () => {
     const scene = mountScene(declare("single", "identifier"), Body(""));
     expect(scene.find<HTMLSelectElement>("select").options[0]?.text).toBe("Choose an answer");
-    scene.setValue("R", single("identifier", "L"));
+    scene.setValue("R", buildSingle("identifier", "L"));
     expect(scene.find<HTMLSelectElement>("select").value).toBe("L");
   });
 
@@ -273,7 +273,7 @@ describe("text entry", () => {
     expect(input.size).toBe(12);
     expect(input.getAttribute("aria-label")).toBe("Your name");
     await userEvent.fill(input, "Ada");
-    expect(scene.responses.at(-1)).toEqual({ responseIdentifier: "R", value: single("string", "Ada") });
+    expect(scene.responses.at(-1)).toEqual({ responseIdentifier: "R", value: buildSingle("string", "Ada") });
     await userEvent.clear(input);
     expect(scene.responses.at(-1)?.value).toBeNull();
     expect(await axeViolations(scene.host)).toEqual([]);
@@ -282,11 +282,11 @@ describe("text entry", () => {
   it("gives a float or an integer from the text that the candidate typed", async () => {
     const floats = mountScene(declare("single", "float"), Body(""));
     await userEvent.fill(floats.find("input"), "3.50");
-    expect(floats.responses.at(-1)?.value).toEqual(single("float", 3.5));
+    expect(floats.responses.at(-1)?.value).toEqual(buildSingle("float", 3.5));
     expect(floats.find("input").getAttribute("inputmode")).toBe("decimal");
     const integers = mountScene(declare("single", "integer"), Body(""));
     await userEvent.fill(integers.find("input"), "42");
-    expect(integers.responses.at(-1)?.value).toEqual(single("integer", 42));
+    expect(integers.responses.at(-1)?.value).toEqual(buildSingle("integer", 42));
   });
 
   it("tells to enter a number, or a whole number, when the text is not one", async () => {
@@ -325,17 +325,17 @@ describe("text entry", () => {
     );
     await userEvent.fill(scene.find("input"), "3.50");
     expect(scene.responses.slice(-2)).toEqual([
-      { responseIdentifier: "R", value: single("float", 3.5) },
-      { responseIdentifier: "T", value: single("string", "3.50") },
+      { responseIdentifier: "R", value: buildSingle("float", 3.5) },
+      { responseIdentifier: "T", value: buildSingle("string", "3.50") },
     ]);
     const restored = mountScene(
       `${declare("single", "float")}${declare("single", "string", "T")}`,
       Body('string-identifier="T"'),
     );
-    restored.setValue("R", single("float", 3.5));
+    restored.setValue("R", buildSingle("float", 3.5));
     expect(restored.find<HTMLInputElement>("input").value).toBe("3.5");
     const element = restored.interaction();
-    if ("typed" in element) element.typed = single("string", "3.50");
+    if ("typed" in element) element.typed = buildSingle("string", "3.50");
     expect(restored.find<HTMLInputElement>("input").value).toBe("3.50");
   });
 
@@ -357,7 +357,7 @@ describe("text entry", () => {
     const scene = mountScene(declare("single", "float"), Body(""));
     const input = scene.find<HTMLInputElement>("input");
     await userEvent.fill(input, "3.50");
-    scene.setValue("R", single("float", 3.5));
+    scene.setValue("R", buildSingle("float", 3.5));
     expect(input.value).toBe("3.50");
   });
 
@@ -419,7 +419,7 @@ describe("order", () => {
     await userEvent.click(first(drops(), 0));
     await pick("Beta");
     await userEvent.click(first(drops(), 0));
-    expect(scene.responses.at(-1)?.value).toEqual(container("ordered", "identifier", ["C", "A", "B"]));
+    expect(scene.responses.at(-1)?.value).toEqual(buildContainer("ordered", "identifier", ["C", "A", "B"]));
     expect(scene.findAll(".ak-choices > qti-simple-choice").every((choice) => choice.hasAttribute("hidden"))).toBe(
       true,
     );
@@ -433,14 +433,14 @@ describe("order", () => {
 
   it("puts a choice back in the pool and gives the order that remains", async () => {
     const scene = mountScene(Ordered, Body(""));
-    scene.setValue("R", container("ordered", "identifier", ["B", "A", "C"]));
+    scene.setValue("R", buildContainer("ordered", "identifier", ["B", "A", "C"]));
     expect(scene.findAll(".ak-target .ak-chip-button").map((chip) => chip.textContent)).toEqual([
       "Beta",
       "Alpha",
       "Gamma",
     ]);
     await userEvent.click(first(scene.findAll("button.ak-remove"), 0));
-    expect(scene.responses.at(-1)?.value).toEqual(container("ordered", "identifier", ["A", "C"]));
+    expect(scene.responses.at(-1)?.value).toEqual(buildContainer("ordered", "identifier", ["A", "C"]));
     expect(scene.find("qti-simple-choice:not([hidden])").textContent).toBe("Beta");
   });
 
@@ -466,7 +466,7 @@ describe("order", () => {
     expect(first(pool).getAttribute("aria-pressed")).toBe("false");
     await userEvent.keyboard("{Enter}");
     await userEvent.type(first(scene.findAll<HTMLButtonElement>("button.ak-drop"), 1), "{Enter}");
-    expect(scene.responses.at(-1)?.value).toEqual(container("ordered", "identifier", ["A"]));
+    expect(scene.responses.at(-1)?.value).toEqual(buildContainer("ordered", "identifier", ["A"]));
     expect(scene.find(".qti-visually-hidden").textContent).toBe("Alpha placed in Position 2");
   });
 
@@ -483,14 +483,14 @@ describe("order", () => {
       first(scene.findAll("qti-simple-choice > button"), 1),
       first(scene.findAll(".ak-target"), 2),
     );
-    expect(scene.responses.at(-1)?.value).toEqual(container("ordered", "identifier", ["B"]));
+    expect(scene.responses.at(-1)?.value).toEqual(buildContainer("ordered", "identifier", ["B"]));
     await userEvent.dragAndDrop(first(scene.findAll(".ak-chip-button")), scene.find(".ak-choices"));
     expect(scene.responses.at(-1)?.value).toBeNull();
   });
 
   it("gives every control a target of at least 24 by 24 CSS pixels", () => {
     const scene = mountScene(Ordered, Body(""));
-    scene.setValue("R", container("ordered", "identifier", ["B"]));
+    scene.setValue("R", buildContainer("ordered", "identifier", ["B"]));
     // A choice that is in a place is not in the pool, where it is hidden.
     for (const control of scene.findAll("button").filter((button) => button.getClientRects().length > 0)) {
       const { width, height } = sizeOf(control);
@@ -500,7 +500,7 @@ describe("order", () => {
 
   it("locks the controls for a candidate who cannot respond", () => {
     const scene = mountScene(Ordered, Body(""));
-    scene.setValue("R", container("ordered", "identifier", ["B"]));
+    scene.setValue("R", buildContainer("ordered", "identifier", ["B"]));
     scene.interaction().disabled = true;
     expect(scene.findAll<HTMLButtonElement>("button").every((button) => button.disabled)).toBe(true);
   });
@@ -530,19 +530,19 @@ describe("associate", () => {
     await put("Alpha", 0);
     expect(scene.responses).toEqual([{ responseIdentifier: "R", value: null }]);
     await put("Gamma", 0);
-    expect(scene.responses.at(-1)?.value).toEqual(container("multiple", "pair", [["A", "C"]]));
+    expect(scene.responses.at(-1)?.value).toEqual(buildContainer("multiple", "pair", [["A", "C"]]));
     expect(await axeViolations(scene.host)).toEqual([]);
   });
 
   it("offers a choice again while it has uses left, as many as its match-max", async () => {
     const scene = mountScene(declare("multiple", "pair"), Body);
-    scene.setValue("R", container("multiple", "pair", [["A", "C"]]));
+    scene.setValue("R", buildContainer("multiple", "pair", [["A", "C"]]));
     const visible = (): string[] =>
       scene.findAll("qti-simple-associable-choice:not([hidden]) > button").map((button) => button.textContent ?? "");
     expect(visible()).toEqual(["Beta", "Gamma"]);
     scene.setValue(
       "R",
-      container("multiple", "pair", [
+      buildContainer("multiple", "pair", [
         ["A", "C"],
         ["B", "C"],
       ]),
@@ -556,7 +556,7 @@ describe("associate", () => {
       "Pair 1, first",
       "Pair 1, second",
     ]);
-    scene.setValue("R", single("pair", ["A", "B"]));
+    scene.setValue("R", buildSingle("pair", ["A", "B"]));
     expect(scene.findAll(".ak-chip-button").map((chip) => chip.textContent)).toEqual(["Alpha", "Beta"]);
   });
 });
@@ -588,7 +588,7 @@ describe("match", () => {
     );
     await userEvent.click(first(scene.findAll("button.ak-drop"), 1));
     expect(scene.responses.at(-1)?.value).toEqual(
-      container("multiple", "directedPair", [
+      buildContainer("multiple", "directedPair", [
         ["C", "R"],
         ["D", "R"],
       ]),
@@ -598,7 +598,7 @@ describe("match", () => {
 
   it("shows the matches that the host restores, and a single pair for a single variable", () => {
     const scene = mountScene(declare("single", "directedPair"), Body("").replace('max-associations="4"', ""));
-    scene.setValue("R", single("directedPair", ["D", "M"]));
+    scene.setValue("R", buildSingle("directedPair", ["D", "M"]));
     expect(scene.findAll(".ak-targets .ak-chip-button").map((chip) => chip.textContent)).toEqual(["Demetrius"]);
   });
 
@@ -614,13 +614,13 @@ describe("match", () => {
     await userEvent.click(first(boxes, 1));
     await userEvent.click(first(boxes, 2));
     expect(scene.responses.at(-1)?.value).toEqual(
-      container("multiple", "directedPair", [
+      buildContainer("multiple", "directedPair", [
         ["C", "R"],
         ["D", "M"],
       ]),
     );
     expect(boxes.map((box) => box.checked)).toEqual([false, true, true, false]);
-    scene.setValue("R", container("multiple", "directedPair", [["D", "R"]]));
+    scene.setValue("R", buildContainer("multiple", "directedPair", [["D", "R"]]));
     expect(boxes.map((box) => box.checked)).toEqual([false, false, false, true]);
     expect(await axeViolations(scene.host)).toEqual([]);
   });
@@ -664,7 +664,7 @@ describe("gap match", () => {
     expect(scene.findAll("qti-gap").map((gap) => gap.getAttribute("aria-label"))).toEqual(["Gap 1", "Gap 2"]);
     await userEvent.click(first(scene.findAll("qti-gap-text > button"), 1));
     await userEvent.click(first(scene.findAll("qti-gap button.ak-drop"), 1));
-    expect(scene.responses.at(-1)?.value).toEqual(container("multiple", "directedPair", [["S", "G2"]]));
+    expect(scene.responses.at(-1)?.value).toEqual(buildContainer("multiple", "directedPair", [["S", "G2"]]));
     expect(scene.find("p").textContent?.replaceAll(/\s+/gu, " ")).toContain("then spring");
     expect(await axeViolations(scene.host)).toEqual([]);
   });
@@ -673,7 +673,7 @@ describe("gap match", () => {
     const scene = mountScene(Directed, Body(""));
     scene.setValue(
       "R",
-      container("multiple", "directedPair", [
+      buildContainer("multiple", "directedPair", [
         ["S", "G1"],
         ["W", "G2"],
       ]),
@@ -687,7 +687,7 @@ describe("gap match", () => {
   it("gives an image choice its alternative text as its name", () => {
     const scene = mountScene(Directed, Body(""));
     expect(first(scene.findAll("qti-gap-img > button")).querySelector("img")?.getAttribute("alt")).toBe("a dot");
-    scene.setValue("R", container("multiple", "directedPair", [["I", "G1"]]));
+    scene.setValue("R", buildContainer("multiple", "directedPair", [["I", "G1"]]));
     expect(first(scene.findAll(".ak-remove")).getAttribute("aria-label")).toBe("Remove a dot");
   });
 
@@ -700,10 +700,10 @@ describe("gap match", () => {
 
   it("replaces the choice of a gap that is full, which goes back to the pool", async () => {
     const scene = mountScene(Directed, Body(""));
-    scene.setValue("R", container("multiple", "directedPair", [["W", "G1"]]));
+    scene.setValue("R", buildContainer("multiple", "directedPair", [["W", "G1"]]));
     await userEvent.click(first(scene.findAll("qti-gap-text > button"), 1));
     await userEvent.click(first(scene.findAll("qti-gap .ak-chip-button")));
-    expect(scene.responses.at(-1)?.value).toEqual(container("multiple", "directedPair", [["S", "G1"]]));
+    expect(scene.responses.at(-1)?.value).toEqual(buildContainer("multiple", "directedPair", [["S", "G1"]]));
   });
 
   it("sets the width of the container of the choices", () => {
@@ -724,7 +724,10 @@ describe("extended text", () => {
     expect(area.placeholder).toBe("Start here");
     expect(area.getAttribute("aria-labelledby")).toBe(scene.find("qti-prompt").id);
     await userEvent.fill(area, "Line one\nLine two");
-    expect(scene.responses.at(-1)).toEqual({ responseIdentifier: "R", value: single("string", "Line one\nLine two") });
+    expect(scene.responses.at(-1)).toEqual({
+      responseIdentifier: "R",
+      value: buildSingle("string", "Line one\nLine two"),
+    });
     expect(await axeViolations(scene.host)).toEqual([]);
   });
 
@@ -812,9 +815,9 @@ describe("extended text", () => {
     expect(areas.map((area) => area.getAttribute("aria-label"))).toEqual(["Answer 1", "Answer 2", "Answer 3"]);
     await userEvent.fill(first(areas, 2), "third");
     await userEvent.fill(first(areas, 0), "first");
-    expect(scene.responses.at(-1)?.value).toEqual(container("ordered", "string", ["first", "third"]));
+    expect(scene.responses.at(-1)?.value).toEqual(buildContainer("ordered", "string", ["first", "third"]));
     expect(scene.find(".ak-instruction").textContent).toBe("Enter at least 2. Enter at most 3.");
-    scene.setValue("R", container("ordered", "string", ["x", "y"]));
+    scene.setValue("R", buildContainer("ordered", "string", ["x", "y"]));
     expect(areas.map((area) => area.value)).toEqual(["x", "y", ""]);
     expect(await axeViolations(scene.host)).toEqual([]);
   });
@@ -847,7 +850,7 @@ describe("extended text", () => {
     );
     area.dispatchEvent(new InputEvent("input", { bubbles: true }));
     expect(scene.responses.at(-1)?.value).toEqual(
-      single("string", "<p>Hello <strong>bold</strong> &amp; &lt;more&gt;</p>"),
+      buildSingle("string", "<p>Hello <strong>bold</strong> &amp; &lt;more&gt;</p>"),
     );
     expect(scene.find(".ak-counter").textContent).toBe("Characters: 19 / 30");
     expect(await axeViolations(scene.host)).toEqual([]);
@@ -855,9 +858,9 @@ describe("extended text", () => {
 
   it("shows an XHTML answer that the host restores, and treats one that is not well-formed as text", () => {
     const scene = mountScene(declare("single", "string"), Body('format="xhtml"'));
-    scene.setValue("R", single("string", "<p>One <em>two</em></p><ul><li>three</li></ul>"));
+    scene.setValue("R", buildSingle("string", "<p>One <em>two</em></p><ul><li>three</li></ul>"));
     expect(scene.find("[role=textbox]").innerHTML).toBe("<p>One <em>two</em></p><ul><li>three</li></ul>");
-    scene.setValue("R", single("string", "<p>broken"));
+    scene.setValue("R", buildSingle("string", "<p>broken"));
     expect(scene.find("[role=textbox]").textContent).toBe("<p>broken");
   });
 
@@ -867,7 +870,7 @@ describe("extended text", () => {
     area.textContent = "one\f two\u0001 \ud800three \u{1f600}";
     area.dispatchEvent(new InputEvent("input", { bubbles: true }));
     const answer = scene.responses.at(-1)?.value ?? null;
-    expect(answer).toEqual(single("string", "<p>one two three \u{1f600}</p>"));
+    expect(answer).toEqual(buildSingle("string", "<p>one two three \u{1f600}</p>"));
     const again = mountScene(declare("single", "string"), Body('format="xhtml"'));
     again.setValue("R", answer);
     expect(again.find("[role=textbox]").innerHTML).toBe("<p>one two three \u{1f600}</p>");
@@ -876,7 +879,7 @@ describe("extended text", () => {
   it("shows an XHTML answer of more nodes than a call of the engine takes as arguments", () => {
     const scene = mountScene(declare("single", "string"), Body('format="xhtml"'));
     const lines = 200_000;
-    scene.setValue("R", single("string", `<p>${"a<br/>".repeat(lines)}</p>${"<p>b</p>".repeat(lines)}`));
+    scene.setValue("R", buildSingle("string", `<p>${"a<br/>".repeat(lines)}</p>${"<p>b</p>".repeat(lines)}`));
     const area = scene.find("[role=textbox]");
     expect(area.childElementCount).toBe(lines + 1);
     expect(area.firstElementChild?.childElementCount).toBe(lines);
@@ -889,7 +892,7 @@ describe("extended text", () => {
     // A selection that script makes cannot cross into a shadow root in every engine, so the test selects with the pointer.
     await userEvent.tripleClick(area);
     await userEvent.click(first(scene.findAll("[role=toolbar] button")));
-    expect(scene.responses.at(-1)?.value).toEqual(single("string", "<p><strong>plain</strong></p>"));
+    expect(scene.responses.at(-1)?.value).toEqual(buildSingle("string", "<p><strong>plain</strong></p>"));
   });
 });
 
@@ -913,15 +916,15 @@ describe("slider", () => {
     const thumb = scene.find("[role=slider]");
     await userEvent.type(thumb, "{ArrowRight}");
     expect(scene.root.activeElement).toBe(thumb);
-    expect(scene.responses.at(-1)?.value).toEqual(single("integer", 2));
+    expect(scene.responses.at(-1)?.value).toEqual(buildSingle("integer", 2));
     await userEvent.keyboard("{ArrowUp}{ArrowUp}{ArrowLeft}");
-    expect(scene.responses.at(-1)?.value).toEqual(single("integer", 4));
+    expect(scene.responses.at(-1)?.value).toEqual(buildSingle("integer", 4));
     await userEvent.keyboard("{End}");
-    expect(scene.responses.at(-1)?.value).toEqual(single("integer", 10));
+    expect(scene.responses.at(-1)?.value).toEqual(buildSingle("integer", 10));
     await userEvent.keyboard("{Home}");
-    expect(scene.responses.at(-1)?.value).toEqual(single("integer", 0));
+    expect(scene.responses.at(-1)?.value).toEqual(buildSingle("integer", 0));
     await userEvent.keyboard("{PageUp}");
-    expect(scene.responses.at(-1)?.value).toEqual(single("integer", 10));
+    expect(scene.responses.at(-1)?.value).toEqual(buildSingle("integer", 10));
     expect(thumb.getAttribute("aria-valuenow")).toBe("10");
     expect(await axeViolations(scene.host)).toEqual([]);
   });
@@ -931,7 +934,7 @@ describe("slider", () => {
     const track = scene.find(".ak-slider-track");
     const box = track.getBoundingClientRect();
     await userEvent.click(track, { position: { x: Math.round(box.width * 0.5), y: 12 } });
-    expect(scene.responses.at(-1)?.value).toEqual(single("integer", 5));
+    expect(scene.responses.at(-1)?.value).toEqual(buildSingle("integer", 5));
   });
 
   it("gives a float on the scale of a hundredth of the range without a step", async () => {
@@ -940,7 +943,7 @@ describe("slider", () => {
       Body('lower-bound="0" upper-bound="1"').replace('lower-bound="0" upper-bound="10"', ""),
     );
     await userEvent.type(scene.find("[role=slider]"), "{ArrowRight}{ArrowRight}{ArrowRight}");
-    expect(scene.responses.at(-1)?.value).toEqual(single("float", 0.03));
+    expect(scene.responses.at(-1)?.value).toEqual(buildSingle("float", 0.03));
   });
 
   it("labels the ends, the steps when asked, and reverses the scale", () => {
@@ -954,7 +957,7 @@ describe("slider", () => {
 
   it("shows the value that the host sets, and is not moved when disabled", async () => {
     const scene = mountScene(declare("single", "integer"), Body(""));
-    scene.setValue("R", single("integer", 7));
+    scene.setValue("R", buildSingle("integer", 7));
     const thumb = scene.find("[role=slider]");
     expect([thumb.getAttribute("aria-valuenow"), thumb.getAttribute("aria-valuetext")]).toEqual(["7", "7"]);
     scene.interaction().disabled = true;
@@ -1006,7 +1009,7 @@ describe("custom interaction", () => {
           calls.push(`mount ${interaction.kind} ${String(state.disabled)}`);
           const button = document.createElement("button");
           button.textContent = "Say hello";
-          button.addEventListener("click", () => set(single("string", "hello")));
+          button.addEventListener("click", () => set(buildSingle("string", "hello")));
           host.append(button);
           return () => calls.push("stop");
         },
@@ -1014,7 +1017,7 @@ describe("custom interaction", () => {
     });
     await new Promise<void>((done) => queueMicrotask(done));
     await userEvent.click(scene.find(".ak-custom button"));
-    expect(scene.responses.at(-1)).toEqual({ responseIdentifier: "R", value: single("string", "hello") });
+    expect(scene.responses.at(-1)).toEqual({ responseIdentifier: "R", value: buildSingle("string", "hello") });
     expect(calls).toEqual(["mount custom-interaction false"]);
     scene.host.remove();
     expect(calls).toEqual(["mount custom-interaction false", "stop"]);
@@ -1025,7 +1028,7 @@ describe("custom interaction", () => {
     const scene = mountScene(declare("single", "string"), Body, {
       options: {
         customInteraction: (_interaction, _host, set) => {
-          give = () => set(single("string", "late"));
+          give = () => set(buildSingle("string", "late"));
           return () => undefined;
         },
       },
@@ -1129,7 +1132,7 @@ describe("upload", () => {
     expect(await files.uploads[0]?.bytes.text()).toBe("abc");
     expect(scene.responses[0]).toEqual({
       responseIdentifier: "R",
-      value: single("file", { reference: "ref-1", mimeType: "text/plain", fileName: "notes.txt" }),
+      value: buildSingle("file", { reference: "ref-1", mimeType: "text/plain", fileName: "notes.txt" }),
     });
     expect(scene.find(".ak-file-name").textContent).toBe("notes.txt");
     expect(await axeViolations(scene.host)).toEqual([]);
@@ -1137,7 +1140,7 @@ describe("upload", () => {
 
   it("takes the file away without sending anything", async () => {
     const scene = mountScene(Declaration, Body(""));
-    scene.setValue("R", single("file", { reference: "r", mimeType: "image/png", fileName: "a.png" }));
+    scene.setValue("R", buildSingle("file", { reference: "r", mimeType: "image/png", fileName: "a.png" }));
     await userEvent.click(scene.find(".ak-stored button"));
     expect(scene.responses.at(-1)?.value).toBeNull();
     expect(scene.find(".ak-stored").textContent).toBe("");
@@ -1199,13 +1202,13 @@ describe("upload", () => {
 
   it("plays a recording that the response holds, from the URL that the host gives", () => {
     const scene = mountScene(Declaration, Body(""), { options: { files: fakeFiles() } });
-    scene.setValue("R", single("file", { reference: "r1", mimeType: "audio/webm", fileName: "recording.webm" }));
+    scene.setValue("R", buildSingle("file", { reference: "r1", mimeType: "audio/webm", fileName: "recording.webm" }));
     expect(scene.find("audio").getAttribute("src")).toBe("https://files.example/r1");
   });
 
   it("locks the controls while the candidate cannot respond", () => {
     const scene = mountScene(Declaration, Body(""));
-    scene.setValue("R", single("file", { reference: "r", mimeType: "image/png" }));
+    scene.setValue("R", buildSingle("file", { reference: "r", mimeType: "image/png" }));
     scene.interaction().disabled = true;
     expect(scene.findAll<HTMLInputElement | HTMLButtonElement>("input, button").every(({ disabled }) => disabled)).toBe(
       true,
@@ -1238,7 +1241,7 @@ describe("upload", () => {
     const reserved = first(files.reserved);
     expect(["audio/webm", "audio/ogg", "audio/mp4"]).toContain(reserved.mimeType);
     expect(reserved.fileName).toMatch(/^recording\.(webm|ogg|m4a)$/u);
-    expect(scene.responses).toEqual([{ responseIdentifier: "R", value: single("file", reserved) }]);
+    expect(scene.responses).toEqual([{ responseIdentifier: "R", value: buildSingle("file", reserved) }]);
     expect(scene.find(".ak-stored").textContent).toBe("");
     await heardFor(0.3);
     await userEvent.click(stop ?? scene.host);
@@ -1383,7 +1386,7 @@ describe("a recording that starts by itself and is kept", () => {
     tick();
     await recording();
     expect(status()).toBe("Recording");
-    expect(scene.responses).toEqual([{ responseIdentifier: "R", value: single("file", first(files.reserved)) }]);
+    expect(scene.responses).toEqual([{ responseIdentifier: "R", value: buildSingle("file", first(files.reserved)) }]);
     expect(clock()).toBe("Time left 10:00");
     expect(files.filled).toEqual([]);
     tick(60);
@@ -1444,7 +1447,7 @@ describe("a recording that starts by itself and is kept", () => {
     await userEvent.click(record());
     await recording();
     expect(files.reserved.map(({ reference }) => reference)).toEqual(["reserved-1", "reserved-2"]);
-    expect(scene.responses.at(-1)?.value).toEqual(single("file", first(files.reserved, 1)));
+    expect(scene.responses.at(-1)?.value).toEqual(buildSingle("file", first(files.reserved, 1)));
   });
 
   it("allows no second recording and no Remove once a recording has started, when it is once", async (context) => {
@@ -1483,7 +1486,7 @@ describe("a recording that starts by itself and is kept", () => {
     await recording();
     await scene.interaction().settled();
     expect(files.filled).toEqual([]);
-    expect(scene.responses).toEqual([{ responseIdentifier: "R", value: single("file", first(files.reserved)) }]);
+    expect(scene.responses).toEqual([{ responseIdentifier: "R", value: buildSingle("file", first(files.reserved)) }]);
     files.release();
     await waitFor(() => expect(files.filled).toHaveLength(1));
   });
@@ -1509,7 +1512,7 @@ describe("a recording that starts by itself and is kept", () => {
     await recording();
     scene.interaction().disabled = true;
     await waitFor(() => expect(files.filled).toHaveLength(1));
-    expect(scene.responses).toEqual([{ responseIdentifier: "R", value: single("file", first(files.reserved)) }]);
+    expect(scene.responses).toEqual([{ responseIdentifier: "R", value: buildSingle("file", first(files.reserved)) }]);
   });
 
   it("lets go of the microphone and stores the recording when the element leaves the page, and keeps nothing of a countdown", async (context) => {
@@ -1537,7 +1540,7 @@ describe("a recording that starts by itself and is kept", () => {
 
   it("starts nothing when the item is shown with a response, is locked, or offers no recording", async () => {
     const answered = open('data-ak-record-start="0"');
-    answered.scene.setValue("R", single("file", { reference: "r", mimeType: "audio/webm" }));
+    answered.scene.setValue("R", buildSingle("file", { reference: "r", mimeType: "audio/webm" }));
     const locked = open('data-ak-record-start="0"');
     locked.scene.interaction().disabled = true;
     const off = open('data-ak-record-start="0"', fakeFiles(), { record: false });
@@ -1595,7 +1598,7 @@ describe("a recording that starts by itself and is kept", () => {
       expect(status()).toBe("The microphone could not be used.");
       await scene.interaction().settled();
       await waitFor(() => expect(files.filled).toHaveLength(1));
-      expect(scene.responses).toEqual([{ responseIdentifier: "R", value: single("file", first(files.reserved)) }]);
+      expect(scene.responses).toEqual([{ responseIdentifier: "R", value: buildSingle("file", first(files.reserved)) }]);
       expect(status()).toBe("The microphone could not be used.");
     });
 
@@ -1666,7 +1669,9 @@ describe("a recording that starts by itself and is kept", () => {
       await userEvent.click(record);
       await waitFor(() => expect(scene.root.querySelector(".ak-recording")).not.toBeNull());
       expect(files.reserved).toHaveLength(2);
-      expect(scene.responses).toEqual([{ responseIdentifier: "R", value: single("file", first(files.reserved, 1)) }]);
+      expect(scene.responses).toEqual([
+        { responseIdentifier: "R", value: buildSingle("file", first(files.reserved, 1)) },
+      ]);
     });
 
     it("reports that the bytes cannot be stored after the lock, and leaves the response naming the file", async (context) => {
@@ -1675,7 +1680,7 @@ describe("a recording that starts by itself and is kept", () => {
       await recording();
       scene.interaction().disabled = true;
       await waitFor(() => expect(errors).toHaveLength(1));
-      expect(scene.responses).toEqual([{ responseIdentifier: "R", value: single("file", first(files.reserved)) }]);
+      expect(scene.responses).toEqual([{ responseIdentifier: "R", value: buildSingle("file", first(files.reserved)) }]);
     });
   });
 });
@@ -1692,88 +1697,88 @@ const EVERY_KIND: readonly {
     kind: "choice",
     declarations: declare("multiple", "identifier"),
     body: `<qti-choice-interaction response-identifier="R" max-choices="2" min-choices="2"><qti-prompt>P</qti-prompt><qti-simple-choice identifier="A">a</qti-simple-choice><qti-simple-choice identifier="B">b</qti-simple-choice><qti-simple-choice identifier="C">c</qti-simple-choice></qti-choice-interaction>`,
-    given: container("multiple", "identifier", ["A", "B"]),
-    invalid: container("multiple", "identifier", ["A"]),
+    given: buildContainer("multiple", "identifier", ["A", "B"]),
+    invalid: buildContainer("multiple", "identifier", ["A"]),
   },
   {
     kind: "hottext",
     declarations: declare("multiple", "identifier"),
     body: `<qti-hottext-interaction response-identifier="R" max-choices="2" min-choices="2"><p>x <qti-hottext identifier="A">a</qti-hottext> y <qti-hottext identifier="B">b</qti-hottext></p></qti-hottext-interaction>`,
-    given: container("multiple", "identifier", ["A", "B"]),
-    invalid: container("multiple", "identifier", ["A"]),
+    given: buildContainer("multiple", "identifier", ["A", "B"]),
+    invalid: buildContainer("multiple", "identifier", ["A"]),
   },
   {
     kind: "inline choice",
     declarations: declare("single", "identifier"),
     body: `<p>x <qti-inline-choice-interaction response-identifier="R"><qti-inline-choice identifier="A">a</qti-inline-choice></qti-inline-choice-interaction></p>`,
-    given: single("identifier", "A"),
-    invalid: single("identifier", "Z"),
+    given: buildSingle("identifier", "A"),
+    invalid: buildSingle("identifier", "Z"),
   },
   {
     kind: "text entry",
     declarations: declare("single", "string"),
     body: `<p>x <qti-text-entry-interaction response-identifier="R" pattern-mask="[a-z]+"/></p>`,
-    given: single("string", "abc"),
-    invalid: single("string", "123"),
+    given: buildSingle("string", "abc"),
+    invalid: buildSingle("string", "123"),
   },
   {
     kind: "extended text",
     declarations: declare("single", "string"),
     body: `<qti-extended-text-interaction response-identifier="R" pattern-mask="[a-z]+"><qti-prompt>P</qti-prompt></qti-extended-text-interaction>`,
-    given: single("string", "abc"),
-    invalid: single("string", "123"),
+    given: buildSingle("string", "abc"),
+    invalid: buildSingle("string", "123"),
   },
   {
     kind: "slider",
     declarations: declare("single", "integer"),
     body: `<qti-slider-interaction response-identifier="R" lower-bound="0" upper-bound="10" step-label="true"><qti-prompt>P</qti-prompt></qti-slider-interaction>`,
-    given: single("integer", 4),
-    invalid: single("integer", 40),
+    given: buildSingle("integer", 4),
+    invalid: buildSingle("integer", 40),
   },
   {
     kind: "order",
     declarations: declare("ordered", "identifier"),
     body: `<qti-order-interaction response-identifier="R"><qti-prompt>P</qti-prompt><qti-simple-choice identifier="A">a</qti-simple-choice><qti-simple-choice identifier="B">b</qti-simple-choice></qti-order-interaction>`,
-    given: container("ordered", "identifier", ["B", "A"]),
-    invalid: container("ordered", "identifier", ["B"]),
+    given: buildContainer("ordered", "identifier", ["B", "A"]),
+    invalid: buildContainer("ordered", "identifier", ["B"]),
   },
   {
     kind: "associate",
     declarations: declare("multiple", "pair"),
     body: `<qti-associate-interaction response-identifier="R" max-associations="2" min-associations="2"><qti-prompt>P</qti-prompt><qti-simple-associable-choice identifier="A" match-max="2">a</qti-simple-associable-choice><qti-simple-associable-choice identifier="B" match-max="2">b</qti-simple-associable-choice></qti-associate-interaction>`,
-    given: container("multiple", "pair", [
+    given: buildContainer("multiple", "pair", [
       ["A", "B"],
       ["B", "A"],
     ]),
-    invalid: container("multiple", "pair", [["A", "B"]]),
+    invalid: buildContainer("multiple", "pair", [["A", "B"]]),
   },
   {
     kind: "match",
     declarations: declare("multiple", "directedPair"),
     body: `<qti-match-interaction response-identifier="R" max-associations="2" min-associations="2"><qti-prompt>P</qti-prompt><qti-simple-match-set><qti-simple-associable-choice identifier="A" match-max="1">a</qti-simple-associable-choice></qti-simple-match-set><qti-simple-match-set><qti-simple-associable-choice identifier="X" match-max="2">x</qti-simple-associable-choice></qti-simple-match-set></qti-match-interaction>`,
-    given: container("multiple", "directedPair", [["A", "X"]]),
+    given: buildContainer("multiple", "directedPair", [["A", "X"]]),
     invalid: null,
   },
   {
     kind: "gap match",
     declarations: declare("multiple", "directedPair"),
     body: `<qti-gap-match-interaction response-identifier="R"><qti-prompt>P</qti-prompt><qti-gap-text identifier="W" match-max="1">w</qti-gap-text><p>x <qti-gap identifier="G1" required="true"/> y <qti-gap identifier="G2"/></p></qti-gap-match-interaction>`,
-    given: container("multiple", "directedPair", [["W", "G1"]]),
-    invalid: container("multiple", "directedPair", [["W", "G2"]]),
+    given: buildContainer("multiple", "directedPair", [["W", "G1"]]),
+    invalid: buildContainer("multiple", "directedPair", [["W", "G2"]]),
   },
   {
     kind: "upload",
     declarations: declare("single", "file"),
     body: `<qti-upload-interaction response-identifier="R" type="application/pdf"><qti-prompt>P</qti-prompt></qti-upload-interaction>`,
-    given: single("file", { reference: "r", mimeType: "application/pdf", fileName: "a.pdf" }),
-    invalid: single("file", { reference: "r", mimeType: "image/png", fileName: "a.png" }),
+    given: buildSingle("file", { reference: "r", mimeType: "application/pdf", fileName: "a.pdf" }),
+    invalid: buildSingle("file", { reference: "r", mimeType: "image/png", fileName: "a.png" }),
   },
   {
     kind: "media",
     declarations: declare("single", "integer"),
     body: `<qti-media-interaction response-identifier="R" autostart="false" min-plays="2"><qti-prompt>P</qti-prompt><audio><source src="media/tone.wav" type="audio/wav"/></audio></qti-media-interaction>`,
-    given: single("integer", 2),
-    invalid: single("integer", 1),
+    given: buildSingle("integer", 2),
+    invalid: buildSingle("integer", 1),
   },
 ];
 
@@ -1835,7 +1840,7 @@ describe("keyboard operation", () => {
     );
     await putByKeyboard(scene, "Alpha", 0);
     await putByKeyboard(scene, "Beta", 0);
-    expect(scene.responses.at(-1)?.value).toEqual(container("multiple", "pair", [["A", "B"]]));
+    expect(scene.responses.at(-1)?.value).toEqual(buildContainer("multiple", "pair", [["A", "B"]]));
   });
 
   it("matches without a drag, by choosing a choice and then the choice that takes it", async () => {
@@ -1844,7 +1849,7 @@ describe("keyboard operation", () => {
       `<qti-match-interaction response-identifier="R" max-associations="2"><qti-simple-match-set><qti-simple-associable-choice identifier="A" match-max="1">Alpha</qti-simple-associable-choice></qti-simple-match-set><qti-simple-match-set><qti-simple-associable-choice identifier="X" match-max="1">Xi</qti-simple-associable-choice></qti-simple-match-set></qti-match-interaction>`,
     );
     await putByKeyboard(scene, "Alpha", 0);
-    expect(scene.responses.at(-1)?.value).toEqual(container("multiple", "directedPair", [["A", "X"]]));
+    expect(scene.responses.at(-1)?.value).toEqual(buildContainer("multiple", "directedPair", [["A", "X"]]));
   });
 
   it("fills a gap without a drag, by choosing a choice and then the gap", async () => {
@@ -1853,7 +1858,7 @@ describe("keyboard operation", () => {
       `<qti-gap-match-interaction response-identifier="R"><qti-gap-text identifier="W" match-max="1">winter</qti-gap-text><p>It is <qti-gap identifier="G1"/>.</p></qti-gap-match-interaction>`,
     );
     await putByKeyboard(scene, "winter", 0);
-    expect(scene.responses.at(-1)?.value).toEqual(container("multiple", "directedPair", [["W", "G1"]]));
+    expect(scene.responses.at(-1)?.value).toEqual(buildContainer("multiple", "directedPair", [["W", "G1"]]));
   });
 
   it("chooses a hot text and a choice in a menu with the keyboard alone", async () => {
@@ -1862,7 +1867,7 @@ describe("keyboard operation", () => {
       `<qti-hottext-interaction response-identifier="R"><p><qti-hottext identifier="A">one</qti-hottext> <qti-hottext identifier="B">two</qti-hottext></p></qti-hottext-interaction>`,
     );
     await userEvent.type(first(hot.findAll<HTMLInputElement>("qti-hottext > input"), 1), " ");
-    expect(hot.responses.at(-1)?.value).toEqual(single("identifier", "B"));
+    expect(hot.responses.at(-1)?.value).toEqual(buildSingle("identifier", "B"));
     const menu = mountScene(
       declare("single", "identifier"),
       `<p><qti-inline-choice-interaction response-identifier="R"><qti-inline-choice identifier="L">London</qti-inline-choice><qti-inline-choice identifier="P">Paris</qti-inline-choice></qti-inline-choice-interaction></p>`,
@@ -1872,7 +1877,7 @@ describe("keyboard operation", () => {
     const select = menu.find("select");
     await userEvent.type(select, "Pa");
     expect(menu.root.activeElement).toBe(select);
-    expect(menu.responses.at(-1)?.value).toEqual(single("identifier", "P"));
+    expect(menu.responses.at(-1)?.value).toEqual(buildSingle("identifier", "P"));
   });
 
   it("types a text and ends an attempt with the keyboard alone", async () => {
@@ -1883,7 +1888,7 @@ describe("keyboard operation", () => {
     const field = text.find("input");
     await userEvent.type(field, "yes");
     expect(text.root.activeElement).toBe(field);
-    expect(text.responses.at(-1)?.value).toEqual(single("string", "yes"));
+    expect(text.responses.at(-1)?.value).toEqual(buildSingle("string", "yes"));
     const hint = mountScene(
       declare("single", "boolean", "H"),
       `<p><qti-end-attempt-interaction response-identifier="H" title="Hint"/></p>`,
@@ -1900,7 +1905,7 @@ describe("keyboard operation", () => {
       `<qti-match-interaction response-identifier="R" class="qti-match-tabular" max-associations="2"><qti-simple-match-set><qti-simple-associable-choice identifier="A" match-max="1">a</qti-simple-associable-choice></qti-simple-match-set><qti-simple-match-set><qti-simple-associable-choice identifier="X" match-max="1">x</qti-simple-associable-choice></qti-simple-match-set></qti-match-interaction>`,
     );
     await userEvent.type(table.find("td input"), " ");
-    expect(table.responses.at(-1)?.value).toEqual(container("multiple", "directedPair", [["A", "X"]]));
+    expect(table.responses.at(-1)?.value).toEqual(buildContainer("multiple", "directedPair", [["A", "X"]]));
   });
 });
 
@@ -1956,7 +1961,7 @@ describe("mathematics in choices", () => {
       declare("ordered", "identifier"),
       `<qti-order-interaction response-identifier="R"><qti-simple-choice identifier="A">${fraction("2")}</qti-simple-choice><qti-simple-choice identifier="B">${fraction("3")}</qti-simple-choice></qti-order-interaction>`,
     );
-    order.setValue("R", container("ordered", "identifier", ["B"]));
+    order.setValue("R", buildContainer("ordered", "identifier", ["B"]));
     for (const scene of [choice, order]) {
       await typesetter.typeset(scene.root);
       expect(scene.root.querySelector("math")).toBeNull();
@@ -2013,7 +2018,7 @@ describe("the example of the guide", () => {
     });
     const lyon = [...root.root.querySelectorAll("label")].find((label) => label.textContent === "Lyon");
     await userEvent.click(lyon ?? host);
-    expect(heard).toEqual([{ responseIdentifier: "RESPONSE", value: container("multiple", "identifier", ["B"]) }]);
+    expect(heard).toEqual([{ responseIdentifier: "RESPONSE", value: buildContainer("multiple", "identifier", ["B"]) }]);
     expect(JSON.stringify(heard)).toBe(
       '[{"responseIdentifier":"RESPONSE","value":{"cardinality":"multiple","baseType":"identifier","values":["B"]}}]',
     );
@@ -2028,7 +2033,7 @@ describe("the properties of an element", () => {
       declare("ordered", "identifier"),
       `<qti-order-interaction response-identifier="R"><qti-simple-choice identifier="A">a</qti-simple-choice><qti-simple-choice identifier="B">b</qti-simple-choice></qti-order-interaction>`,
     );
-    scene.setValue("R", container("ordered", "identifier", ["B"]));
+    scene.setValue("R", buildContainer("ordered", "identifier", ["B"]));
     expect(scene.find("button.ak-drop").textContent).toBe("Place here");
     scene.interaction().messages = ID_MESSAGES;
     expect(scene.find("button.ak-drop").textContent).toBe("Taruh di sini");
@@ -2058,7 +2063,7 @@ describe("the properties of an element", () => {
 
   it("shows the string that the host restores in the text area, and takes it away for NULL", () => {
     const scene = mountScene(declare("single", "string"), `<qti-extended-text-interaction response-identifier="R"/>`);
-    scene.setValue("R", single("string", "Restored"));
+    scene.setValue("R", buildSingle("string", "Restored"));
     expect(scene.find<HTMLTextAreaElement>("textarea").value).toBe("Restored");
     scene.setValue("R", null);
     expect(scene.find<HTMLTextAreaElement>("textarea").value).toBe("");

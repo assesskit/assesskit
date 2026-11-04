@@ -6,6 +6,7 @@ import {
   type AssessmentItem,
   createItemVariables,
   createRandom,
+  findStandardTemplate,
   ProcessingError,
   ReadError,
   type ResponseProcessing,
@@ -13,7 +14,6 @@ import {
   runResponseProcessing,
   runTemplateProcessing,
   STANDARD_TEMPLATES,
-  standardTemplateUri,
   type Value,
 } from "../src/index.js";
 
@@ -100,7 +100,7 @@ describe("standard templates", () => {
       .flatMap(({ responseProcessing }) => responseProcessing?.template ?? [])
       .filter((uri) => uri !== "");
     expect(new Set(uris).size).toBe(7);
-    for (const uri of uris) expect(standardTemplateUri(uri), uri).toBeDefined();
+    for (const uri of uris) expect(findStandardTemplate(uri), uri).toBeDefined();
   });
 });
 
@@ -130,7 +130,7 @@ describe("the items of the examples", () => {
       ([path, { responseProcessing }]) =>
         !CONTENT_ERRORS.has(path) &&
         ["match_correct", "CC2_match"].some(
-          (name) => standardTemplateUri(responseProcessing?.template ?? "") === `${TEMPLATE_BASE}${name}.xml`,
+          (name) => findStandardTemplate(responseProcessing?.template ?? "") === `${TEMPLATE_BASE}${name}.xml`,
         ),
     );
     expect(matching.length).toBeGreaterThan(40);

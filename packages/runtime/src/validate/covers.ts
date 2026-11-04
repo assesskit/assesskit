@@ -1,4 +1,4 @@
-import { type AssessmentTest, SCORE_COVERS_CLASS, type ScoreCoverBlock, scoreCoverBlocks } from "../asi/index.js";
+import { type AssessmentTest, SCORE_COVERS_CLASS, type ScoreCoverBlock, selectScoreCoverBlocks } from "../asi/index.js";
 import type { Findings } from "./findings.js";
 import type { ItemRefInfo } from "./test-scope.js";
 
@@ -32,7 +32,7 @@ export function checkCovers(
 ): void {
   const declared = new Map(test.outcomeDeclarations.map((declaration) => [declaration.identifier, declaration]));
   const named = new Set<string>();
-  for (const block of scoreCoverBlocks(test)) {
+  for (const block of selectScoreCoverBlocks(test)) {
     if (!block.block.view.includes("scorer") || block.block.view.includes("candidate")) {
       const message = `The rubric block of the class ${SCORE_COVERS_CLASS} must be shown to scorers and hidden from candidates: its view must contain scorer and not candidate, found ${block.block.view.join(" ")}.`;
       findings.error("assesskit/covers/malformed", message, ELEMENT);

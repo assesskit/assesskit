@@ -1,4 +1,4 @@
-import { checkArray, checkChoice, checkRecord, checkString, describe, optional } from "../checks.js";
+import { checkArray, checkChoice, checkOptional, checkRecord, checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import { BASE_TYPES, CARDINALITIES, formatIdentifierList, formatPrimitive, isXsdDateTime } from "../values/index.js";
 import { optionalText } from "../values/internal.js";
@@ -123,8 +123,8 @@ function writeResponseVariable(variable: ResponseVariable): XmlElement {
   const label = `the response variable ${describe(variable.identifier)}`;
   const type = checkType(variable, label);
   const { choiceSequence, scoreStatus, answeredStatus, correctResponse } = variable;
-  optional(scoreStatus, (term) => checkChoice(term, `The scoreStatus of ${label}`, SCORE_STATUSES));
-  optional(answeredStatus, (term) => checkChoice(term, `The answeredStatus of ${label}`, ANSWERED_STATUSES));
+  checkOptional(scoreStatus, (term) => checkChoice(term, `The scoreStatus of ${label}`, SCORE_STATUSES));
+  checkOptional(answeredStatus, (term) => checkChoice(term, `The answeredStatus of ${label}`, ANSWERED_STATUSES));
   const correct = correctResponse === undefined ? [] : [writeCorrectResponse(correctResponse, type, label)];
   const candidate = element(
     "candidateResponse",
@@ -155,7 +155,7 @@ function writeOutcomeVariable(variable: OutcomeVariable): XmlElement {
   const label = `the outcome variable ${describe(variable.identifier)}`;
   const type = checkType(variable, label);
   const { externalScored, outcomeInformation } = variable;
-  optional(externalScored, (term) => checkChoice(term, `The externalScored of ${label}`, OUTCOME_SCORERS));
+  checkOptional(externalScored, (term) => checkChoice(term, `The externalScored of ${label}`, OUTCOME_SCORERS));
   const information =
     outcomeInformation === undefined
       ? []

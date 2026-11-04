@@ -1,7 +1,7 @@
 import { checkArray, checkRecord, describe } from "@assesskit/runtime/checks";
 import type { ScorerItem, ScorerView, ScoringCover, ScoringRequest } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import { toWireValue, type Value } from "@assesskit/runtime/values";
+import { type Value, writeWireValue } from "@assesskit/runtime/values";
 import {
   checkSubmission,
   type Submission,
@@ -18,7 +18,7 @@ import {
  */
 function valueToWire(value: Value | null): SubmissionValue {
   if (value === null) return null;
-  return toWireValue(
+  return writeWireValue(
     value,
     value.cardinality === "record"
       ? { cardinality: "record" }

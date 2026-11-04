@@ -1,11 +1,11 @@
 import type { AssessmentItem, Expression, TemplateRule } from "../asi/index.js";
-import { operandsOf } from "../processing/index.js";
+import { listOperands } from "../processing/index.js";
 import type { Findings } from "./findings.js";
 
 /** Adds the identifiers of the variables an expression reads to a set. */
 function readVariables(expression: Expression, into: Set<string>): void {
   if (expression.kind === "variable") into.add(expression.identifier);
-  for (const operand of operandsOf(expression)) readVariables(operand, into);
+  for (const operand of listOperands(expression)) readVariables(operand, into);
 }
 
 /** Adds the identifiers of the variables that the constraints among the rules read to a set. */

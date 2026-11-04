@@ -3,15 +3,15 @@ import {
   type BodyNode,
   type ModelNode,
   type ScoringRubric,
-  scoreCoverBlocks,
+  selectScoreCoverBlocks,
 } from "../asi/index.js";
 import { scoringRubricBlocks, scoringRubricOf, withDescendants } from "../asi/internal.js";
-import { resolveContent, testRubricBlocks } from "../content/index.js";
+import { resolveContent, selectTestRubricBlocks } from "../content/index.js";
 import { DataError } from "../errors.js";
 import type { Value } from "../values/index.js";
 import { type Course, candidateOf } from "./course.js";
 import { type DeliveredItem, type DeliveryState, findDelivered } from "./delivery-state.js";
-import { itemFeedback } from "./item-display.js";
+import { deriveItemFeedback } from "./item-display.js";
 import { type ItemKey, sameKey } from "./plan.js";
 import { planIndex } from "./plan-index.js";
 import type { ScoringRequest } from "./scoring.js";
@@ -118,7 +118,7 @@ function scorerItem(
     };
   }
   const { variables } = delivered.session;
-  const { outcomes } = itemFeedback(delivered.session, item, entry.control);
+  const { outcomes } = deriveItemFeedback(delivered.session, item, entry.control);
   const shown = { outcomes, templates: variables.templates };
   const identifiers = item.responseDeclarations.map(({ identifier }) => identifier);
   const pick = (values: ReadonlyMap<string, Value | null>): Map<string, Value | null> =>
@@ -159,11 +159,11 @@ function rubricFor(course: Course, state: DeliveryState, request: ScoringRequest
   const { structure } = course;
   const test = structure.test.model;
   const named = request.scope === "test" ? request.outcome : undefined;
-  const others = [...scoreCoverBlocks(test), ...scoringRubricBlocks(test)]
+  const others = [...selectScoreCoverBlocks(test), ...scoringRubricBlocks(test)]
     .filter(({ outcomeIdentifier }) => named === undefined || outcomeIdentifier !== named)
     .map(({ block }) => block);
   const placement = request.item === undefined ? undefined : planIndex(state.plan).placement(request.item);
-  const blocks = testRubricBlocks(
+  const blocks = selectTestRubricBlocks(
     {
       test,
       ...(placement === undefined ? {} : { part: structure.part(placement.part)?.model }),

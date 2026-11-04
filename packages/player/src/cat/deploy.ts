@@ -1,9 +1,9 @@
 import type { AdaptiveSelection } from "@assesskit/runtime/asi";
-import { type CatPort, checkPool, type SectionFiles, sectionData } from "@assesskit/runtime/cat";
+import { buildSectionData, type CatPort, type SectionFiles, validatePool } from "@assesskit/runtime/cat";
 import { checkFunction, checkRecord, describe } from "@assesskit/runtime/checks";
 import { resolveStructure, type SectionNode } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import { packageResolvers, type QtiPackage, resourcePath } from "@assesskit/runtime/package";
+import { createPackageResolvers, type QtiPackage, resolveResourcePath } from "@assesskit/runtime/package";
 
 /** The section that the engine made for an adaptive section: the entry of `DeliveryDefinition.catSections`. */
 export interface DeployedCatSection {
@@ -51,11 +51,11 @@ function filesOf(pkg: QtiPackage, section: SectionNode, selection: AdaptiveSelec
 
 /** Returns the adaptive sections of the tests of a package, in document order. */
 function adaptiveSections(pkg: QtiPackage): SectionNode[] {
-  const resolvers = packageResolvers(pkg);
+  const resolvers = createPackageResolvers(pkg);
   return pkg.manifest.resources
     .filter((resource) => resource.type === TEST_RESOURCE)
     .flatMap((resource) => {
-      const path = resourcePath(pkg.manifest, resource);
+      const path = resolveResourcePath(pkg.manifest, resource);
       const document = path === undefined ? undefined : pkg.document(path);
       if (path === undefined || document?.kind !== "test") return [];
       const structure = resolveStructure(document.test, path, resolvers);
@@ -107,10 +107,10 @@ export async function deployCatSections(
     const engine = port(selection);
     const { sectionIdentifier } = await engine.createSection(
       prefix,
-      sectionData(selection, filesOf(pkg, section, selection)),
+      buildSectionData(selection, filesOf(pkg, section, selection)),
     );
     const { items } = await engine.getSection(prefix, sectionIdentifier);
-    const issues = checkPool(section.model, items);
+    const issues = validatePool(section.model, items);
     if (issues.length > 0) {
       throw new DataError(
         `The engine's section ${describe(sectionIdentifier)} at ${describe(prefix)} does not agree with the adaptive section ${describe(identifier)}: ${issues.map(({ message }) => message).join(" ")}`,

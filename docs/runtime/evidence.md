@@ -130,7 +130,7 @@ else is a defect: an uncaught exception, a result that breaks an invariant, or a
 | `resolveIncludes`                                                                   | Documents of hostile includes: loops, outside paths, missing targets, fallbacks, small limits | A tree without includes within the limits, `ReadError`, `SecurityError`      |
 | `readAsi`, `readManifest`, `readLtiLink`, `readResults`, `readUsageData`, `readPnp` | Text and bytes of written documents, mutated; a DOCTYPE before the root                       | A model, `ReadError`, `SecurityError` (`doctype` for the DOCTYPE)            |
 | `readPackage`, `file`                                                               | Archives with hostile headers; archives of the fixtures and of `writePackage`, mutated        | Files within the limits and inside the package, `ReadError`, `SecurityError` |
-| `document`, `packageResolvers`                                                      | An item and a file it includes, mutated                                                       | A document, `ReadError`, `SecurityError`                                     |
+| `document`, `createPackageResolvers`                                                | An item and a file it includes, mutated                                                       | A document, `ReadError`, `SecurityError`                                     |
 | `compileXsdRegex`                                                                   | Patterns, mutated, with the delimiters of the dialect; small limits                           | A pattern that matches any text, `DataError`                                 |
 | `evaluate`                                                                          | Expressions over operators, literals at the edges of each base type and small limits          | A value that `normalizeValue` keeps, `ProcessingError`, `SecurityError`      |
 
@@ -209,7 +209,7 @@ No answer key reaches the view; the evidence is a property and a structure check
   holds no mark, except the mark of the correct response in the solution state of an item whose control shows the solution.
   The property fails when the view takes the rubric of another view or the correct responses.
 - At every step of generated tests, the view reads back equal from its JSON text and from a state read back; an action that
-  reaches the engine through `actionToJson`, the JSON text, `parseCandidateAction` and `stamp` gives the step that the same
+  reaches the engine through `writeCandidateAction`, the JSON text, `readCandidateAction` and `stamp` gives the step that the same
   action gives on the device; the engine refuses every action type the view leaves out, and meets no refusal of the state
   in a type it lists, except the two actions that change nothing, `next-attempt` during an attempt and `resume` of a running
   session.

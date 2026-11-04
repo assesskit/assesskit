@@ -1,4 +1,4 @@
-import { checkArray, checkBoolean, checkChoice, checkRecord, checkString, describe, optional } from "../checks.js";
+import { checkArray, checkBoolean, checkChoice, checkOptional, checkRecord, checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import { BASE_TYPES, formatPrimitive, isXsdDate } from "../values/index.js";
 import { optionalText } from "../values/internal.js";
@@ -28,7 +28,9 @@ function arrayOf<T>(value: readonly T[], label: string, minimum: number): readon
 
 function writeTargetObject(target: TargetObject): XmlElement {
   checkRecord(target, "A target object must be an object");
-  optional(target.objectType, (term) => checkChoice(term, "The objectType of a target object", STATISTIC_OBJECT_TYPES));
+  checkOptional(target.objectType, (term) =>
+    checkChoice(term, "The objectType of a target object", STATISTIC_OBJECT_TYPES),
+  );
   return element("targetObject", {
     identifier: formatPrimitive(target.identifier, "string"),
     partIdentifier: optionalText(target.partIdentifier, "identifier"),
@@ -39,7 +41,7 @@ function writeTargetObject(target: TargetObject): XmlElement {
 function writeStatisticValue(statistic: StatisticValue): XmlElement {
   checkRecord(statistic, "The value of a statistic must be an object");
   const { value, baseType, fieldIdentifier } = statistic;
-  optional(baseType, (term) => checkChoice(term, "The baseType of the value of a statistic", BASE_TYPES));
+  checkOptional(baseType, (term) => checkChoice(term, "The baseType of the value of a statistic", BASE_TYPES));
   const text = formatPrimitive(value, baseType ?? "float");
   return element("value", { fieldIdentifier: optionalText(fieldIdentifier, "identifier"), baseType }, [text]);
 }
@@ -47,7 +49,7 @@ function writeStatisticValue(statistic: StatisticValue): XmlElement {
 function writeMapEntry(entry: StatisticMapEntry): XmlElement {
   checkRecord(entry, "A map entry must be an object");
   const { caseSensitive } = entry;
-  optional(caseSensitive, (flag) => checkBoolean(flag, "The caseSensitive of a map entry"));
+  checkOptional(caseSensitive, (flag) => checkBoolean(flag, "The caseSensitive of a map entry"));
   return element("mapEntry", {
     mapKey: formatPrimitive(entry.mapKey, "string"),
     mappedValue: formatPrimitive(entry.mappedValue, "float"),
@@ -73,7 +75,7 @@ function writeBase(statistic: ItemStatisticBase): {
 } {
   const label = `the statistic ${describe(statistic.name)}`;
   const { lastUpdated } = statistic;
-  optional(lastUpdated, (date) => {
+  checkOptional(lastUpdated, (date) => {
     checkString(date, `The lastUpdated of ${label}`);
     if (!isXsdDate(date)) {
       throw new DataError(`The lastUpdated of ${label} must be a date such as 2004-07-04, found ${describe(date)}.`);

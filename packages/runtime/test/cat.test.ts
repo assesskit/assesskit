@@ -8,29 +8,29 @@ import {
   ASI_NAMESPACE,
   type AssessmentResult,
   type AssessmentSection,
-  assessmentResultFromJson,
-  assessmentResultToJson,
+  buildCatMetadata,
+  buildContainer,
+  buildRecord,
+  buildSectionData,
+  buildSingle,
   type CatPort,
   type CreateSectionResponse,
   type CreateSessionRequest,
   type CreateSessionResponse,
-  catMetadata,
-  checkPool,
-  container,
   DataError,
   type GetSectionResponse,
   isSessionEnd,
-  itemStageFromJson,
   type QtiMetadata,
   readAsi,
+  readItemStage,
   readResults,
-  record,
+  readResultsJson,
   type SectionData,
   type SubmitResultsRequest,
   type SubmitResultsResponse,
-  sectionData,
-  single,
+  validatePool,
   writeResults,
+  writeResultsJson,
 } from "../src/index.js";
 import { qtiMetadata } from "./arbitraries/metadata.js";
 import { fuzzJson } from "./fuzz.js";
@@ -75,16 +75,16 @@ const SAMPLE = sectionOf(`<qti-adaptive-selection>${REFS}</qti-adaptive-selectio
 
 describe("checking an item pool", () => {
   it("reports nothing when the item references and the pool agree", () => {
-    expect(checkPool(SAMPLE, { itemIdentifiers: SAMPLE_ITEMS })).toEqual([]);
+    expect(validatePool(SAMPLE, { itemIdentifiers: SAMPLE_ITEMS })).toEqual([]);
   });
 
   it("ignores the order of the pool and the stage length, and a pool that lists an item twice", () => {
     const pool = { itemIdentifiers: [...SAMPLE_ITEMS].reverse().concat("item434"), stageLength: 0 };
-    expect(checkPool(SAMPLE, pool)).toEqual([]);
+    expect(validatePool(SAMPLE, pool)).toEqual([]);
   });
 
   it("reports an item reference that the pool lacks: the engine can never select it", () => {
-    const issues = checkPool(SAMPLE, {
+    const issues = validatePool(SAMPLE, {
       itemIdentifiers: SAMPLE_ITEMS.filter((identifier) => identifier !== "item365"),
     });
     expect(issues).toEqual([
@@ -100,7 +100,7 @@ describe("checking an item pool", () => {
   });
 
   it("reports an item of the pool that the section does not list: the engine could select it", () => {
-    const issues = checkPool(SAMPLE, { itemIdentifiers: [...SAMPLE_ITEMS, "item999"] });
+    const issues = validatePool(SAMPLE, { itemIdentifiers: [...SAMPLE_ITEMS, "item999"] });
     expect(issues).toEqual([
       {
         severity: "error",
@@ -113,7 +113,7 @@ describe("checking an item pool", () => {
 
   it("reports the item references first and the pool after, each in list order", () => {
     const section = sectionOf("", itemRefs(["a", "b", "c"]));
-    const issues = checkPool(section, { itemIdentifiers: ["z", "c", "y"] });
+    const issues = validatePool(section, { itemIdentifiers: ["z", "c", "y"] });
     expect(issues.map(({ code, message }) => [code, /"(\w)"/.exec(message)?.[1]])).toEqual([
       ["assesskit/cat/item-not-in-pool", "a"],
       ["assesskit/cat/item-not-in-pool", "b"],
@@ -124,7 +124,7 @@ describe("checking an item pool", () => {
 
   it("reports every item reference when the pool is empty, absent or null", () => {
     for (const pool of [{}, { itemIdentifiers: [] }, { itemIdentifiers: null }]) {
-      expect(checkPool(SAMPLE, pool).map(({ code }) => code)).toEqual(
+      expect(validatePool(SAMPLE, pool).map(({ code }) => code)).toEqual(
         Array(SAMPLE_ITEMS.length).fill("assesskit/cat/item-not-in-pool"),
       );
     }
@@ -135,40 +135,40 @@ describe("checking an item pool", () => {
       "",
       `${itemRefs(["a"])}<qti-assessment-section identifier="inner" title="i" visible="true">${itemRefs(["b"])}</qti-assessment-section>`,
     );
-    expect(checkPool(section, { itemIdentifiers: ["a", "b"] }).map(({ code }) => code)).toEqual([
+    expect(validatePool(section, { itemIdentifiers: ["a", "b"] }).map(({ code }) => code)).toEqual([
       "assesskit/cat/item-not-in-section",
     ]);
   });
 
   it("reports an item reference that two children repeat once", () => {
     const section = sectionOf("", itemRefs(["a", "a"]));
-    expect(checkPool(section, { itemIdentifiers: [] })).toHaveLength(1);
+    expect(validatePool(section, { itemIdentifiers: [] })).toHaveLength(1);
   });
 
   it("throws a DataError for arguments of other types", () => {
     const pool = { itemIdentifiers: SAMPLE_ITEMS };
-    expect(() => checkPool(json("null"), pool)).toThrow(DataError);
-    expect(() => checkPool(json("null"), pool)).toThrow("The section must be an object, found null.");
-    expect(() => checkPool(json("{}"), pool)).toThrow(
+    expect(() => validatePool(json("null"), pool)).toThrow(DataError);
+    expect(() => validatePool(json("null"), pool)).toThrow("The section must be an object, found null.");
+    expect(() => validatePool(json("{}"), pool)).toThrow(
       "The identifier of the section must be a string, found undefined.",
     );
-    expect(() => checkPool(json('{"identifier":"s","children":"a"}'), pool)).toThrow(
+    expect(() => validatePool(json('{"identifier":"s","children":"a"}'), pool)).toThrow(
       'The property children of the section must be an array, found "a".',
     );
-    expect(() => checkPool(json('{"identifier":"s","children":[1]}'), pool)).toThrow(
+    expect(() => validatePool(json('{"identifier":"s","children":[1]}'), pool)).toThrow(
       "A child of the section must be an object, found 1.",
     );
     expect(() =>
-      checkPool(json('{"identifier":"s","children":[{"kind":"assessment-item-ref","identifier":5}]}'), pool),
+      validatePool(json('{"identifier":"s","children":[{"kind":"assessment-item-ref","identifier":5}]}'), pool),
     ).toThrow("The identifier of an item reference must be a string, found 5.");
-    expect(() => checkPool(SAMPLE, json("null"))).toThrow("The pool is invalid: expected an object, found null.");
-    expect(() => checkPool(SAMPLE, json('{"itemIdentifiers":"a"}'))).toThrow(
+    expect(() => validatePool(SAMPLE, json("null"))).toThrow("The pool is invalid: expected an object, found null.");
+    expect(() => validatePool(SAMPLE, json('{"itemIdentifiers":"a"}'))).toThrow(
       'The pool is invalid at itemIdentifiers: expected an array, found "a".',
     );
-    expect(() => checkPool(SAMPLE, json('{"itemIdentifiers":[1]}'))).toThrow(
+    expect(() => validatePool(SAMPLE, json('{"itemIdentifiers":[1]}'))).toThrow(
       "The pool is invalid at itemIdentifiers[0]: expected a string, found 1.",
     );
-    expect(() => checkPool(SAMPLE, json('{"stageLength":"1"}'))).toThrow(
+    expect(() => validatePool(SAMPLE, json('{"stageLength":"1"}'))).toThrow(
       'The pool is invalid at stageLength: expected a number, found "1".',
     );
   });
@@ -190,7 +190,7 @@ describe("metadata of the pool", () => {
   };
 
   it("binds QTI metadata to the fields of the metadata binding", () => {
-    const result = catMetadata([{ identifier: "item434", metadata: Complete }]);
+    const result = buildCatMetadata([{ identifier: "item434", metadata: Complete }]);
     expect(JSON.parse(JSON.stringify(result))).toEqual({
       itemMetadata: [
         {
@@ -211,29 +211,31 @@ describe("metadata of the pool", () => {
   });
 
   it("leaves out what the QTI metadata omits, but keeps an empty list of interactions", () => {
-    const result = catMetadata([{ identifier: "i", metadata: { interactionTypes: [], scoringModes: [] } }]);
+    const result = buildCatMetadata([{ identifier: "i", metadata: { interactionTypes: [], scoringModes: [] } }]);
     expect(JSON.parse(JSON.stringify(result))).toEqual({ itemMetadata: [{ identifier: "i", interactionType: [] }] });
   });
 
   it("keeps the items in the order given, and gives no item metadata for no items", () => {
     const metadata: QtiMetadata = { interactionTypes: [], scoringModes: [] };
-    const result = catMetadata(["b", "a", "c"].map((identifier) => ({ identifier, metadata })));
+    const result = buildCatMetadata(["b", "a", "c"].map((identifier) => ({ identifier, metadata })));
     expect(result.itemMetadata.map(({ identifier }) => identifier)).toEqual(["b", "a", "c"]);
-    expect(catMetadata([])).toEqual({ itemMetadata: [] });
+    expect(buildCatMetadata([])).toEqual({ itemMetadata: [] });
   });
 
   it("encodes the metadata files of an item and of the section in base64 with their type", () => {
     const metadata: QtiMetadata = { interactionTypes: [], scoringModes: [] };
     const lom = { type: "lom", content: bytes("<lom/>") };
     const csmd = { type: "csmd", content: bytes("<csmd/>") };
-    const result = catMetadata([{ identifier: "i", metadata, externalMetadata: [lom] }], { externalMetadata: [csmd] });
+    const result = buildCatMetadata([{ identifier: "i", metadata, externalMetadata: [lom] }], {
+      externalMetadata: [csmd],
+    });
     // The base64 of "<lom/>" and "<csmd/>".
     expect(result.externalMetadata).toEqual([{ type: "csmd", content: "PGNzbWQvPg==" }]);
     expect(result.itemMetadata[0]?.externalMetadata).toEqual([{ type: "lom", content: "PGxvbS8+" }]);
   });
 
   it("puts the metadata of the section before the metadata of the items", () => {
-    const result = catMetadata([], { externalMetadata: [{ type: "lom", content: bytes("") }] });
+    const result = buildCatMetadata([], { externalMetadata: [{ type: "lom", content: bytes("") }] });
     expect(Object.keys(result)).toEqual(["externalMetadata", "itemMetadata"]);
     expect(result.externalMetadata).toEqual([{ type: "lom", content: "" }]);
   });
@@ -241,7 +243,7 @@ describe("metadata of the pool", () => {
   it("throws a DataError for an identifier that two items share", () => {
     const metadata: QtiMetadata = { interactionTypes: [], scoringModes: [] };
     expect(() =>
-      catMetadata([
+      buildCatMetadata([
         { identifier: "a", metadata },
         { identifier: "a", metadata },
       ]),
@@ -250,32 +252,34 @@ describe("metadata of the pool", () => {
 
   it("throws a DataError for arguments of other types", () => {
     const metadata: QtiMetadata = { interactionTypes: [], scoringModes: [] };
-    expect(() => catMetadata(json("{}"))).toThrow("The items must be an array, found an object.");
-    expect(() => catMetadata(json("null"))).toThrow(DataError);
-    expect(() => catMetadata([], json("null"))).toThrow("The options must be an object, found null.");
-    expect(() => catMetadata([], json('{"externalMetadata":null}'))).toThrow(
+    expect(() => buildCatMetadata(json("{}"))).toThrow("The items must be an array, found an object.");
+    expect(() => buildCatMetadata(json("null"))).toThrow(DataError);
+    expect(() => buildCatMetadata([], json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => buildCatMetadata([], json('{"externalMetadata":null}'))).toThrow(
       "The option externalMetadata must be an array, found null.",
     );
-    expect(() => catMetadata(json("[5]"))).toThrow("The item at index 0 must be an object, found 5.");
-    expect(() => catMetadata(json('[{"identifier":5}]'))).toThrow(
+    expect(() => buildCatMetadata(json("[5]"))).toThrow("The item at index 0 must be an object, found 5.");
+    expect(() => buildCatMetadata(json('[{"identifier":5}]'))).toThrow(
       "The identifier of the item at index 0 must be a string, found 5.",
     );
-    expect(() => catMetadata(json('[{"identifier":"a"}]'))).toThrow(
+    expect(() => buildCatMetadata(json('[{"identifier":"a"}]'))).toThrow(
       "The QTI metadata must be an object, found undefined.",
     );
     expect(() =>
-      catMetadata(json('[{"identifier":"a","metadata":{"interactionTypes":["boxInteraction"],"scoringModes":[]}}]')),
+      buildCatMetadata(
+        json('[{"identifier":"a","metadata":{"interactionTypes":["boxInteraction"],"scoringModes":[]}}]'),
+      ),
     ).toThrow('An interaction type must be "associateInteraction"');
-    expect(() => catMetadata([{ identifier: "a", metadata, externalMetadata: json("{}") }])).toThrow(
+    expect(() => buildCatMetadata([{ identifier: "a", metadata, externalMetadata: json("{}") }])).toThrow(
       "The externalMetadata of the item at index 0 must be an array, found an object.",
     );
-    expect(() => catMetadata([], { externalMetadata: json("[null]") })).toThrow(
+    expect(() => buildCatMetadata([], { externalMetadata: json("[null]") })).toThrow(
       "The metadata file at index 0 of the option externalMetadata must be an object, found null.",
     );
-    expect(() => catMetadata([], { externalMetadata: json('[{"type":1}]') })).toThrow(
+    expect(() => buildCatMetadata([], { externalMetadata: json('[{"type":1}]') })).toThrow(
       "The type of the metadata file at index 0 of the option externalMetadata must be a string, found 1.",
     );
-    expect(() => catMetadata([], { externalMetadata: json('[{"type":"lom","content":"<lom/>"}]') })).toThrow(
+    expect(() => buildCatMetadata([], { externalMetadata: json('[{"type":"lom","content":"<lom/>"}]') })).toThrow(
       'The content of the metadata file at index 0 of the option externalMetadata must be a Uint8Array, found "<lom/>".',
     );
   });
@@ -390,7 +394,7 @@ const MINIMAL_REPORT: AssessmentResult = {
           identifier: "numAttempts",
           cardinality: "single",
           baseType: "integer",
-          candidateResponse: single("integer", 1),
+          candidateResponse: buildSingle("integer", 1),
           extensions: [],
         },
         {
@@ -398,7 +402,7 @@ const MINIMAL_REPORT: AssessmentResult = {
           identifier: "duration",
           cardinality: "single",
           baseType: "duration",
-          candidateResponse: single("duration", 12.5),
+          candidateResponse: buildSingle("duration", 12.5),
           extensions: [],
         },
         {
@@ -406,9 +410,15 @@ const MINIMAL_REPORT: AssessmentResult = {
           identifier: "completionStatus",
           cardinality: "single",
           baseType: "string",
-          value: single("string", "completed"),
+          value: buildSingle("string", "completed"),
         },
-        { kind: "outcome", identifier: "SCORE", cardinality: "single", baseType: "float", value: single("float", 1) },
+        {
+          kind: "outcome",
+          identifier: "SCORE",
+          cardinality: "single",
+          baseType: "float",
+          value: buildSingle("float", 1),
+        },
       ],
       supports: [],
     },
@@ -429,8 +439,20 @@ const RESULT: AssessmentResult = {
     identifier: "test1",
     datestamp: DATESTAMP,
     variables: [
-      { kind: "outcome", identifier: "TOTAL", cardinality: "single", baseType: "float", value: single("float", 1) },
-      { kind: "context", identifier: "LEVEL", cardinality: "single", baseType: "integer", value: single("integer", 2) },
+      {
+        kind: "outcome",
+        identifier: "TOTAL",
+        cardinality: "single",
+        baseType: "float",
+        value: buildSingle("float", 1),
+      },
+      {
+        kind: "context",
+        identifier: "LEVEL",
+        cardinality: "single",
+        baseType: "integer",
+        value: buildSingle("integer", 2),
+      },
     ],
     supports: [{ name: "spoken", assignment: "assigned" }],
   },
@@ -446,20 +468,26 @@ const RESULT: AssessmentResult = {
           identifier: "RESPONSE",
           cardinality: "single",
           baseType: "identifier",
-          candidateResponse: single("identifier", "B"),
-          correctResponse: { interpretation: "The capital", value: single("identifier", "A") },
+          candidateResponse: buildSingle("identifier", "B"),
+          correctResponse: { interpretation: "The capital", value: buildSingle("identifier", "A") },
           choiceSequence: ["B", "A"],
           scoreStatus: "scored",
           answeredStatus: "answered",
           extensions: [],
         },
-        { kind: "template", identifier: "N", cardinality: "single", baseType: "integer", value: single("integer", 4) },
+        {
+          kind: "template",
+          identifier: "N",
+          cardinality: "single",
+          baseType: "integer",
+          value: buildSingle("integer", 4),
+        },
         {
           kind: "outcome",
           identifier: "SCORE",
           cardinality: "single",
           baseType: "float",
-          value: single("float", 0),
+          value: buildSingle("float", 0),
           view: ["candidate", "scorer"],
           normalMaximum: 1,
           externalScored: "human",
@@ -480,7 +508,7 @@ const RESULT: AssessmentResult = {
           identifier: "PAIRS",
           cardinality: "multiple",
           baseType: "pair",
-          candidateResponse: container("multiple", "pair", [
+          candidateResponse: buildContainer("multiple", "pair", [
             ["A", "B"],
             ["C", "D"],
           ]),
@@ -498,8 +526,8 @@ const RESULT: AssessmentResult = {
           kind: "outcome",
           identifier: "DETAIL",
           cardinality: "record",
-          value: record([
-            ["points", single("float", 1.5)],
+          value: buildRecord([
+            ["points", buildSingle("float", 1.5)],
             ["label", { cardinality: "single", baseType: "string", value: "ok" }],
           ]),
         },
@@ -583,7 +611,7 @@ const RESULT_JSON = {
 describe("the CAT port", () => {
   it("deploys the section data of the files, and the pool Get Section returns agrees with the section", async () => {
     const engine = new ScriptedEngine();
-    const data = sectionData(selectionOf(), {
+    const data = buildSectionData(selectionOf(), {
       settings: bytes("{}"),
       usageData: bytes("<usageData/>"),
       metadata: bytes("{}"),
@@ -596,7 +624,7 @@ describe("the CAT port", () => {
       { sectionConfiguration: "e30=", qtiUsagedata: "PHVzYWdlRGF0YS8+", qtiMetadata: "e30=" },
     ]);
     expect(deployed).toBe(data);
-    expect(checkPool(SAMPLE, items)).toEqual([]);
+    expect(validatePool(SAMPLE, items)).toEqual([]);
   });
 
   it("runs the shortest session: one stage, one Submit Results that ends it", async () => {
@@ -641,11 +669,11 @@ describe("the CAT port", () => {
 
 describe("the JSON of results and stages", () => {
   it("writes an assessment result in the JSON of the binding: itemResult, sourceID, and the three lists of variables", () => {
-    expect(JSON.parse(JSON.stringify(assessmentResultToJson(RESULT)))).toEqual(RESULT_JSON);
+    expect(JSON.parse(JSON.stringify(writeResultsJson(RESULT)))).toEqual(RESULT_JSON);
   });
 
   it("writes NULL as the absence of a value, and the status that waits for external scoring as pending processing", () => {
-    const written = JSON.parse(JSON.stringify(assessmentResultToJson(RESULT)));
+    const written = JSON.parse(JSON.stringify(writeResultsJson(RESULT)));
     expect(written.itemResult[1].responseVariables[1].candidateResponse).toEqual({ value: [] });
     expect(written.itemResult[1].sessionStatus).toBe("pendingResponseProcessing");
     expect(JSON.stringify(written)).not.toContain("externalScored");
@@ -653,7 +681,7 @@ describe("the JSON of results and stages", () => {
   });
 
   it("reads the assessment result of an engine, with the lists of variables joined, and no context as no sessions", () => {
-    const read = assessmentResultFromJson({
+    const read = readResultsJson({
       testResult: {
         identifier: "t",
         datestamp: DATESTAMP,
@@ -708,7 +736,7 @@ describe("the JSON of results and stages", () => {
             identifier: "THETA",
             cardinality: "single",
             baseType: "float",
-            value: single("float", 0.42),
+            value: buildSingle("float", 0.42),
             interpretation: "Ability",
             normalMinimum: -4,
             view: ["tutor"],
@@ -729,8 +757,8 @@ describe("the JSON of results and stages", () => {
               identifier: "R",
               cardinality: "ordered",
               baseType: "identifier",
-              candidateResponse: container("ordered", "identifier", ["B", "A"]),
-              correctResponse: { value: container("ordered", "identifier", ["A", "B"]) },
+              candidateResponse: buildContainer("ordered", "identifier", ["B", "A"]),
+              correctResponse: { value: buildContainer("ordered", "identifier", ["A", "B"]) },
               choiceSequence: ["B", "A"],
               extensions: [],
             },
@@ -738,7 +766,7 @@ describe("the JSON of results and stages", () => {
               kind: "template",
               identifier: "T",
               cardinality: "record",
-              value: record([["f", single("point", [1, 2])]]),
+              value: buildRecord([["f", buildSingle("point", [1, 2])]]),
             },
           ],
           candidateComment: "hi",
@@ -749,7 +777,7 @@ describe("the JSON of results and stages", () => {
   });
 
   it("reads the context of an engine with its source identifiers", () => {
-    const read = assessmentResultFromJson({
+    const read = readResultsJson({
       context: { sourcedId: "c1", sessionIdentifiers: [{ sourceID: "https://engine.example", identifier: "s1" }] },
     });
     expect(read).toEqual({
@@ -859,34 +887,34 @@ describe("the JSON of results and stages", () => {
       ],
     ];
     for (const [result, message] of rejects) {
-      expect(() => assessmentResultFromJson(result), JSON.stringify(result)).toThrow(message);
+      expect(() => readResultsJson(result), JSON.stringify(result)).toThrow(message);
     }
     // valibot reads an array as an object whose entries are all optional.
-    expect(() => assessmentResultFromJson([])).toThrow("The assessmentResult is invalid: expected an object");
-    expect(() => assessmentResultFromJson({ context: [] })).toThrow(
+    expect(() => readResultsJson([])).toThrow("The assessmentResult is invalid: expected an object");
+    expect(() => readResultsJson({ context: [] })).toThrow(
       "The assessmentResult is invalid at context: expected an object",
     );
-    expect(() => assessmentResultToJson(json("null"))).toThrow(DataError);
-    expect(() => assessmentResultToJson(json('{"context":{},"itemResults":"x"}'))).toThrow(DataError);
+    expect(() => writeResultsJson(json("null"))).toThrow(DataError);
+    expect(() => writeResultsJson(json('{"context":{},"itemResults":"x"}'))).toThrow(DataError);
   });
 
   it("reads an item stage with absent or null fields as the stage that ends the session", () => {
-    expect(itemStageFromJson({}, "stage")).toEqual({ itemIdentifiers: null, stageLength: null });
-    expect(itemStageFromJson({ itemIdentifiers: null, stageLength: null }, "stage")).toEqual({
+    expect(readItemStage({}, "stage")).toEqual({ itemIdentifiers: null, stageLength: null });
+    expect(readItemStage({ itemIdentifiers: null, stageLength: null }, "stage")).toEqual({
       itemIdentifiers: null,
       stageLength: null,
     });
-    expect(itemStageFromJson({ itemIdentifiers: ["a"], stageLength: 1 }, "stage")).toEqual({
+    expect(readItemStage({ itemIdentifiers: ["a"], stageLength: 1 }, "stage")).toEqual({
       itemIdentifiers: ["a"],
       stageLength: 1,
     });
-    expect(() => itemStageFromJson({ stageLength: -1 }, "stage")).toThrow(/^The stage is invalid at stageLength: /);
-    expect(() => itemStageFromJson(json("[]"), "stage")).toThrow(DataError);
+    expect(() => readItemStage({ stageLength: -1 }, "stage")).toThrow(/^The stage is invalid at stageLength: /);
+    expect(() => readItemStage(json("[]"), "stage")).toThrow(DataError);
   });
 
   it("reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
-    fuzzJson(assessmentResultFromJson, [JSON.parse(JSON.stringify(assessmentResultToJson(RESULT)))]);
-    fuzzJson((json) => itemStageFromJson(json, "stage"), [{}, { itemIdentifiers: ["a"], stageLength: 1 }]);
+    fuzzJson(readResultsJson, [JSON.parse(JSON.stringify(writeResultsJson(RESULT)))]);
+    fuzzJson((json) => readItemStage(json, "stage"), [{}, { itemIdentifiers: ["a"], stageLength: 1 }]);
   });
 });
 
@@ -901,18 +929,18 @@ describe("section data", () => {
     ["fooba", "Zm9vYmE="],
     ["foobar", "Zm9vYmFy"],
   ])("encodes the settings file %j as the base64 %j of RFC 4648", (text, expected) => {
-    const data = sectionData(selectionOf(), { settings: bytes(text), usageData: bytes(""), metadata: bytes("") });
+    const data = buildSectionData(selectionOf(), { settings: bytes(text), usageData: bytes(""), metadata: bytes("") });
     expect(data.sectionConfiguration).toBe(expected);
   });
 
   it("encodes every byte value, with the digits + and / and the padding of the end", () => {
     const all = Uint8Array.from({ length: 256 }, (_, value) => value);
-    const data = sectionData(selectionOf(), { settings: all, usageData: bytes(""), metadata: bytes("") });
+    const data = buildSectionData(selectionOf(), { settings: all, usageData: bytes(""), metadata: bytes("") });
     expect(data.sectionConfiguration).toBe(Buffer.from(all).toString("base64"));
   });
 
   it("gives the section data with the three fields, each the base64 of the file", () => {
-    const data = sectionData(selectionOf(), { settings: bytes("S"), usageData: bytes("U"), metadata: bytes("M") });
+    const data = buildSectionData(selectionOf(), { settings: bytes("S"), usageData: bytes("U"), metadata: bytes("M") });
     expect(data).toEqual({ sectionConfiguration: "Uw==", qtiUsagedata: "VQ==", qtiMetadata: "TQ==" });
   });
 
@@ -921,20 +949,20 @@ describe("section data", () => {
     const selection = selectionOf(
       `${REFS.split("\n")[0]}<qti-usagedata-ref identifier="usagedata" href="usagedata.xml"/>`,
     );
-    const data = sectionData(selection, { settings: bytes("S"), usageData: usage });
+    const data = buildSectionData(selection, { settings: bytes("S"), usageData: usage });
     expect(Buffer.from(data.qtiUsagedata ?? "", "base64")).toEqual(Buffer.from(usage));
     expect(data).not.toHaveProperty("qtiMetadata");
   });
 
   it("sends no usage data or metadata when the selection references none", () => {
     const selection = selectionOf('<qti-adaptive-engine-ref identifier="engine" href="http://example.org/engine"/>');
-    expect(sectionData(selection, { settings: bytes("S") })).toEqual({ sectionConfiguration: "Uw==" });
+    expect(buildSectionData(selection, { settings: bytes("S") })).toEqual({ sectionConfiguration: "Uw==" });
   });
 
   it("sends the settings file whether or not the selection references it, because Section Data requires it", () => {
     const selection = selectionOf('<qti-adaptive-engine-ref identifier="engine" href="http://example.org/engine"/>');
     expect(selection.adaptiveSettingsRef).toBeUndefined();
-    expect(sectionData(selection, { settings: bytes("") }).sectionConfiguration).toBe("");
+    expect(buildSectionData(selection, { settings: bytes("") }).sectionConfiguration).toBe("");
   });
 
   it("throws a DataError for a referenced file that is missing and for a file that nothing references", () => {
@@ -946,41 +974,41 @@ describe("section data", () => {
     );
     const bare = selectionOf('<qti-adaptive-engine-ref identifier="e" href="e"/>');
     const settings = bytes("S");
-    expect(() => sectionData(withUsage, { settings })).toThrow(
+    expect(() => buildSectionData(withUsage, { settings })).toThrow(
       "The selection has a qti-usagedata-ref, so the file usageData is required, found nothing.",
     );
-    expect(() => sectionData(withMetadata, { settings })).toThrow(
+    expect(() => buildSectionData(withMetadata, { settings })).toThrow(
       "The selection has a qti-metadata-ref, so the file metadata is required",
     );
-    expect(() => sectionData(bare, { settings, usageData: bytes("U") })).toThrow(
+    expect(() => buildSectionData(bare, { settings, usageData: bytes("U") })).toThrow(
       "The selection has no qti-usagedata-ref, so the file usageData must be omitted, found an object.",
     );
-    expect(() => sectionData(bare, { settings, metadata: bytes("M") })).toThrow(
+    expect(() => buildSectionData(bare, { settings, metadata: bytes("M") })).toThrow(
       "The selection has no qti-metadata-ref, so the file metadata must be omitted",
     );
   });
 
   it("throws a DataError for arguments of other types", () => {
     const settings = bytes("S");
-    expect(() => sectionData(json("null"), { settings })).toThrow("The selection must be an object, found null.");
-    expect(() => sectionData(json('{"kind":"selection"}'), { settings })).toThrow(
+    expect(() => buildSectionData(json("null"), { settings })).toThrow("The selection must be an object, found null.");
+    expect(() => buildSectionData(json('{"kind":"selection"}'), { settings })).toThrow(
       'The selection must be a qti-adaptive-selection, found the kind "selection".',
     );
-    expect(() => sectionData(selectionOf(), json("null"))).toThrow("The files must be an object, found null.");
-    expect(() => sectionData(selectionOf(), json("{}"))).toThrow(
+    expect(() => buildSectionData(selectionOf(), json("null"))).toThrow("The files must be an object, found null.");
+    expect(() => buildSectionData(selectionOf(), json("{}"))).toThrow(
       "The file settings must be a Uint8Array, found undefined.",
     );
-    expect(() => sectionData(selectionOf(), json('{"settings":"{}"}'))).toThrow(
+    expect(() => buildSectionData(selectionOf(), json('{"settings":"{}"}'))).toThrow(
       'The file settings must be a Uint8Array, found "{}".',
     );
-    expect(() => sectionData(selectionOf(), { settings, usageData: json("null"), metadata: bytes("") })).toThrow(
+    expect(() => buildSectionData(selectionOf(), { settings, usageData: json("null"), metadata: bytes("") })).toThrow(
       "The file usageData must be a Uint8Array, found null.",
     );
-    expect(() => sectionData(selectionOf(), { settings, usageData: bytes(""), metadata: json('"m"') })).toThrow(
+    expect(() => buildSectionData(selectionOf(), { settings, usageData: bytes(""), metadata: json('"m"') })).toThrow(
       'The file metadata must be a Uint8Array, found "m".',
     );
     expect(() =>
-      sectionData(json('{"kind":"adaptive-selection","usagedataRef":5}'), { settings, usageData: bytes("") }),
+      buildSectionData(json('{"kind":"adaptive-selection","usagedataRef":5}'), { settings, usageData: bytes("") }),
     ).toThrow("The qti-usagedata-ref of the selection must be an object, found 5.");
   });
 });
@@ -1001,7 +1029,7 @@ describe("properties", () => {
   it("encodes any bytes as the base64 of the Node.js implementation, in a size that grows by four thirds", () => {
     fc.assert(
       fc.property(fc.uint8Array({ maxLength: 300 }), (content) => {
-        const { sectionConfiguration } = sectionData(
+        const { sectionConfiguration } = buildSectionData(
           selectionOf('<qti-adaptive-engine-ref identifier="e" href="e"/>'),
           { settings: content },
         );
@@ -1013,9 +1041,12 @@ describe("properties", () => {
 
   it("encodes a file of several megabytes", () => {
     const large = Uint8Array.from({ length: 5_000_001 }, (_, index) => (index * 31) % 251);
-    const { sectionConfiguration } = sectionData(selectionOf('<qti-adaptive-engine-ref identifier="e" href="e"/>'), {
-      settings: large,
-    });
+    const { sectionConfiguration } = buildSectionData(
+      selectionOf('<qti-adaptive-engine-ref identifier="e" href="e"/>'),
+      {
+        settings: large,
+      },
+    );
     expect(sectionConfiguration).toBe(Buffer.from(large).toString("base64"));
   });
 
@@ -1024,7 +1055,7 @@ describe("properties", () => {
   it("reports exactly the identifiers that one side lists and the other does not", () => {
     fc.assert(
       fc.property(identifiers, identifiers, (listed, pooled) => {
-        const issues = checkPool(sectionOf("", itemRefs(listed)), { itemIdentifiers: pooled });
+        const issues = validatePool(sectionOf("", itemRefs(listed)), { itemIdentifiers: pooled });
         const missingFromPool = new Set(listed.filter((identifier) => !pooled.includes(identifier)));
         const missingFromSection = new Set(pooled.filter((identifier) => !listed.includes(identifier)));
         expect(issues.filter(({ code }) => code === "assesskit/cat/item-not-in-pool")).toHaveLength(
@@ -1056,7 +1087,7 @@ describe("properties", () => {
     fc.assert(
       fc.property(fc.array(qtiMetadata, { maxLength: 4 }), (metadata) => {
         const items = metadata.map((entry, index) => ({ identifier: `item${index}`, metadata: entry }));
-        const parsed = JSON.parse(JSON.stringify(catMetadata(items)));
+        const parsed = JSON.parse(JSON.stringify(buildCatMetadata(items)));
         expect(parsed.itemMetadata.map((item: { identifier: string }) => item.identifier)).toEqual(
           items.map(({ identifier }) => identifier),
         );

@@ -2,23 +2,23 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
-  attributeOf,
   buildElement,
-  childElements,
+  collectText,
+  createReadError,
+  createTermConverter,
   DataError,
   DEFAULT_XML_LIMITS,
   ElementReader,
+  findAttribute,
   type Issue,
   isXmlLanguage,
-  locationOf,
+  listChildElements,
+  locateElement,
   parseXml,
   ReadError,
-  readError,
   resolveIncludes,
   SecurityError,
   serializeXml,
-  termOf,
-  textOf,
   XINCLUDE_NAMESPACE,
   XML_NAMESPACE,
   XMLNS_NAMESPACE,
@@ -97,11 +97,10 @@ function issueOf(error: unknown): Issue {
 
 describe("building elements", () => {
   it("builds an element in a namespace and leaves out the attributes that are undefined", () => {
-    const built = buildElement("urn:a", "item", { id: "x", title: undefined, "xml:lang": "en", "xsi:nil": "true" }, [
-      "text",
-      "",
-      element("b"),
-    ]);
+    const built = buildElement("urn:a", "item", {
+      attributes: { id: "x", title: undefined, "xml:lang": "en", "xsi:nil": "true" },
+      children: ["text", "", element("b")],
+    });
     expect(built).toEqual({
       kind: "element",
       namespace: "urn:a",
@@ -125,10 +124,11 @@ describe("building elements", () => {
   it("rejects arguments of other types", () => {
     expect(() => buildElement(JSON.parse("5"), "a")).toThrow("The namespace of an element must be a string, found 5.");
     expect(() => buildElement("", JSON.parse("null"))).toThrow("The name of an element must be a string, found null.");
-    expect(() => buildElement("", "a", JSON.parse("null"))).toThrow(
+    expect(() => buildElement("", "a", JSON.parse("null"))).toThrow("The options must be an object, found null.");
+    expect(() => buildElement("", "a", { attributes: JSON.parse("null") })).toThrow(
       "The attributes of an element must be an object, found null.",
     );
-    expect(() => buildElement("", "a", {}, JSON.parse('{"0":"x"}'))).toThrow(
+    expect(() => buildElement("", "a", { children: JSON.parse('{"0":"x"}') })).toThrow(
       "The children of an element must be an array, found an object.",
     );
   });
@@ -337,7 +337,7 @@ describe("mapping an element to a model", () => {
     });
   });
 
-  describe("path, base, leaf and termOf", () => {
+  describe("path, base, leaf and createTermConverter", () => {
     it("names the document in the issues when open gets a path, and passes the limits to parseXml", () => {
       const reader = ElementReader.open(`<a xmlns="${Ns}"><b/></a>`, rules, "The demo", { path: "d/a.xml" });
       const error = failure(() => reader.done());
@@ -385,11 +385,16 @@ describe("mapping an element to a model", () => {
     });
 
     it("converts the text of an element or an attribute to one of some terms", () => {
-      const terms = termOf(["red", "green"]);
+      const terms = createTermConverter(["red", "green"]);
       expect(open(`<a xmlns="${Ns}">red</a>`).text(terms)).toBe("red");
       expect(open(`<a xmlns="${Ns}" c="green"/>`).attribute("c", terms)).toBe("green");
       expect(() => terms("blue")).toThrow('The text must be "red" or "green", found "blue".');
-      expect(() => termOf(["a", "b"], "The color")("c")).toThrow('The color must be "a" or "b", found "c".');
+      expect(() => createTermConverter(["a", "b"], { label: "The color" })("c")).toThrow(
+        'The color must be "a" or "b", found "c".',
+      );
+      expect(() => createTermConverter(["a"], JSON.parse("null"))).toThrow(
+        "The options must be an object, found null.",
+      );
       expect(failure(() => open(`<a xmlns="${Ns}">blue</a>`).text(terms)).issues[0]?.code).toBe(
         "assesskit/demo/invalid-text",
       );
@@ -1084,30 +1089,32 @@ describe("reading a tree without mapping it", () => {
   );
 
   it("returns the child elements in document order, without the nodes between them", () => {
-    expect(childElements(root).map(({ name }) => name)).toEqual(["b", "c"]);
-    expect(childElements(element("e"))).toEqual([]);
+    expect(listChildElements(root).map(({ name }) => name)).toEqual(["b", "c"]);
+    expect(listChildElements(element("e"))).toEqual([]);
   });
 
   it("returns the value of an attribute of a namespace, the unqualified one by default, or undefined", () => {
-    expect(attributeOf(root, "x")).toBe("1");
-    expect(attributeOf(root, "x", "urn:p")).toBe("2");
-    expect(attributeOf(root, "lang", XML_NAMESPACE)).toBe("en");
-    expect(attributeOf(root, "y")).toBeUndefined();
-    expect(attributeOf(root, "lang")).toBeUndefined();
+    expect(findAttribute(root, "x")).toBe("1");
+    expect(findAttribute(root, "x", { namespace: "urn:p" })).toBe("2");
+    expect(findAttribute(root, "lang", { namespace: XML_NAMESPACE })).toBe("en");
+    expect(findAttribute(root, "y")).toBeUndefined();
+    expect(findAttribute(root, "lang")).toBeUndefined();
   });
 
   it("joins the text and CDATA children of an element, and leaves out comments, instructions and child elements", () => {
-    expect(textOf(root)).toBe("t1t2<cd>");
-    expect(textOf(element("e"))).toBe("");
+    expect(collectText(root)).toBe("t1t2<cd>");
+    expect(collectText(element("e"))).toBe("");
   });
 });
 
 describe("read errors and locations", () => {
   it("builds a ReadError with one issue and the position in its message", () => {
-    const error = readError("assesskit/xml/example", "The example is wrong.", {
-      path: "a.xml",
-      line: 3,
-      column: 7,
+    const error = createReadError("assesskit/xml/example", "The example is wrong.", {
+      location: {
+        path: "a.xml",
+        line: 3,
+        column: 7,
+      },
     });
     expect(error).toBeInstanceOf(ReadError);
     expect(error.message).toBe("The example is wrong. (line 3, column 7)");
@@ -1119,17 +1126,31 @@ describe("read errors and locations", () => {
         location: { path: "a.xml", line: 3, column: 7 },
       },
     ]);
-    expect(readError("assesskit/xml/example", "m").issues[0]).not.toHaveProperty("location");
+    expect(createReadError("assesskit/xml/example", "m").issues[0]).not.toHaveProperty("location");
+  });
+
+  it("refuses options that are not an object", () => {
+    expect(() => createReadError("assesskit/xml/example", "m", JSON.parse("null"))).toThrow(
+      "The options must be an object, found null.",
+    );
+    expect(() => locateElement(parseXml("<a/>"), "x.xml", JSON.parse("null"))).toThrow(
+      "The options must be an object, found null.",
+    );
   });
 
   it("takes the location of an element from its start tag", () => {
-    expect(locationOf(parseXml("<a>\n  <b/></a>"), "x.xml")).toEqual({ path: "x.xml", line: 1, column: 1 });
-    const b = childElements(parseXml("<a>\n  <b/></a>"))[0];
-    expect(b && locationOf(b, undefined)).toEqual({ path: undefined, line: 2, column: 3 });
+    expect(locateElement(parseXml("<a>\n  <b/></a>"), "x.xml")).toEqual({ path: "x.xml", line: 1, column: 1 });
+    const b = listChildElements(parseXml("<a>\n  <b/></a>"))[0];
+    expect(b && locateElement(b, undefined)).toEqual({ path: undefined, line: 2, column: 3 });
   });
 
   it("adds the path of the element names when the caller tracks it", () => {
-    expect(locationOf(parseXml("<a/>"), "x.xml", "r/a")).toEqual({ path: "x.xml", line: 1, column: 1, element: "r/a" });
+    expect(locateElement(parseXml("<a/>"), "x.xml", { trail: "r/a" })).toEqual({
+      path: "x.xml",
+      line: 1,
+      column: 1,
+      element: "r/a",
+    });
   });
 });
 

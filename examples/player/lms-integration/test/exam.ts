@@ -8,7 +8,7 @@ import {
 } from "@assesskit/player/server";
 import { ASI_NAMESPACE } from "@assesskit/runtime/asi";
 import { createEngine } from "@assesskit/runtime/delivery";
-import { openPackage, packageResolvers, type QtiPackage } from "@assesskit/runtime/package";
+import { createPackageResolvers, openPackage, type QtiPackage } from "@assesskit/runtime/package";
 import type { Clock } from "@interopkit/core";
 
 const CP = "http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1";
@@ -112,7 +112,7 @@ export async function sessionHostOver(pkg: QtiPackage, clock: Clock, forward: Fo
     kind: "test",
     test: document.test,
     base: "tests/exam.xml",
-    resolvers: packageResolvers(pkg),
+    resolvers: createPackageResolvers(pkg),
   });
   const key = await crypto.subtle.generateKey({ name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
   const packages = async (): Promise<QtiPackage> => pkg;

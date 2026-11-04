@@ -1,7 +1,7 @@
 import { readAsi } from "@assesskit/runtime/asi";
 import { DataError } from "@assesskit/runtime/errors";
 import { describeInteractions, type InteractionDescriptor } from "@assesskit/runtime/interactions";
-import { container, single } from "@assesskit/runtime/values";
+import { buildContainer, buildSingle } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
@@ -131,7 +131,7 @@ describe("values", () => {
   it("reads the points of a value in their order, and none from NULL or other values", () => {
     expect(
       pointsOf(
-        container("multiple", "point", [
+        buildContainer("multiple", "point", [
           [1, 2],
           [3, 4],
         ]),
@@ -140,16 +140,18 @@ describe("values", () => {
       [1, 2],
       [3, 4],
     ]);
-    expect(pointsOf(single("point", [5, 6]))).toEqual([[5, 6]]);
+    expect(pointsOf(buildSingle("point", [5, 6]))).toEqual([[5, 6]]);
     expect(pointsOf(null)).toEqual([]);
-    expect(pointsOf(single("integer", 5))).toEqual([]);
-    expect(pointsOf(container("multiple", "pair", [["A", "B"]]))).toEqual([]);
+    expect(pointsOf(buildSingle("integer", 5))).toEqual([]);
+    expect(pointsOf(buildContainer("multiple", "pair", [["A", "B"]]))).toEqual([]);
   });
 
   it("gives a single point for one point of a single variable, a container otherwise, and NULL for none", () => {
-    expect(responseOf(selectPoint("single", 'max-choices="1"'), "point", [[1, 2]])).toEqual(single("point", [1, 2]));
+    expect(responseOf(selectPoint("single", 'max-choices="1"'), "point", [[1, 2]])).toEqual(
+      buildSingle("point", [1, 2]),
+    );
     expect(responseOf(selectPoint("multiple", 'max-choices="3"'), "point", [[1, 2]])).toEqual(
-      container("multiple", "point", [[1, 2]]),
+      buildContainer("multiple", "point", [[1, 2]]),
     );
     expect(responseOf(selectPoint("multiple", 'max-choices="3"'), "point", [])).toBeNull();
   });

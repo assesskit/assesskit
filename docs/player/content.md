@@ -80,7 +80,7 @@ the item's stylesheets are adopted and the expressions are typeset.
 | `testFeedback` | `readonly TestFeedback[]`     | The test feedback that is shown, in a region labelled Feedback after the item. Default: none.                                    |
 | `stylesheets`  | `readonly string[]`           | The paths in the package of the stylesheets of the test and of the item, in that order. Default: none.                           |
 | `catalogs`     | `readonly Catalog[]`          | The catalogs of the item, for `card`. Default: none.                                                                             |
-| `hazards`      | `readonly HazardExposure[]`   | The hazards of the delivered content from the runtime's `hazardExposure`. Default: none.                                         |
+| `hazards`      | `readonly HazardExposure[]`   | The hazards of the delivered content from the runtime's `deriveHazardExposure`. Default: none.                                   |
 | `language`     | `string`                      | The language of the content, such as that of the delivered variant; it becomes `lang` of the content. Default: that of the host. |
 | `variables`    | `ContentVariables`            | The variables that printed variables still in the content read. Default: none.                                                   |
 
@@ -344,13 +344,13 @@ type. It is `undefined` when no catalog has the id, or its card has no entry tha
 
 ## Feedback
 
-`root.showFeedback(feedback)` takes the `ModalFeedback` that the runtime's `visibleModalFeedback` gives and opens one modal
+`root.showFeedback(feedback)` takes the `ModalFeedback` that the runtime's `selectModalFeedback` gives and opens one modal
 `<dialog>` named Feedback, with a heading for each title and the content of each. A modal dialog is in the top layer, so the
 containment of the root does not clip it; it makes the rest of the page inert, closes with Escape or the Close button, and
 gives the focus back to where it was. The focus starts on the heading, so a screen reader reads the dialog from its name.
 The promise resolves when the candidate closes it.
 
-Test feedback is a field of `show`: the entries from the runtime's `visibleTestFeedback` are drawn after the item in a region.
+Test feedback is a field of `show`: the entries from the runtime's `selectTestFeedback` are drawn after the item in a region.
 
 ## Errors
 

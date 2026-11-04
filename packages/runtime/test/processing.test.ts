@@ -7,8 +7,10 @@ import {
   type AssessmentItemRef,
   type AssessmentTest,
   type BaseType,
+  buildContainer,
+  buildRecord,
+  buildSingle,
   type CustomOperator,
-  container,
   createItemVariables,
   createRandom,
   DataError,
@@ -16,38 +18,36 @@ import {
   DEFAULT_RANDOM_MIN,
   DEFAULT_RANDOM_STEP,
   DEFAULT_XML_LIMITS,
-  declaredValue,
   describeCount,
   describeOperand,
   describeType,
   type Expression,
   evaluate,
   evaluateTestExpression,
+  findStandardTemplate,
   fitsBaseType,
   type ItemSessionFilter,
   type ItemSessionView,
   type ItemVariables,
   isQti2TemplateUri,
-  itemIdentifier,
+  listOperands,
   normalizeValue,
   OPERATOR_SIGNATURES,
-  operandsOf,
   type Primitive,
   type ProcessingContext,
   ProcessingError,
   type Random,
   ReadError,
   readAsi,
+  readDeclaredValue,
   readPrimitive,
-  record,
+  resolveItemIdentifier,
   runOutcomeProcessing,
   runResponseProcessing,
   runTemplateProcessing,
   SecurityError,
   type SingleValue,
   STANDARD_TEMPLATES,
-  single,
-  standardTemplateUri,
   type TestScope,
   type Value,
   writeAsi,
@@ -65,18 +65,18 @@ function json<T = never>(text: string): T {
 
 const NS = `xmlns="${ASI_NAMESPACE}"`;
 
-const int = (value: number): SingleValue => single("integer", value);
-const float = (value: number): SingleValue => single("float", value);
-const bool = (value: boolean): SingleValue => single("boolean", value);
-const id = (value: string): SingleValue => single("identifier", value);
-const duration = (value: number): SingleValue => single("duration", value);
+const int = (value: number): SingleValue => buildSingle("integer", value);
+const float = (value: number): SingleValue => buildSingle("float", value);
+const bool = (value: boolean): SingleValue => buildSingle("boolean", value);
+const id = (value: string): SingleValue => buildSingle("identifier", value);
+const duration = (value: number): SingleValue => buildSingle("duration", value);
 function str(value: string): SingleValue {
-  const built = single("string", value);
+  const built = buildSingle("string", value);
   if (built === null) throw new Error("The test builds an empty string.");
   return built;
 }
 function list(cardinality: "multiple" | "ordered", baseType: BaseType, values: readonly Primitive[]): Value {
-  const built = container(cardinality, baseType, values);
+  const built = buildContainer(cardinality, baseType, values);
   if (built === null) throw new Error("The test builds an empty container.");
   return built;
 }
@@ -714,9 +714,9 @@ describe("declared values", () => {
       <qti-outcome-declaration identifier="M" cardinality="multiple" base-type="string"><qti-default-value><qti-value>a</qti-value><qti-value></qti-value><qti-value>b</qti-value></qti-default-value></qti-outcome-declaration>
       <qti-outcome-declaration identifier="R" cardinality="record"><qti-default-value><qti-value field-identifier="n" base-type="integer">1</qti-value><qti-value field-identifier="s" base-type="string"></qti-value></qti-default-value></qti-outcome-declaration>`);
     const { outcomes } = createItemVariables(item);
-    expect(outcomes.get("S")).toEqual(single("point", [3, 4]));
+    expect(outcomes.get("S")).toEqual(buildSingle("point", [3, 4]));
     expect(outcomes.get("M")).toEqual(list("multiple", "string", ["a", "b"]));
-    expect(outcomes.get("R")).toEqual(record([["n", single("integer", 1)]]));
+    expect(outcomes.get("R")).toEqual(buildRecord([["n", buildSingle("integer", 1)]]));
   });
 
   it("raises a ProcessingError for a value that is not in its lexical form or a single variable with two values", () => {
@@ -741,7 +741,7 @@ describe("declared values", () => {
   });
 
   it("reads a base value as its base type, NULL for an empty string", () => {
-    expect(run(bv("pair", "A B"))).toEqual(single("pair", ["A", "B"]));
+    expect(run(bv("pair", "A B"))).toEqual(buildSingle("pair", ["A", "B"]));
     expect(run(bv("boolean", "1"))).toEqual(bool(true));
     expect(run(bv("float", "INF"))).toEqual(float(Number.POSITIVE_INFINITY));
     expect(run(bv("string", ""))).toBeNull();
@@ -1044,7 +1044,7 @@ describe("mapping", () => {
     );
   };
   const mapR = (values: readonly string[]) =>
-    primitive(mapped(`<qti-map-response identifier="R"/>`, { R: container("multiple", "identifier", values) }));
+    primitive(mapped(`<qti-map-response identifier="R"/>`, { R: buildContainer("multiple", "identifier", values) }));
 
   it("maps a single value, and sums the distinct values of a container as the specification's example does", () => {
     expect(primitive(mapped(`<qti-map-response identifier="S"/>`, { S: id("C") }))).toBe(0.5);
@@ -1066,7 +1066,7 @@ describe("mapping", () => {
 
   it("matches string keys case-insensitively unless the entry is case-sensitive", () => {
     const mapW = (values: readonly string[]) =>
-      primitive(mapped(`<qti-map-response identifier="W"/>`, { W: container("multiple", "string", values) }));
+      primitive(mapped(`<qti-map-response identifier="W"/>`, { W: buildContainer("multiple", "string", values) }));
     expect(mapW(["PARIS"])).toBe(1);
     expect(mapW(["rome"])).toBe(0);
     expect(mapW(["Rome", "paris"])).toBe(3);
@@ -1074,7 +1074,7 @@ describe("mapping", () => {
 
   it("maps each point to the first area that holds it, each area counted once", () => {
     const mapP = (points: readonly (readonly [number, number])[]) =>
-      primitive(mapped(`<qti-map-response-point identifier="P"/>`, { P: container("multiple", "point", points) }));
+      primitive(mapped(`<qti-map-response-point identifier="P"/>`, { P: buildContainer("multiple", "point", points) }));
     expect(mapP([[10, 10]])).toBe(1);
     expect(
       mapP([
@@ -1094,7 +1094,9 @@ describe("mapping", () => {
         [60, 60],
       ]),
     ).toBe(-2);
-    expect(primitive(mapped(`<qti-map-response-point identifier="Q"/>`, { Q: single("point", [40, 40]) }))).toBe(0.5);
+    expect(primitive(mapped(`<qti-map-response-point identifier="Q"/>`, { Q: buildSingle("point", [40, 40]) }))).toBe(
+      0.5,
+    );
     expect(mapped(`<qti-map-response-point identifier="Q"/>`, { Q: null })).toBeNull();
   });
 
@@ -1613,13 +1615,13 @@ describe("response processing", () => {
       "http://www.imsglobal.org/question/qti_v2p1/rptemplates/match_correct",
       "http://www.imsglobal.org/question/qti_v2p2/rptemplates/match_correct.xml",
     ]) {
-      expect(standardTemplateUri(uri), uri).toBe(
+      expect(findStandardTemplate(uri), uri).toBe(
         "https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct.xml",
       );
       expect(scored(`<qti-response-processing template="${uri}"/>`, id("B")), uri).toEqual(float(1));
     }
-    expect(standardTemplateUri("http://www.imsglobal.org/question/qti_v2p1/rptemplates/CC2_match")).toBeUndefined();
-    expect(standardTemplateUri("https://example.com/rptemplates/match_correct.xml")).toBeUndefined();
+    expect(findStandardTemplate("http://www.imsglobal.org/question/qti_v2p1/rptemplates/CC2_match")).toBeUndefined();
+    expect(findStandardTemplate("https://example.com/rptemplates/match_correct.xml")).toBeUndefined();
   });
 
   it("prefers the item's own rules to its template, and treats an empty template as none", () => {
@@ -2049,7 +2051,7 @@ describe("template processing", () => {
     const item = itemOf(
       `<qti-template-declaration identifier="LABEL" cardinality="single" base-type="string"/><qti-template-processing>${rules}</qti-template-processing>`,
     );
-    const context = new Map([["QTI_CONTEXT", record([["testIdentifier", str("test-1")]])]]);
+    const context = new Map([["QTI_CONTEXT", buildRecord([["testIdentifier", str("test-1")]])]]);
     expect(runTemplateProcessing(item, createItemVariables(item, { context }), CONTEXT).templates.get("LABEL")).toEqual(
       str("test-1"),
     );
@@ -2129,7 +2131,7 @@ describe("item variables", () => {
       ["TERM", id("autumn")],
       [
         "QTI_CONTEXT",
-        record([
+        buildRecord([
           ["candidateIdentifier", str("c-7")],
           ["seat", int(4)],
         ]),
@@ -2138,7 +2140,7 @@ describe("item variables", () => {
     const { contexts } = createItemVariables(item, { context });
     expect(contexts.get("TERM")).toEqual(id("autumn"));
     expect(contexts.get("QTI_CONTEXT")).toEqual(
-      record([
+      buildRecord([
         ["candidateIdentifier", str("c-7")],
         ["seat", int(4)],
       ]),
@@ -2158,7 +2160,7 @@ describe("item variables", () => {
       "The context variable TERM is a single identifier, found a single string.",
     );
     expect(() =>
-      createItemVariables(item, { context: new Map([["QTI_CONTEXT", record([["testIdentifier", int(1)]])]]) }),
+      createItemVariables(item, { context: new Map([["QTI_CONTEXT", buildRecord([["testIdentifier", int(1)]])]]) }),
     ).toThrow("The field testIdentifier of QTI_CONTEXT must be a single string, found a single integer.");
     expect(() => createItemVariables(item, { context: new Map([["TERM", json('{"cardinality":"single"}')]]) })).toThrow(
       DataError,
@@ -2196,9 +2198,9 @@ describe("what the static checks of validate read", () => {
 
   it("lists the operands of an expression, whether it has an operand or operands", () => {
     const one: Expression = { kind: "base-value", baseType: "integer", value: "1" };
-    expect(operandsOf({ kind: "not", operand: one })).toEqual([one]);
-    expect(operandsOf({ kind: "and", operands: [one, one] })).toEqual([one, one]);
-    expect(operandsOf(one)).toEqual([]);
+    expect(listOperands({ kind: "not", operand: one })).toEqual([one]);
+    expect(listOperands({ kind: "and", operands: [one, one] })).toEqual([one, one]);
+    expect(listOperands(one)).toEqual([]);
   });
 
   it("describes what an operator takes", () => {
@@ -2226,8 +2228,8 @@ describe("what the static checks of validate read", () => {
       templateDefaults: [],
       extensions: [],
     };
-    expect(itemIdentifier(ref, "POINTS")).toBe("SCORE");
-    expect(itemIdentifier(ref, "OTHER")).toBe("OTHER");
+    expect(resolveItemIdentifier(ref, "POINTS")).toBe("SCORE");
+    expect(resolveItemIdentifier(ref, "OTHER")).toBe("OTHER");
   });
 
   it("gives the defaults of the random expressions", () => {
@@ -2237,9 +2239,9 @@ describe("what the static checks of validate read", () => {
   it("reads a declared value and a lexical form as processing does", () => {
     expect(readPrimitive("7", "integer", "The text")).toBe(7);
     expect(() => readPrimitive("x", "integer", "The text")).toThrow(ProcessingError);
-    expect(declaredValue(undefined, { cardinality: "single", baseType: "integer" }, "The default")).toBeNull();
+    expect(readDeclaredValue(undefined, { cardinality: "single", baseType: "integer" }, "The default")).toBeNull();
     expect(() =>
-      declaredValue(
+      readDeclaredValue(
         [
           { kind: "value", value: "x" },
           { kind: "value", value: "y" },
@@ -2672,8 +2674,8 @@ describe("properties", () => {
     const item = itemOf(`${DECLARATIONS}
       <qti-response-declaration identifier="M" cardinality="single" base-type="identifier"><qti-mapping><qti-map-entry map-key="A" mapped-value="1"/></qti-mapping></qti-response-declaration>
       <qti-response-declaration identifier="P" cardinality="single" base-type="point"><qti-area-mapping><qti-area-map-entry shape="default" coords="" mapped-value="1"/></qti-area-mapping></qti-response-declaration>`);
-    const variables = createItemVariables(item, { context: new Map([["QTI_CONTEXT", record([["x", int(1)]])]]) });
-    const responses = new Map(variables.responses).set("M", id("A")).set("P", single("point", [1, 1]));
+    const variables = createItemVariables(item, { context: new Map([["QTI_CONTEXT", buildRecord([["x", int(1)]])]]) });
+    const responses = new Map(variables.responses).set("M", id("A")).set("P", buildSingle("point", [1, 1]));
     const scope: TestScope = { itemSessions: () => [], itemSession: () => undefined, variable: () => undefined };
     const test = readAsi(
       `<qti-assessment-test ${NS} identifier="t" title="t"><qti-test-part identifier="p" navigation-mode="linear" submission-mode="individual"><qti-assessment-section identifier="s" title="s" visible="true"/></qti-test-part></qti-assessment-test>`,

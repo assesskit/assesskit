@@ -7,7 +7,7 @@ import { html } from "../internal.js";
  *
  * @remarks
  * The title is a heading of the given level and the content is the body. Whether the feedback is shown is the engine's
- * decision (`visibleModalFeedback` and `visibleTestFeedback` of the runtime), so the renderer shows what it gets.
+ * decision (`selectModalFeedback` and `selectTestFeedback` of the runtime), so the renderer shows what it gets.
  *
  * @param feedback - The feedback to render.
  * @param heading - The level of the heading that holds the title.

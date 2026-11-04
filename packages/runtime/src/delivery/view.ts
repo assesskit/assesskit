@@ -1,6 +1,6 @@
 import type { AssessmentItem, BodyNode, TestFeedback } from "../asi/index.js";
 import { describe } from "../checks.js";
-import { resolveContent, testRubricBlocks, visibleTestFeedback } from "../content/index.js";
+import { resolveContent, selectTestFeedback, selectTestRubricBlocks } from "../content/index.js";
 import { DataError } from "../errors.js";
 import type { CandidateView, SupportView, TimerView } from "./candidate-view.js";
 import { partOfSection } from "./cat-session.js";
@@ -156,7 +156,7 @@ export function candidateView(course: Course, original: DeliveryState, now: numb
       state.clocks.some((clock) => clock.scope === "part" && clock.identifier === part.model.identifier),
     );
     const feedback = [test, ...entered.map((part) => part.model)].flatMap((holder) =>
-      visibleTestFeedback(holder.testFeedback, state.outcomes, "atEnd"),
+      selectTestFeedback(holder.testFeedback, state.outcomes, "atEnd"),
     );
     const ended = {
       ...base,
@@ -189,11 +189,12 @@ export function candidateView(course: Course, original: DeliveryState, now: numb
     };
   }
   const sections = where.sections.flatMap((each) => structure.section(each.identifier)?.model ?? []);
-  const rubric = testRubricBlocks({ test, ...(part === undefined ? {} : { part }), sections }, "candidate").flatMap(
-    (block) => block.contentBody.children,
-  );
+  const rubric = selectTestRubricBlocks(
+    { test, ...(part === undefined ? {} : { part }), sections },
+    "candidate",
+  ).flatMap((block) => block.contentBody.children);
   const during = [test, ...(part === undefined ? [] : [part])].flatMap((holder) =>
-    visibleTestFeedback(holder.testFeedback, state.outcomes, "during"),
+    selectTestFeedback(holder.testFeedback, state.outcomes, "during"),
   );
   // No item is presented while the first stage of an adaptive section is awaited: the candidate sees the test part.
   if (placement === undefined) {

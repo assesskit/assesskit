@@ -1,11 +1,11 @@
-import { checkFunction, functionSchema, parseWith, recordSchema, untilAborted } from "@assesskit/runtime/checks";
+import { checkFunction, functionSchema, parseWith, raceAbort, recordSchema } from "@assesskit/runtime/checks";
 import {
   type ActionLimits,
-  actionToJson,
   type CandidateAction,
   type CandidateView,
-  parseCandidateAction,
-  viewFromJson,
+  readCandidateAction,
+  readView,
+  writeCandidateAction,
 } from "@assesskit/runtime/delivery/wire";
 import { DataError, SecurityError } from "@assesskit/runtime/errors";
 import type { Value } from "@assesskit/runtime/values";
@@ -104,7 +104,7 @@ const isRejection = (error: unknown): boolean =>
  *
  * @remarks
  * - **Envelopes.** Each request is an `ActionEnvelope` with the next sequence number and the action in the runtime's JSON form,
- *   sent one at a time. The answer is read with `viewFromJson`. An action above `limits` is a `SecurityError` and is not sent.
+ *   sent one at a time. The answer is read with `readView`. An action above `limits` is a `SecurityError` and is not sent.
  * - **Lost answers.** A request that got no answer may or may not have been applied, so it is sent again, unchanged, before
  *   any later one; the host answers a repeated sequence number with the answer it stored. A request whose call aborted while
  *   it waited for the answer is one of these.
@@ -145,7 +145,7 @@ export function createRemoteSession(
   let closed = false;
 
   const read = (envelope: ViewEnvelope): Latest => ({
-    view: viewFromJson(envelope.view),
+    view: readView(envelope.view),
     assets: assetResolver(envelope.assets),
     documents: envelope.documents ?? NO_DOCUMENTS,
     receivedAt: clock.now(),
@@ -213,7 +213,7 @@ export function createRemoteSession(
     signal?.throwIfAborted();
     await settleDoubt(signal);
     sequence += 1;
-    return accept(await deliver({ seq: sequence, action: actionToJson(action) }, signal));
+    return accept(await deliver({ seq: sequence, action: writeCandidateAction(action) }, signal));
   };
 
   /**
@@ -282,7 +282,7 @@ export function createRemoteSession(
     const waiting = new Promise<DispatchResult>((resolve, reject) => batch.waiters.push({ resolve, reject }));
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => report(flush()), AUTOSAVE_MS);
-    return untilAborted(waiting, signal);
+    return raceAbort(waiting, { signal });
   };
 
   const onVisibility = (): void => {
@@ -305,7 +305,7 @@ export function createRemoteSession(
       const signal = options?.signal;
       if (closed) throw new DataError("The session client is closed.");
       // The host reads the action with these limits; one above them is refused here, before it joins the held responses.
-      parseCandidateAction(actionToJson(action), { limits });
+      readCandidateAction(writeCandidateAction(action), { limits });
       if (action.type === "set-responses") return hold(action, signal);
       signal?.throwIfAborted();
       await flush();

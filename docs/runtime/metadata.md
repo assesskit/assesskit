@@ -18,27 +18,27 @@ flowchart LR
   resource --> standards
   resource --> lom
   item -- "deriveQtiMetadata" --> qti
-  lom -- "lomGeneral" --> general["identifiers, titles"]
+  lom -- "readLomGeneral" --> general["identifiers, titles"]
 ```
 
 | Export                                                                   | Purpose                                                                                             |
 | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| `readResourceMetadata(element, path?)`, `writeResourceMetadata`          | The metadata of a resource: `lom`, `qti` and `curriculumStandards` (`ResourceMetadata`).            |
+| `readResourceMetadata(element, options?)`, `writeResourceMetadata`       | The metadata of a resource: `lom`, `qti` and `curriculumStandards` (`ResourceMetadata`).            |
 | `readQtiMetadata`, `writeQtiMetadata`, `checkQtiMetadata`, `QtiMetadata` | The `qtiMetadata` element.                                                                          |
 | `readCurriculumStandardsSet`, `writeCurriculumStandardsSet`              | The `curriculumStandardsMetadataSet` element.                                                       |
 | `readAccessForAllResource`, `writeAccessForAllResource`                  | The `accessForAllResource` element.                                                                 |
-| `lomGeneral(lom)`                                                        | The identifiers and titles of the LOM category `general`.                                           |
+| `readLomGeneral(lom)`                                                    | The identifiers and titles of the LOM category `general`.                                           |
 | `deriveQtiMetadata(item)`                                                | The `QtiMetadata` that an item from `asi` shows.                                                    |
 | `INTERACTION_TYPES`, `FEEDBACK_TYPES`, `SCORING_MODES`                   | The vocabularies of QTI metadata. The DRD vocabularies are `ACCESS_MODES`, `DRD_HAZARDS` and so on. |
 | `*_NAMESPACE`                                                            | The namespaces of QTI metadata, LOM, curriculum standards, the DRD and content packaging.           |
 
-Readers take a parsed `XmlElement` (`parseXml` of [xml](xml.md)); writers return one, and `serializeXml` writes it. `path`
+Readers take a parsed `XmlElement` (`parseXml` of [xml](xml.md)); writers return one, and `serializeXml` writes it. The option `path` of a reader
 names the document in the issues of a `ReadError`.
 
 ## Example
 
 ```ts
-import { lomGeneral, readResourceMetadata } from "@assesskit/runtime/metadata";
+import { readLomGeneral, readResourceMetadata } from "@assesskit/runtime/metadata";
 import { parseXml } from "@assesskit/runtime/xml";
 
 const metadata = readResourceMetadata(
@@ -59,7 +59,7 @@ const metadata = readResourceMetadata(
 metadata.qti?.interactionTypes; // => ["choiceInteraction"]
 metadata.qti?.feedbackType; // => "nonadaptive"
 metadata.qti?.solutionAvailable; // => true
-metadata.lom && lomGeneral(metadata.lom);
+metadata.lom && readLomGeneral(metadata.lom);
 // => { identifiers: ["capital"], titles: [{ language: "en", text: "Capital city" }] }
 ```
 
@@ -94,7 +94,7 @@ are `xs:normalizedString`: a tab, line feed or carriage return reads as a space.
 the schema, whatever the order of the fields.
 
 `checkQtiMetadata(value)` throws a `DataError` unless the value is valid QTI metadata: the types of the fields, the terms of
-the vocabularies and the length of the tool strings. `writeQtiMetadata` and `cat.catMetadata` check their input with it.
+the vocabularies and the length of the tool strings. `writeQtiMetadata` and `cat.buildCatMetadata` check their input with it.
 
 ## Derived metadata
 
@@ -143,7 +143,7 @@ responses for one of its two responses ([Evidence](evidence.md)).
 
 The LOM stays XML. `ResourceMetadata.lom` is the `lom:lom` element with all its categories (`general`, `lifeCycle`,
 `metaMetadata`, `technical`, `educational`, `rights`, `relation`, `annotation`, `classification`), and
-`lomGeneral(lom)` returns what the package needs of `general`:
+`readLomGeneral(lom)` returns what the package needs of `general`:
 
 | Field         | Content                                                                                                |
 | ------------- | ------------------------------------------------------------------------------------------------------ |

@@ -1,7 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers, OAuth parameters and JSON fields are those of their specifications.
 
 import {
-  assessmentResultToJson,
   type CatPort,
   type CreateSectionResponse,
   type CreateSessionResponse,
@@ -9,10 +8,11 @@ import {
   isSessionEnd,
   type SectionData,
   type SubmitResultsResponse,
+  writeResultsJson,
 } from "@assesskit/runtime/cat";
 import { DataError, ReadError, SecurityError } from "@assesskit/runtime/errors";
 import type { QtiMetadata } from "@assesskit/runtime/metadata";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
@@ -376,7 +376,7 @@ describe("createRestCatPort", () => {
               identifier: "THETA",
               cardinality: "single",
               baseType: "float",
-              value: single("float", 0.42),
+              value: buildSingle("float", 0.42),
             },
           ],
           supports: [],
@@ -2027,7 +2027,7 @@ describe("createCatRestHandler", () => {
     expect(submitted.status).toBe(201);
     expect(await submitted.json()).toEqual({
       nextItems: { itemIdentifiers: ["q2"], stageLength: 1 },
-      assessmentResult: assessmentResultToJson(result),
+      assessmentResult: writeResultsJson(result),
       sessionState: "st1",
     });
     for (const request of [requestOf("DELETE", "/sections/sec1/sessions/s1"), requestOf("DELETE", "/sections/sec1")]) {

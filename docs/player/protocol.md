@@ -18,8 +18,8 @@ sequenceDiagram
   H-->>C: ViewEnvelope {seq, view, assets, documents?, refusal?}
 ```
 
-The runtime writes and reads the JSON inside an envelope: `actionToJson` and `parseCandidateAction` for actions, `viewToJson`
-and `viewFromJson` for views. The checks of this module look at the envelope only. The one form that the player defines is the
+The runtime writes and reads the JSON inside an envelope: `writeCandidateAction` and `readCandidateAction` for actions, `writeView`
+and `readView` for views. The checks of this module look at the envelope only. The one form that the player defines is the
 submission, because the server writes it and the browser shows it.
 
 | Export                                             | Purpose                                                                                                |
@@ -68,9 +68,9 @@ one is refused.
 | Envelope         | Property    | Type                 | Meaning                                                                             |
 | ---------------- | ----------- | -------------------- | ----------------------------------------------------------------------------------- |
 | `ActionEnvelope` | `seq`       | non-negative integer | The sequence number of the request                                                  |
-| `ActionEnvelope` | `action`    | any JSON             | The runtime's JSON of a candidate action; `parseCandidateAction` reads it           |
+| `ActionEnvelope` | `action`    | any JSON             | The runtime's JSON of a candidate action; `readCandidateAction` reads it            |
 | `ViewEnvelope`   | `seq`       | non-negative integer | The number of the request it answers                                                |
-| `ViewEnvelope`   | `view`      | any JSON             | The runtime's JSON of a candidate view; `viewFromJson` reads it                     |
+| `ViewEnvelope`   | `view`      | any JSON             | The runtime's JSON of a candidate view; `readView` reads it                         |
 | `ViewEnvelope`   | `assets`    | object of strings    | Each asset prefix mapped to its base URL                                            |
 | `ViewEnvelope`   | `documents` | `ViewDocuments`      | Where the content comes from. Default: none, so that references resolve at the root |
 | `ViewEnvelope`   | `refusal`   | refusal              | Why the action was not applied. Default: none, the action was applied               |

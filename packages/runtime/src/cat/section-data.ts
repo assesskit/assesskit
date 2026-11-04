@@ -59,7 +59,7 @@ function encodeOptional(
  * @remarks
  * Each file is sent as base64. The settings file is always sent. The usage data and the metadata are sent when the
  * selection references them, and only then, so the files must agree with the references. The usage data is the file
- * that `writeUsageData` writes, and the metadata the JSON of `catMetadata`.
+ * that `writeUsageData` writes, and the metadata the JSON of `buildCatMetadata`.
  *
  * @param selection - The `qti-adaptive-selection` of the section.
  * @param files - The content of the referenced files.
@@ -68,7 +68,7 @@ function encodeOptional(
  * for a reference or present without one.
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, section data}
  */
-export function sectionData(selection: AdaptiveSelection, files: SectionFiles): SectionData {
+export function buildSectionData(selection: AdaptiveSelection, files: SectionFiles): SectionData {
   const input: unknown = selection;
   checkRecord(input, "The selection must be an object");
   if (input.kind !== "adaptive-selection") {

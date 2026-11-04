@@ -51,7 +51,7 @@ export function checkArray(value: unknown, message: string): asserts value is re
  * @param check - The check, which throws when the value is not valid.
  * @returns The field.
  */
-export function optional<T>(value: T | undefined, check: (value: T) => void): T | undefined {
+export function checkOptional<T>(value: T | undefined, check: (value: T) => void): T | undefined {
   if (value !== undefined) check(value);
   return value;
 }
@@ -144,10 +144,11 @@ export function checkAbortSignal(value: unknown, label: string): asserts value i
  * Ends the wait for a promise when a signal aborts. The promise itself goes on.
  *
  * @param promise - What the caller waits for.
- * @param signal - The signal of the caller, if it passed one.
+ * @param options - The `signal` of the caller. Without one the promise is returned as it is.
  * @returns The promise, or a promise that rejects with `signal.reason` as soon as the signal aborts.
  */
-export function untilAborted<T>(promise: Promise<T>, signal: AbortSignal | undefined): Promise<T> {
+export function raceAbort<T>(promise: Promise<T>, options?: { readonly signal?: AbortSignal }): Promise<T> {
+  const signal = options?.signal;
   if (signal === undefined) return promise;
   return new Promise<T>((resolve, reject) => {
     if (signal.aborted) {
@@ -363,7 +364,7 @@ function toError(issue: v.BaseIssue<unknown>, label: string): DataError {
 }
 
 /** Returns what is wrong with a nested value for the message of an issue of the schema that parsed it, with its path. */
-export function issueText(issue: v.BaseIssue<unknown>): string {
+export function describeIssue(issue: v.BaseIssue<unknown>): string {
   const { path, text } = locate(issue);
   return path === "" ? text : `${path}: ${text}`;
 }

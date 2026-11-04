@@ -1,6 +1,6 @@
 import { ReadError, SecurityError } from "@assesskit/runtime";
 import { type AssessmentItem, readAsi } from "@assesskit/runtime/asi";
-import { checkResponse, describeInteractions } from "@assesskit/runtime/interactions";
+import { describeInteractions, validateResponse } from "@assesskit/runtime/interactions";
 import { describe, expect, it } from "vitest";
 import { commands } from "vitest/browser";
 import type { InteractionElement } from "../src/player/index.js";
@@ -154,7 +154,7 @@ describe("the examples of 1EdTech", () => {
         expect(given, `${path} ${element.kind} ${element.responseIdentifier} gave a response`).toBeDefined();
         const descriptor = scene.descriptors.get(element.responseIdentifier);
         if (descriptor === undefined) throw new Error(`${path}: no descriptor`);
-        const { reasons } = checkResponse(descriptor, given?.value ?? null);
+        const { reasons } = validateResponse(descriptor, given?.value ?? null);
         expect(
           reasons.filter((reason) => DATA_ERRORS.includes(reason)),
           `${path} ${element.kind} ${element.responseIdentifier}`,

@@ -7,13 +7,13 @@ import {
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
-  checkResponse,
-  container,
+  buildContainer,
+  buildSingle,
   describeInteractions,
-  numericRecord,
   readAsi,
-  single,
+  readNumericRecord,
   type Value,
+  validateResponse,
 } from "../src/index.js";
 import { ACCEPTED_DIFFERENCES } from "./differential/accepted.js";
 import { ampUp, UNSUPPORTED } from "./differential/amp-up.js";
@@ -324,7 +324,7 @@ function subjectValid(testCase: ValidityCase): boolean {
   if (document.kind !== "item") throw new Error("The case is no item.");
   const [descriptor] = describeInteractions(document.item);
   if (descriptor === undefined) throw new Error("The case has no interaction.");
-  return checkResponse(descriptor, testCase.subject).reasons.length === 0;
+  return validateResponse(descriptor, testCase.subject).reasons.length === 0;
 }
 
 function agreeOnValidity(cases: fc.Arbitrary<ValidityCase>): void {
@@ -366,7 +366,7 @@ describe("runtime against the oracle on the validity of responses", () => {
               declare("multiple", "identifier"),
               `<qti-choice-interaction response-identifier="R"${attribute("min-choices", min)}${attribute("max-choices", max ?? 4)}>${choiceMarkup(IDENTIFIERS.slice(0, size), "qti-simple-choice")}</qti-choice-interaction>`,
             );
-            return { xml, oracle: picked, subject: container("multiple", "identifier", picked) };
+            return { xml, oracle: picked, subject: buildContainer("multiple", "identifier", picked) };
           }),
         ),
     );
@@ -390,7 +390,7 @@ describe("runtime against the oracle on the validity of responses", () => {
               declare("ordered", "identifier"),
               `<qti-order-interaction response-identifier="R"${limits}>${choiceMarkup(IDENTIFIERS.slice(0, size), "qti-simple-choice")}</qti-order-interaction>`,
             );
-            return { xml, oracle: picked, subject: container("ordered", "identifier", picked) };
+            return { xml, oracle: picked, subject: buildContainer("ordered", "identifier", picked) };
           }),
         ),
     );
@@ -419,7 +419,11 @@ describe("runtime against the oracle on the validity of responses", () => {
             declare("multiple", "pair"),
             `<qti-associate-interaction response-identifier="R"${attribute("max-associations", max ?? 3)}>${choices}</qti-associate-interaction>`,
           );
-          return { xml, oracle: pairs.map(([a, b]) => `${a} ${b}`), subject: container("multiple", "pair", pairs) };
+          return {
+            xml,
+            oracle: pairs.map(([a, b]) => `${a} ${b}`),
+            subject: buildContainer("multiple", "pair", pairs),
+          };
         }),
     );
   });
@@ -431,7 +435,11 @@ describe("runtime against the oracle on the validity of responses", () => {
           declare("single", "identifier"),
           `<p><qti-inline-choice-interaction response-identifier="R" required="${required}">${choiceMarkup(["A", "B"], "qti-inline-choice")}</qti-inline-choice-interaction></p>`,
         );
-        return { xml, oracle: picked ?? null, subject: picked === undefined ? null : single("identifier", picked) };
+        return {
+          xml,
+          oracle: picked ?? null,
+          subject: picked === undefined ? null : buildSingle("identifier", picked),
+        };
       }),
     );
   });
@@ -471,7 +479,7 @@ function numericFields(
   readonly subject: Record<string, unknown>;
   readonly oracle: Record<string, unknown>;
 } {
-  const made = numericRecord(text, base);
+  const made = readNumericRecord(text, { base });
   const subject = Object.fromEntries([...(made?.fields ?? [])].map(([name, field]) => [name, field.value]));
   const oracle = Object.fromEntries(
     Object.entries(oracleFields(text, base)).map(([name, value]) => [

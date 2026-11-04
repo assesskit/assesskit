@@ -27,7 +27,7 @@ xychart-beta
 | start + template | the same for the 8 items with template processing, 20 times each                                     | Longsight: the same                                                                   | 1.833 ms | 1.685 ms  | 1.09  | 40 ms, 2             |
 | submit           | `set-responses` and `submit` of the correct responses in presented sessions                          | Longsight: `respond` for each response, then `score`                                  | 0.615 ms | 0.605 ms  | 1.02  | 20 ms, 2             |
 | item end to end  | `readAsi`, start, present, set the responses and submit                                              | Longsight: `parseQtiXml`, `createItemSession`, `respond`, `score`                     | 16.18 ms | 19.84 ms  | 0.82  | 400 ms, 1.5          |
-| package          | `readPackage` of 200 generated items, then each item through `packageResolvers`                      | Longsight: `parseQtiPackage`, with the inflation of fflate that the runtime uses      | 75.2 ms  | 141.4 ms  | 0.53  | 2,000 ms, 1          |
+| package          | `readPackage` of 200 generated items, then each item through `createPackageResolvers`                | Longsight: `parseQtiPackage`, with the inflation of fflate that the runtime uses      | 75.2 ms  | 141.4 ms  | 0.53  | 2,000 ms, 1          |
 | start a test     | `start` of a test of 10 sections of 10 choice items, 100 times                                       | Longsight: `startQtiTest` and `createItemSession` of its first item, 100 times        | 0.206 ms | 0.412 ms  | 0.50  | 4 ms, 1              |
 | submit in a test | `apply` of `submit` for the 51st of 100 items, 100 times: response processing, the sum of the scores | Longsight: `score` of the item, then `submitQtiTestAnswer` with the 50 earlier scores | 1.10 ms  | 0.680 ms  | 1.62  | 20 ms, 3             |
 | XML (libxml2)    | `parseXml` of the bytes of the 325 XML files of the examples that both read                          | libxml2-wasm: `XmlDocument.fromBuffer` with the options of `validateXmlFiles`         | 14.94 ms | 9.53 ms   | 1.57  | 300 ms, 2.5          |
@@ -83,14 +83,14 @@ of the tests generate with a fixed seed. A benchmark fails when its fastest samp
 | Benchmark                               | Input                                                                                                                       | Fastest on the CI runner | Budget        |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------- |
 | `readPackage`                           | 1,000 generated items of 7.6 MB, an archive of 2.7 MB, and the manifest with generated metadata for each resource           | 92.2 ms                  | 500 ms        |
-| First use of 3 items                    | The resolvers of `packageResolvers` on a package that has parsed none                                                       | 2.97 ms                  | 20 ms         |
+| First use of 3 items                    | The resolvers of `createPackageResolvers` on a package that has parsed none                                                 | 2.97 ms                  | 20 ms         |
 | `start` of a test of 100 sections       | 100 sections of 10 items, each selecting 8 and shuffling: 800 instances                                                     | 1.16 ms                  | 6 ms          |
 | `submit` with outcome processing        | The same test halfway through its session, with 101 rules that read item sessions                                           | 18.4 ms                  | 100 ms        |
 | Replay of 1,000 actions                 | `deserializeState` of a stored state, then `apply` of 250 items times 4 actions on a test of 10 sections and 11 rules       | 264 ms                   | 2,000 ms      |
 | `serializeState` and `deserializeState` | The state of a session of 100 items, all answered                                                                           | 4.81 ms                  | 30 ms         |
 | Rescoring a report                      | `readTestInputs` and `runOutcomeProcessing` on the report of 200 items, all answered, with 21 rules that read item sessions | 1.40 ms                  | 7 ms          |
 | Size of that state                      | The same state as JSON text                                                                                                 | 118,699 bytes            | 150,000 bytes |
-| Heap of a refused action                | A `support-settings` action of 1,000,000 font names, read by the build of `parseCandidateAction` in a worker                | 24 to 28 MB on a laptop  | 64 MB         |
+| Heap of a refused action                | A `support-settings` action of 1,000,000 font names, read by the build of `readCandidateAction` in a worker                 | 24 to 28 MB on a laptop  | 64 MB         |
 
 The replay also checks that the replayed state equals the state of the session. The heap is the old generation of the worker
 (`resourceLimits`), which no runner changes: the same action read without the limit `maxSettingListLength` needs 192 to 256 MB
@@ -180,8 +180,8 @@ xychart-beta
 `errors` holds nothing else, and `checks` holds only `errors` and valibot. A module that reads XML holds the parser (`xml`,
 saxes and xmlchars). A module that walks the model of a document (`asi`, `package`, `validate`, `delivery`) holds the element
 table of `asi`, which is most of its 234 kB; `content`, `interactions` and `processing` hold a few hundred bytes of `asi`, its
-guards and constants. `delivery/wire` is the wire forms of `delivery` alone (`viewToJson`, `viewFromJson`, `actionToJson`,
-`parseCandidateAction`), which `delivery` re-exports: no file of the engine is reachable from it, so a client that imports it
+guards and constants. `delivery/wire` is the wire forms of `delivery` alone (`writeView`, `readView`, `writeCandidateAction`,
+`readCandidateAction`), which `delivery` re-exports: no file of the engine is reachable from it, so a client that imports it
 and also loads the engine with `import()` keeps the engine out of its first load
 ([size](../player/size.md#the-first-load-of-a-client)). The engine of `delivery` holds the static gate of the content
 (`validate`) and processing, and builds

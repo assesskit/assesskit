@@ -563,8 +563,8 @@ over an engine of measurekit, with a port for each client, and the Node adapter.
    settings, and the usage data and the metadata when referenced. A selection without a settings reference sends an empty
    settings file, because the engine may be configured elsewhere (CAT section 2.2).
 2. It calls `port(selection)` for the engine, which is the host's choice by `qti-adaptive-engine-ref`.
-3. It makes Create Section with `sectionData` of the runtime, then Get Section, and checks the pool against the item references
-   with `checkPool` (CAT sections 2.1 and 2.2).
+3. It makes Create Section with `buildSectionData` of the runtime, then Get Section, and checks the pool against the item references
+   with `validatePool` (CAT sections 2.1 and 2.2).
 
 The result maps the identifier of each adaptive section to `{ prefix, sectionIdentifier }`, which is
 `DeliveryDefinition.catSections`. Create Section is not idempotent at a remote engine, so deploy once. When a check fails,

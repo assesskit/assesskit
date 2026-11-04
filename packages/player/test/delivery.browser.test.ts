@@ -3,7 +3,7 @@ import type { CandidateAction } from "@assesskit/runtime/delivery";
 import { createEngine } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { readPnp } from "@assesskit/runtime/pnp";
-import { type FileValue, single } from "@assesskit/runtime/values";
+import { buildSingle, type FileValue } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import { createRemoteSession, type Transport } from "../src/client/index.js";
@@ -182,7 +182,7 @@ const shown = (s: Shell): Promise<void> =>
 const answer = (identifier: string): CandidateAction => ({
   type: "set-responses",
   item: Q1,
-  responses: new Map([["RESPONSE", single("identifier", identifier)]]),
+  responses: new Map([["RESPONSE", buildSingle("identifier", identifier)]]),
 });
 
 describe("mountDelivery", () => {
@@ -1067,7 +1067,7 @@ describe("a portable custom interaction in the player", () => {
     const view = s.client.view.current;
     await waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."));
     await waitFor(() => expect(s.client.view.current?.responses.get("PCI")).toBeDefined());
-    expect(s.client.view.current?.responses.get("PCI")).toEqual(single("integer", 1));
+    expect(s.client.view.current?.responses.get("PCI")).toEqual(buildSingle("integer", 1));
     expect(s.client.view.current?.pci.get("PCI")?.state).toBe('{"count":1}');
     expect(view?.key.ref).toBe("q3");
   });
@@ -1099,7 +1099,7 @@ describe("a portable custom interaction that fires no event in the player", () =
     buttonNamed(s.ui, "Previous").click();
     await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
     await s.client.dispatch({ type: "move", to: { ref: "q3", instance: 1 } });
-    expect(s.client.view.current?.responses.get("PCI")).toEqual(single("integer", 1));
+    expect(s.client.view.current?.responses.get("PCI")).toEqual(buildSingle("integer", 1));
     expect(s.client.view.current?.pci.get("PCI")?.state).toBe('{"count":1}');
   });
 });
@@ -1115,7 +1115,7 @@ describe("the interactions in the player", () => {
     await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     choices(s.ui)[1]?.click();
     await waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."));
-    expect(s.client.view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "B"));
+    expect(s.client.view.current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "B"));
     expect(choices(s.ui).map((input) => input.checked)).toEqual([false, true]);
   });
 
@@ -1127,7 +1127,7 @@ describe("the interactions in the player", () => {
     if (current === undefined) throw new Error("The fixture shows an item.");
     s.mounted.update({
       ...s.client.view,
-      current: { ...current, responses: new Map([["RESPONSE", single("identifier", "A")]]) },
+      current: { ...current, responses: new Map([["RESPONSE", buildSingle("identifier", "A")]]) },
     });
     await real(50);
     expect(choices(s.ui).map((input) => input.checked)).toEqual([false, true]);
@@ -1166,10 +1166,12 @@ describe("the interactions in the player", () => {
     await s.client.dispatch({ type: "move", to: { ref: "q2", instance: 2 } });
     await waitFor(() => expect(choices(s.ui).map((input) => input.checked)).toEqual([false, false]));
     choices(s.ui)[0]?.click();
-    await waitFor(() => expect(s.client.view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "A")));
+    await waitFor(() =>
+      expect(s.client.view.current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "A")),
+    );
     await s.client.dispatch({ type: "move", to: { ref: "q2", instance: 1 } });
     await waitFor(() => expect(choices(s.ui).map((input) => input.checked)).toEqual([false, true]));
-    expect(s.client.view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "B"));
+    expect(s.client.view.current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "B"));
   });
 
   it("sends the held response before the submit, so that the engine submits what the candidate chose", async () => {
@@ -1179,7 +1181,7 @@ describe("the interactions in the player", () => {
     choices(s.ui)[1]?.click();
     buttonNamed(s.ui, "Submit answer").click();
     await waitFor(() => expect(buttons(s.ui)).toContain("Review answer"));
-    expect(s.client.view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "B"));
+    expect(s.client.view.current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "B"));
   });
 
   it("disables the interactions of a closed item, and shows the answer in the review and the correct one in the solution", async () => {
@@ -2288,7 +2290,7 @@ describe("a recording kept at the clock", () => {
       await s.hostSession.apply({ type: "time" });
       await s.client.refresh();
       await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
-      expect(await answerOf(s)).toEqual(single("file", reserved));
+      expect(await answerOf(s)).toEqual(buildSingle("file", reserved));
       await waitFor(() => expect(store.filled.size).toBe(1));
       expect(await loudest(store.filled.get(reserved.reference) ?? new Blob())).toBeGreaterThan(0);
     });
@@ -2304,7 +2306,7 @@ describe("a recording kept at the clock", () => {
       await waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
       buttonNamed(s.ui, "Yes, continue").click();
       await waitFor(() => expect(s.ui.querySelector(".ak-notice")?.textContent).toBe("The test has ended."));
-      expect(await answerOf(s)).toEqual(single("file", reserved));
+      expect(await answerOf(s)).toEqual(buildSingle("file", reserved));
       expect(store.filled.size).toBe(0);
       await waitFor(() => expect(store.waiting()).toBe(1));
       store.release();
@@ -2329,7 +2331,7 @@ describe("a recording kept at the clock", () => {
     expect((await s.host.proctor(ALICE.session, { type: "end-test" })).refusal).toBeUndefined();
     await s.client.refresh();
     await waitFor(() => expect(store.filled.size).toBe(1));
-    expect(await answerOf(s)).toEqual(single("file", reserved));
+    expect(await answerOf(s)).toEqual(buildSingle("file", reserved));
     expect(await loudest(store.filled.get(reserved.reference) ?? new Blob())).toBeGreaterThan(0);
   });
 });

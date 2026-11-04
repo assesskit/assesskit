@@ -1,6 +1,6 @@
 import type { CandidateAction, CandidateView, DeliveryEvent, HostAction } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BROWSER_CLOCK } from "../src/client/index.js";
@@ -75,7 +75,7 @@ const REQUEST = "item:e1:1:SCORE";
 const supply = (value: number, request = REQUEST): HostAction => ({
   type: "supply-scores",
   request,
-  value: single("float", value),
+  value: buildSingle("float", value),
   scorer: "human",
 });
 
@@ -89,7 +89,11 @@ async function essaySession(overrides: Parameters<typeof localOptions>[0] = {}) 
   const client = await createLocalSession(setup.options);
   const item = client.view.current?.key ?? fail("The essay is presented.");
   const write = () =>
-    client.dispatch({ type: "set-responses", item, responses: new Map([["RESPONSE", single("string", "My essay.")]]) });
+    client.dispatch({
+      type: "set-responses",
+      item,
+      responses: new Map([["RESPONSE", buildSingle("string", "My essay.")]]),
+    });
   const submit = () => client.dispatch({ type: "submit", item });
   return { ...setup, client, item, write, submit };
 }
@@ -246,15 +250,15 @@ describe("the host side of a local session", () => {
     await client.dispatch({
       type: "set-responses",
       item,
-      responses: new Map([["RESPONSE", single("identifier", "A")]]),
+      responses: new Map([["RESPONSE", buildSingle("identifier", "A")]]),
     });
     await client.dispatch({ type: "submit", item });
     const [request] = (await client.host.pending()).scoring;
     const view = await client.host.scorerView(request?.id ?? fail("A request waits."));
     expect(view.request).toEqual(request);
-    expect(view.items[0]?.correctResponses.get("RESPONSE")).toEqual(single("identifier", "B"));
-    expect(view.items[0]?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
-    expect(view.items[0]?.templateValues.get("N")).toEqual(single("integer", 4));
+    expect(view.items[0]?.correctResponses.get("RESPONSE")).toEqual(buildSingle("identifier", "B"));
+    expect(view.items[0]?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "A"));
+    expect(view.items[0]?.templateValues.get("N")).toEqual(buildSingle("integer", 4));
     client.close();
   });
 
@@ -269,7 +273,7 @@ describe("the host side of a local session", () => {
     void client.dispatch({
       type: "set-responses",
       item,
-      responses: new Map([["RESPONSE", single("string", "Text.")]]),
+      responses: new Map([["RESPONSE", buildSingle("string", "Text.")]]),
     });
     void client.dispatch({ type: "submit", item });
     expect((await client.host.pending()).scoring).toHaveLength(1);
@@ -326,7 +330,7 @@ describe("the option cat of a local session", () => {
   const choose = (ref: string): CandidateAction => ({
     type: "set-responses",
     item: item(ref),
-    responses: new Map([["RESPONSE", single("identifier", "A")]]),
+    responses: new Map([["RESPONSE", buildSingle("identifier", "A")]]),
   });
 
   /** A local session over the adaptive test whose CAT engine is behind the port. */
@@ -399,7 +403,7 @@ describe("the option cat of a local session", () => {
     expect((await client.host.pending()).cat.map(({ kind }) => kind)).toEqual(["end-session"]);
 
     const saves = setup.store.saved.get("practice-1")?.length ?? 0;
-    const text = new Map([["RESPONSE", single("string", "An essay.")]]);
+    const text = new Map([["RESPONSE", buildSingle("string", "An essay.")]]);
     const entered = await client.dispatch({ type: "set-responses", item: b1, responses: text });
     expect(entered.refusal).toBeUndefined();
     expect(setup.store.saved.get("practice-1")).toHaveLength(saves + 1);
@@ -412,7 +416,7 @@ describe("the option cat of a local session", () => {
     const step = await client.host.apply({
       type: "supply-scores",
       request: request?.id ?? "",
-      value: single("float", 5),
+      value: buildSingle("float", 5),
       scorer: "human",
     });
     expect(step.events.map(({ type }) => type)).toContain("scores-applied");
@@ -833,7 +837,7 @@ describe("signals", () => {
     client.subscribe((view) => views.push(view));
     client.host.subscribeSteps((events) => steps.push(events));
     const result = await client.dispatch(answer("A"), { signal: controller.signal });
-    expect(result.view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+    expect(result.view.current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "A"));
     expect(views).toHaveLength(1);
     expect(steps).toHaveLength(1);
     client.close();

@@ -1,5 +1,5 @@
 import { AssesskitError } from "../errors.js";
-import { MANIFEST_PATH, type Manifest, type QtiPackage, type Resource, resourcePath } from "../package/index.js";
+import { MANIFEST_PATH, type Manifest, type QtiPackage, type Resource, resolveResourcePath } from "../package/index.js";
 import { PNP_ALTERNATE_NAMESPACES, PNP_NAMESPACE } from "../pnp/index.js";
 import { RESULTS_NAMESPACE } from "../results/index.js";
 import { parseXml, type XmlElement } from "../xml/index.js";
@@ -66,7 +66,7 @@ interface Listing {
 function listings(manifest: Manifest): readonly Listing[] {
   return manifest.resources.flatMap((resource) => {
     const hrefs = [...(resource.href === undefined ? [] : [resource.href]), ...resource.files.map(({ href }) => href)];
-    return hrefs.map((href) => ({ resource, href, path: resourcePath(manifest, resource, href) }));
+    return hrefs.map((href) => ({ resource, href, path: resolveResourcePath(manifest, resource, { href }) }));
   });
 }
 

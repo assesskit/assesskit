@@ -7,7 +7,7 @@ import {
   methodsSchema,
   parseWith,
   positiveIntegerSchema,
-  untilAborted,
+  raceAbort,
 } from "@assesskit/runtime/checks";
 import * as v from "valibot";
 import { httpsUrlSchema } from "../checks.js";
@@ -289,6 +289,6 @@ export function createCatRestHandler(
   return async (request) => {
     parseWith(requestSchema, request, "The request");
     request.signal.throwIfAborted();
-    return untilAborted(answer(request), request.signal);
+    return raceAbort(answer(request), { signal: request.signal });
   };
 }

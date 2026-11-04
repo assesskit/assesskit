@@ -2,7 +2,7 @@ import { ProcessingError } from "../errors.js";
 import { type BaseType, matchValues, type Primitive, type Value } from "../values/index.js";
 import { NUM_ATTEMPTS } from "./built-ins.js";
 import { checkContainerSize, type Environment } from "./context.js";
-import { itemIdentifier, itemValue, weightOf } from "./item-session.js";
+import { itemValue, resolveItemIdentifier, weightOf } from "./item-session.js";
 import { asNumber, integerResult, primitiveOf } from "./operands.js";
 import type { Scope } from "./scope.js";
 import type { ItemSessionFilter, ItemSessionView, TestScope } from "./test-scope.js";
@@ -149,7 +149,7 @@ export function outcomeBound(
 ): Value | null {
   const values: number[] = [];
   for (const view of sessions) {
-    const identifier = itemIdentifier(view.ref, outcomeIdentifier);
+    const identifier = resolveItemIdentifier(view.ref, outcomeIdentifier);
     const declaration = view.item.outcomeDeclarations.find((each) => each.identifier === identifier);
     if (declaration === undefined || declaration.cardinality !== "single") continue;
     const value = bound === "minimum" ? declaration.normalMinimum : declaration.normalMaximum;
@@ -189,7 +189,7 @@ export function testVariables(
   const weighted: number[] = [];
   let integers = true;
   for (const view of sessions) {
-    const value = itemValue(view.variables, itemIdentifier(view.ref, variableIdentifier));
+    const value = itemValue(view.variables, resolveItemIdentifier(view.ref, variableIdentifier));
     if (value?.cardinality !== "single" || !accepted.includes(value.baseType)) continue;
     values.push(value.value);
     if (value.baseType !== "integer") integers = false;

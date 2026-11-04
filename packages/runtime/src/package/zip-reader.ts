@@ -1,6 +1,6 @@
 import { Inflate } from "fflate";
 import { AssesskitError, type ReadError, SecurityError } from "../errors.js";
-import { readError } from "../xml/index.js";
+import { createReadError } from "../xml/index.js";
 import { crc32 } from "./crc32.js";
 import type { PackageFiles } from "./package-files.js";
 import { normalizeEntryName } from "./paths.js";
@@ -51,7 +51,7 @@ interface Entry {
 }
 
 function corrupt(message: string): ReadError {
-  return readError("assesskit/package/zip", message, undefined);
+  return createReadError("assesskit/package/zip", message);
 }
 
 function exceeded(limit: keyof ZipLimits, limits: ZipLimits, what: string): SecurityError {

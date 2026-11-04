@@ -1,4 +1,4 @@
-import { checkArray, checkRecord, describe } from "../checks.js";
+import { checkArray, checkOptions, checkRecord, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import type { PersonalNeedsProfile, PNP_HAZARDS } from "../pnp/index.js";
 
@@ -29,6 +29,16 @@ export interface HazardExposure {
   readonly avoided: boolean;
 }
 
+/** The options of {@link deriveHazardExposure}. */
+export interface DeriveHazardExposureOptions {
+  /**
+   * The candidate's profile.
+   *
+   * @defaultValue none, and then nothing is avoided
+   */
+  readonly profile?: PersonalNeedsProfile;
+}
+
 /**
  * Maps the hazards of a resource, in the terms of the DRD, to the terms of a PNP and marks those the candidate avoids.
  *
@@ -37,16 +47,18 @@ export interface HazardExposure {
  * without the avoided hazards and flags the hazards it cannot avoid.
  *
  * @param hazards - The `hazard` terms of the resource's DRD.
- * @param profile - The candidate's profile; without one nothing is avoided.
+ * @param options - See {@link DeriveHazardExposureOptions}.
  * @returns One entry for each hazard, in the order given and each once.
  * @throws `DataError` when `hazards` holds anything but terms of the DRD, or `profile` is not a profile.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
  */
-export function hazardExposure(
+export function deriveHazardExposure(
   hazards: readonly DrdHazardTerm[],
-  profile?: PersonalNeedsProfile,
+  options: DeriveHazardExposureOptions = {},
 ): readonly HazardExposure[] {
   checkArray(hazards, "The hazards must be an array");
+  checkOptions(options);
+  const { profile } = options;
   if (profile !== undefined) checkRecord(profile, "The profile must be an object");
   const setting = profile?.supports.get("hazard-avoidance");
   const avoided = new Set(setting?.name === "hazard-avoidance" ? setting.hazards : []);

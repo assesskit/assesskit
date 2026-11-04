@@ -33,7 +33,7 @@ Points to be aware of when deploying the runtime:
   larger one is a `SecurityError`. Expressions are no deeper than the document they were read from, which `maxDepth`
   limits.
 - **Portable custom interactions.** The core runs no PCI code: module locations are data, and loading and sandboxing the
-  modules is the player's. `parseModuleResolution` reads JSON only, and a module id such as `__proto__` stays data in a
+  modules is the player's. `readModuleResolution` reads JSON only, and a module id such as `__proto__` stays data in a
   `Map`. `decodePciValue` checks everything a module returns before it becomes a value, and refuses a file that is not
   `{ data, mime, name }` and a duration with years or months; the bytes of a file go to a callback of the host and never
   into a value. A package path from a configuration file is still untrusted: the host serves only paths of the package.
@@ -72,7 +72,7 @@ Points to be aware of when deploying the runtime:
   content or metadata but the hazards, and a property test searches every view of random sessions for marked key material.
   In device mode the engine, the items with their keys and the seed are in the client, which is fit for practice only.
   `createRandom` is not cryptographic: selections and shuffles are reproducible from the seed.
-- **Client actions.** `parseCandidateAction` checks the shape, the types and the size of an action from a client (see
+- **Client actions.** `readCandidateAction` checks the shape, the types and the size of an action from a client (see
   **Default limits**) and refuses the actions of the host (`time`, `supply-scores`, `cat-response`) and any `at`; the server
   stamps the time. The engine checks every action against the rules and answers a refusal, never a state change, and an
   out-of-range integer response is a refusal. `support-settings` changes only the preferences of a support that is on
@@ -143,7 +143,7 @@ browser code imports only the wire functions of the runtime's `delivery`, and a 
 session holds any file of the engine. Practice runs the engine on the device, so its keys are visible there.
 
 - The host parses the body of a request, so it limits the size of the body before `JSON.parse`
-  ([server.md](docs/player/server.md#handling-a-request)): `limits` of `parseCandidateAction` counts what the parse has built.
+  ([server.md](docs/player/server.md#handling-a-request)): `limits` of `readCandidateAction` counts what the parse has built.
 - The host's authentication gives `{ session, principal }` to every call. Envelopes carry no session identifier, and a
   request for a session that is not bound to the principal, or that does not exist, is the same `AccessError`: map it to 403
   and tell nothing else. `start` never rebinds a session.
@@ -231,7 +231,7 @@ items, the rubric for the scorer and the scoring rubric of the outcome ([scoring
 - The text of a response is data: the display sets it as text and never as markup.
 - `Submission.scoringRubric` goes only to authorized raters, with the rest of the submission: the candidate's view and
   envelopes hold none of its text. `mountRatingForm` sets the texts of the rubric as text, never as markup. The ratings that
-  a rater's page sends back are untrusted input: the server computes the score again with `scoreFromRatings` of the runtime
+  a rater's page sends back are untrusted input: the server computes the score again with `rubricScore` of the runtime
   from the rubric of its own state, and passes it to `toSupplyScores`.
 - `toSupplyScores` checks a score against the declaration, but the host decides who may score. The engine
   trusts a score it is given, so authenticate the rater and log who supplied it.
@@ -331,7 +331,7 @@ Test plans (`PlanLimits`; option `limits` of `planTest` and of `createEngine`, w
 | -------------- | ------- | ----- | --------------- | -------------------------------------------------------------------------------------------------- |
 | `maxPlanNodes` | 10,000  | nodes | 24              | The sections and items of a test plan, so that a selection with replacement cannot exhaust memory. |
 
-Actions of a client (`ActionLimits`; option `limits` of `parseCandidateAction`):
+Actions of a client (`ActionLimits`; option `limits` of `readCandidateAction`):
 
 | Limit                  | Default   | Unit       | Largest example | Applies to                                                                                                                                                                                                                                            |
 | ---------------------- | --------- | ---------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -351,8 +351,8 @@ These numbers are fixed and cannot be replaced:
 | Number    | Applies to                                                                                                                          |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | 100       | Runs of template processing for its constraints (INFO section 5.150), fixed by the specification.                                   |
-| 256       | Levels of the JSON content of a view that `viewFromJson` reads, the depth that the XML reader allows.                               |
-| 65,536    | Characters of a module resolution file that `parseModuleResolution` reads; a longer file is a `DataError` before it is parsed.      |
+| 256       | Levels of the JSON content of a view that `readView` reads, the depth that the XML reader allows.                                   |
+| 65,536    | Characters of a module resolution file that `readModuleResolution` reads; a longer file is a `DataError` before it is parsed.       |
 | 1,100     | The width and the precision of a printed variable format; a larger one is ignored.                                                  |
 | 1,000,000 | Entries, states and transitions together, that the matcher of a pattern keeps of its automaton; beyond it the matcher starts again. |
 

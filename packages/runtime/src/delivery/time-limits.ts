@@ -1,7 +1,7 @@
-import { checkFinite, checkNonNegative, checkRecord, describe } from "../checks.js";
+import { checkFinite, checkNonNegative, checkOptions, checkRecord, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import { type PersonalNeedsProfile, resolveSupports, type TestingTime } from "../pnp/index.js";
-import { ancestry, partOf, type StructureNode } from "./structure.js";
+import { findTestPart, listAncestors, type StructureNode } from "./structure.js";
 
 /**
  * The time limits of one scope, in seconds, with the extra time of a candidate's profile applied.
@@ -69,7 +69,7 @@ function checkTestingTime(time: TestingTime): void {
 
 /** Returns whether an enclosing scope has a maximum time. A section that ordering mixes into its parent is no scope. */
 function hasEnclosingMaximum(node: StructureNode): boolean {
-  return ancestry(node).some(
+  return listAncestors(node).some(
     (outer) => !(outer.kind === "section" && outer.dissolved) && outer.model.timeLimits?.maxTime !== undefined,
   );
 }
@@ -95,6 +95,16 @@ function extendedMaximum(
   }
 }
 
+/** The options of {@link timeLimits}. */
+export interface TimeLimitsOptions {
+  /**
+   * The extra testing time of the candidate, from {@link additionalTestingTime}.
+   *
+   * @defaultValue none
+   */
+  readonly extra?: TestingTime;
+}
+
 /**
  * Returns the time limits of a test, test part, section or item reference, in seconds.
  *
@@ -110,19 +120,21 @@ function extendedMaximum(
  *   enclosing scope.
  *
  * @param node - The test, a part, a section or an item reference of a structure.
- * @param extra - The extra testing time of the candidate, from {@link additionalTestingTime}.
+ * @param options - See {@link TimeLimitsOptions}.
  * @returns The limits.
  * @throws `DataError` when an argument has the wrong type, or the multiplier is not positive.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-time-limits}
  * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
-export function timeLimits(node: StructureNode, extra?: TestingTime): EffectiveTimeLimits {
+export function timeLimits(node: StructureNode, options: TimeLimitsOptions = {}): EffectiveTimeLimits {
   checkRecord(node, "The node must be an object from resolveStructure");
+  checkOptions(options);
+  const { extra } = options;
   if (extra !== undefined) checkTestingTime(extra);
   if (node.kind === "section" && node.dissolved) return { allowLateSubmission: false };
   const declared = node.model.timeLimits;
   const nonlinear =
-    (node.kind === "item-ref" || node.kind === "section") && partOf(node).model.navigationMode !== "linear";
+    (node.kind === "item-ref" || node.kind === "section") && findTestPart(node).model.navigationMode !== "linear";
   const minTime = nonlinear ? undefined : declared?.minTime;
   const maxTime = extendedMaximum(node, declared?.maxTime, extra);
   return {

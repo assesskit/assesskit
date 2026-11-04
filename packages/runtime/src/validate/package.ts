@@ -1,14 +1,14 @@
 import type { AsiDocument, ResponseProcessing } from "../asi/index.js";
 import { checkRecord } from "../checks.js";
 import type { Issue } from "../errors.js";
-import { lomGeneral } from "../metadata/index.js";
+import { readLomGeneral } from "../metadata/index.js";
 import {
+  createPackageResolvers,
   MANIFEST_PATH,
-  packageResolvers,
   type QtiPackage,
   type Resource,
   type ResourceType,
-  resourcePath,
+  resolveResourcePath,
 } from "../package/index.js";
 import { checkDocument } from "./asi.js";
 import { failureIssues } from "./failures.js";
@@ -35,7 +35,7 @@ const DOCUMENT_KINDS: ReadonlyMap<ResourceType, AsiDocument["kind"]> = new Map([
 function mainPath(pkg: QtiPackage, resource: Resource): string | undefined {
   const [only, ...others] = resource.files;
   const href = resource.href ?? (only !== undefined && others.length === 0 ? only.href : undefined);
-  return href === undefined ? undefined : resourcePath(pkg.manifest, resource, href);
+  return href === undefined ? undefined : resolveResourcePath(pkg.manifest, resource, { href });
 }
 
 /** Returns the response processing at a path of the package, as a resolver of templates gives it. */
@@ -56,7 +56,7 @@ function checkMetadataIdentifier(resource: Resource, identifier: string, finding
   const identifiers =
     resource.metadata?.lom === undefined
       ? []
-      : lomGeneral(resource.metadata.lom).identifiers.map((each) => each.trim());
+      : readLomGeneral(resource.metadata.lom).identifiers.map((each) => each.trim());
   if (identifiers.length === 0 || identifiers.includes(identifier)) return;
   const message = `The item has the identifier ${JSON.stringify(identifier)}, but the LOM metadata of its resource ${JSON.stringify(resource.identifier)} gives ${identifiers.map((each) => JSON.stringify(each)).join(", ")}; the two must be the same.`;
   findings.error("assesskit/validate/metadata-identifier", message, `manifest/resources/resource`);
@@ -80,7 +80,7 @@ function checkResource(
     checkPciFiles(contents, document.item, reports.of(path));
     checkMetadataIdentifier(resource, document.item.identifier, reports.of(MANIFEST_PATH));
   } else if (document.kind === "test") {
-    checkTest(document.test, reports, scoped, { base: path, resolvers: packageResolvers(pkg) }, false);
+    checkTest(document.test, reports, scoped, { base: path, resolvers: createPackageResolvers(pkg) }, false);
     checkAdaptiveFiles(contents, document, path, reports.of(path));
   } else {
     checkDocument(document, reports, scoped);

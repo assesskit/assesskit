@@ -1,4 +1,4 @@
-import { ASI_NAMESPACE, descendantNodes, type ModelNode } from "@assesskit/runtime/asi";
+import { ASI_NAMESPACE, listDescendantNodes, type ModelNode } from "@assesskit/runtime/asi";
 import { AssesskitError } from "@assesskit/runtime/errors";
 import {
   CP_NAMESPACE,
@@ -13,7 +13,7 @@ import {
   type QtiPackage,
   type Resource,
   type ResourceType,
-  resourcePath,
+  resolveResourcePath,
 } from "@assesskit/runtime/package";
 import { RESULTS_NAMESPACE } from "@assesskit/runtime/results";
 import { USAGE_NAMESPACE } from "@assesskit/runtime/usage";
@@ -100,7 +100,7 @@ function adaptiveFilesOf(pkg: QtiPackage, path: string): string[] {
   try {
     const document = pkg.document(path);
     const root = document.kind === "test" ? document.test : document.kind === "section" ? document.section : undefined;
-    return root === undefined ? [] : adaptiveFiles(pkg, path, [root, ...descendantNodes(root)]);
+    return root === undefined ? [] : adaptiveFiles(pkg, path, [root, ...listDescendantNodes(root)]);
   } catch (error) {
     // A document that cannot be read is denied by its type; nothing in it can be named.
     if (error instanceof AssesskitError) return [];
@@ -113,9 +113,9 @@ function mainPathOf(pkg: QtiPackage, resource: Resource): string | undefined {
   const { manifest } = pkg;
   const [only, ...others] = resource.files;
   if (resource.href === undefined && only !== undefined && others.length === 0) {
-    return resourcePath(manifest, resource, only.href);
+    return resolveResourcePath(manifest, resource, { href: only.href });
   }
-  return resourcePath(manifest, resource);
+  return resolveResourcePath(manifest, resource);
 }
 
 /** Parses an XML file; `undefined` when it is not XML, or the runtime's limits refuse it, so the engine cannot read it either. */

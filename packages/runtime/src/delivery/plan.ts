@@ -238,6 +238,16 @@ export function drawsNothing(structure: TestStructure): boolean {
   return structure.test.parts.every((part) => part.sections.every(fixed));
 }
 
+/** The options of {@link listPlanItems}. */
+export interface ListPlanItemsOptions {
+  /**
+   * The identifier of a test part.
+   *
+   * @defaultValue none, which lists every part
+   */
+  readonly part?: string;
+}
+
 /**
  * Returns the item instances of a plan in presentation order, or those of one test part.
  *
@@ -245,13 +255,15 @@ export function drawsNothing(structure: TestStructure): boolean {
  * A part with simultaneous submission submits these together at its end.
  *
  * @param plan - The plan, from {@link planTest}.
- * @param part - The identifier of a test part. Default: every part.
+ * @param options - See {@link ListPlanItemsOptions}.
  * @returns The item instances.
  * @throws `DataError` when the plan is not a plan, or the part is not in it.
  */
-export function planItems(plan: TestPlan, part?: string): readonly ItemKey[] {
+export function listPlanItems(plan: TestPlan, options: ListPlanItemsOptions = {}): readonly ItemKey[] {
   checkRecord(plan, "The plan must be an object");
   checkArray(plan.parts, "The plan must have an array parts");
+  checkOptions(options);
+  const { part } = options;
   if (part !== undefined) checkString(part, "The test part");
   const chosen = part === undefined ? plan.parts : plan.parts.filter((candidate) => candidate.identifier === part);
   if (part !== undefined && chosen.length === 0) throw new DataError(`The plan has no test part ${describe(part)}.`);

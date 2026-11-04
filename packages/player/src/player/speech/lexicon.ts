@@ -1,6 +1,13 @@
 import { checkArray, checkNonEmptyString, checkRecord, describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
-import { attributeOf, childElements, parseXml, textOf, XML_NAMESPACE, type XmlElement } from "@assesskit/runtime/xml";
+import {
+  collectText,
+  findAttribute,
+  listChildElements,
+  parseXml,
+  XML_NAMESPACE,
+  type XmlElement,
+} from "@assesskit/runtime/xml";
 
 /**
  * The namespace of PLS.
@@ -62,13 +69,13 @@ const collapse = (text: string): string => text.replace(/\s+/gu, " ").trim();
 
 function readCandidates(lexeme: XmlElement, alphabet: string): Candidate[] {
   const candidates: Candidate[] = [];
-  for (const child of childElements(lexeme)) {
-    const preferred = attributeOf(child, "prefer") === "true";
+  for (const child of listChildElements(lexeme)) {
+    const preferred = findAttribute(child, "prefer") === "true";
     if (pls(child, "phoneme")) {
-      const own = attributeOf(child, "alphabet") ?? alphabet;
-      candidates.push({ pronunciation: { kind: "phoneme", alphabet: own, ph: textOf(child).trim() }, preferred });
+      const own = findAttribute(child, "alphabet") ?? alphabet;
+      candidates.push({ pronunciation: { kind: "phoneme", alphabet: own, ph: collectText(child).trim() }, preferred });
     } else if (pls(child, "alias")) {
-      candidates.push({ pronunciation: { kind: "alias", alias: collapse(textOf(child)) }, preferred });
+      candidates.push({ pronunciation: { kind: "alias", alias: collapse(collectText(child)) }, preferred });
     }
   }
   return candidates;
@@ -79,9 +86,9 @@ function readHeader(root: XmlElement): { readonly alphabet: string; readonly lan
   if (!pls(root, "lexicon")) {
     throw new DataError(`A lexicon must have the root element lexicon in the namespace ${PLS_NAMESPACE}.`);
   }
-  if (attributeOf(root, "version") !== "1.0") throw new DataError('A lexicon must have version "1.0".');
-  const alphabet = attributeOf(root, "alphabet");
-  const language = attributeOf(root, "lang", XML_NAMESPACE);
+  if (findAttribute(root, "version") !== "1.0") throw new DataError('A lexicon must have version "1.0".');
+  const alphabet = findAttribute(root, "alphabet");
+  const language = findAttribute(root, "lang", { namespace: XML_NAMESPACE });
   if (alphabet === undefined || language === undefined || language === "") {
     throw new DataError("A lexicon must have an alphabet and an xml:lang.");
   }
@@ -108,11 +115,11 @@ export function parseLexicon(source: string | Uint8Array): Lexicon {
   const root = parseXml(source);
   const { alphabet, language } = readHeader(root);
   const candidates = new Map<string, Candidate[]>();
-  for (const lexeme of childElements(root).filter((child) => pls(child, "lexeme"))) {
-    if (attributeOf(lexeme, "role") !== undefined) continue;
+  for (const lexeme of listChildElements(root).filter((child) => pls(child, "lexeme"))) {
+    if (findAttribute(lexeme, "role") !== undefined) continue;
     const found = readCandidates(lexeme, alphabet);
-    for (const grapheme of childElements(lexeme).filter((child) => pls(child, "grapheme"))) {
-      const key = collapse(textOf(grapheme));
+    for (const grapheme of listChildElements(lexeme).filter((child) => pls(child, "grapheme"))) {
+      const key = collapse(collectText(grapheme));
       if (key !== "") candidates.set(key, [...(candidates.get(key) ?? []), ...found]);
     }
   }

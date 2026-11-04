@@ -6,8 +6,8 @@ import { inflateSync } from "fflate";
 import { expect, test } from "vitest";
 import {
   type AsiDocument,
+  createPackageResolvers,
   type Manifest,
-  packageResolvers,
   type Resource,
   readPackage,
   writeAsi,
@@ -70,18 +70,18 @@ test("reads the manifest of a package of 1,000 items, and an item when it is fir
   const pkg = readPackage(zip);
   expect(pkg.manifest.resources).toHaveLength(ITEMS);
   expect(pkg.paths).toHaveLength(ITEMS + 1);
-  for (const index of used) expect(packageResolvers(pkg).items(path(index), BASE).deliverable.kind).toBe("qti");
+  for (const index of used) expect(createPackageResolvers(pkg).items(path(index), BASE).deliverable.kind).toBe("qti");
 
   const read = await bench("read the package", () => readPackage(zip)).run(BENCH_OPTIONS);
   await expectWithin(annotate, "read the package", read, BUDGETS.packageRead);
 
   // Each run uses a package that has parsed nothing; the hook that reads it is outside the time.
-  let resolvers = packageResolvers(readPackage(zip));
+  let resolvers = createPackageResolvers(readPackage(zip));
   const firstUse = await bench(
     "first use of 3 items",
     {
       beforeEach: () => {
-        resolvers = packageResolvers(readPackage(zip));
+        resolvers = createPackageResolvers(readPackage(zip));
       },
     },
     () => {
@@ -98,7 +98,7 @@ test("reads a package and every item in it within its budget against Longsight",
   const read = parseQtiPackage(zip, options);
   expect(read.items.filter(({ document }) => document !== undefined)).toHaveLength(COMPARED_ITEMS);
   const readAll = () => {
-    const resolvers = built.packageResolvers(built.readPackage(zip));
+    const resolvers = built.createPackageResolvers(built.readPackage(zip));
     for (let index = 0; index < COMPARED_ITEMS; index++) resolvers.items(path(index), BASE);
   };
   await compareRow(

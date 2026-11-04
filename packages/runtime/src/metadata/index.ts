@@ -37,8 +37,9 @@ export {
   writeCurriculumStandardsSet,
 } from "./curriculum-standards.js";
 export { deriveQtiMetadata } from "./derive.js";
+export type { ReadMetadataOptions } from "./element-reading.js";
 export type { ExtensionTerm } from "./extension-term.js";
-export { type LomGeneral, type LomString, lomGeneral } from "./lom.js";
+export { type LomGeneral, type LomString, readLomGeneral } from "./lom.js";
 export {
   CP_NAMESPACE,
   CSM_NAMESPACE,

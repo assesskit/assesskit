@@ -17,7 +17,7 @@ const INPUT_MODES: ReadonlyMap<string, string> = new Map([
  * The element of `qti-text-entry-interaction`: a line of text inside a sentence.
  *
  * @remarks
- * The response is the text, or the number it reads as, or the record of the runtime's `numericRecord`, as the
+ * The response is the text, or the number it reads as, or the record of the runtime's `readNumericRecord`, as the
  * declaration of the variable says.
  *
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, text entry interaction}

@@ -4,11 +4,11 @@ import { DataError } from "../errors.js";
 import { type BaseType, isBaseType } from "./base-type.js";
 import type { Cardinality } from "./cardinality.js";
 import { readDeclaration, type ValueDeclaration } from "./declaration.js";
-import { parseIsoDuration } from "./duration.js";
+import { parseDuration } from "./duration.js";
 import {
-  buildContainer,
-  buildRecord,
-  buildSingle,
+  buildUntrustedContainer,
+  buildUntrustedRecord,
+  buildUntrustedSingle,
   type ContainerValue,
   type RecordValue,
   type SingleValue,
@@ -75,7 +75,7 @@ function decodeDuration(json: unknown): number {
   if (typeof json !== "string") {
     throw new DataError(`A duration must be an ISO 8601 duration such as "PT1.5S", found ${describe(json)}.`);
   }
-  return NON_JSON_NUMBERS.get(json) ?? parseIsoDuration(json);
+  return NON_JSON_NUMBERS.get(json) ?? parseDuration(json);
 }
 
 const fileSchema = v.strictObject({
@@ -111,13 +111,13 @@ function decodeItem(baseType: BaseType, json: unknown): unknown {
 
 function decodeSingle(json: unknown, what: string, declared: BaseType | undefined): SingleValue | null {
   const [baseType, content] = typedContent(json, declared, what);
-  return buildSingle(baseType, decodeItem(baseType, content));
+  return buildUntrustedSingle(baseType, decodeItem(baseType, content));
 }
 
 function decodeList(json: unknown, cardinality: Cardinality, declared: BaseType): ContainerValue | null {
   const [baseType, content] = typedContent(json, declared, "The list of a container");
   const items = parseWith(v.array(v.unknown()), content, `The list of base type ${baseType}`);
-  return buildContainer(
+  return buildUntrustedContainer(
     cardinality,
     baseType,
     items.map((item) => decodeItem(baseType, item)),
@@ -133,11 +133,11 @@ function decodeRecord(json: unknown): RecordValue | null {
     const field = base === null ? null : decodeSingle(base, `The base of the field ${describe(name)}`, undefined);
     if (field !== null) fields.push([name, field]);
   }
-  return buildRecord(fields);
+  return buildUntrustedRecord(fields);
 }
 
 /**
- * Reads a value from the JSON binding that {@link toJsonValue} writes.
+ * Reads a value from the JSON binding that {@link writeJsonValue} writes.
  *
  * @remarks
  * `{ "base": null }`, `{ "list": null }` and `{ "record": null }` are NULL, and so are an empty list, an empty record
@@ -153,7 +153,7 @@ function decodeRecord(json: unknown): RecordValue | null {
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, JSON binding}
  * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
-export function fromJsonValue(json: unknown, declaration: ValueDeclaration): Value | null {
+export function readJsonValue(json: unknown, declaration: ValueDeclaration): Value | null {
   const declared = readDeclaration(declaration);
   if (declared.cardinality === "single") {
     const { base } = parseWith(singleSchema, json, "The JSON of a single value");

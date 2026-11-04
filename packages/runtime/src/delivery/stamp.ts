@@ -12,7 +12,7 @@ import { checkState, type DeliveryState } from "./delivery-state.js";
  *
  * @param state - The state the action applies to.
  * @param action - The action without its time; a time it has is replaced. A server passes the result of
- * `parseCandidateAction`, which has none.
+ * `readCandidateAction`, which has none.
  * @param now - The host's clock, in epoch milliseconds.
  * @returns The action with `at` = max(`now`, `state.at`).
  * @throws `DataError` when an argument has the wrong type, or the action is not an action.

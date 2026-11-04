@@ -78,7 +78,7 @@ function splitDuration(text: string): DurationParts | undefined {
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, JSON binding}
  * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
-export function parseIsoDuration(text: string): number {
+export function parseDuration(text: string): number {
   checkString(text, "The duration");
   const parts = splitDuration(text);
   if (parts === undefined)

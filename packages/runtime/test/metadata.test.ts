@@ -20,7 +20,6 @@ import {
   FEEDBACK_TYPES,
   INTERACTION_TYPES,
   LOM_NAMESPACE,
-  lomGeneral,
   parseXml,
   QTI_METADATA_NAMESPACE,
   type QtiMetadata,
@@ -28,6 +27,7 @@ import {
   readAccessForAllResource,
   readAsi,
   readCurriculumStandardsSet,
+  readLomGeneral,
   readQtiMetadata,
   readResourceMetadata,
   SCORING_MODES,
@@ -73,10 +73,10 @@ function bare(node: XmlNode): XmlNode {
 }
 
 const qti = (xml: string, path?: string): QtiMetadata =>
-  readQtiMetadata(parseXml(`<qtiMetadata ${QMD}>${xml}</qtiMetadata>`), path);
+  readQtiMetadata(parseXml(`<qtiMetadata ${QMD}>${xml}</qtiMetadata>`), { path });
 
 const drd = (xml: string, path?: string): AccessForAllResource =>
-  readAccessForAllResource(parseXml(`<accessForAllResource ${DRD}>${xml}</accessForAllResource>`), path);
+  readAccessForAllResource(parseXml(`<accessForAllResource ${DRD}>${xml}</accessForAllResource>`), { path });
 
 describe("reading the accessibility description", () => {
   it("reads the elements in the order of the schema", () => {
@@ -168,7 +168,7 @@ describe("writing the accessibility description", () => {
   it("reads back what it writes, through XML text", () => {
     fc.assert(
       fc.property(accessForAllResource, (resource) => {
-        const read = readAccessForAllResource(parseXml(serializeXml(writeAccessForAllResource(resource))), undefined);
+        const read = readAccessForAllResource(parseXml(serializeXml(writeAccessForAllResource(resource))));
         expect({ ...read, extensions: read.extensions.map(bare) }).toEqual({
           ...resource,
           extensions: resource.extensions.map(bare),
@@ -203,7 +203,6 @@ describe("writing the accessibility description", () => {
 const csm = (xml: string): ReturnType<typeof readCurriculumStandardsSet> =>
   readCurriculumStandardsSet(
     parseXml(`<curriculumStandardsMetadataSet ${CSM}>${xml}</curriculumStandardsMetadataSet>`),
-    undefined,
   );
 
 describe("reading curriculum standards", () => {
@@ -274,9 +273,7 @@ describe("writing curriculum standards", () => {
   it("reads back what it writes, through XML text", () => {
     fc.assert(
       fc.property(curriculumStandardsSet, (set) => {
-        expect(readCurriculumStandardsSet(parseXml(serializeXml(writeCurriculumStandardsSet(set))), undefined)).toEqual(
-          set,
-        );
+        expect(readCurriculumStandardsSet(parseXml(serializeXml(writeCurriculumStandardsSet(set))))).toEqual(set);
       }),
       { numRuns: 200 },
     );
@@ -587,7 +584,7 @@ const lomXml = `<lom:lom xmlns:lom="${LOM_NAMESPACE}">
 
 describe("the general category of a LOM", () => {
   it("reads the entries of the identifiers and the strings of the title, with their languages", () => {
-    expect(lomGeneral(parseXml(lomXml))).toEqual({
+    expect(readLomGeneral(parseXml(lomXml))).toEqual({
       identifiers: ["qti_v2_item_01"],
       titles: [
         { language: "en", text: "Metadata Example Item #1" },
@@ -598,7 +595,7 @@ describe("the general category of a LOM", () => {
   });
 
   it("returns empty lists for a lom without a general category", () => {
-    expect(lomGeneral(parseXml(`<lom xmlns="${LOM_NAMESPACE}"/>`))).toEqual({ identifiers: [], titles: [] });
+    expect(readLomGeneral(parseXml(`<lom xmlns="${LOM_NAMESPACE}"/>`))).toEqual({ identifiers: [], titles: [] });
   });
 });
 
@@ -855,13 +852,20 @@ describe("reading resource metadata", () => {
   });
 
   it("reports the path the caller gives in the location of an issue", () => {
-    const error = thrownAs(ReadError, () => readResourceMetadata(resourceMetadata("<other/>"), "imsmanifest.xml"));
+    const error = thrownAs(ReadError, () =>
+      readResourceMetadata(resourceMetadata("<other/>"), { path: "imsmanifest.xml" }),
+    );
     expect(error.issues[0]?.location?.path).toBe("imsmanifest.xml");
   });
 
   it("throws a DataError for an argument of another type", () => {
     for (const input of ["null", '"x"', "[]"]) expect(() => readResourceMetadata(JSON.parse(input))).toThrow(DataError);
-    expect(() => readResourceMetadata(resourceMetadata(""), JSON.parse("3"))).toThrow(DataError);
+    expect(() => readResourceMetadata(resourceMetadata(""), { path: JSON.parse("3") })).toThrow(
+      "The option path must be a string, found 3.",
+    );
+    expect(() => readResourceMetadata(resourceMetadata(""), JSON.parse("null"))).toThrow(
+      "The options must be an object, found null.",
+    );
   });
 });
 

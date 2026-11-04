@@ -3,10 +3,10 @@ import {
   checkAbortSignal,
   checkChoice,
   checkFunction,
+  checkOptional,
   checkOptions,
   checkRecord,
-  optional,
-  untilAborted,
+  raceAbort,
 } from "../checks.js";
 import { DataError } from "../errors.js";
 import type { DeliveryState } from "./delivery-state.js";
@@ -34,7 +34,7 @@ function checkMethod(port: CatSessionPort, method: (typeof SESSION_METHODS)[numb
 function readSignal(options: SendCatRequestOptions): AbortSignal | undefined {
   checkOptions(options);
   const { signal } = options;
-  optional(signal, (value) => checkAbortSignal(value, "The option signal"));
+  checkOptional(signal, (value) => checkAbortSignal(value, "The option signal"));
   return signal;
 }
 
@@ -97,7 +97,7 @@ export async function sendCatRequest(
   checkChoice(request.kind, "The kind of the request", REQUEST_KINDS);
   const signal = readSignal(options);
   signal?.throwIfAborted();
-  return untilAborted(call(port, request), signal);
+  return raceAbort(call(port, request), { signal });
 }
 
 /** The options of {@link drainCat}. */

@@ -12,7 +12,7 @@ sequenceDiagram
   participant Engine as Delivery engine
   participant CAT as CAT engine
   Host->>CAT: createSection(sectionData)
-  Host->>CAT: getSection, then checkPool
+  Host->>CAT: getSection, then validatePool
   Engine->>CAT: createSession
   CAT-->>Engine: first ItemStage
   loop until isSessionEnd(nextItems)
@@ -22,14 +22,14 @@ sequenceDiagram
   Host->>CAT: endSection
 ```
 
-| Function                                                           | Does                                                                                       |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| `sectionData(selection, files)`                                    | Builds the `SectionData` of Create Section from the files of an adaptive section           |
-| `isSessionEnd(stage)`                                              | Tells whether a stage, or a missing one, ends the session                                  |
-| `checkPool(section, pool)`                                         | Compares the item references of an adaptive section with the pool that Get Section returns |
-| `catMetadata(items, options?)`                                     | Builds the metadata JSON from the QTI metadata of the items                                |
-| `assessmentResultToJson(result)`, `assessmentResultFromJson(json)` | Write and read an assessment result in the JSON of the public binding                      |
-| `itemStageFromJson(json, noun)`                                    | Reads an item stage of the binding                                                         |
+| Function                                            | Does                                                                                       |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `buildSectionData(selection, files)`                | Builds the `SectionData` of Create Section from the files of an adaptive section           |
+| `isSessionEnd(stage)`                               | Tells whether a stage, or a missing one, ends the session                                  |
+| `validatePool(section, pool)`                       | Compares the item references of an adaptive section with the pool that Get Section returns |
+| `buildCatMetadata(items, options?)`                 | Builds the metadata JSON from the QTI metadata of the items                                |
+| `writeResultsJson(result)`, `readResultsJson(json)` | Write and read an assessment result in the JSON of the public binding                      |
+| `readItemStage(json, noun)`                         | Reads an item stage of the binding                                                         |
 
 | Type                                                                                             | Is                                                                                   |
 | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
@@ -39,7 +39,7 @@ sequenceDiagram
 | `CreateSectionResponse`, `GetSectionResponse`                                                    | The answers to Create Section and Get Section                                        |
 | `CreateSessionRequest`, `CreateSessionResponse`, `SubmitResultsRequest`, `SubmitResultsResponse` | The bodies and answers of Create Session and Submit Results                          |
 | `CatResponse`                                                                                    | What the host answers to a request of the delivery engine                            |
-| `SectionFiles`, `CatPoolItem`, `CatMetadataFile`, `CatMetadataOptions`                           | The arguments of `sectionData` and `catMetadata`                                     |
+| `SectionFiles`, `CatPoolItem`, `CatMetadataFile`, `BuildCatMetadataOptions`                      | The arguments of `buildSectionData` and `buildCatMetadata`                           |
 | `CatMetadata`, `CatItemMetadata`, `CatExternalMetadata`                                          | The metadata JSON                                                                    |
 
 ## The port
@@ -67,7 +67,7 @@ there. `CatSessionPort` is the three methods of the delivery of a session, `crea
 
 ## Section data
 
-`sectionData(selection, files)` builds the body of Create Section. Each field is the base64 (RFC 4648, with padding) of the file
+`buildSectionData(selection, files)` builds the body of Create Section. Each field is the base64 (RFC 4648, with padding) of the file
 that a reference of the `qti-adaptive-selection` names.
 
 | Field                  | File              | Rule                                                                         |
@@ -76,17 +76,17 @@ that a reference of the `qti-adaptive-selection` names.
 | `qtiUsagedata`         | `files.usageData` | Sent when the selection has a `qti-usagedata-ref`, and only then.            |
 | `qtiMetadata`          | `files.metadata`  | Sent when the selection has a `qti-metadata-ref`, and only then.             |
 
-`SectionData` has a further field, `qtiMetadataRecord`, which `sectionData` never sets: the one QTI metadata record that the REST binding carries as
+`SectionData` has a further field, `qtiMetadataRecord`, which `buildSectionData` never sets: the one QTI metadata record that the REST binding carries as
 `qtiMetadata` (the runtime's `QtiMetadata`), which an engine returns from Get Section and a client may send with Create Section. It is not the
 metadata file above ([spec-gaps](spec-gaps.md)). A `PriorDataEntry` has an optional `glossaryUri`, the address of the glossary that defines its name.
 
 The files are bytes, which the host reads from the package or from wherever each `href` points. The usage data is the XML of
 [usage](usage.md) (`writeUsageData`), whose statistics the engine may use as its item parameters. The metadata is the JSON of
-`catMetadata`. A file that the selection does not reference, or a referenced file that is missing, is a `DataError`.
+`buildCatMetadata`. A file that the selection does not reference, or a referenced file that is missing, is a `DataError`.
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
-import { checkPool, sectionData } from "@assesskit/runtime/cat";
+import { validatePool, buildSectionData } from "@assesskit/runtime/cat";
 
 const { section } = readAsi(`<qti-assessment-section xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
     identifier="sec" title="Adaptive" visible="true">
@@ -97,8 +97,8 @@ const { section } = readAsi(`<qti-assessment-section xmlns="http://www.imsglobal
   <qti-assessment-item-ref identifier="item434" href="item434.xml"/>
   <qti-assessment-item-ref identifier="item065" href="item065.xml"/>
 </qti-assessment-section>`);
-sectionData(section.adaptiveSelection, { settings: new TextEncoder().encode("{}") }); // => { sectionConfiguration: "e30=" }
-checkPool(section, { itemIdentifiers: ["item434", "item999"] }).map(({ code }) => code);
+buildSectionData(section.adaptiveSelection, { settings: new TextEncoder().encode("{}") }); // => { sectionConfiguration: "e30=" }
+validatePool(section, { itemIdentifiers: ["item434", "item999"] }).map(({ code }) => code);
 // => ["assesskit/cat/item-not-in-pool", "assesskit/cat/item-not-in-section"]
 ```
 
@@ -121,7 +121,7 @@ isSessionEnd(null); // => true
 
 ## Pool check
 
-`checkPool(section, pool)` compares the `qti-assessment-item-ref` children of an adaptive section with the pool of Get Section.
+`validatePool(section, pool)` compares the `qti-assessment-item-ref` children of an adaptive section with the pool of Get Section.
 The result is empty, or has one error for each identifier that only one side lists, first the item references and then the pool,
 each in list order.
 
@@ -135,9 +135,9 @@ includes resolved, as `QtiPackage.document` has. An identifier counts once howev
 
 ## JSON binding
 
-`assessmentResultToJson(result)` and `assessmentResultFromJson(json)` convert an assessment result to and from the JSON of the
+`writeResultsJson(result)` and `readResultsJson(json)` convert an assessment result to and from the JSON of the
 public REST binding of CAT 1.0. The OpenAPI files that the binding names do not serve, so the field names come from its listing.
-`itemStageFromJson(json, noun)` reads an item stage; `noun` names it in the error message, such as `nextItems of the answer`. The
+`readItemStage(json, noun)` reads an item stage; `noun` names it in the error message, such as `nextItems of the answer`. The
 functions make no request: the adapter that talks to the engine owns the transport.
 
 | Runtime                      | Binding                                                                                             |
@@ -158,10 +158,10 @@ functions make no request: the adapter that talks to the engine owns the transpo
 | Date and time | The binding declares `datestamp` as `format: date-time`, RFC 3339 with an offset, while an `xs:dateTime` of Results Reporting may lack one; the reports that the delivery engine builds always have `Z` |
 
 ```ts
-import { assessmentResultFromJson, assessmentResultToJson } from "@assesskit/runtime/cat";
-import { single } from "@assesskit/runtime/values";
+import { readResultsJson, writeResultsJson } from "@assesskit/runtime/cat";
+import { buildSingle } from "@assesskit/runtime/values";
 
-const json = assessmentResultToJson({
+const json = writeResultsJson({
   context: { sessionIdentifiers: [{ sourceId: "https://delivery.example", identifier: "s1" }] },
   itemResults: [
     {
@@ -170,18 +170,24 @@ const json = assessmentResultToJson({
       datestamp: "2026-10-30T10:00:00Z",
       sessionStatus: "final",
       variables: [
-        { kind: "outcome", identifier: "SCORE", cardinality: "single", baseType: "float", value: single("float", 1) },
+        {
+          kind: "outcome",
+          identifier: "SCORE",
+          cardinality: "single",
+          baseType: "float",
+          value: buildSingle("float", 1),
+        },
       ],
       supports: [],
     },
   ],
 });
-assessmentResultFromJson(JSON.parse(JSON.stringify(json))).itemResults[0].identifier; // => "q1"
+readResultsJson(JSON.parse(JSON.stringify(json))).itemResults[0].identifier; // => "q1"
 ```
 
 ## Metadata JSON
 
-`catMetadata(items, options?)` builds the content of the file that `qti-metadata-ref` references, in the JSON binding of the CAT
+`buildCatMetadata(items, options?)` builds the content of the file that `qti-metadata-ref` references, in the JSON binding of the CAT
 metadata, which is non-normative. Write the result with `JSON.stringify` in UTF-8 and pass the bytes as `files.metadata`.
 
 | Binding field                                | From                                                                                               |
@@ -205,9 +211,9 @@ XML); any other type is allowed by agreement. The content is bytes: serialize LO
 [xml](xml.md). An item whose QTI metadata is not valid, or a repeated identifier, is a `DataError`.
 
 ```ts
-import { catMetadata } from "@assesskit/runtime/cat";
+import { buildCatMetadata } from "@assesskit/runtime/cat";
 
-const metadata = catMetadata([
+const metadata = buildCatMetadata([
   {
     identifier: "item434",
     metadata: { interactionTypes: ["choiceInteraction"], scoringModes: ["responseprocessing"] },
@@ -220,14 +226,14 @@ JSON.stringify(metadata);
 
 ## Errors
 
-| Situation                                                              | Result                                                         |
-| ---------------------------------------------------------------------- | -------------------------------------------------------------- |
-| An argument of the wrong type, as plain JavaScript or JSON passes it   | `DataError` that says what is wrong and what is expected       |
-| JSON that is not the binding's, or a value not in the form of its type | `DataError` that names the path of the first problem           |
-| A stage that is not an item stage                                      | `DataError`                                                    |
-| A file that nothing references, or a referenced file that is missing   | `DataError`                                                    |
-| A repeated item identifier in the metadata                             | `DataError`                                                    |
-| An item reference and the pool that disagree                           | `Issue`s from `checkPool`; the only function that returns them |
+| Situation                                                              | Result                                                            |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| An argument of the wrong type, as plain JavaScript or JSON passes it   | `DataError` that says what is wrong and what is expected          |
+| JSON that is not the binding's, or a value not in the form of its type | `DataError` that names the path of the first problem              |
+| A stage that is not an item stage                                      | `DataError`                                                       |
+| A file that nothing references, or a referenced file that is missing   | `DataError`                                                       |
+| A repeated item identifier in the metadata                             | `DataError`                                                       |
+| An item reference and the pool that disagree                           | `Issue`s from `validatePool`; the only function that returns them |
 
 ## Not included
 

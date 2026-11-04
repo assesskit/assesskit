@@ -5,7 +5,7 @@ others: hotspot, select point, graphic order, graphic associate, graphic gap mat
 its properties and events, the hints, the board that carries the choices in places, and the options (`messages`, `files`,
 `staticUrl`) are in [interactions](interactions.md). This guide holds what is particular to an image. The renderers draw what
 the runtime describes and decide nothing of QTI: the descriptor of the runtime's `interactions` says which choices stand where, and the runtime's
-`checkResponse` says whether a response is valid.
+`validateResponse` says whether a response is valid.
 
 The drawing is the one kind that needs `files`: `upload(bytes, mimeType, fileName?)` stores a picture and returns its file
 value, and `url(file)` returns where the picture of a file value loads from. The other six never call it.
@@ -37,7 +37,7 @@ the candidate returns to no answer by choosing the hotspot again.
 
 ### Limits
 
-The controls do not forbid a move that the question does not allow; the runtime's `checkResponse` says what is wrong and the
+The controls do not forbid a move that the question does not allow; the runtime's `validateResponse` says what is wrong and the
 interaction says it in words ([hints](interactions.md#hints-and-limits)). Where a rule makes a choice impossible, the
 interaction shows it instead:
 
@@ -152,7 +152,7 @@ The graphic interactions follow the errors of [interactions](interactions.md#err
 every response against the runtime's rules, the keyboard alone, drag and select-then-place, the sizes of the targets, axe at WCAG 2.2
 A and AA in each state, and the pictures that the drawing stores, decoded as a person would see them. `pnpm test:corpus`
 renders every graphic item of the 1EdTech examples with its images, answers each interaction by clicks, checks the response
-with `checkResponse` and runs axe on the item.
+with `validateResponse` and runs axe on the item.
 
 ## Files
 

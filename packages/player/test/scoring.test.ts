@@ -4,11 +4,11 @@ import {
   type PendingWork,
   type ScorerView,
   type ScoringRequest,
-  viewToJson,
+  writeView,
 } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { AssessmentResult, ResultVariable } from "@assesskit/runtime/results";
-import { container, fromWireValue, record, single, type Value } from "@assesskit/runtime/values";
+import { buildContainer, buildRecord, buildSingle, readWireValue, type Value } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import scoringGuide from "../../../docs/player/scoring.md?raw";
@@ -68,7 +68,7 @@ const outcome = (identifier: string, value: number | null): ResultVariable => ({
   identifier,
   cardinality: "single",
   baseType: "float",
-  value: value === null ? null : single("float", value),
+  value: value === null ? null : buildSingle("float", value),
 });
 /** A report of a test with the given outcomes, branded as the session host does. */
 function report(outcomes: Readonly<Record<string, number | null>>, datestamp = DATESTAMP): OfficialResult {
@@ -190,7 +190,7 @@ describe("sessionScore", () => {
             identifier: "SCORE",
             cardinality: "single",
             baseType: "string",
-            value: single("string", "high"),
+            value: buildSingle("string", "high"),
           },
         ],
         supports: [],
@@ -310,8 +310,8 @@ describe("toSubmission", () => {
     const started = begin(engine);
     const state = play(engine, started, write("e", "Dear Sir", 1_000), act("submit", "e", 2_000));
     for (const text of [
-      JSON.stringify(viewToJson(engine.view(started, 0))),
-      JSON.stringify(viewToJson(engine.view(state, 3_000))),
+      JSON.stringify(writeView(engine.view(started, 0))),
+      JSON.stringify(writeView(engine.view(state, 3_000))),
     ]) {
       expect(text).not.toContain(RUBRIC_WORD);
       expect(text).not.toContain("Clear order.");
@@ -320,7 +320,12 @@ describe("toSubmission", () => {
 
   it("gives the correct responses and the template values of an item as wire values", () => {
     const engine = itemEngine(pick("p"));
-    const state = play(engine, begin(engine), answer("p", single("identifier", "A"), 1_000), act("submit", "p", 2_000));
+    const state = play(
+      engine,
+      begin(engine),
+      answer("p", buildSingle("identifier", "A"), 1_000),
+      act("submit", "p", 2_000),
+    );
     const [item] = toSubmission(firstScorerView(engine, state)).items;
     expect(item?.correctResponses).toEqual([{ identifier: "RESPONSE", value: wire("identifier", "B") }]);
     expect(item?.templateValues).toEqual([{ identifier: "N", value: wire("integer", 4) }]);
@@ -354,7 +359,7 @@ describe("toSubmission", () => {
 
   it("keeps a file as a reference that the host resolves, and NULL as null", () => {
     const { view } = essayView();
-    const file = single("file", { reference: "uploads/a1", mimeType: "audio/wav", fileName: "speech.wav" });
+    const file = buildSingle("file", { reference: "uploads/a1", mimeType: "audio/wav", fileName: "speech.wav" });
     const [cover] = view.request.covers;
     const filed: ScorerView = {
       ...view,
@@ -416,7 +421,7 @@ describe("toSupplyScores", () => {
   const request = essayRequest();
 
   it("builds the action with one value, the id of the request and the scorer", () => {
-    const value = single("float", 7.5);
+    const value = buildSingle("float", 7.5);
     expect(toSupplyScores(request, value, "human")).toEqual({
       type: "supply-scores",
       request: "item:e:1:SCORE",
@@ -437,12 +442,12 @@ describe("toSupplyScores", () => {
   });
 
   it("takes a number as a single value of the base type of the outcome", () => {
-    expect(toSupplyScores(request, 7.5, "human").value).toEqual(single("float", 7.5));
-    expect(toSupplyScores(request, 0, "human").value).toEqual(single("float", 0));
+    expect(toSupplyScores(request, 7.5, "human").value).toEqual(buildSingle("float", 7.5));
+    expect(toSupplyScores(request, 0, "human").value).toEqual(buildSingle("float", 0));
   });
 
   it("promotes an integer value to the float outcome, as the engine does", () => {
-    expect(toSupplyScores(request, single("integer", 7), "human").value).toEqual(single("float", 7));
+    expect(toSupplyScores(request, buildSingle("integer", 7), "human").value).toEqual(buildSingle("float", 7));
   });
 
   it("takes a string, a boolean and an identifier for the outcomes of those base types", () => {
@@ -450,10 +455,10 @@ describe("toSupplyScores", () => {
       ...request,
       declaration: { cardinality: "single", baseType },
     });
-    expect(toSupplyScores(declared("string"), "good", "human").value).toEqual(single("string", "good"));
-    expect(toSupplyScores(declared("boolean"), true, "human").value).toEqual(single("boolean", true));
-    expect(toSupplyScores(declared("identifier"), "PASS", "human").value).toEqual(single("identifier", "PASS"));
-    expect(toSupplyScores(declared("integer"), 3, "human").value).toEqual(single("integer", 3));
+    expect(toSupplyScores(declared("string"), "good", "human").value).toEqual(buildSingle("string", "good"));
+    expect(toSupplyScores(declared("boolean"), true, "human").value).toEqual(buildSingle("boolean", true));
+    expect(toSupplyScores(declared("identifier"), "PASS", "human").value).toEqual(buildSingle("identifier", "PASS"));
+    expect(toSupplyScores(declared("integer"), 3, "human").value).toEqual(buildSingle("integer", 3));
   });
 
   it("accepts NULL, and the empty string, which is NULL", () => {
@@ -463,17 +468,17 @@ describe("toSupplyScores", () => {
   });
 
   it("checks a value against the declaration before the engine does", () => {
-    expect(() => toSupplyScores(request, single("string", "good"), "human")).toThrow(
+    expect(() => toSupplyScores(request, buildSingle("string", "good"), "human")).toThrow(
       new DataError("The outcome SCORE is a single float, found a single string."),
     );
-    expect(() => toSupplyScores(request, container("multiple", "float", [1, 2]) ?? null, "human")).toThrow(
+    expect(() => toSupplyScores(request, buildContainer("multiple", "float", [1, 2]) ?? null, "human")).toThrow(
       new DataError("The outcome SCORE is a single float, found a multiple float."),
     );
-    expect(() => toSupplyScores(request, record([["a", single("integer", 1)]]) ?? null, "human")).toThrow(
+    expect(() => toSupplyScores(request, buildRecord([["a", buildSingle("integer", 1)]]) ?? null, "human")).toThrow(
       new DataError("The outcome SCORE is a single float, found a record."),
     );
     const integer: ScoringRequest = { ...request, declaration: { cardinality: "single", baseType: "integer" } };
-    expect(() => toSupplyScores(integer, single("float", 1.5), "human")).toThrow(
+    expect(() => toSupplyScores(integer, buildSingle("float", 1.5), "human")).toThrow(
       new DataError("The outcome SCORE is a single integer, found a single float."),
     );
   });
@@ -494,7 +499,7 @@ describe("toSupplyScores", () => {
 
   it("accepts a value for a multiple outcome that has the cardinality and the base type", () => {
     const many: ScoringRequest = { ...request, declaration: { cardinality: "multiple", baseType: "identifier" } };
-    const value = container("multiple", "identifier", ["a", "b"]);
+    const value = buildContainer("multiple", "identifier", ["a", "b"]);
     expect(toSupplyScores(many, value, "human").value).toEqual(value);
   });
 
@@ -529,7 +534,7 @@ describe("toSupplyScores", () => {
     expect(
       engine.results(scored.state).testResult?.variables.find(({ identifier }) => identifier === "WRITING"),
     ).toMatchObject({
-      value: single("float", 3),
+      value: buildSingle("float", 3),
     });
 
     const replaced = accepted(
@@ -537,7 +542,7 @@ describe("toSupplyScores", () => {
     );
     expect(replaced.events.map(({ type }) => type)).toContain("scores-replaced");
     const request = replaced.state.scoring.find(({ id }) => id === open.id);
-    expect(request?.supplied).toEqual({ value: single("float", 5.5), at: 5_000, scorer: "externalMachine" });
+    expect(request?.supplied).toEqual({ value: buildSingle("float", 5.5), at: 5_000, scorer: "externalMachine" });
   });
 
   it("is refused by the engine when the request does not exist", () => {
@@ -580,17 +585,17 @@ describe("properties", () => {
           ) as Submission;
           checkSubmission(submission);
           expect(submission.request).toBe(open.id);
-          expect(fromWireValue(submission.parts[0]?.value)).toEqual(single("string", text));
+          expect(readWireValue(submission.parts[0]?.value)).toEqual(buildSingle("string", text));
 
           const scored = accepted(engine.apply(state, { ...toSupplyScores(open, first, "human"), at: 3_000 }));
           expect(engine.pending(scored.state).scoring).toEqual([]);
           const again = accepted(engine.apply(scored.state, { ...toSupplyScores(open, second, "human"), at: 4_000 }));
           expect(again.events.map(({ type }) => type)).toContain("scores-replaced");
           const supplied = again.state.scoring.find(({ id }) => id === open.id)?.supplied;
-          expect(supplied?.value).toEqual(single("float", second));
+          expect(supplied?.value).toEqual(buildSingle("float", second));
           // The submission read again carries the score that stands.
           const after = toSubmission(engine.scorerView(again.state, open.id));
-          expect(fromWireValue(after.supplied?.value ?? null)).toEqual(single("float", second));
+          expect(readWireValue(after.supplied?.value ?? null)).toEqual(buildSingle("float", second));
         },
       ),
       { seed: 20_261_030, numRuns: 100 },
@@ -623,8 +628,8 @@ describe("properties", () => {
         fc.constantFrom("multiple" as const, "ordered" as const),
         ({ baseType, value }, integers, cardinality) => {
           const values: Value[] = [
-            single(baseType, value) ?? fail("A value is not empty."),
-            container(cardinality, "integer", integers) ?? fail("A container is not empty."),
+            buildSingle(baseType, value) ?? fail("A value is not empty."),
+            buildContainer(cardinality, "integer", integers) ?? fail("A container is not empty."),
           ];
           for (const response of values) {
             const built: ScorerView = {
@@ -632,7 +637,7 @@ describe("properties", () => {
               request: { ...view.request, covers: [{ ...(cover ?? fail("No cover.")), response }] },
             };
             const sent = json(JSON.stringify(toSubmission(built))) as Submission;
-            const decoded = fromWireValue(sent.parts[0]?.value);
+            const decoded = readWireValue(sent.parts[0]?.value);
             expect(decoded).toEqual(response);
           }
         },
@@ -648,7 +653,7 @@ describe("properties", () => {
         expect(action).toEqual({
           type: "supply-scores",
           request: EssayRequest.id,
-          value: single("float", score),
+          value: buildSingle("float", score),
           scorer: "human",
         });
       }),

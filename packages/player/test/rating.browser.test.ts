@@ -1,4 +1,4 @@
-import { type RubricRating, type ScoringRubric, scoreFromRatings } from "@assesskit/runtime/asi";
+import { type RubricRating, rubricScore, type ScoringRubric } from "@assesskit/runtime/asi";
 import { DataError } from "@assesskit/runtime/errors";
 import { afterEach, describe, expect, it } from "vitest";
 import { userEvent } from "vitest/browser";
@@ -210,7 +210,7 @@ describe("the ratings and the score", () => {
       { criterion: "language", score: 0 },
     ];
     expect(mounted.ratings).toEqual(ratings);
-    expect(mounted.score).toBe(scoreFromRatings(ESSAY, ratings));
+    expect(mounted.score).toBe(rubricScore(ESSAY, ratings));
     expect(mounted.ratings).not.toBe(mounted.ratings);
   });
 

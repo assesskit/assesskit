@@ -1,4 +1,4 @@
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { followPlayback, Playback, type PlaybackNotice } from "../src/player/media/index.js";
@@ -77,21 +77,21 @@ describe("media", () => {
     const audio = audioOf(scene);
     const finished = next(audio, "ended");
     await playFrom(scene);
-    expect(plays(scene)).toEqual(single("integer", 1));
+    expect(plays(scene)).toEqual(buildSingle("integer", 1));
     await finished;
     await playFrom(scene);
-    expect(plays(scene)).toEqual(single("integer", 2));
+    expect(plays(scene)).toEqual(buildSingle("integer", 2));
     expect(scene.find(".ak-media-status").textContent).toBe("Plays 2.");
   });
 
   it("counts from the response that the host restored, and stops at max-plays", async (context) => {
     await needsPlaybackToEnd(context);
     const scene = mountScene(DECLARATION, BODY('max-plays="2"', "blip"));
-    scene.setValue("R", single("integer", 1));
+    scene.setValue("R", buildSingle("integer", 1));
     expect(scene.find(".ak-media-status").textContent).toBe("Plays 1 / 2.");
     const finished = next(audioOf(scene), "ended");
     await playFrom(scene);
-    expect(plays(scene)).toEqual(single("integer", 2));
+    expect(plays(scene)).toEqual(buildSingle("integer", 2));
     await finished;
     expect(scene.find(".ak-media-status").textContent).toBe("Plays 2 / 2. No plays left.");
     await userEvent.click(button(scene, "Play"));
@@ -103,7 +103,7 @@ describe("media", () => {
 
   it("does not let a reload start the count again: a restored count at max-plays cannot be played", async () => {
     const scene = mountScene(DECLARATION, BODY('max-plays="1"', "blip"));
-    scene.setValue("R", single("integer", 1));
+    scene.setValue("R", buildSingle("integer", 1));
     await userEvent.click(button(scene, "Play"));
     expect(idle(audioOf(scene))).toBe(true);
     expect(scene.responses).toEqual([]);
@@ -123,7 +123,7 @@ describe("media", () => {
     });
     await userEvent.click(button(scene, "Play"));
     await secondEnd;
-    expect(plays(scene)).toEqual(single("integer", 2));
+    expect(plays(scene)).toEqual(buildSingle("integer", 2));
     expect(idle(audio)).toBe(true);
   });
 
@@ -212,7 +212,7 @@ describe("media", () => {
     await userEvent.click(button(scene, "Pause"));
     expect(playing(audioOf(scene))).toBe(true);
     expect(scene.find(".ak-media-notice").textContent).toBe("You cannot pause again.");
-    expect(plays(scene)).toEqual(single("integer", 1));
+    expect(plays(scene)).toEqual(buildSingle("integer", 1));
     audioOf(scene).pause();
   });
 
@@ -254,7 +254,7 @@ describe("media", () => {
     await new Promise<void>((done) => queueMicrotask(done));
     expect(play).toHaveBeenCalledTimes(1);
     expect(scene.findAll(".ak-media-bar button").length).toBeGreaterThan(0);
-    scene.setValue("R", single("integer", 1));
+    scene.setValue("R", buildSingle("integer", 1));
     expect(play).toHaveBeenCalledTimes(1);
     audioOf(scene).pause();
     play.mockRestore();
@@ -265,7 +265,7 @@ describe("media", () => {
     const scene = mountScene(DECLARATION, BODY("").replace('autostart="false"', 'autostart="true"'), {
       describe: false,
     });
-    scene.setValue("R", single("integer", 1));
+    scene.setValue("R", buildSingle("integer", 1));
     scene.interaction().descriptor =
       scene.descriptors.get("R") ??
       (() => {

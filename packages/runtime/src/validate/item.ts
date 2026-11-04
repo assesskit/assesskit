@@ -1,5 +1,5 @@
 import { type AssessmentItem, walkDocument } from "../asi/index.js";
-import { checkBindings, describeInteractions } from "../interactions/index.js";
+import { describeInteractions, validateBindings } from "../interactions/index.js";
 import { QTI_CONTEXT } from "../processing/index.js";
 import { AttributeReferences } from "./attribute-references.js";
 import { BindRuleSets } from "./bind-rule-sets.js";
@@ -75,7 +75,7 @@ export function checkItem(item: AssessmentItem, findings: Findings, options: Che
       { element: "qti-template-declaration", declarations: item.templateDeclarations },
     ],
   });
-  findings.adopt(checkBindings(item));
+  findings.adopt(validateBindings(item));
   checkScoringRubrics(item, findings);
   const bound = boundResponses(item);
   for (const { identifier } of item.responseDeclarations) {

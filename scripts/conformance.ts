@@ -227,7 +227,7 @@ function startTest({ runtime }: RuntimeModules, pkg: QtiPackage, href: string): 
   try {
     const document = pkg.document(href);
     if (document.kind !== "test") return { href, refusal: `${href} is not a test.` };
-    const resolvers = runtime.packageResolvers(pkg);
+    const resolvers = runtime.createPackageResolvers(pkg);
     const definition = { kind: "test", test: document.test, base: href, resolvers } as const;
     const started = runtime.createEngine(definition).start({ seed: 1, at: 0 });
     return started.ok ? { href } : { href, refusal: started.refusal.message };
@@ -247,7 +247,7 @@ async function exportPackage({ node, runtime }: RuntimeModules, pkg: QtiPackage,
     if (bytes !== undefined) files.set(path, bytes);
   }
   for (const resource of pkg.manifest.resources) {
-    const path = runtime.resourcePath(pkg.manifest, resource);
+    const path = runtime.resolveResourcePath(pkg.manifest, resource);
     if (path === undefined || !ASI_RESOURCES.includes(resource.type)) continue;
     files.set(path, new TextEncoder().encode(runtime.writeAsi(pkg.document(path))));
   }

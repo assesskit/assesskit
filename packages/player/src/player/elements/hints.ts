@@ -78,7 +78,7 @@ function limitText(
  * Returns the text that tells the candidate what to change for a rule that the response breaks (WCAG 3.3.1, 3.3.3): the
  * item's own text for the rules that have one, else the player's, which names the limit.
  *
- * @param reason - A reason of the runtime's `checkResponse`.
+ * @param reason - A reason of the runtime's `validateResponse`.
  * @param descriptor - The descriptor whose rules the response breaks.
  * @param messages - The text of the interface.
  * @param custom - The item's own texts; none without it.

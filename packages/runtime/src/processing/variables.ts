@@ -12,7 +12,7 @@ import {
   QTI_CONTEXT,
   QTI_CONTEXT_FIELDS,
 } from "./built-ins.js";
-import { declaredValue } from "./declared-value.js";
+import { readDeclaredValue } from "./declared-value.js";
 import { floatResult, integerResult } from "./operands.js";
 
 /**
@@ -162,7 +162,7 @@ function declaredVariables(item: AssessmentItem): ItemVariables {
     type: VariableType,
     values: readonly ValueElement[] | undefined,
   ): Value | null => {
-    const value = declaredValue(values, type, `The default value of ${identifier}`);
+    const value = readDeclaredValue(values, type, `The default value of ${identifier}`);
     defaults.set(identifier, value);
     return value;
   };
@@ -184,7 +184,7 @@ function declaredVariables(item: AssessmentItem): ItemVariables {
     responses.set(identifier, null);
     correctResponses.set(
       identifier,
-      declaredValue(declaration.correctResponse?.values, declaration, `The correct response of ${identifier}`),
+      readDeclaredValue(declaration.correctResponse?.values, declaration, `The correct response of ${identifier}`),
     );
   }
   const outcomes = new Map<string, Value | null>([

@@ -1,7 +1,7 @@
 import { ASI_NAMESPACE, readAsi } from "@assesskit/runtime/asi";
 import type { CandidateView } from "@assesskit/runtime/delivery";
 import { readPnp } from "@assesskit/runtime/pnp";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { createRemoteSession, type Transport } from "../src/client/index.js";
@@ -145,7 +145,7 @@ async function submit(s: Embed, identifier: string): Promise<void> {
   await s.client.dispatch({
     type: "set-responses",
     item,
-    responses: new Map([["RESPONSE", single("identifier", identifier)]]),
+    responses: new Map([["RESPONSE", buildSingle("identifier", identifier)]]),
   });
   await s.client.dispatch({ type: "submit", item });
 }
@@ -189,7 +189,7 @@ describe("mountItem", () => {
     await shown(s);
     choices(s.ui)[1]?.click();
     await waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."));
-    expect(s.client.view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "B"));
+    expect(s.client.view.current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "B"));
     expect(choices(s.ui).map((input) => input.checked)).toEqual([false, true]);
     const regions = s.ui.querySelectorAll("[role='status']");
     expect(regions).toHaveLength(1);
@@ -267,7 +267,7 @@ describe("mountItem", () => {
     if (current === undefined) throw new Error("The fixture shows an item.");
     s.mounted.update({
       ...s.client.view,
-      current: { ...current, responses: new Map([["RESPONSE", single("identifier", "A")]]) },
+      current: { ...current, responses: new Map([["RESPONSE", buildSingle("identifier", "A")]]) },
     });
     await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     expect(choices(s.ui).map((input) => input.checked)).toEqual([false, true]);
@@ -379,7 +379,7 @@ describe("the lifecycle of an item in a page", () => {
     const answered = await s.client.dispatch({
       type: "set-responses",
       item: s.client.view.current?.key ?? { ref: "l1", instance: 1 },
-      responses: new Map([["RESPONSE", single("identifier", "B")]]),
+      responses: new Map([["RESPONSE", buildSingle("identifier", "B")]]),
     });
     expect(answered.refusal).toBeUndefined();
   });

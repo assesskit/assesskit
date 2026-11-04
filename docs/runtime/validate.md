@@ -234,7 +234,7 @@ a duplicate. A shape or duplicate rule is checked once every value of the block 
 
 `validatePackage` reads each resource through `package.document`, so the includes of a document are resolved, an item
 is checked with the response processing templates the package holds, and a test is checked as `validateTest` checks it
-with `packageResolvers`. Each document is checked once, however many tests name it.
+with `createPackageResolvers`. Each document is checked once, however many tests name it.
 
 ## Decisions
 

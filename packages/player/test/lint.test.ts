@@ -185,18 +185,18 @@ const DELIVERY = '"@assesskit/runtime/delivery"';
 const WIRE = '"@assesskit/runtime/delivery/wire"';
 const delivery = {
   allowed: source(`${SRC}/player/allowed-delivery.ts`, [
-    `import { actionToJson, viewFromJson } from ${WIRE};`,
-    `import { parseCandidateAction, type CandidateView, viewFromJson as read } from ${WIRE};`,
+    `import { writeCandidateAction, readView } from ${WIRE};`,
+    `import { readCandidateAction, type CandidateView, readView as read } from ${WIRE};`,
     `import type { CandidateAction, createEngine } from ${DELIVERY};`,
     `import {\n  type CandidateAction as Action,\n  type CandidateView as View,\n} from ${DELIVERY};`,
     `export type { CandidateView as Shown } from ${DELIVERY};`,
-    `export { viewFromJson as readView } from ${WIRE};`,
-    'import { container } from "@assesskit/runtime/values";',
+    `export { readView as shown } from ${WIRE};`,
+    'import { buildContainer } from "@assesskit/runtime/values";',
   ]),
   denied: source(`${SRC}/client/denied-delivery.ts`, [
     `import { createEngine } from ${DELIVERY};`,
-    `import { viewFromJson, type CandidateView } from ${DELIVERY};`,
-    `import {\n  actionToJson,\n  createEngine as engine,\n} from ${DELIVERY};`,
+    `import { readView, type CandidateView } from ${DELIVERY};`,
+    `import {\n  writeCandidateAction,\n  createEngine as engine,\n} from ${DELIVERY};`,
     `import * as delivery from ${DELIVERY};`,
     `import delivery2 from ${DELIVERY};`,
     `import ${DELIVERY};`,
@@ -210,7 +210,7 @@ const delivery = {
     `export const a = import(${DELIVERY});`,
   ]),
   server: source(`${SRC}/server/delivery.ts`, [
-    `import { createEngine, parseCandidateAction } from ${DELIVERY};`,
+    `import { createEngine, readCandidateAction } from ${DELIVERY};`,
     `export const a = import(${DELIVERY});`,
   ]),
 };

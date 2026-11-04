@@ -7,17 +7,16 @@ import { describe, expect, it } from "vitest";
 import {
   CP_NAMESPACE,
   CPX_NAMESPACE,
+  createPackageResolvers,
   DataError,
   DEFAULT_ZIP_LIMITS,
   DRD_NAMESPACE,
-  dependencyClosure,
   LOM_NAMESPACE,
-  ltiLaunchUrl,
+  listDependencies,
   MANIFEST_SCHEMAS,
   type Manifest,
   openPackage,
   type PackageFiles,
-  packageResolvers,
   parseXml,
   QTI_METADATA_NAMESPACE,
   type QtiPackage,
@@ -27,7 +26,8 @@ import {
   readLtiLink,
   readManifest,
   readPackage,
-  resourcePath,
+  resolveLaunchUrl,
+  resolveResourcePath,
   SecurityError,
   writeManifest,
   writePackage,
@@ -141,7 +141,7 @@ describe("dependency closure", () => {
       ),
     ),
   );
-  const ids = (start: string): string[] => dependencyClosure(manifest, start).map(({ identifier }) => identifier);
+  const ids = (start: string): string[] => listDependencies(manifest, start).map(({ identifier }) => identifier);
 
   it("returns the resource, then each dependency once, depth first in the order of the dependency elements", () => {
     expect(ids("test")).toEqual(["test", "i1", "s", "m1", "i2"]);
@@ -154,12 +154,12 @@ describe("dependency closure", () => {
   });
 
   it("throws a DataError for a resource that is not in the manifest and for a dependency that names none", () => {
-    expect(() => dependencyClosure(manifest, "missing")).toThrow(DataError);
+    expect(() => listDependencies(manifest, "missing")).toThrow(DataError);
     const dangling: Manifest = {
       ...manifest,
       resources: [{ ...(manifest.resources[0] as Resource), dependencies: ["nowhere"] }],
     };
-    expect(() => dependencyClosure(dangling, "test")).toThrow(/depends on "nowhere"/);
+    expect(() => listDependencies(dangling, "test")).toThrow(/depends on "nowhere"/);
   });
 
   it("follows a chain of dependencies as long as a manifest within the default limits can make it", () => {
@@ -174,16 +174,16 @@ describe("dependency closure", () => {
         dependencies: [`r${index === length ? 0 : index + 1}`],
       })),
     };
-    const closure = dependencyClosure(chain, "r0");
+    const closure = listDependencies(chain, "r0");
     expect(closure).toHaveLength(length + 1);
     expect(closure.at(-1)?.identifier).toBe(`r${length}`);
   });
 
   it("throws a DataError for an argument of another type", () => {
     for (const manifestJson of ["null", '"x"', '{"resources":"x"}']) {
-      expect(() => dependencyClosure(JSON.parse(manifestJson), "a"), manifestJson).toThrow(DataError);
+      expect(() => listDependencies(JSON.parse(manifestJson), "a"), manifestJson).toThrow(DataError);
     }
-    expect(() => dependencyClosure(manifest, JSON.parse("3"))).toThrow(DataError);
+    expect(() => listDependencies(manifest, JSON.parse("3"))).toThrow(DataError);
   });
 });
 
@@ -286,7 +286,7 @@ describe("reading LTI links", () => {
 });
 
 describe("launching LTI links", () => {
-  const launch = (inner: string): string => ltiLaunchUrl(readLtiLink(lti(`<blti:title>t</blti:title>${inner}`)));
+  const launch = (inner: string): string => resolveLaunchUrl(readLtiLink(lti(`<blti:title>t</blti:title>${inner}`)));
 
   it("gives the secure launch URL before the launch URL, as the implementation guide says", () => {
     expect(
@@ -309,7 +309,7 @@ describe("launching LTI links", () => {
 
   it("throws a DataError for a link of another type", () => {
     for (const input of ["null", "3", "{}", '{"title":"t"}'])
-      expect(() => ltiLaunchUrl(JSON.parse(input)), input).toThrow(DataError);
+      expect(() => resolveLaunchUrl(JSON.parse(input)), input).toThrow(DataError);
   });
 });
 
@@ -1008,7 +1008,7 @@ describe("resolvers of a package", () => {
     "media/x.png": "png",
     "items/headless.xml": item("headless"),
   });
-  const resolvers = packageResolvers(pkg);
+  const resolvers = createPackageResolvers(pkg);
 
   it("resolves an item reference to the item, its variants and the DRD of the links to them", () => {
     const resolved = resolvers.items("../items/core.xml", "tests/t.xml");
@@ -1068,7 +1068,7 @@ describe("resolvers of a package", () => {
 
   it("reports a variant resource that has no main file inside the package, a file of the wrong kind and a missing LTI file", () => {
     const variant = `<cpx:variant identifier="v" identifierref="headless">${drd("")}</cpx:variant>`;
-    const linked = packageResolvers(
+    const linked = createPackageResolvers(
       packageOf(
         manifestXml(
           resources(
@@ -1080,13 +1080,13 @@ describe("resolvers of a package", () => {
       ),
     );
     expect(issueCode(() => linked.items("i.xml", ""))).toBe("assesskit/package/resource-href");
-    const kind = packageResolvers(
+    const kind = createPackageResolvers(
       packageOf(manifestXml(resources(resourceXml("i", "imsqti_item_xmlv3p0", "i.xml"))), {
         "i.xml": `<qti-assessment-test xmlns="${ASI}" identifier="t" title="t"/>`,
       }),
     );
     expect(issueCode(() => kind.items("i.xml", ""))).toBe("assesskit/package/document-kind");
-    const missing = packageResolvers(
+    const missing = createPackageResolvers(
       packageOf(manifestXml(resources(resourceXml("l", "imsbasiclti_xmlv1p3", "l.xml")))),
     );
     expect(issueCode(() => missing.items("l.xml", ""))).toBe("assesskit/package/missing-file");
@@ -1107,7 +1107,7 @@ describe("resolvers of a package", () => {
         ),
       ),
     );
-    expect(dependencyClosure(linked, "i").map(({ identifier, type }) => [identifier, type])).toEqual([
+    expect(listDependencies(linked, "i").map(({ identifier, type }) => [identifier, type])).toEqual([
       ["i", "imsqti_item_xmlv3p0"],
       ["o", "imsqti_outcomes_xmlv3p0"],
       ["rp", "imsqti_rptemplate_xmlv3p0"],
@@ -1115,7 +1115,8 @@ describe("resolvers of a package", () => {
   });
 
   it("throws a DataError for an argument of another type", () => {
-    for (const input of ["null", '"x"']) expect(() => packageResolvers(JSON.parse(input)), input).toThrow(DataError);
+    for (const input of ["null", '"x"'])
+      expect(() => createPackageResolvers(JSON.parse(input)), input).toThrow(DataError);
   });
 });
 
@@ -1129,25 +1130,28 @@ describe("paths of resources", () => {
   const [a, b, c] = manifest.resources;
 
   it("resolves an href against the xml:base of the manifest, the resources and the resource, each against the one before", () => {
-    expect(resourcePath(manifest, a as Resource)).toBe("pkg/items/sub/a.xml");
-    expect(resourcePath(manifest, a as Resource, "../b.png")).toBe("pkg/items/b.png");
-    expect(resourcePath(manifest, c as Resource, "x")).toBe("pkg/items/x");
+    expect(resolveResourcePath(manifest, a as Resource)).toBe("pkg/items/sub/a.xml");
+    expect(resolveResourcePath(manifest, a as Resource, { href: "../b.png" })).toBe("pkg/items/b.png");
+    expect(resolveResourcePath(manifest, c as Resource, { href: "x" })).toBe("pkg/items/x");
   });
 
   it("returns undefined for a resource without an href and for a base outside the package", () => {
-    expect(resourcePath(manifest, c as Resource)).toBeUndefined();
-    expect(resourcePath(manifest, b as Resource, "x")).toBeUndefined();
+    expect(resolveResourcePath(manifest, c as Resource)).toBeUndefined();
+    expect(resolveResourcePath(manifest, b as Resource, { href: "x" })).toBeUndefined();
   });
 
   it("resolves against the root when no xml:base is given", () => {
     const plain = readManifest(manifestXml(resources(resourceXml("a", "webcontent", "x/a.png"))));
-    expect(resourcePath(plain, plain.resources[0] as Resource)).toBe("x/a.png");
+    expect(resolveResourcePath(plain, plain.resources[0] as Resource)).toBe("x/a.png");
   });
 
   it("throws a DataError for an argument of another type", () => {
-    expect(() => resourcePath(JSON.parse("null"), a as Resource)).toThrow(DataError);
-    expect(() => resourcePath(manifest, JSON.parse("null"))).toThrow(DataError);
-    expect(() => resourcePath(manifest, a as Resource, JSON.parse("3"))).toThrow(DataError);
+    expect(() => resolveResourcePath(JSON.parse("null"), a as Resource)).toThrow(DataError);
+    expect(() => resolveResourcePath(manifest, JSON.parse("null"))).toThrow(DataError);
+    expect(() => resolveResourcePath(manifest, a as Resource, { href: JSON.parse("3") })).toThrow(DataError);
+    expect(() => resolveResourcePath(manifest, a as Resource, JSON.parse("null"))).toThrow(
+      "The options must be an object, found null.",
+    );
   });
 });
 
@@ -1645,7 +1649,7 @@ describe("properties", () => {
             "items/p.xml": mutateText(included, includedChanges),
           });
           pkg.document("items/a.xml");
-          packageResolvers(pkg).items("a.xml", "items/test.xml");
+          createPackageResolvers(pkg).items("a.xml", "items/test.xml");
         });
       }),
       FUZZ,

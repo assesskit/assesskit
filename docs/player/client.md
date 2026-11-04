@@ -3,8 +3,8 @@
 The player mounts against one of two session clients, each a subpath of its own: the remote session of an exam in
 `@assesskit/player/client`, and the local session of practice in `@assesskit/player/client/local`. Both implement
 `SessionClient` of the [protocol](protocol.md#the-session-client), so the player never knows the mode, and a page imports
-only the client it runs. The browser code holds no answer key in an exam: the remote session imports `viewFromJson`,
-`actionToJson` and `parseCandidateAction` from `@assesskit/runtime/delivery/wire`, which reaches no file of the engine, and a
+only the client it runs. The browser code holds no answer key in an exam: the remote session imports `readView`,
+`writeCandidateAction` and `readCandidateAction` from `@assesskit/runtime/delivery/wire`, which reaches no file of the engine, and a
 test bundles the player and the remote session and fails if any file of the engine has code in the first load. Only
 `createLocalSession` loads the engine, with `import()` at its first call on a page ([size](size.md#the-first-load-of-a-client)).
 
@@ -26,7 +26,7 @@ sequenceDiagram
     Note over C: The request stays in doubt and is sent<br/>again, unchanged, before any later one
   end
   H-->>C: ViewEnvelope (same seq)
-  C->>C: viewFromJson, resolve assets, notify listeners
+  C->>C: readView, resolve assets, notify listeners
   C-->>P: DispatchResult {view, refusal?}
   Note over C,H: At FLUSH_BEFORE_DEADLINE_MS before a timer ends, the held<br/>responses go; at 0 an empty set-responses learns the time-out
 ```
@@ -35,7 +35,7 @@ sequenceDiagram
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
-import { createEngine, viewToJson } from "@assesskit/runtime/delivery";
+import { createEngine, writeView } from "@assesskit/runtime/delivery";
 import { createRemoteSession } from "@assesskit/player/client";
 
 // A page gets the first envelope from the route of `SessionHost.view` and sends the others to the route of `SessionHost.handle`.
@@ -46,7 +46,7 @@ const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/x
 </qti-assessment-item>`);
 const engine = createEngine({ kind: "item", item: document.item, base: "items/q1.xml" });
 const started = engine.start({ seed: 1, at: 0 });
-const view = viewToJson(engine.view(started.state, 0));
+const view = writeView(engine.view(started.state, 0));
 
 const sent = [];
 const transport = async (envelope) => {
@@ -75,7 +75,7 @@ client.close();
 
 | Duty         | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sequence     | One request at a time, each with the next `seq`. The answer is read with `viewFromJson`; an answer to another `seq` is a `DataError`.                                                                                                                                                                                                                                                                                   |
+| Sequence     | One request at a time, each with the next `seq`. The answer is read with `readView`; an answer to another `seq` is a `DataError`.                                                                                                                                                                                                                                                                                       |
 | Lost answers | A request that got no answer, such as a network failure, may have been applied. It is sent again, unchanged, before any later request, and the host answers a repeated `seq` with the answer it stored. A request that the host rejected (`DataError`, `AccessError` or `SecurityError`) is not sent again.                                                                                                             |
 | Autosave     | `set-responses` actions are held and merged, by item, and sent `AUTOSAVE_MS` (1000) after the last. Every promise of a held action resolves with the answer to the merged request.                                                                                                                                                                                                                                      |
 | Flush        | The held responses go first before any other action, when the page becomes hidden, and `FLUSH_BEFORE_DEADLINE_MS` (10,000) before the nearest timer reaches 0.                                                                                                                                                                                                                                                          |
@@ -145,8 +145,8 @@ lesson page whose items each have a session of their own, which [`mountItem`](de
 The session has the engine and the definition but not the package, so a host that wants reading aloud to use the lexicons of
 the items names them with `lexicons`, from the manifest of the package it made the definition from:
 
-A lexicon is a resource of type `pls` among the dependencies of the item's resource, so a host reads it with `dependencyClosure` of
-`@assesskit/runtime/package` and `resourcePath`: find the resource whose path is the item's, filter its closure for `pls`, and
+A lexicon is a resource of type `pls` among the dependencies of the item's resource, so a host reads it with `listDependencies` of
+`@assesskit/runtime/package` and `resolveResourcePath`: find the resource whose path is the item's, filter its closure for `pls`, and
 return the paths.
 
 The server's session host finds them the same way for an exam.
@@ -213,7 +213,7 @@ sequenceDiagram
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import { createLocalSession } from "@assesskit/player/client/local";
 
 const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
@@ -242,7 +242,7 @@ const item = client.view.current.key;
 await client.dispatch({
   type: "set-responses",
   item,
-  responses: new Map([["RESPONSE", single("string", "My essay.")]]),
+  responses: new Map([["RESPONSE", buildSingle("string", "My essay.")]]),
 });
 await client.dispatch({ type: "submit", item });
 types; // => ["responses-set", "attempt-ended", "response-processed", "outcome-processed", "scoring-requested"]
@@ -252,7 +252,7 @@ request.id; // => "item:essay:1:SCORE"
 const step = await client.host.apply({
   type: "supply-scores",
   request: request.id,
-  value: single("float", 7),
+  value: buildSingle("float", 7),
   scorer: "human",
 });
 step.events.map((event) => event.type); // => ["scores-applied", "outcome-processed"]

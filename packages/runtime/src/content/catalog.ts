@@ -1,6 +1,14 @@
 import type { AssessmentItem, BodyNode, Catalog, FileHref, HtmlContent } from "../asi/index.js";
 import { withDescendants } from "../asi/internal.js";
-import { checkArray, checkPositiveInteger, checkRecord, checkString, describe, optional } from "../checks.js";
+import {
+  checkArray,
+  checkOptional,
+  checkOptions,
+  checkPositiveInteger,
+  checkRecord,
+  checkString,
+  describe,
+} from "../checks.js";
 import type { Issue } from "../errors.js";
 import type { Braille, SupportName } from "../pnp/index.js";
 
@@ -80,9 +88,9 @@ function brailleAgreement(extensions: readonly EntryAttribute[], braille: Braill
 function checkBraille(braille: unknown): void {
   checkRecord(braille, "The braille settings must be an object");
   const { brailleType, grade, mathType } = braille;
-  optional(brailleType, (value) => checkString(value, "The braille type"));
-  optional(grade, (value) => checkPositiveInteger(value, "The braille grade"));
-  optional(mathType, (value) => checkString(value, "The math type"));
+  checkOptional(brailleType, (value) => checkString(value, "The braille type"));
+  checkOptional(grade, (value) => checkPositiveInteger(value, "The braille grade"));
+  checkOptional(mathType, (value) => checkString(value, "The math type"));
 }
 
 /**
@@ -102,6 +110,23 @@ function brailleEntryFor<
   return entryFor(agreeing, language) ?? stating ?? entryFor(entries, language);
 }
 
+/** The options of {@link selectCard}. */
+export interface SelectCardOptions {
+  /**
+   * The language tag of the candidate's PNP, such as the `item-translation` language.
+   *
+   * @defaultValue none, which gives the default entry
+   */
+  readonly language?: string;
+  /**
+   * The settings of the candidate's `braille` support while it is on, whose preferences choose among entries that state
+   * them, as those of a braille or a tactile card may.
+   *
+   * @defaultValue none
+   */
+  readonly braille?: Braille;
+}
+
 /**
  * Selects the content of the card that a catalog has for a support.
  *
@@ -115,10 +140,7 @@ function brailleEntryFor<
  *
  * @param catalog - The catalog.
  * @param support - The support that was requested, such as `glossary-on-screen` or `ext:name`.
- * @param language - The language tag of the candidate's PNP, such as the `item-translation` language. Without one, the
- * default entry is given.
- * @param braille - The settings of the candidate's `braille` support while it is on, whose preferences choose among entries
- * that state them, as those of a braille or a tactile card may.
+ * @param options - See {@link SelectCardOptions}.
  * @returns The content, or `undefined` when the catalog has no card for the support or no entry fits.
  * @throws `DataError` when an argument has the wrong type.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
@@ -127,12 +149,13 @@ function brailleEntryFor<
 export function selectCard(
   catalog: Catalog,
   support: SupportName,
-  language?: string,
-  braille?: Braille,
+  options: SelectCardOptions = {},
 ): CardContent | undefined {
   checkRecord(catalog, "The catalog must be an object of the model of qti-catalog");
   checkArray(catalog.cards, "The cards of the catalog must be an array");
   checkString(support, "The support");
+  checkOptions(options);
+  const { language, braille } = options;
   if (language !== undefined) checkString(language, "The language");
   if (braille !== undefined) checkBraille(braille);
   const card = catalog.cards.find((candidate) => candidate.support === support);
@@ -162,7 +185,7 @@ export function selectCard(
  * @see
  * {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, qti-catalog-info}
  */
-export function catalogsFor(item: AssessmentItem, node: BodyNode): readonly Catalog[] {
+export function listCatalogs(item: AssessmentItem, node: BodyNode): readonly Catalog[] {
   const input: unknown = item;
   checkRecord(input, "The item must be an object of the model of qti-assessment-item");
   checkRecord(node, "The node must be an object of the model");
@@ -194,7 +217,7 @@ export function catalogsFor(item: AssessmentItem, node: BodyNode): readonly Cata
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function checkCatalog(catalog: Catalog): readonly Issue[] {
+export function validateCatalog(catalog: Catalog): readonly Issue[] {
   checkRecord(catalog, "The catalog must be an object of the model of qti-catalog");
   checkArray(catalog.cards, "The cards of the catalog must be an array");
   const issues: Issue[] = [];

@@ -26,7 +26,7 @@ sequenceDiagram
 | Check a submission that arrived       | shared, `@assesskit/player/protocol` | `checkSubmission`                                 |
 | Show a submission to a rater          | browser, `@assesskit/player/player`  | `mountSubmission`                                 |
 | Show a rating form                    | browser, `@assesskit/player/player`  | `mountRatingForm` ([rating](rating.md))           |
-| Turn ratings into a score             | shared, `@assesskit/runtime/asi`     | `scoreFromRatings`, which the form calls          |
+| Turn ratings into a score             | shared, `@assesskit/runtime/asi`     | `rubricScore`, which the form calls               |
 | Turn the rater's score into an action | shared, `@assesskit/player/scoring`  | `toSupplyScores`                                  |
 | Give the action to the engine         | server or device, the host session   | `session(id).apply(action)`, `host.apply(action)` |
 | Read the score of a session           | shared, `@assesskit/player/scoring`  | `sessionScore`                                    |
@@ -42,7 +42,7 @@ responses of the items, so the host gives it only to authorized raters.
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
 import { createEngine } from "@assesskit/runtime/delivery";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 import { toSubmission, toSupplyScores } from "@assesskit/player/scoring";
 
 const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="essay"
@@ -65,7 +65,7 @@ const item = { ref: "essay", instance: 1 };
 const written = engine.apply(started.state, {
   type: "set-responses",
   item,
-  responses: new Map([["RESPONSE", single("string", "Dear Sir")]]),
+  responses: new Map([["RESPONSE", buildSingle("string", "Dear Sir")]]),
   at: 1_000,
 });
 if (!written.ok) throw new Error(written.refusal.message);
@@ -133,14 +133,14 @@ rates one outcome. It is JSON text as it is: `JSON.parse(JSON.stringify(submissi
 | `correctResponses` | `SubmissionVariable[]` | The correct response of each response variable of the item                                                        |
 
 - A value is the runtime's `WireValue`: `{ cardinality, baseType, value }` whose `value` is the JSON of the QTI 3.0 Best Practices guide, Appendix C. It decodes
-  with `fromWireValue` of `@assesskit/runtime/values` without a declaration. NULL is `null`.
+  with `readWireValue` of `@assesskit/runtime/values` without a declaration. NULL is `null`.
 - A file stays a reference, `{ reference, mime, name }`. The host resolves it to a URL with its own files service.
 - A variable is `{ identifier, value }` in a list, so that an identifier such as `__proto__` stays data.
 - The content is the runtime's typed nodes, as JSON.
 
 `checkSubmission(value)` of `@assesskit/player/protocol` checks a submission that arrived as JSON: every property of its
 form and no other, the type of every field, the content as nodes, the scoring rubric as the runtime's `checkScoringRubric`
-does, and that each part names an item the submission has once. It reads no value; `fromWireValue` does when the value is
+does, and that each part names an item the submission has once. It reads no value; `readWireValue` does when the value is
 shown.
 
 ## The score

@@ -27,14 +27,14 @@ import {
   buildScoreCoversBlock,
   buildScoringRubricBlock,
   checkScoringRubric,
-  childNodes,
-  coordinateCountFits,
   DataError,
-  descendantNodes,
   type ElementVisit,
   type Expression,
+  fitsCoordinateCount,
   isBodyNode,
   isModelNode,
+  listChildNodes,
+  listDescendantNodes,
   type ModelNode,
   type OutcomeDeclaration,
   type OutcomeProcessing,
@@ -48,13 +48,13 @@ import {
   readAsi,
   readScoreCovers,
   readScoringRubrics,
+  rubricScore,
   rubricScoreRange,
   SCORE_COVERS_CLASS,
   SCORING_RUBRIC_CLASS,
   type ScoreCover,
   type ScoringRubric,
-  scoreCoverBlocks,
-  scoreFromRatings,
+  selectScoreCoverBlocks,
   serializeXml,
   type TemplateRule,
   walkDocument,
@@ -369,7 +369,7 @@ describe("building and reading the covers", () => {
   it("builds the block that reading the example gives, and writes it before the first test part", () => {
     const read = checked(testWith(coversBlock));
     if (read.kind !== "test") throw new Error("Expected a test.");
-    const block = buildScoreCoversBlock("CONTENT", covers, notes);
+    const block = buildScoreCoversBlock("CONTENT", covers, { notes });
     expect(block).toEqual(read.test.rubricBlocks[0]);
     const written = writeAsi({ kind: "test", test: { ...testModel(), rubricBlocks: [block] } });
     expect(written.indexOf("<qti-rubric-block")).toBeLessThan(written.indexOf("<qti-test-part"));
@@ -423,7 +423,7 @@ describe("building and reading the covers", () => {
   });
 
   it("builds a block that a round trip keeps unchanged", () => {
-    const block = buildScoreCoversBlock("CONTENT", covers, notes);
+    const block = buildScoreCoversBlock("CONTENT", covers, { notes });
     const document: AsiDocument = { kind: "test", test: { ...testModel(), rubricBlocks: [block] } };
     const again = readAsi(writeAsi(document));
     expect(again).toEqual(document);
@@ -466,11 +466,14 @@ describe("building and reading the covers", () => {
     expect(() => buildScoreCoversBlock("O", JSON.parse("[null]"))).toThrow(
       new DataError("A cover must be an object, found null."),
     );
-    expect(() => buildScoreCoversBlock("O", [], JSON.parse("null"))).toThrow(
+    expect(() => buildScoreCoversBlock("O", [], { notes: JSON.parse("null") })).toThrow(
       new DataError("The notes must be an array, found null."),
     );
-    expect(() => buildScoreCoversBlock("O", [], JSON.parse('["x"]'))).toThrow(
+    expect(() => buildScoreCoversBlock("O", [], { notes: JSON.parse('["x"]') })).toThrow(
       new DataError("The notes must be nodes of body content, found an array."),
+    );
+    expect(() => buildScoreCoversBlock("O", [], JSON.parse("null"))).toThrow(
+      new DataError("The options must be an object, found null."),
     );
     expect(() => buildScoreCoversBlock(JSON.parse("1"), [])).toThrow(
       new DataError("The outcome identifier must be an identifier, found 1."),
@@ -517,7 +520,7 @@ describe("the covers as written", () => {
       ),
     );
     if (read.kind !== "test") throw new Error("Expected a test.");
-    const [block, ...others] = scoreCoverBlocks(read.test);
+    const [block, ...others] = selectScoreCoverBlocks(read.test);
     expect(others).toEqual([]);
     expect(block?.outcomeIdentifier).toBe("CONTENT");
     expect(block?.entries).toEqual([
@@ -536,7 +539,10 @@ describe("the covers as written", () => {
     const read = checked(testWith(`${plain}${unnamed}`));
     if (read.kind !== "test") throw new Error("Expected a test.");
     expect(
-      scoreCoverBlocks(read.test).map(({ outcomeIdentifier, entries: found }) => [outcomeIdentifier, found.length]),
+      selectScoreCoverBlocks(read.test).map(({ outcomeIdentifier, entries: found }) => [
+        outcomeIdentifier,
+        found.length,
+      ]),
     ).toEqual([[undefined, 0]]);
     expect(readScoreCovers(read.test).size).toBe(0);
   });
@@ -552,7 +558,7 @@ describe("the covers as written", () => {
       '{"rubricBlocks":[{"contentBody":{"children":"x"}}]}',
       "null",
     ]) {
-      expect(() => scoreCoverBlocks(JSON.parse(bad))).toThrow(DataError);
+      expect(() => selectScoreCoverBlocks(JSON.parse(bad))).toThrow(DataError);
     }
   });
 });
@@ -581,7 +587,7 @@ describe("reading and building the scoring rubric", () => {
       { kind: "p", children: [{ kind: "text", value: "Rate the essay on each criterion." }], extensions: [] },
     ] satisfies RubricContent[];
     const [block] = testWithBlocks(compact).rubricBlocks;
-    expect(buildScoringRubricBlock(ESSAY, notes)).toEqual(block);
+    expect(buildScoringRubricBlock(ESSAY, { notes })).toEqual(block);
   });
 
   it("builds a block that fits an item body and the rubric blocks of a test, and reads it back after writing", () => {
@@ -898,18 +904,18 @@ describe("the score that ratings give", () => {
     });
 
   it("is the sum of weight times the chosen score, for each kind", () => {
-    expect(scoreFromRatings(ESSAY, rate(ESSAY, 2, 1))).toBe(5);
-    expect(scoreFromRatings(ESSAY, rate(ESSAY, 1, 0))).toBe(2);
-    expect(scoreFromRatings(KIND_EXAMPLES.holistic, rate(KIND_EXAMPLES.holistic, 3))).toBe(3);
-    expect(scoreFromRatings(KIND_EXAMPLES.checklist, rate(KIND_EXAMPLES.checklist, 1, 0, 1))).toBe(3);
-    expect(scoreFromRatings(KIND_EXAMPLES.checklist, rate(KIND_EXAMPLES.checklist, 0, 0, 0))).toBe(0);
-    expect(scoreFromRatings(KIND_EXAMPLES["single-point"], rate(KIND_EXAMPLES["single-point"], 2, 1))).toBe(5);
+    expect(rubricScore(ESSAY, rate(ESSAY, 2, 1))).toBe(5);
+    expect(rubricScore(ESSAY, rate(ESSAY, 1, 0))).toBe(2);
+    expect(rubricScore(KIND_EXAMPLES.holistic, rate(KIND_EXAMPLES.holistic, 3))).toBe(3);
+    expect(rubricScore(KIND_EXAMPLES.checklist, rate(KIND_EXAMPLES.checklist, 1, 0, 1))).toBe(3);
+    expect(rubricScore(KIND_EXAMPLES.checklist, rate(KIND_EXAMPLES.checklist, 0, 0, 0))).toBe(0);
+    expect(rubricScore(KIND_EXAMPLES["single-point"], rate(KIND_EXAMPLES["single-point"], 2, 1))).toBe(5);
   });
 
   it("is null while a criterion has no rating, for an empty list too", () => {
-    expect(scoreFromRatings(ESSAY, [])).toBeNull();
-    expect(scoreFromRatings(ESSAY, rate(ESSAY, 2))).toBeNull();
-    expect(scoreFromRatings(ESSAY, [{ criterion: "language", score: 1 }])).toBeNull();
+    expect(rubricScore(ESSAY, [])).toBeNull();
+    expect(rubricScore(ESSAY, rate(ESSAY, 2))).toBeNull();
+    expect(rubricScore(ESSAY, [{ criterion: "language", score: 1 }])).toBeNull();
   });
 
   it("ranges from the sum of the lowest levels to the sum of the highest", () => {
@@ -917,7 +923,7 @@ describe("the score that ratings give", () => {
     expect(rubricScoreRange(KIND_EXAMPLES.checklist)).toEqual({ minimum: 0, maximum: 4 });
     expect(rubricScoreRange(KIND_EXAMPLES["single-point"])).toEqual({ minimum: 3, maximum: 11 });
     const lowest = rate(KIND_EXAMPLES["single-point"], 0, 1);
-    expect(scoreFromRatings(KIND_EXAMPLES["single-point"], lowest)).toBe(3);
+    expect(rubricScore(KIND_EXAMPLES["single-point"], lowest)).toBe(3);
   });
 
   it("refuses a rubric that fails the check when it gives the range", () => {
@@ -927,7 +933,7 @@ describe("the score that ratings give", () => {
 
   it("does not depend on the order of the ratings", () => {
     const ratings = rate(ESSAY, 2, 1);
-    expect(scoreFromRatings(ESSAY, [...ratings].reverse())).toBe(scoreFromRatings(ESSAY, ratings));
+    expect(rubricScore(ESSAY, [...ratings].reverse())).toBe(rubricScore(ESSAY, ratings));
   });
 
   it("sums in the order of the criteria in binary floating point", () => {
@@ -940,27 +946,27 @@ describe("the score that ratings give", () => {
         levels: [{ score: 0 }, { score: 1 }],
       })),
     };
-    expect(scoreFromRatings(rubric, rate(rubric, 1, 1, 1))).toBe(0.1 + 0.1 + 0.1);
+    expect(rubricScore(rubric, rate(rubric, 1, 1, 1))).toBe(0.1 + 0.1 + 0.1);
   });
 
   it("refuses a rating of an unknown criterion, a criterion rated twice and a score that no level has", () => {
-    expect(() => scoreFromRatings(ESSAY, [{ criterion: "style", score: 1 }])).toThrow(
+    expect(() => rubricScore(ESSAY, [{ criterion: "style", score: 1 }])).toThrow(
       new DataError('A rating names the criterion "style", which the scoring rubric does not have.'),
     );
     expect(() =>
-      scoreFromRatings(ESSAY, [
+      rubricScore(ESSAY, [
         { criterion: "content", score: 1 },
         { criterion: "content", score: 2 },
       ]),
     ).toThrow(new DataError('The criterion "content" has more than one rating.'));
-    expect(() => scoreFromRatings(ESSAY, [{ criterion: "content", score: 3 }])).toThrow(
+    expect(() => rubricScore(ESSAY, [{ criterion: "content", score: 3 }])).toThrow(
       new DataError('The rating of the criterion "content" gives the score 3, which no level of the criterion has.'),
     );
   });
 
   it("refuses a rubric that fails the check and ratings that are not the model, as JSON passes them", () => {
-    expect(() => scoreFromRatings(JSON.parse("null"), [])).toThrow(DataError);
-    expect(() => scoreFromRatings({ ...ESSAY, criteria: [] }, [])).toThrow(DataError);
+    expect(() => rubricScore(JSON.parse("null"), [])).toThrow(DataError);
+    expect(() => rubricScore({ ...ESSAY, criteria: [] }, [])).toThrow(DataError);
     for (const bad of [
       "null",
       "{}",
@@ -970,12 +976,10 @@ describe("the score that ratings give", () => {
       '[{"criterion":"content"}]',
       '[{"criterion":"content","score":2,"note":"x"}]',
     ]) {
-      expect(() => scoreFromRatings(ESSAY, JSON.parse(bad)), bad).toThrow(DataError);
+      expect(() => rubricScore(ESSAY, JSON.parse(bad)), bad).toThrow(DataError);
     }
-    expect(() => scoreFromRatings(ESSAY, [{ criterion: "content", score: Number.NaN }])).toThrow(DataError);
-    expect(() => scoreFromRatings(ESSAY, [{ criterion: "content", score: Number.POSITIVE_INFINITY }])).toThrow(
-      DataError,
-    );
+    expect(() => rubricScore(ESSAY, [{ criterion: "content", score: Number.NaN }])).toThrow(DataError);
+    expect(() => rubricScore(ESSAY, [{ criterion: "content", score: Number.POSITIVE_INFINITY }])).toThrow(DataError);
   });
 });
 
@@ -1005,14 +1009,17 @@ describe("the arguments of the rubric functions", () => {
   });
 
   it("refuses notes that are not nodes, or hold a list, and a rubric that fails the check", () => {
-    expect(() => buildScoringRubricBlock(ESSAY, JSON.parse("null"))).toThrow(
+    expect(() => buildScoringRubricBlock(ESSAY, { notes: JSON.parse("null") })).toThrow(
       new DataError("The notes must be an array, found null."),
     );
-    expect(() => buildScoringRubricBlock(ESSAY, JSON.parse('["x"]'))).toThrow(
+    expect(() => buildScoringRubricBlock(ESSAY, { notes: JSON.parse('["x"]') })).toThrow(
       new DataError("The notes must be nodes of body content, found an array."),
     );
-    expect(() => buildScoringRubricBlock(ESSAY, [{ kind: "ol", items: [], extensions: [] }])).toThrow(
+    expect(() => buildScoringRubricBlock(ESSAY, { notes: [{ kind: "ol", items: [], extensions: [] }] })).toThrow(
       new DataError("The notes must not contain an ol, which a reader would take for the criteria."),
+    );
+    expect(() => buildScoringRubricBlock(ESSAY, JSON.parse("null"))).toThrow(
+      new DataError("The options must be an object, found null."),
     );
     expect(() => buildScoringRubricBlock(JSON.parse("{}"))).toThrow(DataError);
     expect(() => buildScoringRubricBlock({ ...ESSAY, kind: "holistic" })).toThrow(DataError);
@@ -4022,38 +4029,45 @@ describe("the nodes of the content", () => {
     const [interaction] = body(
       '<qti-choice-interaction response-identifier="R"><qti-prompt>Pick</qti-prompt><qti-simple-choice identifier="A">a</qti-simple-choice><qti-simple-choice identifier="B">b</qti-simple-choice></qti-choice-interaction>',
     );
-    expect(interaction && kindsOf(childNodes(interaction))).toEqual(["prompt", "simple-choice", "simple-choice"]);
+    expect(interaction && kindsOf(listChildNodes(interaction))).toEqual(["prompt", "simple-choice", "simple-choice"]);
     const [feedback] = body(
       '<qti-feedback-block outcome-identifier="O" identifier="x" show-hide="show"><qti-content-body><p>x</p></qti-content-body></qti-feedback-block>',
     );
-    expect(feedback && kindsOf(childNodes(feedback))).toEqual(["content-body"]);
+    expect(feedback && kindsOf(listChildNodes(feedback))).toEqual(["content-body"]);
   });
 
   it("lists the nodes at any depth in document order, text included, without the node itself", () => {
     const [paragraph] = body("<p>One <em>two <strong>three</strong></em> four</p>");
-    expect(paragraph && kindsOf(descendantNodes(paragraph))).toEqual(["text", "em", "text", "strong", "text", "text"]);
-    const [text] = body("<p>x</p>").flatMap((node) => childNodes(node));
-    expect(text && descendantNodes(text)).toEqual([]);
+    expect(paragraph && kindsOf(listDescendantNodes(paragraph))).toEqual([
+      "text",
+      "em",
+      "text",
+      "strong",
+      "text",
+      "text",
+    ]);
+    const [text] = body("<p>x</p>").flatMap((node) => listChildNodes(node));
+    expect(text && listDescendantNodes(text)).toEqual([]);
   });
 
   it("lists each of some nodes before its descendants, in document order", () => {
     const nodes = body("<p>One <em>two</em></p><p>three</p>");
     expect(kindsOf(withDescendants(nodes))).toEqual(["p", "text", "em", "text", "p", "text"]);
-    expect(withDescendants(nodes)).toEqual(nodes.flatMap((node) => [node, ...descendantNodes(node)]));
+    expect(withDescendants(nodes)).toEqual(nodes.flatMap((node) => [node, ...listDescendantNodes(node)]));
     expect(withDescendants([])).toEqual([]);
   });
 
   it("takes MathML as a leaf, because the model keeps it as XML", () => {
     const [paragraph] = body('<p><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>x</mi></math></p>');
-    const [math] = paragraph ? childNodes(paragraph) : [];
+    const [math] = paragraph ? listChildNodes(paragraph) : [];
     expect(math?.kind).toBe("element");
-    expect(math && childNodes(math)).toEqual([]);
-    expect(paragraph && kindsOf(descendantNodes(paragraph))).toEqual(["element"]);
+    expect(math && listChildNodes(math)).toEqual([]);
+    expect(paragraph && kindsOf(listDescendantNodes(paragraph))).toEqual(["element"]);
   });
 
   it("does not take the attributes or the lists of strings for nodes", () => {
     const [paragraph] = body('<p class="a b" data-x="1">x</p>');
-    expect(paragraph && kindsOf(childNodes(paragraph))).toEqual(["text"]);
+    expect(paragraph && kindsOf(listChildNodes(paragraph))).toEqual(["text"]);
   });
 
   it("tells a node from other values by the string kind", () => {
@@ -4069,7 +4083,7 @@ describe("the nodes of the content", () => {
 describe("the shapes of areas", () => {
   it("takes the number of coordinates that each shape needs: three, four, an even six or more, or any", () => {
     const counts = [0, 1, 2, 3, 4, 5, 6, 7, 8, 10];
-    const fitting = (shape: AreaShape): number[] => counts.filter((count) => coordinateCountFits(shape, count));
+    const fitting = (shape: AreaShape): number[] => counts.filter((count) => fitsCoordinateCount(shape, count));
     expect(fitting("circle")).toEqual([3]);
     expect(fitting("rect")).toEqual([4]);
     expect(fitting("ellipse")).toEqual([4]);
@@ -4078,7 +4092,7 @@ describe("the shapes of areas", () => {
   });
 
   it("takes no coordinates for a shape that the information model does not have", () => {
-    expect(coordinateCountFits(JSON.parse('"triangle"'), 3)).toBe(false);
+    expect(fitsCoordinateCount(JSON.parse('"triangle"'), 3)).toBe(false);
   });
 });
 
@@ -4639,7 +4653,7 @@ describe("properties", () => {
     );
     fc.assert(
       fc.property(rated, ([rubric, ratings, omitted]) => {
-        const score = scoreFromRatings(rubric, ratings);
+        const score = rubricScore(rubric, ratings);
         const lowest = rubric.criteria.reduce(
           (sum, { weight, levels }) => sum + weight * Math.min(...levels.map((level) => level.score)),
           0,
@@ -4652,13 +4666,13 @@ describe("properties", () => {
         expect(score).toBeGreaterThanOrEqual(lowest);
         expect(score).toBeLessThanOrEqual(highest);
         expect(
-          scoreFromRatings(
+          rubricScore(
             rubric,
             ratings.toSorted((first, second) => first.criterion.localeCompare(second.criterion)),
           ),
         ).toBe(score);
         expect(
-          scoreFromRatings(
+          rubricScore(
             rubric,
             ratings.filter((_, index) => index !== omitted),
           ),

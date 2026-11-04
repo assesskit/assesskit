@@ -16,7 +16,7 @@ import { entriesSchema, valuesSchema, valuesToJson } from "./entries-json.js";
 import { checkKey, type ItemKey, itemKeySchema } from "./item-key.js";
 import { supportNameSchema, supportSettingSchema } from "./support-json.js";
 
-/** The limits of {@link parseCandidateAction}, which keep a client from sending an action that is too large to handle. */
+/** The limits of {@link readCandidateAction}, which keep a client from sending an action that is too large to handle. */
 export interface ActionLimits {
   /**
    * The size of an action: each string, number, boolean, `null`, array and object counts 1, and each string and
@@ -40,8 +40,8 @@ export interface ActionLimits {
   readonly maxSettingListLength: number;
 }
 
-/** The options of {@link parseCandidateAction}. */
-export interface ParseCandidateActionOptions {
+/** The options of {@link readCandidateAction}. */
+export interface ReadCandidateActionOptions {
   /**
    * Limits that replace those of {@link DEFAULT_ACTION_LIMITS}, field by field.
    *
@@ -50,7 +50,7 @@ export interface ParseCandidateActionOptions {
   readonly limits?: Partial<ActionLimits>;
 }
 
-/** The default limits of {@link parseCandidateAction}. */
+/** The default limits of {@link readCandidateAction}. */
 export const DEFAULT_ACTION_LIMITS: ActionLimits = {
   maxActionSize: 4_194_304,
   maxPciStateLength: 1_048_576,
@@ -173,7 +173,7 @@ function checkPciStates(action: CandidateAction, limit: number): void {
 }
 
 /**
- * Reads the JSON form of an action of the candidate, as {@link actionToJson} writes it, and checks it: the type, every
+ * Reads the JSON form of an action of the candidate, as {@link writeCandidateAction} writes it, and checks it: the type, every
  * property of the type and no other, the values as wire values, and the limits.
  *
  * @remarks
@@ -181,13 +181,13 @@ function checkPciStates(action: CandidateAction, limit: number): void {
  * `cat-response`) or a property `at` is refused.
  *
  * @param json - The parsed JSON.
- * @param options - See {@link ParseCandidateActionOptions}.
+ * @param options - See {@link ReadCandidateActionOptions}.
  * @returns The action of the candidate, without a time.
  * @throws `DataError` when the input is not an action of the candidate, or an option has the wrong type.
  * @throws `SecurityError` when the action is larger than `maxActionSize`, a PCI state is longer than `maxPciStateLength`, or
  * a list in the settings of `support-settings` is longer than `maxSettingListLength`.
  */
-export function parseCandidateAction(json: unknown, options: ParseCandidateActionOptions = {}): CandidateAction {
+export function readCandidateAction(json: unknown, options: ReadCandidateActionOptions = {}): CandidateAction {
   checkOptions(options);
   const { limits = {} } = options;
   const { maxActionSize, maxPciStateLength, maxSettingListLength } = readLimits(limits);
@@ -199,7 +199,7 @@ export function parseCandidateAction(json: unknown, options: ParseCandidateActio
   return action;
 }
 
-/** The limits that let {@link actionToJson} check the form it writes without refusing a large action. */
+/** The limits that let {@link writeCandidateAction} check the form it writes without refusing a large action. */
 const UNLIMITED: ActionLimits = {
   maxActionSize: Number.MAX_SAFE_INTEGER,
   maxPciStateLength: Number.MAX_SAFE_INTEGER,
@@ -212,13 +212,13 @@ const UNLIMITED: ActionLimits = {
  *
  * @remarks
  * Only the properties of the action's type are written, so a time `at` is not. The result is read back by
- * {@link parseCandidateAction} before it is returned.
+ * {@link readCandidateAction} before it is returned.
  *
  * @param action - The action.
  * @returns The plain data of the action.
  * @throws `DataError` when the action is not an action of the candidate.
  */
-export function actionToJson(action: CandidateAction): unknown {
+export function writeCandidateAction(action: CandidateAction): unknown {
   checkRecord(action, "The action must be an object with a type");
   checkChoice(action.type, "The type of the action", CANDIDATE_ACTION_TYPES);
   let json: Readonly<Record<string, unknown>>;
@@ -264,7 +264,7 @@ export function actionToJson(action: CandidateAction): unknown {
       json = { type: action.type };
       break;
   }
-  parseCandidateAction(json, { limits: UNLIMITED });
+  readCandidateAction(json, { limits: UNLIMITED });
   return json;
 }
 

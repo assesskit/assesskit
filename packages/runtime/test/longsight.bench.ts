@@ -2,6 +2,7 @@ import {
   ASI_NAMESPACE,
   type AssessmentItem,
   applyItemAction,
+  buildSingle,
   createEngine,
   createRandom,
   type ItemKey,
@@ -9,7 +10,6 @@ import {
   type ItemSessionContext,
   presentItem,
   readAsi,
-  single,
   startItemSession,
   type Value,
   validateAsi,
@@ -312,7 +312,7 @@ test("processes the outcomes of a test on a submission as fast as Longsight", as
   const submission = act("submit", ref, ++at);
   const submitted = engine.apply(drafted, submission);
   if (!submitted.ok) fail(`The submission was refused: ${submitted.refusal.code}.`);
-  expect(submitted.state.outcomes.get("TOTAL")).toEqual(single("float", ANSWERED_BEFORE + 1));
+  expect(submitted.state.outcomes.get("TOTAL")).toEqual(buildSingle("float", ANSWERED_BEFORE + 1));
 
   let oracle = startQtiTest(test);
   if (!oracle.ok) fail("Longsight does not start the test.");

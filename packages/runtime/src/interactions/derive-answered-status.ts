@@ -2,7 +2,7 @@ import { checkArray, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import type { Value } from "../values/index.js";
 import type { InteractionDescriptor } from "./descriptor.js";
-import { checkResponse } from "./response-check.js";
+import { validateResponse } from "./response-check.js";
 import type { ResponseStatus } from "./response-status.js";
 
 /**
@@ -21,7 +21,7 @@ import type { ResponseStatus } from "./response-status.js";
  * @throws `DataError` when an argument has the wrong type.
  * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
  */
-export function answeredStatus(
+export function deriveAnsweredStatus(
   descriptors: readonly InteractionDescriptor[],
   responses: ReadonlyMap<string, Value | null>,
 ): ResponseStatus {
@@ -35,7 +35,7 @@ export function answeredStatus(
     if (descriptor.kind === "end-attempt-interaction") continue;
     const response = responses.get(descriptor.responseIdentifier) ?? null;
     responded ||= response !== null;
-    valid &&= checkResponse(descriptor, response).reasons.length === 0;
+    valid &&= validateResponse(descriptor, response).reasons.length === 0;
   }
   if (!responded) return "presented";
   return valid ? "answered" : "attempted";

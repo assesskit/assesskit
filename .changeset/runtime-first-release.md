@@ -2,7 +2,7 @@
 "@assesskit/runtime": major
 ---
 
-A QTI 3.0 runtime for JavaScript and TypeScript. It reads, writes and validates assessment items, tests, content packages (with `ltiLaunchUrl` for the launch URL of an LTI link),
+A QTI 3.0 runtime for JavaScript and TypeScript. It reads, writes and validates assessment items, tests, content packages (with `resolveLaunchUrl` for the launch URL of an LTI link),
 results, usage data and personal needs and preferences, against the official schemas and with semantic checks; runs
 template, response and outcome processing; and delivers a test session without presenting it, on a server where the
 answer keys never reach a candidate, or on a device for practice. A host answers the requests of a CAT engine through a
@@ -19,7 +19,7 @@ option `eventOutcomes` of `createEngine` its outcomes, so that a host needs no `
 The option `reviewAfterEnd` of `createEngine` lets a candidate review the items presented after the test ended, as each item
 session control allows; it is off by default, and an engine with it names the content version of the states it reads.
 The builders of the covers block and of the scoring rubric block are `buildScoreCoversBlock` and `buildScoringRubricBlock`.
-`parseCandidateAction(json, { limits })` takes its limits in an options object like the other readers, and reports an action
+`readCandidateAction(json, { limits })` takes its limits in an options object like the other readers, and reports an action
 above a limit as a `SecurityError` that names it; `maxSettingListLength`, 256 by default, bounds each list in the settings of a
 `support-settings` action. `sendCatRequest(port, request, { signal })` and `drainCat` end their wait
 when the signal aborts, and leave the request of the port to its own timeout. A custom operator that throws is a
@@ -29,7 +29,7 @@ the end record, so that an archive of more than 65,535 entries is read whole and
 record whose count differs from the entries is a `ReadError`. A document that declares ISO-8859-1 is read byte for byte.
 A validation lists at most `maxFindings` issues, 1,000 by default, and ends a longer list with the error
 `assesskit/validate/findings-stopped`; `validateResults`, `validatePnpNamespace` and `validateXmlFiles` take the option too.
-`parseModuleResolution` refuses a file longer than 65,536 characters before it parses it.
+`readModuleResolution` refuses a file longer than 65,536 characters before it parses it.
 
 `readItemVariables` and `readTestInputs` of `@assesskit/runtime/delivery` read a stored results report back into the inputs of
 `runResponseProcessing` and `runOutcomeProcessing`, so that a host can score a fixed item again; the guide has the recipe. For that, a
@@ -59,6 +59,6 @@ falling back to the language and the default where no entry fits.
 
 The view carries the stylesheets of the test as package paths (`TestView.stylesheets`), in every status of the session.
 
-`viewToJson`, `viewFromJson`, `actionToJson`, `parseCandidateAction` and `DEFAULT_ACTION_LIMITS`, the wire forms of a candidate
+`writeView`, `readView`, `writeCandidateAction`, `readCandidateAction` and `DEFAULT_ACTION_LIMITS`, the wire forms of a candidate
 view and action, are also `@assesskit/runtime/delivery/wire`, which reaches no file of the engine: a client in a browser
 imports them from there, so that a bundler that splits code by file keeps the engine out of its first load.

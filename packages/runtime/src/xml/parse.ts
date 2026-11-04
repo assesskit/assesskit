@@ -4,7 +4,7 @@ import { AssesskitError, DataError, type ReadError, SecurityError } from "../err
 import { decodeXml } from "./encoding.js";
 import { resolveXmlLimits, type XmlLimits } from "./limits.js";
 import { Locator } from "./locator.js";
-import { documentName, readError } from "./read-error.js";
+import { createReadError, documentName } from "./read-error.js";
 import type { XmlElement } from "./tree.js";
 import { TreeBuilder } from "./tree-builder.js";
 
@@ -43,10 +43,12 @@ function notWellFormed(error: Error, parser: Position, path: string | undefined)
   const prefix = `${parser.line}:${parser.column}: `;
   const reason = error.message.startsWith(prefix) ? error.message.slice(prefix.length) : error.message;
   const message = `${documentName(path)} is not well-formed: ${reason}${reason.endsWith(".") ? "" : "."}`;
-  return readError("assesskit/xml/not-well-formed", message, {
-    path,
-    line: parser.line,
-    column: Math.max(1, parser.column),
+  return createReadError("assesskit/xml/not-well-formed", message, {
+    location: {
+      path,
+      line: parser.line,
+      column: Math.max(1, parser.column),
+    },
   });
 }
 
@@ -99,17 +101,19 @@ function parseText(text: string, limits: XmlLimits, path: string | undefined): X
   if (lone >= 0) {
     const code = (text.codePointAt(lone) ?? 0).toString(16).toUpperCase();
     const message = `${name} is not well-formed: it has the lone surrogate U+${code}, which is not a character.`;
-    throw readError("assesskit/xml/not-well-formed", message, { path, ...locator.at(lone) });
+    throw createReadError("assesskit/xml/not-well-formed", message, { location: { path, ...locator.at(lone) } });
   }
   let start = { line: 1, column: 1 };
   listen(parser, {
     xmldecl: ({ version }) => {
       if (version !== "1.0") {
         const message = `${name} declares XML version ${describe(version)}, but the runtime reads XML 1.0.`;
-        throw readError("assesskit/xml/version", message, {
-          path,
-          line: parser.line,
-          column: parser.column,
+        throw createReadError("assesskit/xml/version", message, {
+          location: {
+            path,
+            line: parser.line,
+            column: parser.column,
+          },
         });
       }
     },

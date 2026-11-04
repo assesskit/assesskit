@@ -1,18 +1,18 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of the JSON fields are those of the binding.
 
 import {
-  assessmentResultFromJson,
-  assessmentResultToJson,
   type CreateSectionResponse,
   type CreateSessionRequest,
   type CreateSessionResponse,
   type GetSectionResponse,
   type ItemStage,
   isSessionEnd,
-  itemStageFromJson,
+  readItemStage,
+  readResultsJson,
   type SectionData,
   type SubmitResultsRequest,
   type SubmitResultsResponse,
+  writeResultsJson,
 } from "@assesskit/runtime/cat";
 import {
   describe,
@@ -191,7 +191,7 @@ const EMPTY_STAGE: ItemStage = { itemIdentifiers: [], stageLength: 0 };
  */
 export function writeGetSectionAnswer(response: GetSectionResponse): unknown {
   const { items } = parseWith(pooledSchema, response, "The answer to Get Section");
-  const pool = itemStageFromJson(items, "items of the answer to Get Section").itemIdentifiers ?? [];
+  const pool = readItemStage(items, "items of the answer to Get Section").itemIdentifiers ?? [];
   return {
     section: writeSectionBody(response.sectionData),
     ...(pool.length === 0 ? {} : { items: { itemIdentifiers: pool } }),
@@ -203,7 +203,7 @@ export function readGetSectionAnswer(json: unknown): GetSectionResponse {
   const { section, items } = parseWith(getSectionSchema, json, "The answer to Get Section");
   return {
     sectionData: section,
-    items: items === undefined ? EMPTY_STAGE : itemStageFromJson(items, "items of the answer to Get Section"),
+    items: items === undefined ? EMPTY_STAGE : readItemStage(items, "items of the answer to Get Section"),
   };
 }
 
@@ -231,7 +231,7 @@ export function writeCreateSessionAnswer(response: CreateSessionResponse): unkno
   );
   return {
     sessionIdentifier,
-    ...nextItemsToJson(itemStageFromJson(nextItems, "nextItems of the answer to Create Session")),
+    ...nextItemsToJson(readItemStage(nextItems, "nextItems of the answer to Create Session")),
     ...(sessionState === undefined ? {} : { sessionState }),
   };
 }
@@ -246,7 +246,7 @@ export function readCreateSessionAnswer(json: unknown): CreateSessionResponse {
   return {
     sessionIdentifier,
     nextItems:
-      nextItems === undefined ? EMPTY_STAGE : itemStageFromJson(nextItems, "nextItems of the answer to Create Session"),
+      nextItems === undefined ? EMPTY_STAGE : readItemStage(nextItems, "nextItems of the answer to Create Session"),
     ...(sessionState === undefined ? {} : { sessionState }),
   };
 }
@@ -257,7 +257,7 @@ const resultsRequestSchema = v.pipe(recordSchema, v.object({ sessionState: v.opt
 export function writeResultsBody(request: SubmitResultsRequest): unknown {
   const { sessionState } = parseWith(resultsRequestSchema, request, "The request to submit results");
   return {
-    assessmentResult: assessmentResultToJson(request.assessmentResult),
+    assessmentResult: writeResultsJson(request.assessmentResult),
     ...(sessionState === undefined ? {} : { sessionState }),
   };
 }
@@ -268,7 +268,7 @@ const resultsBodySchema = strictRecord({ assessmentResult: v.unknown(), sessionS
 export function readResultsBody(json: unknown): SubmitResultsRequest {
   const { assessmentResult, sessionState } = parseWith(resultsBodySchema, json, "The request to Submit Results");
   return {
-    assessmentResult: assessmentResultFromJson(assessmentResult),
+    assessmentResult: readResultsJson(assessmentResult),
     ...(sessionState === undefined ? {} : { sessionState }),
   };
 }
@@ -289,8 +289,8 @@ export function writeSubmitResultsAnswer(response: SubmitResultsResponse): unkno
   return {
     ...(nextItems === null || nextItems === undefined
       ? {}
-      : nextItemsToJson(itemStageFromJson(nextItems, "nextItems of the answer to Submit Results"))),
-    ...(assessmentResult === undefined ? {} : { assessmentResult: assessmentResultToJson(assessmentResult) }),
+      : nextItemsToJson(readItemStage(nextItems, "nextItems of the answer to Submit Results"))),
+    ...(assessmentResult === undefined ? {} : { assessmentResult: writeResultsJson(assessmentResult) }),
     ...(sessionState === undefined ? {} : { sessionState }),
   };
 }
@@ -303,12 +303,9 @@ export function readSubmitResultsAnswer(json: unknown): SubmitResultsResponse {
     ...(nextItems === undefined
       ? {}
       : {
-          nextItems:
-            nextItems === null ? null : itemStageFromJson(nextItems, "nextItems of the answer to Submit Results"),
+          nextItems: nextItems === null ? null : readItemStage(nextItems, "nextItems of the answer to Submit Results"),
         }),
-    ...(answer.assessmentResult === undefined
-      ? {}
-      : { assessmentResult: assessmentResultFromJson(answer.assessmentResult) }),
+    ...(answer.assessmentResult === undefined ? {} : { assessmentResult: readResultsJson(answer.assessmentResult) }),
     ...(answer.sessionState === undefined ? {} : { sessionState: answer.sessionState }),
   };
 }

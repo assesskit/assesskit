@@ -3,14 +3,14 @@ import type { CatSessionPort } from "@assesskit/runtime/cat";
 import {
   checkAbortSignal,
   checkFunction,
+  checkOptional,
   checkPositiveInteger,
   functionSchema,
   methodsSchema,
   nonEmptyStringSchema,
-  optional,
   parseWith,
+  raceAbort,
   recordSchema,
-  untilAborted,
 } from "@assesskit/runtime/checks";
 import type {
   CandidateAction,
@@ -274,8 +274,8 @@ function loadEngine(): Promise<typeof import("@assesskit/runtime/delivery")> {
 export async function createLocalSession(options: LocalSessionOptions): Promise<LocalSession> {
   parseWith(optionsSchema, options, "The options object");
   const { signal: creating, cat, maxIdle } = options;
-  optional(creating, (value) => checkAbortSignal(value, "The option signal"));
-  optional(maxIdle, (value) => checkPositiveInteger(value, "The option maxIdle"));
+  checkOptional(creating, (value) => checkAbortSignal(value, "The option signal"));
+  checkOptional(maxIdle, (value) => checkPositiveInteger(value, "The option maxIdle"));
   const { definition, store, session, seed, assets, lexicons = () => [], clock = BROWSER_CLOCK } = options;
   const onError = options.onError ?? ((error: unknown) => reportError(error));
   const now = (): number => readClock(clock);
@@ -398,7 +398,7 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
    * takes no signal, so an abort ends this wait and never the loop.
    */
   const serve = async (signal: AbortSignal | undefined): Promise<CatLoopFailure | undefined> =>
-    answerer === undefined ? undefined : untilAborted(loops.join("", answerer), signal);
+    answerer === undefined ? undefined : raceAbort(loops.join("", answerer), { signal });
 
   /** Runs the answer loop after a step of the host, unless one runs: that loop is told to read the pending work once more. */
   const finish = async (step: HostStep): Promise<HostStep> => {
@@ -461,7 +461,7 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
     dispatch: async (action, options) => {
       checkCallOptions(options);
       if (closed) throw new DataError("The session client is closed.");
-      delivery.actionToJson(action);
+      delivery.writeCandidateAction(action);
       // Without the option cat the action joins the queue at once, in the order of the calls.
       const before = answerer === undefined ? undefined : await serve(options?.signal);
       const { step } = await run(action, options?.signal);

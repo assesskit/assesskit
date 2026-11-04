@@ -42,13 +42,14 @@ export interface RecordValue {
  * A value of a variable.
  *
  * @remarks
- * NULL, the absence of a value, is `null` and not a `Value`: no value is empty. Build values with {@link single},
- * {@link container} and {@link record}, which return `null` for what is NULL.
+ * NULL, the absence of a value, is `null` and not a `Value`: no value is empty. Build values with {@link buildSingle},
+ * {@link buildContainer} and {@link buildRecord}, which return `null` for what is NULL.
  */
 export type Value = SingleValue | ContainerValue | RecordValue;
 
-// The typed signatures of `single`, `container` and `record` serve callers that hold typed data. The readers of JSON and
-// `normalizeValue` hold untrusted data, so they use the `build...` forms, which take `unknown` and check everything.
+// The typed signatures of `buildSingle`, `buildContainer` and `buildRecord` serve callers that hold typed data. The readers
+// of JSON and `normalizeValue` hold untrusted data, so they use the `buildUntrusted...` forms, which take `unknown` and
+// check everything.
 
 /** The empty string is NULL, so a value of base type `string` cannot be empty. */
 const isNullString = (baseType: BaseType, primitive: Primitive): boolean => baseType === "string" && primitive === "";
@@ -59,7 +60,7 @@ const isNullString = (baseType: BaseType, primitive: Primitive): boolean => base
  * @returns The value, or `null` for the empty string.
  * @throws `DataError` when `baseType` is not a base type or `value` is not a value of it.
  */
-export function buildSingle(baseType: unknown, value: unknown): SingleValue | null {
+export function buildUntrustedSingle(baseType: unknown, value: unknown): SingleValue | null {
   checkBaseType(baseType);
   const primitive = normalizePrimitive(baseType, value);
   return isNullString(baseType, primitive) ? null : { cardinality: "single", baseType, value: primitive };
@@ -76,10 +77,10 @@ export function buildSingle(baseType: unknown, value: unknown): SingleValue | nu
  * @throws `DataError` when `baseType` is not a base type or `value` is not a value of it.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, NULL}
  */
-export function single(baseType: Exclude<BaseType, "string">, value: Primitive): SingleValue;
-export function single(baseType: BaseType, value: Primitive): SingleValue | null;
-export function single(baseType: BaseType, value: Primitive): SingleValue | null {
-  return buildSingle(baseType, value);
+export function buildSingle(baseType: Exclude<BaseType, "string">, value: Primitive): SingleValue;
+export function buildSingle(baseType: BaseType, value: Primitive): SingleValue | null;
+export function buildSingle(baseType: BaseType, value: Primitive): SingleValue | null {
+  return buildUntrustedSingle(baseType, value);
 }
 
 /**
@@ -88,7 +89,11 @@ export function single(baseType: BaseType, value: Primitive): SingleValue | null
  * @returns The container, or `null` when there are no values.
  * @throws `DataError` when an argument is not valid.
  */
-export function buildContainer(cardinality: unknown, baseType: unknown, values: unknown): ContainerValue | null {
+export function buildUntrustedContainer(
+  cardinality: unknown,
+  baseType: unknown,
+  values: unknown,
+): ContainerValue | null {
   if (cardinality !== "multiple" && cardinality !== "ordered") {
     throw new DataError(
       `The cardinality of a container must be "multiple" or "ordered", found ${describe(cardinality)}.`,
@@ -111,16 +116,16 @@ export function buildContainer(cardinality: unknown, baseType: unknown, values: 
  *
  * @param cardinality - `multiple` or `ordered`.
  * @param baseType - The base type of every value.
- * @param values - The values, as {@link single} takes them. None may be an empty string, which is NULL.
+ * @param values - The values, as {@link buildSingle} takes them. None may be an empty string, which is NULL.
  * @returns The container, or `null` when there are no values: an empty container is NULL.
  * @throws `DataError` when an argument is not valid.
  */
-export function container(
+export function buildContainer(
   cardinality: "multiple" | "ordered",
   baseType: BaseType,
   values: readonly Primitive[],
 ): ContainerValue | null {
-  return buildContainer(cardinality, baseType, values);
+  return buildUntrustedContainer(cardinality, baseType, values);
 }
 
 function isIterable(value: unknown): value is Iterable<unknown> {
@@ -133,7 +138,7 @@ function buildField(label: string, field: unknown): SingleValue {
   if (field.cardinality !== "single") {
     throw new DataError(`${label} must be a single value, found the cardinality ${describe(field.cardinality)}.`);
   }
-  const built = buildSingle(field.baseType, field.value);
+  const built = buildUntrustedSingle(field.baseType, field.value);
   if (built === null) throw new DataError(`${label} cannot be an empty string, which is NULL.`);
   return built;
 }
@@ -145,7 +150,7 @@ function buildField(label: string, field: unknown): SingleValue {
  * @throws `DataError` when `fields` is not an iterable of pairs of an identifier and a single value, or repeats an
  * identifier.
  */
-export function buildRecord(fields: unknown): RecordValue | null {
+export function buildUntrustedRecord(fields: unknown): RecordValue | null {
   if (!isIterable(fields)) {
     const expected = "an iterable of pairs of an identifier and a single value";
     throw new DataError(`The fields of a record must be ${expected}, found ${describe(fields)}.`);
@@ -171,8 +176,8 @@ export function buildRecord(fields: unknown): RecordValue | null {
  * @returns The record, or `null` when there are no fields: an empty record is NULL.
  * @throws `DataError` when `fields` is not an iterable of such pairs.
  */
-export function record(fields: Iterable<readonly [string, SingleValue]>): RecordValue | null {
-  return buildRecord(fields);
+export function buildRecord(fields: Iterable<readonly [string, SingleValue]>): RecordValue | null {
+  return buildUntrustedRecord(fields);
 }
 
 /**
@@ -189,8 +194,8 @@ export function normalizeValue(value: unknown): Value {
     value.cardinality === "single"
       ? buildField("A single value", value)
       : value.cardinality === "record"
-        ? buildRecord(value.fields instanceof Map ? value.fields : undefined)
-        : buildContainer(value.cardinality, value.baseType, value.values);
+        ? buildUntrustedRecord(value.fields instanceof Map ? value.fields : undefined)
+        : buildUntrustedContainer(value.cardinality, value.baseType, value.values);
   if (built === null) throw new DataError("A value cannot be empty; the absence of a value is null.");
   return built;
 }

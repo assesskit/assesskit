@@ -12,7 +12,7 @@ flowchart LR
   rubric -->|"read by the engine"| request
   request --> view["Scorer view"]
   view --> scorer["A person or a scoring service"]
-  rubric -->|"ratings"| score["scoreFromRatings: the score"]
+  rubric -->|"ratings"| score["rubricScore: the score"]
 ```
 
 | Convention                                      | Marker                    | Place                                  | Says                                           |
@@ -58,11 +58,11 @@ Nothing is copied into the model, and a read followed by a write keeps the block
 
 ### Reading and writing
 
-| Function                                         | Does                                                                                                                                                                          |
-| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `readScoreCovers(test)`                          | The covers by outcome identifier, in document order. A test without blocks gives an empty map; an entry without both attributes is left out.                                  |
-| `scoreCoverBlocks(test)`                         | The blocks that carry the class token, as they are written, with a missing attribute absent, so that `validate` can report them.                                              |
-| `buildScoreCoversBlock(outcome, covers, notes?)` | Builds the block: the attributes, the notes (nodes of the content of a rubric block), then the list. Identifiers are checked, labels are written with white space normalized. |
+| Function                                           | Does                                                                                                                                                                                   |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `readScoreCovers(test)`                            | The covers by outcome identifier, in document order. A test without blocks gives an empty map; an entry without both attributes is left out.                                           |
+| `selectScoreCoverBlocks(test)`                     | The blocks that carry the class token, as they are written, with a missing attribute absent, so that `validate` can report them.                                                       |
+| `buildScoreCoversBlock(outcome, covers, options?)` | Builds the block: the attributes, the option `notes` (nodes of the content of a rubric block), then the list. Identifiers are checked, labels are written with white space normalized. |
 
 ```ts
 import { readAsi, readScoreCovers } from "@assesskit/runtime/asi";
@@ -120,7 +120,7 @@ flowchart LR
   block -->|"readScoringRubrics"| rubric["ScoringRubric"]
   rubric --> rater["A person or a machine rates<br/>one level for each criterion"]
   rater --> ratings["ratings: { criterion, score }[]"]
-  ratings --> score["scoreFromRatings"]
+  ratings --> score["rubricScore"]
   rubric --> score
   score --> result["The score, or null<br/>while a criterion is unrated"]
   block -->|"the engine, for a scoring request"| view["ScorerView.scoringRubric"]
@@ -218,23 +218,23 @@ A single-point rubric here has three scored levels, while the literature often l
 
 | Rule                            | Behavior                                                                                                                                                                                      |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A criterion without a rating    | `scoreFromRatings` returns `null`, so the scoring request stays pending                                                                                                                       |
+| A criterion without a rating    | `rubricScore` returns `null`, so the scoring request stays pending                                                                                                                            |
 | The range of the score          | `rubricScoreRange` gives it: from the sum of weight times the lowest score to the sum of weight times the highest score; it starts at 0 only when every criterion has a level of 0            |
 | The arithmetic                  | Binary floating point, in the order of the criteria, so the result is deterministic and does not depend on the order of the ratings. A sum such as 0.1 + 0.1 + 0.1 carries its usual rounding |
 | An outcome of base type integer | Takes the score only when every weight times score is an integer                                                                                                                              |
 
 ### Reading and writing
 
-| Function                                  | Does                                                                                                                                                                                          |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `readScoringRubrics(document)`            | The rubrics of an item or a test by outcome identifier. An outcome whose first block breaks a rule has no entry; a document without blocks gives an empty map.                                |
-| `buildScoringRubricBlock(rubric, notes?)` | Builds the block: the attributes, the notes (nodes of the content of a rubric block, never an `ol`), then the criteria list. Texts are written with white space normalized.                   |
-| `checkScoringRubric(value)`               | Checks a rubric that arrived as JSON or from a caller: its shape, its numbers and identifiers, and the shape that its kind requires. Throws a `DataError` with the path.                      |
-| `scoreFromRatings(rubric, ratings)`       | The score of `{ criterion, score }` ratings, or `null` while a criterion has none. Throws a `DataError` for a rating that does not fit the rubric.                                            |
-| `rubricScoreRange(rubric)`                | The lowest and the highest score that ratings can give, for a host that shows "7 out of 12" or checks the declaration of the outcome. Throws a `DataError` for a rubric that fails the check. |
+| Function                                    | Does                                                                                                                                                                                          |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `readScoringRubrics(document)`              | The rubrics of an item or a test by outcome identifier. An outcome whose first block breaks a rule has no entry; a document without blocks gives an empty map.                                |
+| `buildScoringRubricBlock(rubric, options?)` | Builds the block: the attributes, the option `notes` (nodes of the content of a rubric block, never an `ol`), then the criteria list. Texts are written with white space normalized.          |
+| `checkScoringRubric(value)`                 | Checks a rubric that arrived as JSON or from a caller: its shape, its numbers and identifiers, and the shape that its kind requires. Throws a `DataError` with the path.                      |
+| `rubricScore(rubric, ratings)`              | The score of `{ criterion, score }` ratings, or `null` while a criterion has none. Throws a `DataError` for a rating that does not fit the rubric.                                            |
+| `rubricScoreRange(rubric)`                  | The lowest and the highest score that ratings can give, for a host that shows "7 out of 12" or checks the declaration of the outcome. Throws a `DataError` for a rubric that fails the check. |
 
 ```ts
-import { readAsi, readScoringRubrics, rubricScoreRange, scoreFromRatings } from "@assesskit/runtime/asi";
+import { readAsi, readScoringRubrics, rubricScoreRange, rubricScore } from "@assesskit/runtime/asi";
 
 const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
     identifier="essay" title="Essay" time-dependent="false">
@@ -269,11 +269,11 @@ rubric?.criteria.map(({ identifier, weight }) => [identifier, weight]); // => [[
 rubric?.criteria[0]?.levels.map(({ score, quality }) => [score, quality]); // => [[0, "Absent"], [1, "Partial"], [2, "Full"]]
 rubric && rubricScoreRange(rubric); // => { minimum: 0, maximum: 5 }
 rubric &&
-  scoreFromRatings(rubric, [
+  rubricScore(rubric, [
     { criterion: "content", score: 2 },
     { criterion: "language", score: 1 },
   ]); // => 5
-rubric && scoreFromRatings(rubric, [{ criterion: "content", score: 2 }]); // => null
+rubric && rubricScore(rubric, [{ criterion: "content", score: 2 }]); // => null
 ```
 
 ### CASE alignment

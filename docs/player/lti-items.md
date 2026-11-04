@@ -9,7 +9,7 @@ ports for it and imports no library of another family.
 ```mermaid
 flowchart LR
   subgraph assesskit["assesskit"]
-    runtime["@assesskit/runtime<br/>readLtiLink, ltiLaunchUrl,<br/>the item with SCORE and MAXSCORE"]
+    runtime["@assesskit/runtime<br/>readLtiLink, resolveLaunchUrl,<br/>the item with SCORE and MAXSCORE"]
     subgraph player["@assesskit/player"]
       frame["player: the frames of the tool<br/>LtiLogin"]
       srv["server: the session host<br/>forward.log, createToolScoreIntake"]
@@ -49,7 +49,7 @@ sequenceDiagram
   participant S as Session host
   participant J as Host job
   P->>H: ltiLogin(item, { signal })
-  H->>H: read the link, ltiLaunchUrl(link)
+  H->>H: read the link, resolveLaunchUrl(link)
   H->>K: ltiPlatformFrame(MessageInput), check with SessionHost.check
   K-->>H: the frame
   H-->>P: LtiFrame
@@ -64,11 +64,11 @@ sequenceDiagram
   J->>K: sessionScore, then the grade of the session
 ```
 
-| Step | The host does                                                                                                                                                                                                                                                                                                                                                                                   |
-| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | Answers `ltiLogin`: it reads the `LtiLink` of the item, takes the launch URL with `ltiLaunchUrl` of the runtime, describes the launch as a message in which the session is the context and the item instance is the resource link, and has its LTI library build the `LtiFrame`; the library calls the host's `check` first, which binds the message to the candidate with `SessionHost.check`. |
-| 2    | Takes the score of the tool: the gradebook behind the grade services checks that the line item is a link of the tool and that the session is the user's, and gives each score to `intake.onScore` as a `ToolScore`; the host's log calls `intake.settle`, so that a score that came early is supplied when the item's session is over.                                                          |
-| 3    | Publishes the outcome: the log only appends each step to an outbox, and a job outside any step reads `results()` and `pending()`, calls `sessionScore`, and sends the grade and the analytics events with its libraries.                                                                                                                                                                        |
+| Step | The host does                                                                                                                                                                                                                                                                                                                                                                                       |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Answers `ltiLogin`: it reads the `LtiLink` of the item, takes the launch URL with `resolveLaunchUrl` of the runtime, describes the launch as a message in which the session is the context and the item instance is the resource link, and has its LTI library build the `LtiFrame`; the library calls the host's `check` first, which binds the message to the candidate with `SessionHost.check`. |
+| 2    | Takes the score of the tool: the gradebook behind the grade services checks that the line item is a link of the tool and that the session is the user's, and gives each score to `intake.onScore` as a `ToolScore`; the host's log calls `intake.settle`, so that a score that came early is supplied when the item's session is over.                                                              |
+| 3    | Publishes the outcome: the log only appends each step to an outbox, and a job outside any step reads `results()` and `pending()`, calls `sessionScore`, and sends the grade and the analytics events with its libraries.                                                                                                                                                                            |
 
 The log never touches the network, so an outage of the platform never delays a candidate and never reads as a CAT failure.
 Each grade of a line item needs a later time than the one before, even after a timeout whose outcome is not known; the example

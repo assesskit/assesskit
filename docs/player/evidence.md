@@ -186,11 +186,11 @@ is tested in `scoring.test.ts` against reports built from the runtime's result m
 The tests of `scoring/` run in Node against the runtime's engine, and those of the display run in the browsers. Their oracles are not
 the code under test.
 
-| Oracle                                                                      | Used for                                                                                                                                                  |
-| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The runtime's engine: `scorerView`, `pending`, `apply` and `results`        | The scorer view that `toSubmission` reads, and what the engine does with the action of `toSupplyScores`: the events, the pending requests and the results |
-| The runtime's codec, `toWireValue` and `fromWireValue`, and BPIG Appendix C | The form of the values of a submission, which a property test decodes again from JSON text                                                                |
-| INFO section 4.5.10 and the runtime's scoring requests                      | Which outcomes are scored externally, by whom, and when a request is accepted: after the test ended, and again to replace the score                       |
+| Oracle                                                                         | Used for                                                                                                                                                  |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The runtime's engine: `scorerView`, `pending`, `apply` and `results`           | The scorer view that `toSubmission` reads, and what the engine does with the action of `toSupplyScores`: the events, the pending requests and the results |
+| The runtime's codec, `writeWireValue` and `readWireValue`, and BPIG Appendix C | The form of the values of a submission, which a property test decodes again from JSON text                                                                |
+| INFO section 4.5.10 and the runtime's scoring requests                         | Which outcomes are scored externally, by whom, and when a request is accepted: after the test ended, and again to replace the score                       |
 
 `scoring.test.ts` plays tests and items through the engine: the request of an item outcome and of a test outcome with covers,
 an item that was not presented, correct responses and template values, a score supplied before, and `unknown-request` for a
@@ -201,7 +201,7 @@ WCAG 2.2 A and AA with the contrast of the nested content in every theme.
 
 ## The rating form
 
-The oracle of the form is the runtime: the score is `scoreFromRatings`, its highest value `rubricScoreRange`, and a rating that
+The oracle of the form is the runtime: the score is `rubricScore`, its highest value `rubricScoreRange`, and a rating that
 does not fit the rubric is the runtime's `DataError`. `rating.browser.test.ts` mounts the form in Chromium, Firefox and WebKit
 for a rubric of each kind ([rating](rating.md)).
 

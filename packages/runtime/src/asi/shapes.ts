@@ -27,6 +27,6 @@ const COORDINATE_COUNTS: ReadonlyMap<AreaShape, (count: number) => boolean> = ne
  * @param count - The number of coordinates.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function coordinateCountFits(shape: AreaShape, count: number): boolean {
+export function fitsCoordinateCount(shape: AreaShape, count: number): boolean {
   return COORDINATE_COUNTS.get(shape)?.(count) ?? false;
 }

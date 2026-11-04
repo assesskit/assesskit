@@ -25,8 +25,8 @@ import { checkSynchronous } from "../package/internal.js";
 import {
   BUILT_IN_CONTEXTS,
   type CustomOperator,
-  declaredValue,
   type ProcessingLimits,
+  readDeclaredValue,
   type VariableType,
 } from "../processing/index.js";
 import { checkItem, checkProcessingOptions, initialOutcome } from "../processing/internal.js";
@@ -35,7 +35,11 @@ import type { Value } from "../values/index.js";
 import type { CatSectionRef } from "./cat-session.js";
 import { ltiItem } from "./lti-item.js";
 import { DEFAULT_PLAN_LIMITS, type PlanLimits } from "./plan.js";
-import { type EffectiveSessionControl, sessionControl, standaloneSessionControl } from "./session-control.js";
+import {
+  type EffectiveSessionControl,
+  resolveSessionControl,
+  resolveStandaloneSessionControl,
+} from "./session-control.js";
 import { standaloneTest } from "./standalone.js";
 import {
   type ContentNode,
@@ -49,7 +53,7 @@ import {
  * What the engine delivers: a test, or an item alone for practice.
  *
  * @remarks
- * - `test`: the test, the path of its document, the resolvers of its references, such as those of `packageResolvers`,
+ * - `test`: the test, the path of its document, the resolvers of its references, such as those of `createPackageResolvers`,
  *   and where the CAT engine of each adaptive section is.
  * - `item`: the item, the path of its document, the resolver of the stimuli it names, and the item session control that
  *   the host gives it, if any.
@@ -81,13 +85,13 @@ export type DeliveryDefinition =
       /** The path of the item document, named in the issues of the static checks; its references resolve against it. */
       readonly base: string;
       /**
-       * The resolver of the stimuli the item names, such as that of `packageResolvers`.
+       * The resolver of the stimuli the item names, such as that of `createPackageResolvers`.
        *
        * @defaultValue none, so that an item that names a stimulus presents it without one
        */
       readonly resolvers?: Pick<Resolvers, "stimuli">;
       /**
-       * The item session control of the item, as `standaloneSessionControl` applies it.
+       * The item session control of the item, as `resolveStandaloneSessionControl` applies it.
        *
        * @defaultValue none
        */
@@ -391,7 +395,7 @@ function courseOf(
     const what = `The default value of ${declaration.identifier}`;
     outcomes.set(
       declaration.identifier,
-      initialOutcome(declaration, declaredValue(declaration.defaultValue?.values, declaration, what)),
+      initialOutcome(declaration, readDeclaredValue(declaration.defaultValue?.values, declaration, what)),
     );
   }
   const contexts = new Map<string, Value | null>();
@@ -401,7 +405,7 @@ function courseOf(
   };
   for (const declaration of test.contextDeclarations) {
     const what = `The default value of ${declaration.identifier}`;
-    contexts.set(declaration.identifier, declaredValue(declaration.defaultValue?.values, declaration, what));
+    contexts.set(declaration.identifier, readDeclaredValue(declaration.defaultValue?.values, declaration, what));
     declare(declaration.identifier, declaration);
   }
   for (const { candidates } of items.values()) {
@@ -479,7 +483,7 @@ function testCourse(definition: Extract<DeliveryDefinition, { kind: "test" }>, o
     resolved.set(path, item);
     items.set(node.model.identifier, {
       node,
-      control: sessionControl(node),
+      control: resolveSessionControl(node),
       candidates: candidatesOf(item, path, resolvers),
     });
   }
@@ -497,7 +501,7 @@ function itemCourse(definition: Extract<DeliveryDefinition, { kind: "item" }>, o
   if (resolvers !== undefined) checkRecord(resolvers, "The resolvers must be an object with a function stimuli");
   if (resolvers !== undefined) checkFunction(resolvers.stimuli, "The stimuli of the resolvers must be a function");
   const checked = checkEngineOptions(options);
-  const effective = standaloneSessionControl(control);
+  const effective = resolveStandaloneSessionControl({ control });
   gate(validateAsi({ kind: "item", item }, { ...checked, path: base }), "item");
   const structure = standaloneTest(item);
   const node = structure.itemRef(item.identifier);

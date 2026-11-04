@@ -4,7 +4,7 @@ import { CP_NAMESPACE } from "@assesskit/runtime/metadata";
 import { openPackage, type QtiPackage } from "@assesskit/runtime/package";
 import type { AssessmentResult } from "@assesskit/runtime/results";
 import { type ItemStatistic, writeUsageData } from "@assesskit/runtime/usage";
-import { single } from "@assesskit/runtime/values";
+import { buildSingle } from "@assesskit/runtime/values";
 
 /** The prefix of the engine in the tests: `qti-adaptive-engine-ref` of the sections. */
 export const PREFIX = "https://cat.example/ims/cat/v1p0";
@@ -69,7 +69,7 @@ export function resultsOf(scores: ReadonlyMap<string, number>): AssessmentResult
           identifier: "SCORE",
           cardinality: "single",
           baseType: "float",
-          value: single("float", score),
+          value: buildSingle("float", score),
         },
       ],
       supports: [],

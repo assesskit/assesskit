@@ -8,12 +8,12 @@ import {
   type AssessmentTest,
   type ContentNode,
   createEngine,
+  createPackageResolvers,
   createRandom,
   DataError,
   type DeliveryState,
   type Engine,
   type ItemVariables,
-  packageResolvers,
   ReadError,
   type Resolvers,
   readAsi,
@@ -110,7 +110,7 @@ async function deliverable(): Promise<readonly Delivered[]> {
             name: `${directory}/${path}`,
             test: document.test,
             base: path,
-            resolvers: packageResolvers(pkg),
+            resolvers: createPackageResolvers(pkg),
           });
         }
       } catch (error) {

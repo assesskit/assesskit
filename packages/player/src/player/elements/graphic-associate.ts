@@ -1,5 +1,5 @@
 import type { GraphicAssociateInteraction } from "@assesskit/runtime/asi";
-import { checkResponse, type InteractionDescriptor, type ResponseViolation } from "@assesskit/runtime/interactions";
+import { type InteractionDescriptor, type ResponseViolation, validateResponse } from "@assesskit/runtime/interactions";
 import type { Pair } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
@@ -117,7 +117,7 @@ export class GraphicAssociateInteractionElement extends InteractionElement {
 
   /** Returns whether the runtime's rules leave room for the pair of two hotspots, besides those that stand already. */
   #allows(descriptor: InteractionDescriptor, pairs: readonly Pair[], first: string, second: string): boolean {
-    const { reasons } = checkResponse(descriptor, responseOf(descriptor, "pair", [...pairs, [first, second]]));
+    const { reasons } = validateResponse(descriptor, responseOf(descriptor, "pair", [...pairs, [first, second]]));
     return !reasons.some((reason) => IMPOSSIBLE.has(reason));
   }
 

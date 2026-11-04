@@ -2,8 +2,8 @@
 
 import { AccessError } from "@assesskit/player";
 import type { ViewEnvelope } from "@assesskit/player/protocol";
-import { viewFromJson } from "@assesskit/runtime/delivery";
-import { single } from "@assesskit/runtime/values";
+import { readView } from "@assesskit/runtime/delivery";
+import { buildSingle } from "@assesskit/runtime/values";
 import { ltiPlatformFrame } from "@interopkit/tool-integration/platform";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runSettleJob, toolLaunch } from "../src/index.ts";
@@ -33,7 +33,7 @@ import {
 
 afterEach(() => vi.useRealTimers());
 
-const viewOf = (envelope: ViewEnvelope) => viewFromJson(envelope.view);
+const viewOf = (envelope: ViewEnvelope) => readView(envelope.view);
 
 describe("an exam with an essay and a link to a tool", () => {
   it("launches the tool of an LTI item through the platform's handshake, with its storage in the frame the player names", async () => {
@@ -88,7 +88,7 @@ describe("an exam with an essay and a link to a tool", () => {
     expect(await requestsOf(ctx)).toEqual(["item:essay:1:SCORE", "item:draw:1:SCORE", "item:draw:1:MAXSCORE"]);
     await runSettleJob(CANDIDATE.session, ctx.jobs.settle);
     expect(await requestsOf(ctx)).toEqual(["item:essay:1:SCORE"]);
-    expect(await totalOf(ctx)).toEqual(single("float", 6));
+    expect(await totalOf(ctx)).toEqual(buildSingle("float", 6));
     expect(await typesOf(ctx)).toContain("scores-applied");
   });
 
@@ -134,9 +134,9 @@ describe("an exam with an essay and a link to a tool", () => {
     const tool = await openDrawing(ctx);
     await ctx.send({ type: "submit", item: DRAW });
     await tool.post(drawing(ctx, 10, { scoreGiven: 6 }));
-    expect(await totalOf(ctx)).toEqual(single("float", 6));
+    expect(await totalOf(ctx)).toEqual(buildSingle("float", 6));
     await tool.post(drawing(ctx, 20, { scoreGiven: 9 }));
-    expect(await totalOf(ctx)).toEqual(single("float", 9));
+    expect(await totalOf(ctx)).toEqual(buildSingle("float", 9));
     const types = await typesOf(ctx);
     expect(types.filter((type) => type === "scores-applied")).toHaveLength(2);
     expect(types.filter((type) => type === "scores-replaced")).toHaveLength(2);
@@ -208,7 +208,7 @@ describe("the results of the exam go back to the learning platform", () => {
     // A penalty makes the total negative.
     ctx.clock.advance(60);
     await supplyEssay(ctx, -20);
-    expect(await totalOf(ctx)).toEqual(single("float", -14));
+    expect(await totalOf(ctx)).toEqual(buildSingle("float", -14));
     await ctx.runJobs();
     expect(ctx.lms.accepted.at(-1)).toMatchObject({
       gradingProgress: "FullyGraded",

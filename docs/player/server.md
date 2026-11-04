@@ -41,7 +41,7 @@ sequenceDiagram
 
 ```ts
 import { createEngine } from "@assesskit/runtime/delivery";
-import { openPackage, packageResolvers } from "@assesskit/runtime/package";
+import { openPackage, createPackageResolvers } from "@assesskit/runtime/package";
 import { createAssetGate, createSessionHost, SYSTEM_CLOCK } from "@assesskit/player/server";
 
 const ASI = "http://www.imsglobal.org/xsd/imsqtiasi_v3p0";
@@ -74,7 +74,7 @@ const engine = createEngine({
   kind: "test",
   test: test.test,
   base: "tests/exam.xml",
-  resolvers: packageResolvers(pkg),
+  resolvers: createPackageResolvers(pkg),
 });
 
 // The stores of a host are its database and its job queue; these keep one session in memory.
@@ -122,7 +122,7 @@ records.get("s1").version; // => 1
 | `clientActions` | `CandidateActionType[]`                      | The types of action a client may send. Default: every type but `suspend` and `resume` (`EXAM_CLIENT_ACTIONS`).                                                                 |
 | `profileBreaks` | `boolean`                                    | Whether a candidate whose profile has breaks may send `suspend` and `resume` beside `clientActions` ([the policy](#client-action-policy)). Default: `true`.                    |
 | `maxIdle`       | `number`                                     | The longest gap between steps, in milliseconds, that counts as time on task, as on `createLocalSession`. Needs `suspend` in `clientActions`; never for an exam. Default: none. |
-| `limits`        | `Partial<ActionLimits>`                      | The limits on the size of an action, as the runtime's `parseCandidateAction` takes them; give the remote client the same ones. Default: the runtime's.                         |
+| `limits`        | `Partial<ActionLimits>`                      | The limits on the size of an action, as the runtime's `readCandidateAction` takes them; give the remote client the same ones. Default: the runtime's.                          |
 | `forward`       | `ForwardOptions`                             | Where the events of each step go: the host's `log`. Default: nowhere.                                                                                                          |
 | `cat`           | `CatSessionPort`                             | The port of the CAT engines: the host then answers its own CAT requests ([CAT](cat.md#the-option-cat)). Default: none.                                                         |
 
@@ -186,7 +186,7 @@ what the parse has built. 32 MiB of empty objects take more than a gigabyte. An 
 
 1. The caller is checked against the record. A repeated `seq` returns the stored envelope with fresh tokens and changes
    nothing; a stale one is a `DataError`.
-2. The action is read with the runtime's `parseCandidateAction` and its size limits. The actions of the host are refused there.
+2. The action is read with the runtime's `readCandidateAction` and its size limits. The actions of the host are refused there.
 3. The client-action policy applies: an action outside `clientActions` is a `DataError`.
 4. The action is stamped with `stamp(state, action, clock.now())`, which never goes back, so a clock that steps back refuses
    nothing, and applied.
@@ -428,8 +428,8 @@ flowchart TD
 
 ```ts
 import { createEngine } from "@assesskit/runtime/delivery";
-import { openPackage, packageResolvers } from "@assesskit/runtime/package";
-import { single } from "@assesskit/runtime/values";
+import { openPackage, createPackageResolvers } from "@assesskit/runtime/package";
+import { buildSingle } from "@assesskit/runtime/values";
 
 const ASI = "http://www.imsglobal.org/xsd/imsqtiasi_v3p0";
 const refs = ["a1", "a2", "b1", "b2"];
@@ -471,7 +471,7 @@ const engine = createEngine({
   kind: "test",
   test: test.test,
   base: "tests/exam.xml",
-  resolvers: packageResolvers(pkg),
+  resolvers: createPackageResolvers(pkg),
 });
 
 const UNSUBMITTED = ["initial", "pendingSubmission"];
@@ -524,7 +524,7 @@ const key = (ref) => ({ ref, instance: 1 });
 const answer = (ref) => ({
   type: "set-responses",
   item: key(ref),
-  responses: new Map([["RESPONSE", single("identifier", "A")]]),
+  responses: new Map([["RESPONSE", buildSingle("identifier", "A")]]),
 });
 
 play({ type: "move", to: "next" }); // => "skipping-not-allowed"

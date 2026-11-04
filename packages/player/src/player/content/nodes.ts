@@ -1,14 +1,14 @@
 import {
-  childNodes,
   type Interaction,
   isModelNode,
+  listChildNodes,
   type ModelNode,
   type PrintedVariable,
   type RubricBlock,
   type TestRubricBlock,
 } from "@assesskit/runtime/asi";
 import { checkArray, describe } from "@assesskit/runtime/checks";
-import { rubricBlocksFor } from "@assesskit/runtime/content";
+import { selectRubricBlocks } from "@assesskit/runtime/content";
 import { DataError } from "@assesskit/runtime/errors";
 import { resolveReference } from "@assesskit/runtime/package";
 import type { XmlElement } from "@assesskit/runtime/xml";
@@ -82,8 +82,8 @@ function openAway(element: Element): void {
 
 /** Renders a rubric block for the view of the renderer, or nothing when its `view` does not list it. */
 function renderRubric(node: RubricBlock | TestRubricBlock, context: RenderContext): Node[] {
-  if (rubricBlocksFor([node], context.view).length === 0) return [];
-  const element = context.element("qti-rubric-block", node, context.nodes(childNodes(node)));
+  if (selectRubricBlocks([node], context.view).length === 0) return [];
+  const element = context.element("qti-rubric-block", node, context.nodes(listChildNodes(node)));
   if (RUBRIC_USES.has(node.use ?? "")) element.setAttribute("data-use", node.use ?? "");
   return [element];
 }
@@ -98,9 +98,9 @@ function renderRubric(node: RubricBlock | TestRubricBlock, context: RenderContex
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, inline choice interaction}
  */
 function renderPlaceholderContent(node: Interaction, context: RenderContext): Node[] {
-  return childNodes(node).flatMap((child) =>
+  return listChildNodes(node).flatMap((child) =>
     child.kind === "label"
-      ? [context.element("qti-label", child, context.nodes(childNodes(child)))]
+      ? [context.element("qti-label", child, context.nodes(listChildNodes(child)))]
       : context.nodes([child]),
   );
 }
@@ -148,7 +148,7 @@ function renderElementNode(node: ModelNode, outer: RenderContext): Node[] {
     case "video":
       return renderPlayer(node, context);
     default: {
-      const element = context.element(elementName(node.kind), node, context.nodes(childNodes(node)));
+      const element = context.element(elementName(node.kind), node, context.nodes(listChildNodes(node)));
       if (node.kind === "a") openAway(element);
       return [element];
     }

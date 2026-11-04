@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   type Action,
   type AssessmentResult,
+  buildSingle,
   type CreateSessionResponse,
   createEngine,
   createRandom,
@@ -15,17 +16,16 @@ import {
   isXsdDateTime,
   readResults,
   readScoringRubrics,
+  readView,
   type ScoringRubric,
   sendCatRequest,
   serializeState,
   shuffleChoices,
-  single,
   stamp,
   type Value,
-  viewFromJson,
-  viewToJson,
   writePnp,
   writeResults,
+  writeView,
 } from "../src/index.js";
 import {
   ADAPTIVE,
@@ -107,7 +107,7 @@ describe("scoring requests", () => {
             presented: true,
             interaction: "extended-text-interaction",
             // Exact string, newline included.
-            response: single("string", "An essay\nof two lines"),
+            response: buildSingle("string", "An essay\nof two lines"),
           },
         ],
         requestedAt: 2,
@@ -125,21 +125,21 @@ describe("scoring requests", () => {
   it("supplies the value of an item outcome: outcome processing runs again, response processing does not", () => {
     const submitted = played(engine, begun(engine).state, write("e1", "Text", 1), act("submit", "e1", 2));
     const runs = (state: DeliveryState): unknown => state.items[0]?.session.variables.outcomes.get("RUNS");
-    expect(runs(submitted.state)).toEqual(single("integer", 1));
+    expect(runs(submitted.state)).toEqual(buildSingle("integer", 1));
     const supplied = played(engine, submitted.state, {
       type: "supply-scores",
       request: "item:e1:1:SCORE",
-      value: single("float", 7),
+      value: buildSingle("float", 7),
       scorer: "human",
       at: 3,
     });
     expect(described(supplied.events)).toEqual(["scores-applied e1 item:e1:1:SCORE@3", "outcome-processed T@3"]);
-    expect(supplied.state.items[0]?.session.variables.outcomes.get("SCORE")).toEqual(single("float", 7));
-    expect(supplied.state.outcomes.get("TOTAL")).toEqual(single("float", 7));
+    expect(supplied.state.items[0]?.session.variables.outcomes.get("SCORE")).toEqual(buildSingle("float", 7));
+    expect(supplied.state.outcomes.get("TOTAL")).toEqual(buildSingle("float", 7));
     // The scorer sets the value after the session closed; response processing is not run again.
-    expect(runs(supplied.state)).toEqual(single("integer", 1));
+    expect(runs(supplied.state)).toEqual(buildSingle("integer", 1));
     expect(engine.pending(supplied.state).scoring).toEqual([]);
-    expect(supplied.state.scoring[0]?.supplied).toEqual({ value: single("float", 7), at: 3, scorer: "human" });
+    expect(supplied.state.scoring[0]?.supplied).toEqual({ value: buildSingle("float", 7), at: 3, scorer: "human" });
   });
 
   it("replaces the value when a second one is supplied, and takes an integer for a float outcome", () => {
@@ -148,15 +148,15 @@ describe("scoring requests", () => {
       ({
         type: "supply-scores",
         request: "item:e1:1:SCORE",
-        value: single("integer", value),
+        value: buildSingle("integer", value),
         scorer: "externalMachine",
         at,
       }) as const;
     const first = played(engine, submitted.state, supply(4, 3));
     const second = played(engine, first.state, supply(9, 4));
     expect(described(second.events)).toEqual(["scores-replaced e1 item:e1:1:SCORE@4", "outcome-processed T@4"]);
-    expect(second.state.items[0]?.session.variables.outcomes.get("SCORE")).toEqual(single("float", 9));
-    expect(second.state.outcomes.get("TOTAL")).toEqual(single("float", 9));
+    expect(second.state.items[0]?.session.variables.outcomes.get("SCORE")).toEqual(buildSingle("float", 9));
+    expect(second.state.outcomes.get("TOTAL")).toEqual(buildSingle("float", 9));
     expect(second.state.scoring[0]?.supplied?.scorer).toBe("externalMachine");
   });
 
@@ -166,7 +166,7 @@ describe("scoring requests", () => {
     const supplied = played(engine, suspended.state, {
       type: "supply-scores",
       request: "item:e1:1:SCORE",
-      value: single("float", 5),
+      value: buildSingle("float", 5),
       scorer: "human",
       at: 4,
     });
@@ -176,11 +176,11 @@ describe("scoring requests", () => {
     const replaced = played(engine, ended.state, {
       type: "supply-scores",
       request: "item:e1:1:SCORE",
-      value: single("float", 6),
+      value: buildSingle("float", 6),
       scorer: "human",
       at: 7,
     });
-    expect(replaced.state.outcomes.get("TOTAL")).toEqual(single("float", 6));
+    expect(replaced.state.outcomes.get("TOTAL")).toEqual(buildSingle("float", 6));
     expect(refusalOf(engine, ended.state, act("skip", "e1", 8)).code).toBe("ended");
   });
 
@@ -188,13 +188,13 @@ describe("scoring requests", () => {
     const submitted = played(engine, begun(engine).state, write("e1", "Text", 1), act("submit", "e1", 2));
     const supply = (request: string, value: Value | null) =>
       ({ type: "supply-scores", request, value, scorer: "human", at: 3 }) as const;
-    expect(refusalOf(engine, submitted.state, supply("item:e1:1:NOPE", single("float", 1))).code).toBe(
+    expect(refusalOf(engine, submitted.state, supply("item:e1:1:NOPE", buildSingle("float", 1))).code).toBe(
       "unknown-request",
     );
-    expect(refusalOf(engine, submitted.state, supply("item:e1:1:SCORE", single("string", "high"))).code).toBe(
+    expect(refusalOf(engine, submitted.state, supply("item:e1:1:SCORE", buildSingle("string", "high"))).code).toBe(
       "score-type-mismatch",
     );
-    expect(refusalOf(engine, submitted.state, supply("item:e1:1:SCORE", single("boolean", true))).code).toBe(
+    expect(refusalOf(engine, submitted.state, supply("item:e1:1:SCORE", buildSingle("boolean", true))).code).toBe(
       "score-type-mismatch",
     );
     const nothing = played(engine, submitted.state, supply("item:e1:1:SCORE", null));
@@ -205,7 +205,7 @@ describe("scoring requests", () => {
     const submitted = played(engine, begun(engine).state, write("e1", "Text", 1), act("submit", "e1", 2));
     const action = stamp(
       submitted.state,
-      { type: "supply-scores", request: "item:e1:1:SCORE", value: single("float", 3), scorer: "human" },
+      { type: "supply-scores", request: "item:e1:1:SCORE", value: buildSingle("float", 3), scorer: "human" },
       0,
     );
     expect(action.at).toBe(2);
@@ -217,7 +217,7 @@ describe("scoring requests", () => {
     const supplied = played(engine, submitted.state, {
       type: "supply-scores",
       request: "item:e1:1:SCORE",
-      value: single("float", 2.5),
+      value: buildSingle("float", 2.5),
       scorer: "human",
       at: 3,
     });
@@ -313,7 +313,7 @@ describe("scoring requests of the test", () => {
         label: "Task 1: essay",
         presented: true,
         interaction: "extended-text-interaction",
-        response: single("string", "First task"),
+        response: buildSingle("string", "First task"),
       },
       {
         item: key("w2"),
@@ -321,7 +321,7 @@ describe("scoring requests of the test", () => {
         label: "Task 2: letter",
         presented: true,
         interaction: "extended-text-interaction",
-        response: single("string", "Second task"),
+        response: buildSingle("string", "Second task"),
       },
     ]);
   });
@@ -334,7 +334,7 @@ describe("scoring requests of the test", () => {
     expect(
       request?.covers.map(({ item, presented, response, label }) => [item.ref, presented, response, label]),
     ).toEqual([
-      ["w1", true, single("string", "First task"), "Task 1: essay"],
+      ["w1", true, buildSingle("string", "First task"), "Task 1: essay"],
       ["w2", false, null, "Task 2: letter"],
     ]);
   });
@@ -342,7 +342,7 @@ describe("scoring requests of the test", () => {
   it("keeps a supplied test outcome through every later run of outcome processing, and its default until then", () => {
     const start = begun(engine);
     // Until a value is supplied, the outcome has its declared default.
-    expect(start.state.outcomes.get("CONTENT")).toEqual(single("float", 1.5));
+    expect(start.state.outcomes.get("CONTENT")).toEqual(buildSingle("float", 1.5));
     const closed = played(
       engine,
       start.state,
@@ -352,22 +352,22 @@ describe("scoring requests of the test", () => {
       write("w2", "Two", 4),
       act("submit", "w2", 5),
     );
-    expect(closed.state.outcomes.get("CONTENT")).toEqual(single("float", 1.5));
-    expect(closed.state.outcomes.get("TOTAL")).toEqual(single("float", 3));
+    expect(closed.state.outcomes.get("CONTENT")).toEqual(buildSingle("float", 1.5));
+    expect(closed.state.outcomes.get("TOTAL")).toEqual(buildSingle("float", 3));
     const supplied = played(engine, closed.state, {
       type: "supply-scores",
       request: "test:CONTENT",
-      value: single("float", 5),
+      value: buildSingle("float", 5),
       scorer: "human",
       at: 6,
     });
-    expect(supplied.state.outcomes.get("CONTENT")).toEqual(single("float", 5));
-    expect(supplied.state.outcomes.get("TOTAL")).toEqual(single("float", 10));
+    expect(supplied.state.outcomes.get("CONTENT")).toEqual(buildSingle("float", 5));
+    expect(supplied.state.outcomes.get("TOTAL")).toEqual(buildSingle("float", 10));
     // The next run resets the outcomes to their defaults but not the supplied one.
     const later = played(engine, supplied.state, next(7), act("submit", "q", 8));
     expect(described(later.events)).toContain("outcome-processed T@8");
-    expect(later.state.outcomes.get("CONTENT")).toEqual(single("float", 5));
-    expect(later.state.outcomes.get("TOTAL")).toEqual(single("float", 10));
+    expect(later.state.outcomes.get("CONTENT")).toEqual(buildSingle("float", 5));
+    expect(later.state.outcomes.get("TOTAL")).toEqual(buildSingle("float", 10));
   });
 
   it("makes a request with no covers, at the end of the test, for an outcome that no block names", () => {
@@ -415,7 +415,7 @@ describe("scoring requests of the test", () => {
       ["w2", "Item w2", false],
     ]);
     const [shown, absent] = view.items;
-    expect(shown?.responses).toEqual(new Map([["RESPONSE", single("string", "First task")]]));
+    expect(shown?.responses).toEqual(new Map([["RESPONSE", buildSingle("string", "First task")]]));
     expect(shown?.correctResponses).toEqual(new Map([["RESPONSE", null]]));
     // The item's own rubric for the scorer follows the body as the candidate saw it.
     expect(shown?.body.map((node) => node.kind)).toEqual(["extended-text-interaction", "rubric-block"]);
@@ -575,7 +575,7 @@ describe("the scoring rubric of a scoring request", () => {
 
   it("keeps the candidate view free of the text of the rubric", () => {
     const view = collision.view(begun(collision).state, 0);
-    const text = JSON.stringify(viewToJson(view));
+    const text = JSON.stringify(writeView(view));
     expect(text).not.toContain("item-score");
     expect(text).not.toContain("level 1");
   });
@@ -603,19 +603,19 @@ describe("items that a tool delivers", () => {
       {
         type: "supply-scores",
         request: "item:L1:1:SCORE",
-        value: single("float", 7),
+        value: buildSingle("float", 7),
         scorer: "externalMachine",
         at: 6,
       },
       {
         type: "supply-scores",
         request: "item:L1:1:MAXSCORE",
-        value: single("float", 10),
+        value: buildSingle("float", 10),
         scorer: "externalMachine",
         at: 6,
       },
     );
-    expect(graded.state.outcomes.get("TOTAL")).toEqual(single("float", 7));
+    expect(graded.state.outcomes.get("TOTAL")).toEqual(buildSingle("float", 7));
     expect(engine.pending(graded.state).scoring).toEqual([]);
     const result = engine.results(graded.state).itemResults[0];
     expect(result).toMatchObject({ identifier: "L1", sessionStatus: "final" });
@@ -623,9 +623,9 @@ describe("items that a tool delivers", () => {
       variable.kind === "outcome" ? [[variable.identifier, variable.value, variable.externalScored]] : [],
     );
     expect(outcomesOf).toEqual([
-      ["completionStatus", single("identifier", "unknown"), undefined],
-      ["SCORE", single("float", 7), "externalMachine"],
-      ["MAXSCORE", single("float", 10), "externalMachine"],
+      ["completionStatus", buildSingle("identifier", "unknown"), undefined],
+      ["SCORE", buildSingle("float", 7), "externalMachine"],
+      ["MAXSCORE", buildSingle("float", 10), "externalMachine"],
     ]);
   });
 
@@ -653,7 +653,7 @@ describe("items that a tool delivers", () => {
     const half = played(engine, submitted.state, {
       type: "supply-scores",
       request: "item:L1:1:SCORE",
-      value: single("float", 7),
+      value: buildSingle("float", 7),
       scorer: "externalMachine",
       at: 6,
     });
@@ -808,12 +808,12 @@ describe("adaptive sections", () => {
           ? [variable.kind === "response" ? variable.candidateResponse : (variable as { value?: unknown }).value]
           : [],
       )[0];
-    expect(variableOf(first, "SCORE")).toEqual(single("float", 1));
-    expect(variableOf(second, "SCORE")).toEqual(single("float", 0));
-    expect(variableOf(first, "numAttempts")).toEqual(single("integer", 1));
-    expect(variableOf(first, "duration")).toEqual(single("duration", 0.004));
-    expect(variableOf(second, "duration")).toEqual(single("duration", 0.006));
-    expect(variableOf(first, "completionStatus")).toEqual(single("identifier", "unknown"));
+    expect(variableOf(first, "SCORE")).toEqual(buildSingle("float", 1));
+    expect(variableOf(second, "SCORE")).toEqual(buildSingle("float", 0));
+    expect(variableOf(first, "numAttempts")).toEqual(buildSingle("integer", 1));
+    expect(variableOf(first, "duration")).toEqual(buildSingle("duration", 0.004));
+    expect(variableOf(second, "duration")).toEqual(buildSingle("duration", 0.006));
+    expect(variableOf(first, "completionStatus")).toEqual(buildSingle("identifier", "unknown"));
     expect(assessmentResult.testResult?.datestamp).toBe(new Date(12).toISOString());
   });
 
@@ -881,7 +881,7 @@ describe("adaptive sections", () => {
       actions: ["end-part", "end-test", "suspend"],
     });
     expect(view.current).toBeUndefined();
-    expect(viewFromJson(viewToJson(view))).toEqual(view);
+    expect(readView(writeView(view))).toEqual(view);
     const suspended = played(engine, start.state, { type: "suspend", at: 1 });
     expect(engine.view(suspended.state, 2)).toMatchObject({ status: "suspended", actions: ["resume"] });
     const staged = played(
@@ -965,7 +965,7 @@ describe("adaptive sections in nonlinear parts and at the end", () => {
     const attemptsOf = request.assessmentResult.itemResults[0]?.variables.find(
       ({ identifier }) => identifier === "numAttempts",
     );
-    expect(attemptsOf).toMatchObject({ candidateResponse: single("integer", 2) });
+    expect(attemptsOf).toMatchObject({ candidateResponse: buildSingle("integer", 2) });
     expect(request.assessmentResult.itemResults.map(({ sequenceIndex }) => sequenceIndex)).toEqual([1, 3]);
   });
 
@@ -1229,7 +1229,7 @@ describe("outcomes that a CAT engine reports", () => {
       identifier: name,
       cardinality: "single",
       baseType: "float",
-      value: single("float", value),
+      value: buildSingle("float", value),
     }) as const;
   const report = (
     variables: ReturnType<typeof reported>[],
@@ -1272,31 +1272,31 @@ describe("outcomes that a CAT engine reports", () => {
       ),
     );
     // LEVEL is declared external-scored by a machine and takes the value; PLAIN is declared without it and does not.
-    expect(merged.state.outcomes.get("LEVEL")).toEqual(single("float", 2));
-    expect(merged.state.outcomes.get("PLAIN")).toEqual(single("float", 0));
+    expect(merged.state.outcomes.get("LEVEL")).toEqual(buildSingle("float", 2));
+    expect(merged.state.outcomes.get("PLAIN")).toEqual(buildSingle("float", 0));
     // SCORE of the item is declared without external scoring: the engine's value is ignored.
-    expect(merged.state.items[0]?.session.variables.outcomes.get("SCORE")).toEqual(single("float", 1));
+    expect(merged.state.items[0]?.session.variables.outcomes.get("SCORE")).toEqual(buildSingle("float", 1));
     expect(merged.state.report.sessionIdentifiers).toEqual([{ sourceId: "https://cat.example", identifier: "run-7" }]);
     // The reset of outcome processing does not erase the value.
     const later = played(engine, merged.state, next(5), pick("i2", "B", 6), act("submit", "i2", 7));
-    expect(later.state.outcomes.get("LEVEL")).toEqual(single("float", 2));
+    expect(later.state.outcomes.get("LEVEL")).toEqual(buildSingle("float", 2));
     const results = engine.results(later.state);
     const testVariables = results.testResult?.variables.flatMap((variable) =>
       variable.kind === "outcome" ? [[variable.identifier, variable.value, variable.externalScored]] : [],
     );
     expect(testVariables).toEqual([
-      ["TOTAL", single("float", 2), undefined],
-      ["LEVEL", single("float", 2), "externalMachine"],
-      ["PLAIN", single("float", 0), undefined],
-      ["THETA", single("float", 0.5), "externalMachine"],
+      ["TOTAL", buildSingle("float", 2), undefined],
+      ["LEVEL", buildSingle("float", 2), "externalMachine"],
+      ["PLAIN", buildSingle("float", 0), undefined],
+      ["THETA", buildSingle("float", 0.5), "externalMachine"],
     ]);
     const firstItem = results.itemResults[0]?.variables.flatMap((variable) =>
       variable.kind === "outcome" ? [[variable.identifier, variable.value, variable.externalScored]] : [],
     );
     expect(firstItem).toEqual([
-      ["completionStatus", single("identifier", "unknown"), undefined],
-      ["SCORE", single("float", 1), undefined],
-      ["PROB", single("float", 0.25), "externalMachine"],
+      ["completionStatus", buildSingle("identifier", "unknown"), undefined],
+      ["SCORE", buildSingle("float", 1), undefined],
+      ["PROB", buildSingle("float", 0.25), "externalMachine"],
     ]);
     expect(results.context.sessionIdentifiers).toEqual([{ sourceId: "https://cat.example", identifier: "run-7" }]);
   });
@@ -1346,9 +1346,9 @@ describe("outcomes that a CAT engine reports", () => {
           : [],
       );
     expect(names).toEqual([
-      ["LEVEL", single("float", 1)],
-      ["THETA", single("float", 0.5)],
-      ["OTHER", single("float", 3)],
+      ["LEVEL", buildSingle("float", 1)],
+      ["THETA", buildSingle("float", 0.5)],
+      ["OTHER", buildSingle("float", 3)],
     ]);
   });
 });
@@ -1364,7 +1364,7 @@ describe("the state with pending work", () => {
     identifier: "LEVEL",
     cardinality: "single",
     baseType: "float",
-    value: single("float", 2),
+    value: buildSingle("float", 2),
   } as const;
   /** A state with a session that has a stage, reported items, an outcome and a request that waits for a candidate who asked to move on. */
   const busy = (): DeliveryState => {
@@ -1751,12 +1751,12 @@ describe("results", () => {
     const durations = test?.variables.flatMap((variable) =>
       variable.kind === "response" ? [variable.candidateResponse] : [],
     );
-    expect(durations).toEqual([single("duration", 5), single("duration", 5), single("duration", 5)]);
+    expect(durations).toEqual([buildSingle("duration", 5), buildSingle("duration", 5), buildSingle("duration", 5)]);
     expect(test?.variables.find((variable) => variable.kind === "context")).toMatchObject({
-      value: single("string", "jkt"),
+      value: buildSingle("string", "jkt"),
     });
     expect(test?.variables.find((variable) => variable.kind === "outcome")).toMatchObject({
-      value: single("float", 1),
+      value: buildSingle("float", 1),
     });
   });
 
@@ -1773,20 +1773,23 @@ describe("results", () => {
     });
     const variables = variablesOf(first);
     // The item was shown from 0 to 2000 ms: its duration is reported although the item is not time dependent.
-    expect(variables.get("duration")).toMatchObject({ kind: "response", candidateResponse: single("duration", 2) });
-    expect(variables.get("numAttempts")).toMatchObject({ candidateResponse: single("integer", 1) });
+    expect(variables.get("duration")).toMatchObject({
+      kind: "response",
+      candidateResponse: buildSingle("duration", 2),
+    });
+    expect(variables.get("numAttempts")).toMatchObject({ candidateResponse: buildSingle("integer", 1) });
     expect(variables.get("RESPONSE")).toMatchObject({
       kind: "response",
       cardinality: "single",
       baseType: "identifier",
-      candidateResponse: single("identifier", "B"),
+      candidateResponse: buildSingle("identifier", "B"),
       scoreStatus: "scored",
       answeredStatus: "answered",
     });
-    expect(variables.get("SCORE")).toMatchObject({ kind: "outcome", value: single("float", 1) });
+    expect(variables.get("SCORE")).toMatchObject({ kind: "outcome", value: buildSingle("float", 1) });
     expect(variables.get("completionStatus")).toMatchObject({
       kind: "outcome",
-      value: single("identifier", "unknown"),
+      value: buildSingle("identifier", "unknown"),
     });
   });
 
@@ -1825,7 +1828,7 @@ describe("results", () => {
     const supplied = played(engine, state, {
       type: "supply-scores",
       request: "item:w:1:SCORE",
-      value: single("float", 8),
+      value: buildSingle("float", 8),
       scorer: "human",
       at: 6000,
     });
@@ -1833,13 +1836,13 @@ describe("results", () => {
     expect(final.itemResults[1]?.sessionStatus).toBe("final");
     expect(variablesOf(final.itemResults[1]).get("RESPONSE")).toMatchObject({ scoreStatus: "scored" });
     expect(variablesOf(final.itemResults[1]).get("SCORE")).toMatchObject({
-      value: single("float", 8),
+      value: buildSingle("float", 8),
       externalScored: "human",
       interpretation: "Essay score",
       normalMaximum: 10,
     });
     expect(final.testResult?.variables.find(({ identifier }) => identifier === "TOTAL")).toMatchObject({
-      value: single("float", 9),
+      value: buildSingle("float", 9),
     });
     expect(final.testResult?.datestamp).toBe("1970-01-01T00:00:06.000Z");
   });
@@ -1861,7 +1864,7 @@ describe("results", () => {
     const supplied = played(engine, played1().state, {
       type: "supply-scores",
       request: "item:w:1:SCORE",
-      value: single("float", 8),
+      value: buildSingle("float", 8),
       scorer: "human",
       at: 6000,
     });
@@ -1967,7 +1970,7 @@ describe("properties", () => {
         (request): Action => ({
           type: "supply-scores",
           request: request.id,
-          value: single("float", n % 11),
+          value: buildSingle("float", n % 11),
           scorer: "human",
           at,
         }),
@@ -2021,7 +2024,7 @@ describe("properties", () => {
       const before = serializeState(state);
       // The view builds in every state, also while a CAT engine is awaited, and lists the types the engine accepts.
       const view = walker.view(state, action.at);
-      expect(viewFromJson(viewToJson(view))).toEqual(view);
+      expect(readView(writeView(view))).toEqual(view);
       const step = walker.apply(state, action);
       // A resume of a session that runs changes nothing and is no action to offer.
       const offered = !HostTypes.includes(action.type) && !(action.type === "resume" && state.status === "in-progress");
@@ -2092,7 +2095,7 @@ describe("properties", () => {
             state = played(walker, state, {
               type: "supply-scores",
               request: request.id,
-              value: single("float", 1),
+              value: buildSingle("float", 1),
               scorer: "human",
               at: state.at,
             }).state;
