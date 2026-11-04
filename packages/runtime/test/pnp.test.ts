@@ -4,9 +4,7 @@ import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
   DataError,
-  deriveExtensionName,
   isColorTheme,
-  isSetSupportName,
   isSupportName,
   type PersonalNeedsProfile,
   PNP_ALTERNATE_NAMESPACES,
@@ -20,6 +18,7 @@ import {
   type SupportSetting,
   writePnp,
 } from "../src/index.js";
+import { deriveExtensionName, isSetSupportName } from "../src/pnp/internal.js";
 import { XSI_NAMESPACE } from "../src/xml/internal.js";
 import { asProfile, personalNeedsProfile, pnpRecords } from "./arbitraries/pnp.js";
 import { withoutPositions } from "./arbitraries/xml.js";
