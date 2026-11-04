@@ -4,6 +4,6 @@
  * @module
  */
 export { type BindContext, BindRuleSets } from "./bind-rule-sets.js";
-export { DocumentChecks } from "./document-checks.js";
+export { checkDocumentElement } from "./document-checks.js";
 export { Findings, FindingsLimit } from "./findings.js";
 export { checkMaxFindings } from "./options.js";

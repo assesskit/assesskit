@@ -7,7 +7,7 @@ import { BranchRuleChecks } from "./branch-rules.js";
 import { ContentReferences } from "./content-references.js";
 import { checkCovers } from "./covers.js";
 import { checkDeclarations } from "./declarations.js";
-import { DocumentChecks } from "./document-checks.js";
+import { checkDocumentElement } from "./document-checks.js";
 import { ExpressionChecker } from "./expressions.js";
 import { failureIssues } from "./failures.js";
 import type { Findings } from "./findings.js";
@@ -218,9 +218,8 @@ export function checkTest(
   const formats = new FormatChecks(findings);
   const content = new ContentReferences(findings, (identifier) => scope.own(identifier), "test");
   const references = new AttributeReferences(findings, (identifier) => scope.reference(identifier), "test");
-  const document = new DocumentChecks(findings);
   walkDocument({ kind: "test", test }, (visit) => {
-    document.visit(visit);
+    checkDocumentElement(visit, findings);
     bind.visit(visit);
     formats.visit(visit);
     content.visit(visit);

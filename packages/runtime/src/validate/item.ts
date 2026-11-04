@@ -5,7 +5,7 @@ import { AttributeReferences } from "./attribute-references.js";
 import { BindRuleSets } from "./bind-rule-sets.js";
 import { ContentReferences } from "./content-references.js";
 import { checkDeclarations } from "./declarations.js";
-import { DocumentChecks } from "./document-checks.js";
+import { checkDocumentElement } from "./document-checks.js";
 import { ExpressionChecker } from "./expressions.js";
 import type { Findings } from "./findings.js";
 import { FormatChecks } from "./formats.js";
@@ -54,9 +54,8 @@ export function checkItem(item: AssessmentItem, findings: Findings, options: Che
     "item",
   );
   const unreachable = new UnreachableContent();
-  const document = new DocumentChecks(findings);
   walkDocument({ kind: "item", item }, (visit) => {
-    document.visit(visit);
+    checkDocumentElement(visit, findings);
     bind.visit(visit);
     formats.visit(visit);
     content.visit(visit);

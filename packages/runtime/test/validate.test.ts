@@ -38,7 +38,7 @@ import {
   validateTest,
   writeManifest,
 } from "../src/index.js";
-import { type BindContext, BindRuleSets, DocumentChecks, Findings } from "../src/validate/internal.js";
+import { type BindContext, BindRuleSets, checkDocumentElement, Findings } from "../src/validate/internal.js";
 import { createReadError } from "../src/xml/internal.js";
 import { FUZZ } from "./fuzz.js";
 import { criterionMarkup, rubricMarkup } from "./scoring-rubrics.js";
@@ -285,7 +285,7 @@ describe("the explicit rule sets of the XML binding: the associable elements, th
     const issues = rulesOf(
       (() => {
         const findings = new Findings();
-        new DocumentChecks(findings).visit(visitOf("qti-text-entry-interaction", visitOf("qti-rubric-block")));
+        checkDocumentElement(visitOf("qti-text-entry-interaction", visitOf("qti-rubric-block")), findings);
         return findings.issues;
       })(),
     );
