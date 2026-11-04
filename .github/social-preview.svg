@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <title>assesskit: QTI 3.0 runtime and player for JavaScript and TypeScript</title>
+  <rect width="1280" height="640" fill="#0f4c5c"/>
+  <rect x="0" y="0" width="16" height="640" fill="#e0a458"/>
+  <path d="M880 330l110 110 230-250" fill="none" stroke="#e0a458" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M870 500h340" stroke="#4d8896" stroke-width="4" stroke-linecap="round"/>
+  <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif" fill="#ffffff">
+    <text x="80" y="150" font-size="96" font-weight="700">assesskit</text>
+    <text x="80" y="218" font-size="38">QTI 3.0 runtime and player</text>
+    <text x="80" y="266" font-size="38">for JavaScript and TypeScript</text>
+    <text x="80" y="326" font-size="28" fill="#cfe3e8">Read · validate · score · deliver items and tests</text>
+    <text x="80" y="366" font-size="28" fill="#cfe3e8">Adaptive testing · portable custom interactions</text>
+  </g>
+  <g font-family="Menlo, Consolas, monospace" font-size="25" fill="#ffffff">
+    <text x="80" y="448">@assesskit/runtime</text>
+    <text x="80" y="492">@assesskit/player</text>
+    <text x="80" y="536">@assesskit/custom-interactions</text>
+  </g>
+  <text x="80" y="596" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="26" fill="#e0a458">assesskit.wakan.dev</text>
+</svg>

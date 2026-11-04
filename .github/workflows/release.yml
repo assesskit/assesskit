@@ -4,7 +4,9 @@ on: workflow_dispatch
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
-# npm trusted publishing: the id token authenticates the publish and adds provenance, so no npm token is stored.
+# Every version carries provenance. The first version of a package is published with the short-lived token of the secret
+# NPM_TOKEN and NPM_CONFIG_PROVENANCE, since a trusted publisher is configured only on a package that exists; once each package
+# has its trusted publisher, the id token authenticates the publish and adds provenance, and the secret is deleted.
 permissions:
   contents: write
   id-token: write
@@ -28,4 +30,12 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
       - run: pnpm install --frozen-lockfile
-      - run: pnpm release
+      - env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"
+        run: pnpm release
+      # One GitHub release for the run, named by its date, with the versions published and their changelog entries, which
+      # Zenodo archives; a run that published nothing creates none.
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/github-release.ts

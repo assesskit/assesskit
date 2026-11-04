@@ -81,6 +81,13 @@ describe("identity", () => {
       `Give ${FIRST.name} its description in the table of packages`,
     ]);
   });
+  it("holds the citation and the Context7 file to the family's sentence, its site and its facts", () => {
+    const changed = repository({
+      "CITATION.cff": "cff-version: 1.2.0\nabstract: Another sentence.\n",
+      "context7.json": JSON.stringify({ description: FAMILY.sentence, rules: [] }),
+    });
+    expect(checkIdentity(changed).map(({ file }) => file)).toStrictEqual(["CITATION.cff", "context7.json"]);
+  });
 });
 
 describe("trademarks", () => {

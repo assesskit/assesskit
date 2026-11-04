@@ -1,4 +1,4 @@
-import { FAMILY, PACKAGES } from "../family.ts";
+import { FACTS, FAMILY, PACKAGES, SITE } from "../family.ts";
 import { folderOf, linesFor, packageUrl } from "../identity.ts";
 
 /** A Mermaid diagram, which every README holds. */
@@ -13,7 +13,7 @@ function withLines(text: string): string {
 /**
  * The files of a repository whose manifests, READMEs and NOTICE files say what `family.ts` says, as `check:standards` reads
  * them: the root README with the family's sentence and the table of packages, and for each package its manifest, a README
- * that opens with its description and a NOTICE.
+ * that opens with its description and a NOTICE, and the citation and the Context7 file with the family's sentence.
  */
 export function familyFiles(): Record<string, string> {
   const table = PACKAGES.map(({ name, description }) => `| [\`${name}\`](${packageUrl(name)}) | ${description} |`);
@@ -22,6 +22,9 @@ export function familyFiles(): Record<string, string> {
       `# ${FAMILY.name}\n\n${FAMILY.sentence}\n\n${DIAGRAM}\n## Which package\n\n| Package | What it is |\n| --- | --- |\n${table.join("\n")}\n\n## Documentation\n## Development\n## Layout\n## License\n`,
     ),
   };
+  files["CITATION.cff"] =
+    `cff-version: 1.2.0\ntitle: ${FAMILY.name}\nabstract: >-\n  ${FAMILY.sentence}\nurl: ${SITE}\n`;
+  files["context7.json"] = JSON.stringify({ projectTitle: FAMILY.name, description: FAMILY.sentence, rules: FACTS });
   for (const { name, description, keywords } of PACKAGES) {
     const folder = folderOf(name);
     files[`packages/${folder}/package.json`] = `${JSON.stringify(

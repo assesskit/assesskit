@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: If you use assesskit in your work, please cite it as below.
+type: software
+title: assesskit
+abstract: >-
+  QTI 3.0 runtime and player for JavaScript and TypeScript: read, validate, score and deliver assessment items and tests,
+  with adaptive testing.
+authors:
+  - given-names: Fariz
+    family-names: Wakan
+license: Apache-2.0
+repository-code: https://github.com/assesskit/assesskit
+url: https://assesskit.wakan.dev/
+keywords:
+  - qti
+  - qti3
+  - assessment
+  - e-assessment
+  - online-assessment
+  - assessment-player
+  - computerized-adaptive-testing
+  - adaptive-testing
+  - item-bank
+  - accessibility
+  - wcag
+  - edtech
+  - typescript
+  - javascript

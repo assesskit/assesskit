@@ -120,7 +120,16 @@ Biome enforces, folder by folder.
 - Changesets version and publish the packages, each on its own version. A release has one changeset per package in
   `.changeset/`; a change made before the release extends it.
 - A pull request from a `changeset-release/` branch runs `pnpm changeset version`; after it merges, the maintainer runs the
-  Release workflow by hand, which runs `rules.yml` and, when it passes, builds and publishes the versions not yet on npm.
+  Release workflow by hand from the public repository: it runs `rules.yml` and, when it passes, builds and publishes the
+  versions not yet on npm with provenance, the first version of each package with the short-lived token of the secret
+  `NPM_TOKEN` and later ones through each package's trusted publisher; then `scripts/github-release.ts` creates one GitHub
+  release named by the date with the versions published and their changelog entries (`node scripts/github-release.ts
+  --dry-run` prints it and creates nothing).
+- At the public release the owner sets what a repository file cannot: the repository's description (the family's sentence of
+  `scripts/family.ts`), topics and homepage, the social preview (`.github/social-preview.png`, drawn from
+  `.github/social-preview.svg`), the organization's profile (`.github/profile/README.md`, copied into the organization's
+  `.github` repository), the domain of `SITE` with Pages and `docs.yml`, and Zenodo, which reads `CITATION.cff`. Context7 reads
+  `context7.json`, whose description and rules `pnpm check:standards` holds to the family's sentence and `FACTS`.
 
 ## Boundary between the runtime and the player
 
