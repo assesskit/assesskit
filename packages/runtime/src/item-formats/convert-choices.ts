@@ -1,5 +1,5 @@
 import { buildContainer, buildSingle, type Value } from "../values/index.js";
-import type { XmlElement } from "../xml/index.js";
+import { findAttribute, type XmlElement } from "../xml/index.js";
 import {
   asGrade,
   type ConvertContext,
@@ -8,14 +8,20 @@ import {
   type FeedbackUse,
   type ItemView,
   Omitted,
-  percent,
   readCorrect,
   SAME,
   type Sample,
   sampleOf,
 } from "./item-view.js";
-import { attribute, type Probe } from "./probe.js";
-import { type ChoiceAnswer, emptyText, type FormattedText, type Question, type QuestionCommon } from "./question.js";
+import type { Probe } from "./probe.js";
+import {
+  type ChoiceAnswer,
+  emptyText,
+  type FormattedText,
+  percent,
+  type Question,
+  type QuestionCommon,
+} from "./question.js";
 
 // A choice interaction as Moodle's multiple choice: one answer gives its credit; several give the sum of theirs, floored at
 // 0 and capped at the mark. The credits are learned by running the item's response processing on each choice, and on sets
@@ -148,21 +154,21 @@ function checkSum(scores: ChoiceScores, credits: number[], view: ItemView): numb
   const example = Math.max(differs, 0);
   view.losses.push({
     reason: "scoring",
-    message: `The item gives ${percent((subsetScores[example] ?? 0) / mark)} for the choices ${(subsets[example] ?? []).map((index) => ids[index]).join(", ")}, which a sum of credits per answer, Moodle's rule, does not: ${keys.length > 0 ? "each right answer earns an equal share and a wrong one takes 100%" : "the answers keep the credit they earn alone"}.`,
+    message: `The item gives ${percent((subsetScores[example] ?? 0) / mark)}% for the choices ${(subsets[example] ?? []).map((index) => ids[index]).join(", ")}, which a sum of credits per answer, Moodle's rule, does not: ${keys.length > 0 ? "each right answer earns an equal share and a wrong one takes 100%" : "the answers keep the credit they earn alone"}.`,
   });
   return keys.length > 0 ? ids.map((_, index) => (keys.includes(index) ? 1 / keys.length : -1)) : credits;
 }
 
 function recordSettings(interaction: XmlElement, single: boolean, count: number, view: ItemView): void {
-  const shuffle = attribute(interaction, "shuffle") === "true";
-  if (shuffle && elements(interaction).some((choice) => attribute(choice, "fixed") === "true")) {
+  const shuffle = findAttribute(interaction, "shuffle") === "true";
+  if (shuffle && elements(interaction).some((choice) => findAttribute(choice, "fixed") === "true")) {
     view.losses.push({
       reason: "setting",
       message: "Moodle shuffles every answer or none: the choices that stay in place are shuffled.",
     });
   }
-  const maxChoices = Number(attribute(interaction, "max-choices") ?? "1");
-  const minChoices = Number(attribute(interaction, "min-choices") ?? "0");
+  const maxChoices = Number(findAttribute(interaction, "max-choices") ?? "1");
+  const minChoices = Number(findAttribute(interaction, "min-choices") ?? "0");
   if (!single && ((maxChoices > 0 && maxChoices < count) || minChoices > 1)) {
     view.losses.push({
       reason: "setting",
@@ -211,7 +217,7 @@ export function convertChoices(
   common: QuestionCommon,
   context: ConvertContext,
 ): Question {
-  const single = attribute(view.declaration ?? interaction, "cardinality") !== "multiple";
+  const single = findAttribute(view.declaration ?? interaction, "cardinality") !== "multiple";
   if (choices.length < 2) throw new Omitted("Moodle's multiple choice needs at least two answers.");
   if (choices.length > context.limits.maxAnswers) {
     throw new Omitted(
@@ -248,7 +254,7 @@ export function convertChoices(
     ...scored,
     qtype: "multichoice",
     single,
-    shuffle: attribute(interaction, "shuffle") === "true",
+    shuffle: findAttribute(interaction, "shuffle") === "true",
     numbering: "abc",
     answers,
     combined: feedback.combined,

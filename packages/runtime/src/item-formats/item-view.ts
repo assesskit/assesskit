@@ -1,12 +1,12 @@
 import type { CustomOperator } from "../processing/index.js";
 import type { Value } from "../values/index.js";
-import type { XmlElement, XmlNode } from "../xml/index.js";
+import { collectText, listChildElements, type XmlElement, type XmlNode } from "../xml/index.js";
 import { type HtmlVisitor, writeHtml } from "./body-html.js";
 import { findGrade, nearestGrade } from "./grades.js";
 import type { ItemLoss } from "./item-build.js";
 import type { ItemFormatLimits } from "./limits.js";
 import type { FeedbackElement, Probe, ProbeResult } from "./probe.js";
-import { type CombinedFeedback, emptyText, type FormattedText } from "./question.js";
+import { type CombinedFeedback, emptyText, type FormattedText, percent } from "./question.js";
 
 // What the writer knows of an item while it converts it, and the helpers that each type of question shares: the item's XML,
 // the samples of its response processing, the feedback each shows, and Moodle's grades.
@@ -55,9 +55,13 @@ export interface Sample {
 
 /** The child elements of an element, of a name if one is given. */
 export function elements(parent: XmlElement, name?: string): XmlElement[] {
-  return parent.children.filter(
-    (child): child is XmlElement => child.kind === "element" && (name === undefined || child.name === name),
-  );
+  return listChildElements(parent).filter((child) => name === undefined || child.name === name);
+}
+
+/** The text of the first child element of a name, empty when there is none. */
+export function firstText(parent: XmlElement, name: string): string {
+  const [first] = elements(parent, name);
+  return first === undefined ? "" : collectText(first);
 }
 
 /** The descendants of an element that pass a test, in document order. */
@@ -73,22 +77,11 @@ export function descendants(
   return found;
 }
 
-/** The text that an element holds directly. */
-export function textOf(element: XmlElement | undefined): string {
-  if (element === undefined) return "";
-  return element.children.map((child) => (child.kind === "text" || child.kind === "cdata" ? child.value : "")).join("");
-}
-
-/** A share as Moodle writes it in percent, to seven decimals of the share. */
-export function percent(share: number): string {
-  return `${Math.round(share * 1e7) / 1e5}%`;
-}
-
 /** The values of a declaration's correct response. */
 export function readCorrect(declaration: XmlElement | undefined): string[] {
   if (declaration === undefined) return [];
   const correct = elements(declaration, "qti-correct-response")[0];
-  return correct === undefined ? [] : elements(correct, "qti-value").map((value) => textOf(value).trim());
+  return correct === undefined ? [] : elements(correct, "qti-value").map((value) => collectText(value).trim());
 }
 
 /** The map entries of a declaration's mapping. */
@@ -115,7 +108,7 @@ export function asGrade(fraction: number, what: string, view: ItemView): number 
   const nearest = nearestGrade(Math.max(-1, Math.min(1, fraction)));
   view.losses.push({
     reason: "scoring",
-    message: `The credit ${percent(fraction)} of ${what} is not one of Moodle's grades: it is written as ${percent(nearest)}.`,
+    message: `The credit ${percent(fraction)}% of ${what} is not one of Moodle's grades: it is written as ${percent(nearest)}%.`,
   });
   return nearest;
 }

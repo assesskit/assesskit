@@ -1,7 +1,6 @@
 import { OPERATOR_NAMESPACE } from "../operators/index.js";
 import { OPERATOR_NAMES, parseOptions } from "../operators/internal.js";
-import type { XmlElement } from "../xml/index.js";
-import { attribute } from "./probe.js";
+import { findAttribute, type XmlElement } from "../xml/index.js";
 
 /** The name of the attribute that carries the options of an operator's call. */
 const OPTIONS_ATTRIBUTE = "options";
@@ -12,7 +11,7 @@ const OPTIONS_ATTRIBUTE = "options";
  * runtime's or its options are not valid, as a call that fails in processing leaves the item out.
  */
 export function operatorKey(element: XmlElement) {
-  const name = OPERATOR_NAMES.find((candidate) => candidate === attribute(element, "class"));
+  const name = OPERATOR_NAMES.find((candidate) => candidate === findAttribute(element, "class"));
   const text = element.attributes.find(
     (candidate) => candidate.namespace === OPERATOR_NAMESPACE && candidate.name === OPTIONS_ATTRIBUTE,
   )?.value;

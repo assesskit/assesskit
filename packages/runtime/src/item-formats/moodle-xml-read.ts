@@ -1,5 +1,5 @@
 import { ReadError, SecurityError } from "../errors.js";
-import { parseXml, type XmlElement } from "../xml/index.js";
+import { collectText, findAttribute, listChildElements, parseXml, type XmlElement } from "../xml/index.js";
 import { findGrade } from "./grades.js";
 import { importEntries, resolveReadOptions } from "./import-items.js";
 import type { ItemFormatLimits } from "./limits.js";
@@ -56,21 +56,14 @@ class XmlRefusal {
   }
 }
 
+/** The child elements of a name; none for an element that is not there. */
+function children(element: XmlElement | undefined, name: string): XmlElement[] {
+  return element === undefined ? [] : listChildElements(element).filter((node) => node.name === name);
+}
+
 /** The first child element of a name. */
 function child(element: XmlElement | undefined, name: string): XmlElement | undefined {
-  return element?.children.find((node): node is XmlElement => node.kind === "element" && node.name === name);
-}
-
-/** The child elements of a name. */
-function children(element: XmlElement | undefined, name: string): XmlElement[] {
-  return (element?.children ?? []).filter((node): node is XmlElement => node.kind === "element" && node.name === name);
-}
-
-/** The text of an element, its text and CDATA together. */
-function textOf(element: XmlElement | undefined): string {
-  return (element?.children ?? [])
-    .map((node) => (node.kind === "text" || node.kind === "cdata" ? node.value : ""))
-    .join("");
+  return children(element, name)[0];
 }
 
 /** The trimmed text of the first element of a path of names, or the default, as `getpath` with `istext` reads it. */
@@ -80,11 +73,11 @@ function pathText(element: XmlElement | undefined, names: readonly string[], fal
     at = child(at, name);
     if (at === undefined) return fallback;
   }
-  return phpTrim(textOf(at));
+  return phpTrim(at === undefined ? "" : collectText(at));
 }
 
 function attributeOf(element: XmlElement | undefined, name: string): string | undefined {
-  return element?.attributes.find((attribute) => attribute.namespace === "" && attribute.name === name)?.value;
+  return element === undefined ? undefined : findAttribute(element, name);
 }
 
 /** Moodle's `trans_format`: a name it does not know is HTML. */
@@ -103,7 +96,7 @@ function isTrue(text: string): boolean {
 function filesOf(element: XmlElement | undefined): EmbeddedFile[] {
   return children(element, "file").map((file) => ({
     path: `${attributeOf(file, "path") ?? "/"}${attributeOf(file, "name") ?? ""}`,
-    bytes: phpBase64Decode(textOf(file)),
+    bytes: phpBase64Decode(collectText(file)),
   }));
 }
 
@@ -242,7 +235,8 @@ function readNumerical(question: XmlElement, common: QuestionCommon, limits: Ite
   const read: NumberAnswer[] = answers.map((answer) => {
     const text = pathText(answer, ["text"], "");
     const deprecated = child(answer, "fraction");
-    const credit = deprecated === undefined ? fractionOf(answer) : numberOf(phpTrim(textOf(deprecated)), "fraction");
+    const credit =
+      deprecated === undefined ? fractionOf(answer) : numberOf(phpTrim(collectText(deprecated)), "fraction");
     const value = text === "*" || text === "" ? null : numberOf(text, "answer");
     return {
       value,

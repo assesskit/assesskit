@@ -1,5 +1,5 @@
 import { buildContainer, type Value } from "../values/index.js";
-import type { XmlElement } from "../xml/index.js";
+import { findAttribute, type XmlElement } from "../xml/index.js";
 import { hasMarkup, plainText } from "./body-html.js";
 import {
   type ConvertContext,
@@ -13,7 +13,7 @@ import {
   type Sample,
   sampleOf,
 } from "./item-view.js";
-import { attribute, type Probe } from "./probe.js";
+import type { Probe } from "./probe.js";
 import { emptyText, type Question, type QuestionCommon, type Subquestion } from "./question.js";
 
 // A match interaction as Moodle's matching question, whose stems each have one right answer and earn an equal share of the
@@ -22,7 +22,7 @@ import { emptyText, type Question, type QuestionCommon, type Subquestion } from 
 type Pair = readonly [XmlElement, XmlElement];
 
 function identifierOf(element: XmlElement): string {
-  return attribute(element, "identifier") ?? "";
+  return findAttribute(element, "identifier") ?? "";
 }
 
 function pairsValue(list: readonly Pair[]): Value | null {
@@ -78,7 +78,7 @@ function checkShares(
     });
   }
   const limited = (target: XmlElement) => {
-    const max = Number(attribute(target, "match-max") ?? "1");
+    const max = Number(findAttribute(target, "match-max") ?? "1");
     return max !== 0 && max < stems;
   };
   if (targets.some(limited)) {
@@ -170,7 +170,7 @@ export function convertMatch(
     defaultMark: mark,
     generalFeedback: feedback.general,
     qtype: "match",
-    shuffle: attribute(interaction, "shuffle") === "true",
+    shuffle: findAttribute(interaction, "shuffle") === "true",
     subquestions: subquestionsOf(sources, targets, right, view),
     combined: feedback.combined,
   };

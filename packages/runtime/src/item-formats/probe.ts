@@ -36,11 +36,6 @@ export interface Probe {
   run(response: Value | null): ProbeResult;
 }
 
-/** The value of an attribute of an element without a namespace. */
-export function attribute(element: XmlElement, name: string): string | undefined {
-  return element.attributes.find((candidate) => candidate.namespace === "" && candidate.name === name)?.value;
-}
-
 /** Returns a number that a value holds, or `null`. */
 function numberOf(value: Value | null | undefined): number | null {
   if (value === null || value === undefined || value.cardinality !== "single") return null;

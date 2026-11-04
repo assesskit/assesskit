@@ -1,26 +1,11 @@
 import { ASI_NAMESPACE } from "../asi/index.js";
-import type { XmlElement, XmlNode } from "../xml/index.js";
+import type { XmlElement } from "../xml/index.js";
+import { elementBuilder } from "../xml/internal.js";
 
 // Builders of the QTI elements that a reader writes, as XML trees that `readAsi` then reads into the model.
 
 /** An element of the ASI namespace with its attributes, in order, and its children; an attribute without value is left out. */
-export function qti(
-  name: string,
-  attributes: Readonly<Record<string, string | undefined>> = {},
-  children: readonly (XmlNode | string)[] = [],
-): XmlElement {
-  return {
-    kind: "element",
-    namespace: ASI_NAMESPACE,
-    name,
-    attributes: Object.entries(attributes).flatMap(([attribute, value]) =>
-      value === undefined ? [] : [{ namespace: "", name: attribute, value }],
-    ),
-    children: children.flatMap((child) =>
-      typeof child === "string" ? (child === "" ? [] : [{ kind: "text" as const, value: child }]) : [child],
-    ),
-  };
-}
+export const qti = elementBuilder(ASI_NAMESPACE);
 
 /** A number as an attribute or a value of the base type `float` writes it. */
 export function formatFloat(value: number): string {

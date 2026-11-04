@@ -1,7 +1,7 @@
 import type { AssessmentItem } from "../asi/index.js";
 import { typeNamed, writeElement } from "../asi/internal.js";
 import { DataError } from "../errors.js";
-import type { XmlElement } from "../xml/index.js";
+import { collectText, findAttribute, type XmlElement } from "../xml/index.js";
 import { type HtmlVisitor, writeHtml } from "./body-html.js";
 import { type Choice, convertChoices } from "./convert-choices.js";
 import { convertEssay } from "./convert-essay.js";
@@ -9,8 +9,8 @@ import { convertMatch } from "./convert-match.js";
 import { convertNumerical } from "./convert-number.js";
 import { convertShortAnswer } from "./convert-text.js";
 import type { ItemLoss } from "./item-build.js";
-import { type ConvertContext, descendants, elements, html, type ItemView, Omitted, textOf } from "./item-view.js";
-import { attribute, createProbe, type FeedbackElement, isProcessingFailure, type Probe } from "./probe.js";
+import { type ConvertContext, descendants, elements, html, type ItemView, Omitted } from "./item-view.js";
+import { createProbe, type FeedbackElement, isProcessingFailure, type Probe } from "./probe.js";
 import { emptyText, type Question, type QuestionCommon } from "./question.js";
 
 // An item as Moodle's question model: the interaction gives the question type, its response processing run on the responses
@@ -39,7 +39,7 @@ const MARKER = "\uE000";
 function createVisitor(interaction: XmlElement | undefined, graderInfo: string[]): HtmlVisitor {
   const omitted = new Set<string>();
   const rubric = (element: XmlElement) => {
-    const views = (attribute(element, "view") ?? "").split(/\s+/);
+    const views = (findAttribute(element, "view") ?? "").split(/\s+/);
     const content = elements(element, "qti-content-body").flatMap((body) => body.children);
     if (views.includes("candidate")) return writeHtml(content, visitor);
     if (views.includes("scorer")) graderInfo.push(writeHtml(content, visitor));
@@ -62,13 +62,13 @@ function createVisitor(interaction: XmlElement | undefined, graderInfo: string[]
 /** Reads the mark of an item: the default of `MAXSCORE`, else the `normal-maximum` of `SCORE`. */
 function readMark(tree: XmlElement): number | undefined {
   const outcomes = elements(tree, "qti-outcome-declaration");
-  const max = outcomes.find((outcome) => attribute(outcome, "identifier") === "MAXSCORE");
+  const max = outcomes.find((outcome) => findAttribute(outcome, "identifier") === "MAXSCORE");
   const defaultValue = max === undefined ? undefined : elements(max, "qti-default-value")[0];
   const value = defaultValue === undefined ? undefined : elements(defaultValue, "qti-value")[0];
-  const declared = Number(textOf(value).trim());
-  if (value !== undefined && Number.isFinite(declared) && declared > 0) return declared;
-  const score = outcomes.find((outcome) => attribute(outcome, "identifier") === "SCORE");
-  const normal = Number(score === undefined ? Number.NaN : attribute(score, "normal-maximum"));
+  const declared = value === undefined ? Number.NaN : Number(collectText(value).trim());
+  if (Number.isFinite(declared) && declared > 0) return declared;
+  const score = outcomes.find((outcome) => findAttribute(outcome, "identifier") === "SCORE");
+  const normal = Number(score === undefined ? Number.NaN : findAttribute(score, "normal-maximum"));
   return Number.isFinite(normal) && normal > 0 ? normal : undefined;
 }
 
@@ -80,9 +80,9 @@ function feedbackElements(tree: XmlElement, body: XmlElement | undefined): Feedb
       : descendants(body, ({ name }) => name === "qti-feedback-inline" || name === "qti-feedback-block");
   return [...elements(tree, "qti-modal-feedback"), ...inBody].map((element) => ({
     element,
-    outcome: attribute(element, "outcome-identifier") ?? "",
-    identifier: attribute(element, "identifier") ?? "",
-    showHide: attribute(element, "show-hide") === "hide" ? "hide" : "show",
+    outcome: findAttribute(element, "outcome-identifier") ?? "",
+    identifier: findAttribute(element, "identifier") ?? "",
+    showHide: findAttribute(element, "show-hide") === "hide" ? "hide" : "show",
   }));
 }
 
@@ -141,13 +141,13 @@ function convertInteraction(
   common: QuestionCommon,
   context: ConvertContext,
 ): Question {
-  const baseType = view.declaration === undefined ? undefined : attribute(view.declaration, "base-type");
+  const baseType = view.declaration === undefined ? undefined : findAttribute(view.declaration, "base-type");
   switch (interaction.name) {
     case "qti-choice-interaction":
     case "qti-inline-choice-interaction": {
       const choiceName = interaction.name === "qti-choice-interaction" ? "qti-simple-choice" : "qti-inline-choice";
       const choices: Choice[] = elements(interaction, choiceName).map((choice) => ({
-        id: attribute(choice, "identifier") ?? "",
+        id: findAttribute(choice, "identifier") ?? "",
         content: html(choice.children, view),
       }));
       return convertChoices(interaction, choices, probe, view, common, context);
@@ -184,7 +184,7 @@ function convertView(
   if (view.declaration === undefined) throw new Omitted("The interaction's response has no declaration.");
   const probe = createProbe(
     item,
-    attribute(interaction, "response-identifier") ?? "",
+    findAttribute(interaction, "response-identifier") ?? "",
     view.feedback,
     context.operators,
   );
@@ -212,7 +212,8 @@ export function convertItem(item: AssessmentItem, context: ConvertContext): Conv
         interaction === undefined
           ? undefined
           : elements(tree, "qti-response-declaration").find(
-              (declaration) => attribute(declaration, "identifier") === attribute(interaction, "response-identifier"),
+              (declaration) =>
+                findAttribute(declaration, "identifier") === findAttribute(interaction, "response-identifier"),
             ),
       mark: readMark(tree),
       losses,

@@ -26,7 +26,7 @@ export interface ParseXmlOptions {
 }
 
 /** Returns whether the UTF-8 encoding of a string has more bytes than a limit; a string has at least as many bytes as UTF-16 code units. */
-function exceedsBytes(text: string, limit: number): boolean {
+export function exceedsBytes(text: string, limit: number): boolean {
   return text.length > limit || new TextEncoder().encode(text).byteLength > limit;
 }
 

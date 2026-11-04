@@ -2,6 +2,7 @@ import * as v from "valibot";
 import { checkRecord, describe, parseWith } from "../checks.js";
 import { encodeBase64 } from "../values/index.js";
 import { serializeXml, type XmlElement, type XmlNode } from "../xml/index.js";
+import { elementBuilder } from "../xml/internal.js";
 import {
   addLoss,
   type ExportEntry,
@@ -13,7 +14,7 @@ import {
 } from "./export-items.js";
 import { isRelative, renameReferences } from "./file-references.js";
 import type { BankItem, ExportedItems, WriteMoodleXmlOptions } from "./model.js";
-import type { CombinedFeedback, FormattedText, Question } from "./question.js";
+import { type CombinedFeedback, type FormattedText, percent, type Question } from "./question.js";
 
 // Moodle XML as Moodle's exporter writes it (question/format/xml/format.php, writequestion), so that its importer reads each
 // question back with every field that the question model holds.
@@ -35,19 +36,19 @@ const TYPE_NAMES: Readonly<Record<Question["qtype"], string>> = {
 /** The prefix by which Moodle's texts name the files of their area. */
 const PLUGIN_FILE = "@@PLUGINFILE@@/";
 
-/** An element of no namespace with its attributes and its children; a string is a text. */
+const build = elementBuilder("");
+
+/** An element of no namespace with its attributes and its children; a string is a text, and Moodle writes an empty one as `<text></text>`. */
 function el(
   name: string,
   attributes: Readonly<Record<string, string>> = {},
   children: readonly (XmlNode | string)[] = [],
 ): XmlElement {
-  return {
-    kind: "element",
-    namespace: "",
+  return build(
     name,
-    attributes: Object.entries(attributes).map(([attribute, value]) => ({ namespace: "", name: attribute, value })),
-    children: children.map((node) => (typeof node === "string" ? { kind: "text", value: node } : node)),
-  };
+    attributes,
+    children.map((node) => (node === "" ? ({ kind: "text", value: "" } as const) : node)),
+  );
 }
 
 /** An element that holds a value as its text. */
@@ -99,11 +100,6 @@ function textContent(text: FormattedText, files: Files): XmlElement[] {
 /** A field of a text: its format as an attribute, its text and its files. */
 function field(name: string, text: FormattedText, files: Files): XmlElement {
   return el(name, { format: FORMAT_NAMES[text.format] }, textContent(text, files));
-}
-
-/** A credit in percent, as the exporter writes `fraction * 100`. */
-function percent(fraction: number): string {
-  return String(Math.round(fraction * 1e7) / 1e5);
 }
 
 function combined(feedback: CombinedFeedback, files: Files): XmlElement[] {

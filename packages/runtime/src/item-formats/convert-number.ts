@@ -1,5 +1,5 @@
 import { buildSingle, type Value } from "../values/index.js";
-import type { XmlElement } from "../xml/index.js";
+import { collectText, findAttribute, type XmlElement } from "../xml/index.js";
 import {
   asGrade,
   type ConvertContext,
@@ -12,10 +12,9 @@ import {
   rankAnswers,
   readCorrect,
   SAME,
-  textOf,
 } from "./item-view.js";
 import { operatorKey } from "./operator-key.js";
-import { attribute, type Probe, type ProbeResult } from "./probe.js";
+import type { Probe, ProbeResult } from "./probe.js";
 import { emptyText, type NumberAnswer, type Question, type QuestionCommon } from "./question.js";
 
 // A text entry of a number as Moodle's numerical question: the values and intervals that the item's declaration and
@@ -44,7 +43,7 @@ function high({ value, above }: Interval): number {
 }
 
 function numberAttribute(element: XmlElement, name: string): number[] {
-  return (attribute(element, name) ?? "")
+  return (findAttribute(element, name) ?? "")
     .trim()
     .split(/\s+/)
     .filter((part) => part !== "")
@@ -53,9 +52,12 @@ function numberAttribute(element: XmlElement, name: string): number[] {
 
 /** The interval of a `qti-equal` of a value and its tolerance, absolute or in percent of the value. */
 function equalInterval(element: XmlElement, value: number, view: ItemView): Interval {
-  const mode = attribute(element, "tolerance-mode") ?? "exact";
+  const mode = findAttribute(element, "tolerance-mode") ?? "exact";
   const [lower = 0, upper = lower] = numberAttribute(element, "tolerance");
-  if (attribute(element, "include-lower-bound") === "false" || attribute(element, "include-upper-bound") === "false") {
+  if (
+    findAttribute(element, "include-lower-bound") === "false" ||
+    findAttribute(element, "include-upper-bound") === "false"
+  ) {
     view.losses.push({
       reason: "scoring",
       message: `The interval around ${value} leaves out its bounds; Moodle's tolerance holds them.`,
@@ -79,7 +81,7 @@ function operatorIntervals(element: XmlElement): Interval[] {
 /** The intervals that one element of the response processing names. */
 function intervalsOf(element: XmlElement, view: ItemView): Interval[] {
   if (element.name === "qti-custom-operator") return operatorIntervals(element);
-  const value = elements(element, "qti-base-value").map((base) => Number(textOf(base)))[0];
+  const value = elements(element, "qti-base-value").map((base) => Number(collectText(base)))[0];
   if (value === undefined || !Number.isFinite(value)) return [];
   if (element.name === "qti-equal") return [equalInterval(element, value, view)];
   if (element.name === "qti-equal-rounded") {
@@ -95,7 +97,7 @@ function intervalsOf(element: XmlElement, view: ItemView): Interval[] {
 function numberCandidates(view: ItemView): Interval[] {
   const intervals: Interval[] = [
     ...readCorrect(view.declaration),
-    ...mapEntries(view.declaration).map((entry) => attribute(entry, "map-key") ?? ""),
+    ...mapEntries(view.declaration).map((entry) => findAttribute(entry, "map-key") ?? ""),
   ]
     .map(Number)
     .filter(Number.isFinite)

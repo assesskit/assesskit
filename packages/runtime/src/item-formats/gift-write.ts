@@ -9,7 +9,7 @@ import {
 } from "./export-items.js";
 import { isRelative, listReferences } from "./file-references.js";
 import type { BankItem, ExportedItems, WriteItemsOptions } from "./model.js";
-import type { FormattedText, Question } from "./question.js";
+import { type FormattedText, hasCombined, type Question } from "./question.js";
 
 // GIFT as Moodle's exporter writes it (question/format/gift/format.php), so that its importer reads each question back: the
 // reserved marks escaped, the text of each question in HTML, and the answers in braces after the text or at the missing word.
@@ -163,10 +163,8 @@ function recordEssayLosses(question: Of<"essay">, entry: ExportEntry, plan: Expo
 }
 
 /** Whether a question has feedback by how right a response is. */
-function hasCombined(question: Question): boolean {
-  if (question.qtype !== "multichoice" && question.qtype !== "match") return false;
-  const { correct, partiallyCorrect, incorrect } = question.combined;
-  return correct.text !== "" || partiallyCorrect.text !== "" || incorrect.text !== "";
+function hasCombinedFeedback(question: Question): boolean {
+  return (question.qtype === "multichoice" || question.qtype === "match") && hasCombined(question.combined);
 }
 
 /** Records what GIFT does not hold of a question. */
@@ -190,7 +188,7 @@ function recordLosses(question: Question, entry: ExportEntry, plan: ExportPlan):
       message: "GIFT does not say whether to shuffle: Moodle shuffles the answers, as is its default.",
     });
   }
-  if (hasCombined(question)) {
+  if (hasCombinedFeedback(question)) {
     addLoss(plan, entry, {
       reason: "feedback",
       message: "GIFT has no feedback by how right a response is: it is left out.",

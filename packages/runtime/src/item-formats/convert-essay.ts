@@ -1,7 +1,7 @@
 import { buildSingle } from "../values/index.js";
-import type { XmlElement } from "../xml/index.js";
-import { classifyFeedback, elements, type ItemView, textOf } from "./item-view.js";
-import { attribute, type Probe } from "./probe.js";
+import { findAttribute, type XmlElement } from "../xml/index.js";
+import { classifyFeedback, elements, firstText, type ItemView } from "./item-view.js";
+import type { Probe } from "./probe.js";
 import type { Question, QuestionCommon } from "./question.js";
 
 // An extended text as Moodle's essay, which a person scores: its format, its lines, its starting text and the information
@@ -12,9 +12,9 @@ const ESSAY_ATTRIBUTES = ["max-strings", "min-strings", "expected-length", "patt
 
 /** Converts an extended text into an essay, which a person scores. */
 export function convertEssay(interaction: XmlElement, probe: Probe, view: ItemView, common: QuestionCommon): Question {
-  const format = attribute(interaction, "format") ?? "plain";
-  const lines = Number(attribute(interaction, "expected-lines") ?? "15");
-  for (const name of ESSAY_ATTRIBUTES.filter((candidate) => attribute(interaction, candidate) !== undefined)) {
+  const format = findAttribute(interaction, "format") ?? "plain";
+  const lines = Number(findAttribute(interaction, "expected-lines") ?? "15");
+  for (const name of ESSAY_ATTRIBUTES.filter((candidate) => findAttribute(interaction, candidate) !== undefined)) {
     view.losses.push({
       reason: "setting",
       message: `The attribute ${name} of the extended text has no place in Moodle's essay.`,
@@ -42,7 +42,7 @@ export function convertEssay(interaction: XmlElement, probe: Probe, view: ItemVi
     attachments: 0,
     graderInfo: { text: view.graderInfo.join(""), format: "html" },
     template: {
-      text: textOf(elements(defaultValue ?? interaction, "qti-value")[0]),
+      text: firstText(defaultValue ?? interaction, "qti-value"),
       format: format === "xhtml" ? "html" : "plain",
     },
   };

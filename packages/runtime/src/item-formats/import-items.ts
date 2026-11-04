@@ -2,6 +2,7 @@ import * as v from "valibot";
 import { describe, parseWith, strictRecord } from "../checks.js";
 import { DataError, ReadError, SecurityError } from "../errors.js";
 import { isIdentifier } from "../values/index.js";
+import { exceedsBytes } from "../xml/internal.js";
 import { createContentState } from "./html-content.js";
 import { buildItem } from "./item-build.js";
 import { type ItemFormatLimits, resolveItemFormatLimits } from "./limits.js";
@@ -31,21 +32,6 @@ export function resolveReadOptions(options: ReadItemsOptions): ResolvedReadOptio
   return { labels: trueFalseLabels, limits: resolveItemFormatLimits(limits) };
 }
 
-/** Counts the UTF-8 bytes of a text, stopping past the limit. */
-function utf8Length(text: string, limit: number): number {
-  let bytes = 0;
-  for (let at = 0; at < text.length && bytes <= limit; at += 1) {
-    const code = text.charCodeAt(at);
-    if (code < 0x80) bytes += 1;
-    else if (code < 0x800) bytes += 2;
-    else if (code >= 0xd800 && code <= 0xdbff) {
-      bytes += 4;
-      at += 1;
-    } else bytes += 3;
-  }
-  return bytes;
-}
-
 /**
  * Returns the text of a file within `maxBytes`, decoding bytes as UTF-8, as Moodle demands of an import.
  *
@@ -58,7 +44,7 @@ export function readFileText(input: unknown, limits: ItemFormatLimits, label: st
   const tooLong = () =>
     new SecurityError(`${label} is longer than ${maxBytes} bytes, the limit maxBytes.`, "maxBytes", maxBytes);
   if (typeof input === "string") {
-    if (utf8Length(input, maxBytes) > maxBytes) throw tooLong();
+    if (exceedsBytes(input, maxBytes)) throw tooLong();
     return input;
   }
   if (!(input instanceof Uint8Array)) {

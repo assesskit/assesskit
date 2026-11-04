@@ -597,7 +597,7 @@ export const RUNTIME_RULES: readonly Rule[] = [
   {
     rule: "A reader refuses a file of text longer than the limit maxBytes in UTF-8.",
     file: `${FORMATS}/import-items.ts`,
-    find: "if (utf8Length(input, maxBytes) > maxBytes) throw tooLong();",
+    find: "if (exceedsBytes(input, maxBytes)) throw tooLong();",
     replace: "",
     test: FORMATS_TEST,
   },

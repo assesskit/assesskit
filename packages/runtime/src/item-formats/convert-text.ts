@@ -1,5 +1,5 @@
 import { buildSingle } from "../values/index.js";
-import type { XmlElement } from "../xml/index.js";
+import { collectText, findAttribute, type XmlElement } from "../xml/index.js";
 import {
   asGrade,
   type ConvertContext,
@@ -11,10 +11,9 @@ import {
   Omitted,
   rankAnswers,
   readCorrect,
-  textOf,
 } from "./item-view.js";
 import { operatorKey } from "./operator-key.js";
-import { attribute, type Probe, type ProbeResult } from "./probe.js";
+import type { Probe, ProbeResult } from "./probe.js";
 import { emptyText, type Question, type QuestionCommon, type TextAnswer } from "./question.js";
 
 // A text entry of a string as Moodle's short answer: the answers that the item's declaration and processing name, each with
@@ -103,14 +102,15 @@ function operatorTexts(element: XmlElement): string[] {
 
 /** Collects the answers that one element of the response processing names. */
 function collect(element: XmlElement, texts: string[], patterns: Candidate[], view: ItemView): void {
-  if (element.name === "qti-base-value" && attribute(element, "base-type") === "string") texts.push(textOf(element));
+  if (element.name === "qti-base-value" && findAttribute(element, "base-type") === "string")
+    texts.push(collectText(element));
   else if (element.name === "qti-custom-operator") for (const text of operatorTexts(element)) texts.push(text);
   else if (element.name === "qti-pattern-match") {
-    const answer = readPattern(attribute(element, "pattern") ?? "");
+    const answer = readPattern(findAttribute(element, "pattern") ?? "");
     if (answer === undefined) {
       view.losses.push({
         reason: "scoring",
-        message: `The pattern ${attribute(element, "pattern")} is not an answer with Moodle's wildcards: it is left out.`,
+        message: `The pattern ${findAttribute(element, "pattern")} is not an answer with Moodle's wildcards: it is left out.`,
       });
     } else {
       const sample = answer.text.replaceAll(/(?<!\\)\*+/g, "").replaceAll("\\*", "*");
@@ -123,7 +123,7 @@ function collect(element: XmlElement, texts: string[], patterns: Candidate[], vi
 function textCandidates(view: ItemView): Candidate[] {
   const texts = [
     ...readCorrect(view.declaration),
-    ...mapEntries(view.declaration).map((entry) => attribute(entry, "map-key") ?? ""),
+    ...mapEntries(view.declaration).map((entry) => findAttribute(entry, "map-key") ?? ""),
   ];
   const patterns: Candidate[] = [];
   const processing = elements(view.tree, "qti-response-processing")[0];

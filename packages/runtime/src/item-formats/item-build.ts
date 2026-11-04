@@ -5,7 +5,15 @@ import type { XmlElement, XmlNode } from "../xml/index.js";
 import { type Blank, type ContentState, childType, countElements, readMoodleText, startItem } from "./html-content.js";
 import type { LossReason, TrueFalseLabels } from "./model.js";
 import { baseValue, condition, floatOutcome, formatFloat, isNull, qti, setOutcome, variable } from "./qti-elements.js";
-import type { CombinedFeedback, EssayFormat, FormattedText, NumberAnswer, Question, TextAnswer } from "./question.js";
+import {
+  type CombinedFeedback,
+  type EssayFormat,
+  type FormattedText,
+  hasCombined,
+  type NumberAnswer,
+  type Question,
+  type TextAnswer,
+} from "./question.js";
 
 // The QTI item of a question, as Moodle scores it: QTI's own expressions in response processing, the per-answer, general and
 // combined feedback as modal feedback that the outcome FEEDBACK shows, and the question's text as the item's content.
@@ -531,13 +539,6 @@ function modalFeedback(id: string, text: FormattedText, content: Content): XmlEl
   return qti("qti-modal-feedback", { "outcome-identifier": FEEDBACK, "show-hide": "show", identifier: id }, [
     qti("qti-content-body", {}, body === undefined ? [] : content(text, body)),
   ]);
-}
-
-function hasCombined(combined: CombinedFeedback | undefined): combined is CombinedFeedback {
-  return (
-    combined !== undefined &&
-    (combined.correct.text !== "" || combined.partiallyCorrect.text !== "" || combined.incorrect.text !== "")
-  );
 }
 
 /** Puts the marker of the missing word in place of the `_____` that Moodle wrote there. */

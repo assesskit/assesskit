@@ -146,3 +146,16 @@ export type ReadEntry =
   | { readonly kind: "question"; readonly question: Question }
   | { readonly kind: "category"; readonly category: string }
   | { readonly kind: "error" | "unconverted"; readonly name: string; readonly message: string };
+
+/** A share in percent to seven decimals of the share, as Moodle writes a grade (`fraction * 100`), without the sign. */
+export function percent(share: number): string {
+  return String(Math.round(share * 1e7) / 1e5);
+}
+
+/** Whether a question has feedback by how right a response is. */
+export function hasCombined(combined: CombinedFeedback | undefined): combined is CombinedFeedback {
+  return (
+    combined !== undefined &&
+    (combined.correct.text !== "" || combined.partiallyCorrect.text !== "" || combined.incorrect.text !== "")
+  );
+}
