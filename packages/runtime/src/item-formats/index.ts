@@ -17,4 +17,7 @@ export type {
   ReadItemsOptions,
   TrueFalseLabels,
   WriteItemsOptions,
+  WriteMoodleXmlOptions,
 } from "./model.js";
+export { readMoodleXml } from "./moodle-xml-read.js";
+export { writeMoodleXml } from "./moodle-xml-write.js";

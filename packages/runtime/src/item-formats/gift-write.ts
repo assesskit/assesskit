@@ -1,4 +1,13 @@
-import { addLoss, type ExportEntry, type ExportPlan, omitEntry, planExport, sortedLosses } from "./export-items.js";
+import {
+  addLoss,
+  type ExportEntry,
+  type ExportPlan,
+  moodleRefusal,
+  omitEntry,
+  planExport,
+  sortedLosses,
+} from "./export-items.js";
+import { isRelative, listReferences } from "./file-references.js";
 import type { BankItem, ExportedItems, WriteItemsOptions } from "./model.js";
 import type { FormattedText, Question } from "./question.js";
 
@@ -162,6 +171,13 @@ function hasCombined(question: Question): boolean {
 
 /** Records what GIFT does not hold of a question. */
 function recordLosses(question: Question, entry: ExportEntry, plan: ExportPlan): void {
+  const files = textsOf(question).flatMap((text) => listReferences(text).filter(isRelative));
+  if (files.length > 0) {
+    addLoss(plan, entry, {
+      reason: "content",
+      message: `GIFT holds no files: the references ${[...new Set(files)].join(", ")} stay as written, where Moodle finds none.`,
+    });
+  }
   if (question.defaultMark !== 1 && question.qtype !== "description") {
     addLoss(plan, entry, {
       reason: "setting",
@@ -200,7 +216,16 @@ function refusalOf(question: Question): string | undefined {
   if (question.qtype === "match" && question.subquestions.length < 2) {
     return "GIFT holds a matching question of two pairs or more, and this item has one.";
   }
-  return undefined;
+  return moodleRefusal(question);
+}
+
+/** The texts of a question, whose references a writer checks. */
+function textsOf(question: Question): string[] {
+  const texts = [question.text.text, question.generalFeedback.text];
+  if (question.qtype === "multichoice")
+    for (const { text, feedback } of question.answers) texts.push(text.text, feedback.text);
+  if (question.qtype === "match") for (const { text } of question.subquestions) texts.push(text.text);
+  return texts;
 }
 
 /** Writes one question as the exporter does: comments with its identifier and tags, its name, its text, its answers. */

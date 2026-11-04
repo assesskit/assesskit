@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
-import { DEFAULT_ITEM_FORMAT_LIMITS, readGift, writeGift } from "../src/index.js";
+import { DEFAULT_ITEM_FORMAT_LIMITS, readGift, readMoodleXml, writeGift, writeMoodleXml } from "../src/index.js";
 import { BENCH_OPTIONS, BUDGETS, expectWithin } from "./budgets.js";
-import { buildWrittenItems, GIFT_EDGES, WRITE_OPTIONS } from "./item-formats-cases.js";
+import { buildWrittenItems, GIFT_EDGES, WRITE_OPTIONS, XML_EDGES, XML_WRITE_OPTIONS } from "./item-formats-cases.js";
 
 // The readers take files once, on import, and the writers run each item's response processing on the responses that matter;
 // no library reads GIFT as Moodle does or writes it from QTI items, so the budgets hold the time alone.
@@ -17,7 +17,7 @@ test("reads the edge cases of GIFT within its budget", async ({ annotate, bench 
 
 test("writes the items of the written cases as GIFT within its budget", async ({ annotate, bench }) => {
   const items = buildWrittenItems();
-  expect(writeGift(items, WRITE_OPTIONS).losses).toHaveLength(12);
+  expect(writeGift(items, WRITE_OPTIONS).losses).toHaveLength(14);
   const result = await bench("write GIFT", () => writeGift(items, WRITE_OPTIONS)).run(BENCH_OPTIONS);
   await expectWithin(annotate, "write GIFT", result, BUDGETS.giftWrite);
 });
@@ -29,4 +29,17 @@ test("reads essays of the most tags of a text, to the limit of elements, within 
   expect(readGift(TAGS).items).toHaveLength(47);
   const result = await bench("read GIFT tags", () => readGift(TAGS)).run(BENCH_OPTIONS);
   await expectWithin(annotate, "read GIFT tags", result, BUDGETS.giftTags);
+});
+
+test("reads the edge cases of Moodle XML within its budget", async ({ annotate, bench }) => {
+  expect(readMoodleXml(XML_EDGES).items).toHaveLength(9);
+  const result = await bench("read Moodle XML", () => readMoodleXml(XML_EDGES)).run(BENCH_OPTIONS);
+  await expectWithin(annotate, "read Moodle XML", result, BUDGETS.moodleXmlRead);
+});
+
+test("writes the items of the written cases as Moodle XML within its budget", async ({ annotate, bench }) => {
+  const items = buildWrittenItems();
+  expect(writeMoodleXml(items, XML_WRITE_OPTIONS).losses).toHaveLength(2);
+  const result = await bench("write Moodle XML", () => writeMoodleXml(items, XML_WRITE_OPTIONS)).run(BENCH_OPTIONS);
+  await expectWithin(annotate, "write Moodle XML", result, BUDGETS.moodleXmlWrite);
 });

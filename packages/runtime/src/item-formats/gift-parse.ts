@@ -19,6 +19,9 @@ const MAX_NAME_LENGTH = 255;
 /** The characters of a name that Moodle makes from the start of a question's text. */
 const DEFAULT_NAME_LENGTH = 80;
 
+/** What `shorten_text` puts after a text it cuts. */
+const ELLIPSIS = "...";
+
 /** The characters that end a value in brackets of a comment: control characters, and for a tag `<`, `>` and a backtick. */
 function isControl(character: string): boolean {
   const code = character.charCodeAt(0);
@@ -69,13 +72,37 @@ function cleanName(name: string): string {
   return phpTrim(name.replaceAll(/<[^>]*>/g, "")).slice(0, MAX_NAME_LENGTH);
 }
 
-/** The name that Moodle gives a question without one: the start of its text. */
+/** Whether `shorten_text` may cut a text after a character: a point, a space, or a character of three bytes of UTF-8 or more. */
+function endsWord(character: string | undefined): boolean {
+  return character === "." || character === " " || (character?.codePointAt(0) ?? 0) >= 0x800;
+}
+
+/**
+ * The name that Moodle gives a question without one: its text, cut by `shorten_text` to 80 characters with `...` after the
+ * last word that fits, without its tags; "Question name" when nothing is left.
+ */
 function defaultName(text: string): string {
-  const plain = phpTrim(text.replaceAll(/<[^>]*>/g, " ").replaceAll(/\s+/g, " "));
-  if (plain.length <= DEFAULT_NAME_LENGTH) return plain === "" ? "Question" : plain;
-  const cut = plain.slice(0, DEFAULT_NAME_LENGTH - 3);
-  const space = cut.lastIndexOf(" ");
-  return `${space > 0 ? cut.slice(0, space) : cut}...`;
+  const segments = [...text.matchAll(/(?:<[^>]+>)?([^<>]*)/g)].map((match) => [...(match[1] ?? "")]);
+  let name = "";
+  if (segments.reduce((length, segment) => length + segment.length, 0) <= DEFAULT_NAME_LENGTH) {
+    name = segments.map((segment) => segment.join("")).join("");
+  } else {
+    let length = ELLIPSIS.length;
+    for (const segment of segments) {
+      if (length + segment.length <= DEFAULT_NAME_LENGTH) {
+        name += segment.join("");
+        length += segment.length;
+        continue;
+      }
+      const left = DEFAULT_NAME_LENGTH - length;
+      let end = left;
+      while (end > 0 && !endsWord(segment[end])) end -= 1;
+      name += segment.slice(0, end === 0 ? left : Math.min(end + 1, left)).join("");
+      break;
+    }
+    name += ELLIPSIS;
+  }
+  return phpTrim(name) || "Question name";
 }
 
 /** Returns a character that the text does not hold, to mark the missing word while the importer trims the text around it. */

@@ -61,3 +61,31 @@ export function phpIsNumeric(text: string): boolean {
 export function phpNumber(text: string): number {
   return Number(text.trim());
 }
+
+/** The value of each character of base64's alphabet by its code, -1 for any other below 128. */
+const BASE64_VALUES = Int8Array.from({ length: 128 }, (_, code) =>
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".indexOf(String.fromCharCode(code)),
+);
+
+/**
+ * PHP's `base64_decode` without its strict mode: it skips each character outside base64's alphabet, padding included, and
+ * leaves out the bits of a last group too short for a byte.
+ */
+export function phpBase64Decode(text: string): Uint8Array {
+  const bytes = new Uint8Array(Math.floor((text.length * 3) / 4));
+  let length = 0;
+  let bits = 0;
+  let count = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    const value = BASE64_VALUES[text.charCodeAt(index)] ?? -1;
+    if (value < 0) continue;
+    bits = ((bits << 6) | value) & 0x3fff;
+    count += 6;
+    if (count >= 8) {
+      count -= 8;
+      bytes[length] = bits >> count;
+      length += 1;
+    }
+  }
+  return bytes.slice(0, length);
+}

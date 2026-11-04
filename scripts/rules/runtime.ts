@@ -484,14 +484,14 @@ export const RUNTIME_RULES: readonly Rule[] = [
   {
     rule: "A reader refuses a file of text longer than the limit maxBytes in UTF-8.",
     file: `${FORMATS}/import-items.ts`,
-    find: "if (bytes > maxBytes) throw tooLong(bytes);",
+    find: "if (utf8Length(input, maxBytes) > maxBytes) throw tooLong();",
     replace: "",
     test: FORMATS_TEST,
   },
   {
     rule: "A reader refuses a file of bytes longer than the limit maxBytes, before it decodes them.",
     file: `${FORMATS}/import-items.ts`,
-    find: "if (input.length > maxBytes) throw tooLong(input.length);",
+    find: "if (input.length > maxBytes) throw tooLong();",
     replace: "",
     test: FORMATS_TEST,
   },
@@ -542,6 +542,20 @@ export const RUNTIME_RULES: readonly Rule[] = [
     file: `${FORMATS}/html-content.ts`,
     find: "    state.attributes.add(name);\n    return undefined;\n  }\n  try {",
     replace: '    return { namespace: "", name, value };\n  }\n  try {',
+    test: FORMATS_TEST,
+  },
+  {
+    rule: "The Moodle XML reader refuses a file of more questions than the limit maxQuestions, before it reads one.",
+    file: `${FORMATS}/moodle-xml-read.ts`,
+    find: "if (questions.length > maxQuestions) {",
+    replace: "if (questions.length < 0) {",
+    test: FORMATS_TEST,
+  },
+  {
+    rule: "The Moodle XML reader refuses a question of more answers than the limit maxAnswers.",
+    file: `${FORMATS}/moodle-xml-read.ts`,
+    find: "if (count > limits.maxAnswers) {",
+    replace: "if (count < 0) {",
     test: FORMATS_TEST,
   },
 ];

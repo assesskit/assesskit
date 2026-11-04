@@ -50,7 +50,8 @@ The points below are the runtime's; the sections that start with "The player" ho
   `Map`. `decodePciValue` checks everything a module returns before it becomes a value, and refuses a file that is not
   `{ data, mime, name }` and a duration with years or months; the bytes of a file go to a callback of the host and never
   into a value. A package path from a configuration file is still untrusted: the host serves only paths of the package.
-- **Other platforms' item formats.** `readGift` takes a file from anywhere. It parses the HTML of each text with parse5, as a
+- **Other platforms' item formats.** `readGift` and `readMoodleXml` take a file from anywhere; `readMoodleXml` reads it with
+  `parseXml`, so a DOCTYPE is refused and the limits of XML hold. It parses the HTML of each text with parse5, as a
   browser does, and keeps only QTI's elements and their attributes of a valid value, and `data-*` attributes: `script`,
   `style`, `iframe`, forms and other documents are left out with what they hold, and an attribute such as `onclick` or `style`
   is left out. It refuses a text of more tags than `maxTextTags` before it parses it, since the parser of HTML mends tags that
@@ -468,6 +469,7 @@ and no reader peaks above 200.
 | `readGift`              | 813 questions of 100 answers, or 4,000 of two: the most elements of the items           |        48 and 72 |
 | `readGift`              | 47 essays of 4,096 tags of HTML each, to the limit of elements                          |               48 |
 | `readGift`              | 8,000 questions of two answers, stopped at the limit of elements                        |               48 |
+| `readMoodleXml`         | 4,000 questions of two answers, also padded to the most nodes of the tree               |        56 and 96 |
 
 The bytes of a file and the central directory are outside the heap, so the test bounds the resident memory that these readings
 raise at 256 MiB, and they raise 110 to 220: inflating a deflated entry holds the pieces and the joined bytes at once. The

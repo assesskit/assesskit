@@ -161,6 +161,10 @@ foreach ($input['cases'] as $number => $case) {
     unlink($path);
     $questions = [];
     foreach ($format->questionids as $id) {
+        // An import that Moodle rolls back keeps the ids of the questions it had saved, whose records are gone.
+        if (!$DB->record_exists('question', ['id' => $id])) {
+            continue;
+        }
         $data = question_bank::load_question_data($id);
         $categoryname = $DB->get_field('question_categories', 'name', ['id' => $data->category]);
         $data->contextid = $context->id;

@@ -51,6 +51,11 @@ export interface BankItem {
 export interface ImportedItems {
   /** The items, in the order of the file, with their categories and tags. */
   readonly items: readonly BankItem[];
+  /**
+   * The files that the texts of the file embed, by the reference that the items' content gives them: `files/`, the item's
+   * identifier, then the file's path as the text writes it.
+   */
+  readonly files: ReadonlyMap<string, Uint8Array>;
   /** What does not convert, in the order of the file. */
   readonly losses: readonly ConversionLoss[];
 }
@@ -103,4 +108,15 @@ export interface WriteItemsOptions {
    * @defaultValue `DEFAULT_ITEM_FORMAT_LIMITS`
    */
   readonly limits?: Partial<ItemFormatLimits>;
+}
+
+/** The options of `writeMoodleXml`. */
+export interface WriteMoodleXmlOptions extends WriteItemsOptions {
+  /**
+   * The files that the items' content names, by the reference as the content writes it, such as `images/map.png`: each that
+   * a text names is embedded in the question, which Moodle then shows.
+   *
+   * @defaultValue none: a reference stays as written, with a loss
+   */
+  readonly files?: ReadonlyMap<string, Uint8Array>;
 }

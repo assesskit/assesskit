@@ -55,21 +55,16 @@ function utf8Length(text: string, limit: number): number {
  */
 export function readFileText(input: unknown, limits: ItemFormatLimits, label: string): string {
   const { maxBytes } = limits;
-  const tooLong = (bytes: number) =>
-    new SecurityError(
-      `${label} is ${bytes > maxBytes ? "longer" : "as long"} than ${maxBytes} bytes, the limit maxBytes.`,
-      "maxBytes",
-      maxBytes,
-    );
+  const tooLong = () =>
+    new SecurityError(`${label} is longer than ${maxBytes} bytes, the limit maxBytes.`, "maxBytes", maxBytes);
   if (typeof input === "string") {
-    const bytes = utf8Length(input, maxBytes);
-    if (bytes > maxBytes) throw tooLong(bytes);
+    if (utf8Length(input, maxBytes) > maxBytes) throw tooLong();
     return input;
   }
   if (!(input instanceof Uint8Array)) {
     throw new DataError(`${label} must be a string or bytes, found ${describe(input)}.`);
   }
-  if (input.length > maxBytes) throw tooLong(input.length);
+  if (input.length > maxBytes) throw tooLong();
   try {
     return new TextDecoder("utf-8", { fatal: true }).decode(input);
   } catch (error) {
@@ -96,6 +91,7 @@ export function importEntries(entries: readonly ReadEntry[], options: ResolvedRe
   const items: BankItem[] = [];
   const losses: ConversionLoss[] = [];
   const used = new Set<string>();
+  const files = new Map<string, Uint8Array>();
   let category: string | undefined;
   let index = 0;
   for (const entry of entries) {
@@ -103,20 +99,15 @@ export function importEntries(entries: readonly ReadEntry[], options: ResolvedRe
       category = entry.category;
       continue;
     }
-    if (entry.kind === "error") {
-      losses.push({
-        index,
-        item: entry.name,
-        omitted: true,
-        reason: "item",
-        message: `Moodle refuses the question: ${entry.message}`,
-      });
+    if (entry.kind !== "question") {
+      const message = entry.kind === "error" ? `Moodle refuses the question: ${entry.message}` : entry.message;
+      losses.push({ index, item: entry.name, omitted: true, reason: "item", message });
       index += 1;
       continue;
     }
     const { question } = entry;
     const identifier = identifierFor(question.idNumber, index, used);
-    const built = buildItem(question, identifier, { state, labels: options.labels });
+    const built = buildItem(question, identifier, { state, labels: options.labels, files });
     items.push({
       item: built.item,
       ...(category === undefined ? {} : { category }),
@@ -125,5 +116,5 @@ export function importEntries(entries: readonly ReadEntry[], options: ResolvedRe
     for (const loss of built.losses) losses.push({ index, item: identifier, omitted: false, ...loss });
     index += 1;
   }
-  return { items, losses };
+  return { items, files, losses };
 }

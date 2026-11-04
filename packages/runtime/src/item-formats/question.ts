@@ -4,10 +4,18 @@
 /** How Moodle reads a text: as HTML, with its auto-format, as plain text, or as Markdown. */
 export type TextFormat = "html" | "moodle" | "plain" | "markdown";
 
-/** A text of a question in its format. */
+/** A file that a text embeds, which the text names by `@@PLUGINFILE@@/` and its path. */
+export interface EmbeddedFile {
+  /** The path of the file in its area, from `/`, with its name. */
+  readonly path: string;
+  readonly bytes: Uint8Array;
+}
+
+/** A text of a question in its format, with the files it embeds. */
 export interface FormattedText {
   readonly text: string;
   readonly format: TextFormat;
+  readonly files?: readonly EmbeddedFile[];
 }
 
 /** An answer of a choice, with its credit as a fraction of the question's mark, from -1 to 1. */
@@ -46,7 +54,7 @@ export interface CombinedFeedback {
 }
 
 /** How a candidate writes an essay. */
-type EssayFormat = "editor" | "editorfilepicker" | "plain" | "monospaced" | "noinline";
+export type EssayFormat = "editor" | "editorfilepicker" | "plain" | "monospaced" | "noinline";
 
 /** The fields of every question. */
 export interface QuestionCommon {
@@ -75,7 +83,8 @@ export type Question = QuestionCommon &
     | { readonly qtype: "description" }
     | {
         readonly qtype: "essay";
-        readonly responseFormat: EssayFormat;
+        /** One of {@link EssayFormat}, or another name, which Moodle's importer keeps as written. */
+        readonly responseFormat: string;
         readonly responseRequired: boolean;
         readonly fieldLines: number;
         readonly minWords: number | null;
@@ -103,7 +112,12 @@ export type Question = QuestionCommon &
         readonly caseSensitive: boolean;
         readonly answers: readonly TextAnswer[];
       }
-    | { readonly qtype: "numerical"; readonly answers: readonly NumberAnswer[] }
+    | {
+        readonly qtype: "numerical";
+        readonly answers: readonly NumberAnswer[];
+        /** The units that the question accepts after a number, which a QTI number does not take. */
+        readonly units?: number;
+      }
     | {
         readonly qtype: "match";
         readonly shuffle: boolean;
@@ -124,8 +138,11 @@ export const NO_COMBINED_FEEDBACK: CombinedFeedback = Object.freeze({
   incorrect: emptyText(),
 });
 
-/** What a reader finds in a file, in order: a question, a change of category, or a question that Moodle refuses. */
+/**
+ * What a reader finds in a file, in order: a question, a change of category, a question that Moodle refuses, or one of a type
+ * that Moodle imports and no QTI item here holds.
+ */
 export type ReadEntry =
   | { readonly kind: "question"; readonly question: Question }
   | { readonly kind: "category"; readonly category: string }
-  | { readonly kind: "error"; readonly name: string; readonly message: string };
+  | { readonly kind: "error" | "unconverted"; readonly name: string; readonly message: string };

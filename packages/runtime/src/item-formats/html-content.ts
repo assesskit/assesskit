@@ -167,7 +167,10 @@ function keepAttribute(
     return undefined;
   }
   // An identifier stands once in an item.
-  if (name === "id" && state.ids.has(value)) return undefined;
+  if (name === "id" && state.ids.has(value)) {
+    state.attributes.add(name);
+    return undefined;
+  }
   if (name === "id") state.ids.add(value);
   return { namespace: "", name, value };
 }
@@ -271,16 +274,30 @@ function placeMath(run: Run, node: ParsedElement): void {
   else run.state.dropped.add(node.tagName);
 }
 
+/** Whether content holds the fewest elements that each place of a type needs, as a table body needs a row. */
+function fillsSlots(type: TypeInfo, children: readonly XmlNode[]): boolean {
+  return type.slots.every(({ def, byElement }) => {
+    if (def.min === 0) return true;
+    let count = 0;
+    for (const child of children) if (child.kind === "element" && byElement.has(child.name)) count += 1;
+    return count >= def.min;
+  });
+}
+
 function placeElement(run: Run, node: ParsedElement): void {
   const { parent, wrapper, state } = run;
   const name = node.tagName;
   const type = childType(parent, name);
   const attributes = type === undefined ? undefined : keepAttributes(node, type, state);
-  if (type !== undefined && attributes !== undefined) {
+  const children =
+    type === undefined || attributes === undefined
+      ? undefined
+      : convertNodes(node.childNodes, type, checkDepth(run.depth + 1, state), state, run.blank);
+  if (type !== undefined && attributes !== undefined && children !== undefined && fillsSlots(type, children)) {
     flush(run);
-    const children = convertNodes(node.childNodes, type, checkDepth(run.depth + 1, state), state, run.blank);
     run.out.push({ kind: "element", namespace: ASI_NAMESPACE, name, attributes, children });
-  } else if (wrapper !== undefined && childType(wrapper, name) !== undefined) run.pending.push(node);
+  } else if (children === undefined && wrapper !== undefined && childType(wrapper, name) !== undefined)
+    run.pending.push(node);
   else {
     if (!BLOCKS.has(name)) state.unwrapped.add(name);
     for (const child of convertNodes(node.childNodes, parent, checkDepth(run.depth + 1, state), state, run.blank)) {

@@ -1,30 +1,32 @@
 # Item formats
 
 `item-formats` converts QTI items to and from the item formats of another platform: GIFT, the text format of Moodle's
-question bank. A reader takes a file and gives QTI items that score each response as Moodle grades it; a writer takes items
+question bank, and Moodle XML, its full format. A reader takes a file and gives QTI items that score each response as Moodle grades it; a writer takes items
 and gives a file that Moodle imports with the same credits and feedback. A conversion is lossy: everything that does not
 convert, an item left out or a part of one, is in the result's `losses`, each with its reason. It imports `xml`, `values`,
 `asi`, `processing` and `content`, and parse5 for the HTML of a question; it runs in any JavaScript runtime.
 
 ```mermaid
 flowchart LR
-  file["GIFT file"] -- "readGift" --> question["Moodle's question model<br/>as its importer reads it"]
+  file["GIFT or Moodle XML file"] -- "readGift, readMoodleXml" --> question["Moodle's question model<br/>as its importer reads it"]
   question --> built["QTI item: QTI's own expressions,<br/>modal feedback, the text as content"]
   built --> items["items, losses"]
-  qti["QTI items"] -- "writeGift" --> run["Response processing run<br/>on the responses that matter"]
+  qti["QTI items"] -- "writeGift, writeMoodleXml" --> run["Response processing run<br/>on the responses that matter"]
   run --> model["Moodle's question model:<br/>credits, feedback, text"]
-  model --> text["GIFT file, losses"]
+  model --> text["GIFT or Moodle XML file, losses"]
 ```
 
-| Function or type                                 | Is                                                                                 |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| `readGift(input, options?)`                      | The items of a GIFT file, with their categories and tags, and the losses.          |
-| `writeGift(items, options?)`                     | A GIFT file of items, and the losses.                                              |
-| `BankItem`                                       | An item with its category path and tags, what a reader gives and a writer takes.   |
-| `ConversionLoss`, `LossReason`                   | What does not convert: the item, its position, whether it is left out, the reason. |
-| `ImportedItems`, `ExportedItems`                 | The results of a reader and of a writer.                                           |
-| `ReadItemsOptions`, `WriteItemsOptions`          | The options.                                                                       |
-| `DEFAULT_ITEM_FORMAT_LIMITS`, `ItemFormatLimits` | The limits of a file.                                                              |
+| Function or type                                                 | Is                                                                                 |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `readGift(input, options?)`                                      | The items of a GIFT file, with their categories and tags, and the losses.          |
+| `writeGift(items, options?)`                                     | A GIFT file of items, and the losses.                                              |
+| `readMoodleXml(input, options?)`                                 | The items of a Moodle XML file, the files its texts embed, and the losses.         |
+| `writeMoodleXml(items, options?)`                                | A Moodle XML file of items, with the files their content names, and the losses.    |
+| `BankItem`                                                       | An item with its category path and tags, what a reader gives and a writer takes.   |
+| `ConversionLoss`, `LossReason`                                   | What does not convert: the item, its position, whether it is left out, the reason. |
+| `ImportedItems`, `ExportedItems`                                 | The results of a reader and of a writer.                                           |
+| `ReadItemsOptions`, `WriteItemsOptions`, `WriteMoodleXmlOptions` | The options.                                                                       |
+| `DEFAULT_ITEM_FORMAT_LIMITS`, `ItemFormatLimits`                 | The limits of a file.                                                              |
 
 ## Quick start
 
@@ -54,6 +56,15 @@ writeGift([{ item: order }]).losses.map(({ item, omitted, reason }) => [item, om
 // => [["steps", true, "item"]]
 ```
 
+```ts
+import { readGift, readMoodleXml, writeMoodleXml } from "@assesskit/runtime/item-formats";
+
+const { items } = readGift("::Capital::The capital of Indonesia is {=Jakarta =%50%Batavia#Its old name.}.");
+const xml = writeMoodleXml(items).text;
+xml.includes("<usecase>0</usecase>"); // => true
+readMoodleXml(xml).items.map(({ item }) => item.title); // => ["Capital"]
+```
+
 The short answer of the first question stands at its place in the text, GIFT's missing word, and becomes an inline text entry;
 the second, whose credits add up, a choice of several answers. A writer learns the credits of an item by running its response
 processing, so the order interaction, which no question type of GIFT holds, is left out with its reason.
@@ -70,6 +81,25 @@ processing, so the order interaction, which no question type of GIFT holds, is l
 | Matching                    | `{=stem -> answer = -> extra}`            | `qti-match-interaction`: the stems, then the answers, each answer for any number of stems    |
 | Essay                       | `{}`                                      | `qti-extended-text-interaction`, `SCORE` externally scored by a person                       |
 | Description                 | no braces                                 | an item without an interaction                                                               |
+
+Moodle XML names each type (`multichoice`, `truefalse`, `shortanswer`, `numerical`, `matching`, `essay`, `description`), and its
+`category` elements name the category of the questions that follow. It holds what GIFT does not:
+
+| Moodle XML                                                            | QTI                                                                                            |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `defaultgrade`, the mark                                              | `MAXSCORE` and the `normal-maximum` of `SCORE`; the credits scale it                           |
+| `single`, `shuffleanswers`                                            | The cardinality of the response, `max-choices`, `shuffle`                                      |
+| `usecase` of a short answer                                           | Each letter of the patterns in one case or in both                                             |
+| `correctfeedback`, `partiallycorrectfeedback`, `incorrectfeedback`    | Modal feedback that `FEEDBACK` shows by Moodle's states                                        |
+| An essay's `responseformat`, `responsefieldlines`, `responsetemplate` | `format`, `expected-lines` and the response's default value of `qti-extended-text-interaction` |
+| An essay's `graderinfo`                                               | A `qti-rubric-block` for scorers                                                               |
+| A `file` of a text, which `@@PLUGINFILE@@/` names                     | A file of `files`, `files/<item>/` and its path, which the content names                       |
+| `_____` in a question's text, where Moodle shows GIFT's missing word  | The place of an inline interaction                                                             |
+
+The hints of Moodle's interactive modes, the units of a numerical question, an essay's limits of words and attachments, and a
+question of a type that no QTI item here holds (`cloze`, `calculated`, the drag-and-drop types) are losses; so is a file that the
+content of an item names and `files` of `writeMoodleXml` does not hold. A reader reads a file with the runtime's XML reader and
+its limits, so a file with a DOCTYPE is refused.
 
 A writer takes the interaction of an item by the same table, read the other way: a choice interaction is a multiple choice, or
 a true-false question when its two choices are `true` and `false` and it scores one of them; a text entry is a short answer or
@@ -147,11 +177,12 @@ identifier or name, `omitted`, and a `message` that says what the result holds i
 
 ## Options
 
-| Option            | Of                      | Does                                                                                                                         | Default                            |
-| ----------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `trueFalseLabels` | `readGift`              | The labels of the choices of a true-false question, which Moodle draws in its user's language                                | `{ true: "True", false: "False" }` |
-| `customOperators` | `writeGift`             | The custom operators that the items' processing calls: `createScoringOperators()` for the items that `compileScoring` writes | none                               |
-| `limits`          | `readGift`, `writeGift` | The limits below, each replacing its default                                                                                 | `DEFAULT_ITEM_FORMAT_LIMITS`       |
+| Option            | Of                      | Does                                                                                                                         | Default                              |
+| ----------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `trueFalseLabels` | the readers             | The labels of the choices of a true-false question, which Moodle draws in its user's language                                | `{ true: "True", false: "False" }`   |
+| `customOperators` | the writers             | The custom operators that the items' processing calls: `createScoringOperators()` for the items that `compileScoring` writes | none                                 |
+| `files`           | `writeMoodleXml`        | The files that the items' content names, by the reference as written, which the questions embed                              | none: a reference stays, with a loss |
+| `limits`          | the readers and writers | The limits below, each replacing its default                                                                                 | `DEFAULT_ITEM_FORMAT_LIMITS`         |
 
 ## Limits
 
@@ -164,7 +195,11 @@ identifier or name, `omitted`, and a `message` that says what the result holds i
 | Tags of one text, before it is parsed                          | `maxTextTags`  |           4,096 | `SecurityError` with `limit` `maxTextTags`    |
 | Levels of HTML elements in a text                              | `maxDepth`     | 64, at most 256 | `SecurityError` with `limit` `maxDepth`       |
 
-A file of the most elements, 813 questions of 100 answers, reads in a heap of 72 MiB at most on Node.js 22, 24 and 26; essays
+A Moodle XML file is read by `parseXml` with `maxBytes` of these limits and the other limits of `DEFAULT_XML_LIMITS`: 300,000
+nodes, 256 levels and 256 attributes of an element.
+
+A file of the most elements, 813 questions of 100 answers, reads in a heap of 72 MiB at most on Node.js 22, 24 and 26, and a
+Moodle XML file of the most nodes of its tree and the most elements of its items in 96 MiB; essays
 of the most tags to the limit of elements, in 48 MiB, and in 88 ms on a laptop. The parser of HTML moves the children of an
 element one by one when it mends tags that close out of order, in time that grows with their square, which `maxTextTags` bounds. A writer runs
 an item's processing on at most 1,023 sets of choices, every set of 10 choices, and beside each choice of no credit on at most
@@ -177,6 +212,8 @@ at most `maxAnswers` squared.
 | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | An input that is neither text nor bytes; options of the wrong type, an unknown limit                                                     | `DataError`                                              |
 | Bytes that are not UTF-8, which Moodle refuses as a file                                                                                 | `ReadError`                                              |
+| Moodle XML that is not well-formed, or whose root is not `quiz`                                                                          | `ReadError`                                              |
+| Moodle XML with a DOCTYPE                                                                                                                | `SecurityError` with `limit` `doctype`                   |
 | A file past a limit                                                                                                                      | `SecurityError` with `limit` and `maximum`               |
 | A question that Moodle refuses: braces that do not match, too few answers, a pair without `->`, a weight or a bound that is not a number | A loss `item`, the question left out; the reader goes on |
 | Items that are not an array of objects with an item of the model                                                                         | `DataError`                                              |
@@ -186,25 +223,30 @@ at most `maxAnswers` squared.
 
 | Not included                                          | Why                                                                                                                                        |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| An item of several interactions                       | A GIFT question holds one answer block; Moodle's cloze questions, which hold several, are a format of their own inside the question's text |
+| An item of several interactions, and cloze questions  | A GIFT question holds one answer block; Moodle's cloze questions, which hold several, are a format of their own inside the question's text |
 | Calculated questions, and items of template variables | Moodle's calculated questions draw their values from datasets of their own, which QTI's template processing does not read or write         |
 | Drag and drop, select missing words, ordering         | Question types of Moodle that GIFT does not hold                                                                                           |
 | Markdown rendered as Moodle renders it                | Moodle uses a PHP library of Markdown Extra, whose rules no JavaScript library follows; the text is kept as plain text, with a loss        |
-| Media files                                           | GIFT holds no files; a reference stays as written                                                                                          |
+| Media files in GIFT                                   | GIFT holds no files; a reference stays as written, with a loss; Moodle XML embeds them                                                     |
+| The penalties of Moodle's tries                       | A setting of Moodle's interactive and adaptive behaviors, which score a question over several tries; a QTI item scores each attempt        |
+| Units of a numerical question                         | Moodle's own grammar of a number and a unit; a QTI float response is a number, and the units are a loss                                    |
 | Aiken                                                 | A subset of GIFT for one-answer choices, which GIFT already carries                                                                        |
 
 ## Differences from the references
 
-| Case                                                                                                                                                     | Resolution                                                                                                                  |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| A question that Moodle 5.3 refuses with a `TypeError`: a weight such as `%--50%`, fewer answers than its type needs, a numerical answer without a number | Moodle stops the import of the whole file; the reader leaves that question out and goes on                                  |
-| A credit outside Moodle's grades, such as 35%                                                                                                            | Moodle refuses the question; the reader reads it as written, which QTI holds                                                |
-| A response with leading or trailing spaces, which Moodle trims                                                                                           | A short answer read from GIFT trims too; a writer does not list an item whose own scoring does not trim                     |
-| Unicode normalization: Moodle compares short answers in form C                                                                                           | The reader's patterns hold the answer in form C; a response is matched as the candidate types it                            |
-| A number at the bound of a tolerance, which Moodle widens by 10^-14 of the larger of the value and the tolerance                                         | The item compares in doubles without the widening, so a response that rounding puts at the bound can differ in the last bit |
-| A numerical response with a thousands separator or a unit, which Moodle's answer processor reads                                                         | A QTI float response is a number alone                                                                                      |
-| The name of a question without one                                                                                                                       | The start of its text, as Moodle makes it, cut at 80 characters on a word; Moodle's `shorten_text` may cut elsewhere        |
-| Moodle's export of an answer `*` of full credit, `~#`                                                                                                    | Moodle writes no answer then, and its own importer refuses the file; so does the reader                                     |
+| Case                                                                                                                                                                                                                                         | Resolution                                                                                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| A question at which Moodle 5.3 stops: in GIFT a weight such as `%--50%`, fewer answers than its type needs, a numerical answer without a number; in Moodle XML a credit, a mark or a number that is not one, a multiple choice of one answer | Moodle stops the import of the whole file, and may undo it; the reader leaves that question out and goes on                                  |
+| A credit outside Moodle's grades, such as 35%                                                                                                                                                                                                | Moodle refuses the question; the reader reads it as written, which QTI holds                                                                 |
+| A response with leading or trailing spaces, which Moodle trims                                                                                                                                                                               | A short answer read from GIFT trims too; a writer does not list an item whose own scoring does not trim                                      |
+| Unicode normalization: Moodle compares short answers in form C                                                                                                                                                                               | The reader's patterns hold the answer in form C; a response is matched as the candidate types it                                             |
+| A number at the bound of a tolerance, which Moodle widens by 10^-14 of the larger of the value and the tolerance                                                                                                                             | The item compares in doubles without the widening, so a response that rounding puts at the bound can differ in the last bit                  |
+| A numerical response with a thousands separator or a unit, which Moodle's answer processor reads                                                                                                                                             | A QTI float response is a number alone                                                                                                       |
+| The name of a GIFT question without one                                                                                                                                                                                                      | The start of its text, cut as Moodle's `shorten_text` cuts it; `shorten_text` counts an HTML entity as one character, the reader its letters |
+| A Moodle XML question without a name, which Moodle reports and imports with an empty one                                                                                                                                                     | The reader titles the item by its identifier                                                                                                 |
+| Moodle's export of an answer `*` of full credit, `~#`                                                                                                                                                                                        | Moodle writes no answer then, and its own importer refuses the file; so does the reader                                                      |
+| A short answer without an answer of 100%, which Moodle refuses and stops its import at                                                                                                                                                       | The reader reads it as written; a writer leaves such an item out                                                                             |
+| Moodle XML with a DOCTYPE, whose entities Moodle's parser expands                                                                                                                                                                            | Refused, as every XML reader of the runtime refuses one                                                                                      |
 
 ## Build or adopt
 
@@ -212,27 +254,31 @@ at most `maxAnswers` squared.
 | ------------------ | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Reading GIFT       | gift-pegjs 1.0.2 (MIT, 396 kB with pegjs 0.10)                                     | Built. Its last release is of 2024-09 (a beta of 2025-01), it is CommonJS, and its grammar is its own: on the edge cases that Moodle read it reads 13 of 19 blocks as Moodle does, and it stops a whole file at the first question it refuses. The reader follows Moodle's importer step by step, the reference that decides what a file means |
 | Writing GIFT       | none from QTI                                                                      | Built, as Moodle's exporter writes                                                                                                                                                                                                                                                                                                             |
+| Moodle XML         | the runtime's XML reader and writer                                                | `parseXml` and `serializeXml`, with their limits; the questions follow Moodle's importer and exporter                                                                                                                                                                                                                                          |
 | HTML of a question | parse5 8.0.1 (MIT, 229 million downloads a week, released 2026-04-19, no advisory) | Adopted: the HTML parsing of the WHATWG standard, as a browser that shows the question parses it                                                                                                                                                                                                                                               |
 | Scoring of an item | the runtime's own processing                                                       | `runResponseProcessing`, so that any rule the runtime runs converts the same way                                                                                                                                                                                                                                                               |
 
 ## Evidence
 
 Moodle 5.3.0 itself is the reference. `validation/moodle.py` starts Moodle and its database in containers, and
-`validation/moodle/questions.php` imports each file of the cases with Moodle's own importer, as "Import" in its question bank
+`validation/moodle/questions.php` imports each file of the cases with Moodle's own GIFT or XML importer, as "Import" in its question bank
 does; it records what Moodle stored, grades each response of the case with each question's own `grade_response`, and exports
 each question with Moodle's own GIFT and XML exporters. The fixture `item-formats-moodle.json` holds the cases and Moodle's
 results, and `item-formats.test.ts` compares:
 
-| What                                          | Cases                                                                                                | Agreement                                      |
-| --------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| A reader's items on Moodle's grades           | The files that `writeGift` writes of 13 items, edge cases of GIFT, and those edge cases written back | Every response within 1e-9                     |
-| A reader's items of Moodle's own export       | The GIFT that Moodle exports of each question it kept                                                | Every response within 1e-9                     |
-| A writer's file on the original item's scores | The 13 items                                                                                         | Equal, except where a loss of scoring says why |
-| The questions that Moodle refuses or stops at | Broken braces, a pair without `->`, a credit off its grades, four questions that stop the import     | As in Differences                              |
+| What                                          | Cases                                                                                                                                                                                                                                                  | Agreement                                                                                |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| A reader's items on Moodle's grades           | The files that `writeGift` and `writeMoodleXml` write of 14 items, edge cases of each format, and those edge cases written back, files included                                                                                                        | Every response within 1e-9                                                               |
+| A reader's items of Moodle's own export       | The GIFT and the XML that Moodle exports of each question it kept                                                                                                                                                                                      | Every response within 1e-9; Moodle's GIFT of a question that keeps case reads without it |
+| A writer's file on the original item's scores | The 14 items, in each format                                                                                                                                                                                                                           | Equal, except where a loss of scoring says why                                           |
+| The questions that Moodle refuses or stops at | Broken braces, a pair without `->`, a credit off its grades, four questions of each format that stop the import                                                                                                                                        | As in Differences                                                                        |
+| The oddities that Moodle reads past           | Questions without names, a byte order mark, lines ended by carriage returns alone, the formats `wiki_like` and an unknown one, a tolerance that is not a number, base64 with other characters, an essay's unknown response format, a match of one pair | Names, files and grades as Moodle's; every response within 1e-9                          |
 
 The items that a reader writes from every file and export of the fixture pass the official QTI 3.0 schema
 (`item-formats.xsd.test.ts`). Property tests write and read back any text, GIFT's reserved marks and HTML's included, and any
 credits of Moodle's list; a fuzz test reads mutated files and any text, which a reader reads or refuses with a `SecurityError`.
+Items of one rule each (`item-formats-rules.ts`) pin what each writer lists of them; three of those items are read back and
+scored against the original.
 
 ## Files
 
@@ -241,6 +287,9 @@ credits of Moodle's list; a fuzz test reads mutated files and any text, which a 
 | `gift-parse.ts`         | `readGift`, and the frame of a GIFT question: its lines, comments, name and braces       |
 | `gift-answers.ts`       | The answers of a GIFT question by type, its escapes and weights                          |
 | `gift-write.ts`         | `writeGift`, as Moodle's exporter writes                                                 |
+| `moodle-xml-read.ts`    | `readMoodleXml`, each question element by its type as Moodle's importer reads it         |
+| `moodle-xml-write.ts`   | `writeMoodleXml`, as Moodle's exporter writes, with embedded files                       |
+| `file-references.ts`    | The files that the HTML of a question names                                              |
 | `question.ts`           | Moodle's question model, between the files and QTI                                       |
 | `import-items.ts`       | The reading of a file's text, the options of the readers, and the items of a file        |
 | `item-build.ts`         | The QTI item of a question                                                               |
@@ -265,6 +314,7 @@ credits of Moodle's list; a fuzz test reads mutated files and any text, which a 
 | Topic                         | Reference                                                                                                 |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------- |
 | GIFT                          | Moodle Docs, GIFT format; Moodle 5.3.0, `question/format/gift/format.php`                                 |
+| Moodle XML                    | Moodle Docs, Moodle XML format; Moodle 5.3.0, `question/format/xml/format.php`                            |
 | Grading of each question type | Moodle 5.3.0, `question/type/{multichoice,truefalse,shortanswer,numerical,match}/question.php`            |
 | Grades and their matching     | Moodle 5.3.0, `question_bank::fraction_options_full` and `match_grade_options`                            |
 | Text formats                  | Moodle 5.3.0, `format_text` and `text_to_html`                                                            |

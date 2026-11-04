@@ -20,7 +20,7 @@ export interface EntryBudget {
  */
 export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   "@assesskit/runtime": {
-    gzip: 318_500,
+    gzip: 323_500,
     holds: [
       "entities",
       "fflate",
@@ -208,7 +208,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/runtime/item-formats": {
-    gzip: 145_500,
+    gzip: 153_000,
     holds: [
       "entities",
       "parse5",

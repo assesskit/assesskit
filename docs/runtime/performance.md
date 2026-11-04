@@ -99,8 +99,10 @@ of the tests generate with a fixed seed. A benchmark fails when its fastest samp
 | `compileScoring` of an item             | A choice, pairs, an order and a text                                                                                        | 0.04 ms on a laptop      | 0.2 ms        |
 | `compileScoring` at the limits          | 64 orders of 1,000 choices scored per position, a condition for each choice                                                 | 52.7 ms on a laptop      | 300 ms        |
 | `readGift`                              | The edge cases of GIFT that Moodle read: 18 items and two questions that Moodle refuses                                     | 0.32 ms on a laptop      | 2 ms          |
-| `writeGift`                             | The 13 items that Moodle read, each response processing run on the responses that tell its credits apart                    | 0.43 ms on a laptop      | 3 ms          |
+| `writeGift`                             | The 14 items that Moodle read, each response processing run on the responses that tell its credits apart                    | 0.56 ms on a laptop      | 3 ms          |
 | `readGift` at the limits                | 47 essays of 4,096 tags of HTML each, to the limit of elements                                                              | 87.8 ms on a laptop      | 500 ms        |
+| `readMoodleXml`                         | The edge cases of Moodle XML that Moodle read: 9 items and a cloze question that does not convert                           | 0.26 ms on a laptop      | 2 ms          |
+| `writeMoodleXml`                        | The 14 items that Moodle read, with an image embedded                                                                       | 0.69 ms on a laptop      | 4 ms          |
 
 The replay also checks that the replayed state equals the state of the session. The peak memory of the readers is a test, not a
 benchmark: [SECURITY.md](../../SECURITY.md#default-limits) lists it.
@@ -157,14 +159,14 @@ shows in the change that makes it. The player's entry points are in [size](../pl
 ```mermaid
 xychart-beta
   title "Subpaths after gzip, in kilobytes"
-  x-axis ["keys", "errors", "checks", "content", "pci", "cat", "xml", "values", "interactions", "delivery/wire", "metadata", "usage", "results", "pnp", "processing", "scoring", "operators", "asi", "package", "validate", "item-formats", "delivery", "root"]
-  y-axis "kB" 0 --> 255
-  bar [0.1, 0.2, 4.0, 8.2, 8.7, 9.3, 16.9, 18.4, 17.2, 17.8, 18.8, 19.2, 22.0, 22.1, 26.6, 31.5, 34.5, 39.3, 51.2, 72.9, 116.3, 118.0, 254.7]
+  x-axis ["keys", "errors", "checks", "content", "pci", "cat", "xml", "values", "interactions", "delivery/wire", "metadata", "usage", "results", "pnp", "processing", "scoring", "operators", "asi", "package", "validate", "delivery", "item-formats", "root"]
+  y-axis "kB" 0 --> 260
+  bar [0.1, 0.2, 4.0, 8.2, 8.7, 9.3, 16.9, 18.4, 17.2, 17.8, 18.8, 19.2, 22.0, 22.1, 26.6, 31.5, 34.5, 39.3, 51.2, 72.9, 118.0, 122.4, 259.2]
 ```
 
 | Subpath         | Bytes     | Gzip    | Budget  | Holds besides its own code, `errors`, `checks` and valibot                                                                                                               |
 | --------------- | --------- | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `.`             | 958,669   | 254,716 | 318,500 | Every module but `node` and `cli`; entities, fflate, parse5, saxes, xmlchars                                                                                             |
+| `.`             | 972,428   | 259,151 | 323,500 | Every module but `node` and `cli`; entities, fflate, parse5, saxes, xmlchars                                                                                             |
 | `asi`           | 235,113   | 39,319  | 49,000  | `values`, `xml`; saxes, xmlchars                                                                                                                                         |
 | `cat`           | 28,642    | 9,252   | 12,000  | `metadata`, `results`, `values`                                                                                                                                          |
 | `checks`        | 13,522    | 4,006   | 5,500   | Nothing                                                                                                                                                                  |
@@ -173,7 +175,7 @@ xychart-beta
 | `delivery/wire` | 57,252    | 17,791  | 22,500  | `interactions`, `pnp`, `values`, `xml`; xmlchars                                                                                                                         |
 | `errors`        | 477       | 225     | 500     | Nothing                                                                                                                                                                  |
 | `interactions`  | 54,608    | 17,198  | 21,500  | `asi`, `random`, `values`                                                                                                                                                |
-| `item-formats`  | 498,364   | 116,306 | 145,500 | `asi`, `content`, `processing`, `random`, `values`, `xml`; entities, parse5, saxes, xmlchars                                                                             |
+| `item-formats`  | 517,474   | 122,382 | 153,000 | `asi`, `content`, `processing`, `random`, `values`, `xml`; entities, parse5, saxes, xmlchars                                                                             |
 | `keys`          | 99        | 117     | 500     | Nothing                                                                                                                                                                  |
 | `pci`           | 26,986    | 8,726   | 11,000  | `values`                                                                                                                                                                 |
 | `pnp`           | 74,124    | 22,090  | 27,500  | `xml`; saxes, xmlchars                                                                                                                                                   |

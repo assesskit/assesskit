@@ -26,6 +26,7 @@ import {
   readGift,
   readManifest,
   readModuleResolution,
+  readMoodleXml,
   readPackage,
   readResults,
   readResultsJson,
@@ -109,6 +110,16 @@ const GIFT_TAG_QUESTIONS =
     (DEFAULT_ITEM_FORMAT_LIMITS.maxNodes - DEFAULT_ITEM_FORMAT_LIMITS.maxTextTags) /
       (DEFAULT_ITEM_FORMAT_LIMITS.maxTextTags / 2 + GIFT_ESSAY_ELEMENTS),
   ) + 1;
+
+/** A question of Moodle XML of two answers. */
+const MOODLE_XML_QUESTION =
+  '<question type="multichoice"><name><text>q</text></name><answer fraction="100"><text>a</text></answer><answer fraction="0"><text>b</text></answer></question>';
+
+/** The question of two answers padded with as many empty elements as the limit of nodes leaves each question. */
+const MOODLE_XML_PADDED = MOODLE_XML_QUESTION.replace(
+  "</question>",
+  `${"<x/>".repeat(Math.floor(XML_NODES / GIFT_SHORT_QUESTIONS) - 16)}</question>`,
+);
 
 /** The nodes that a document keeps for the elements around its units, out of the nodes it may have. */
 const WRAPPER_NODES = 16;
@@ -751,6 +762,19 @@ export const READINGS = {
         "",
       ),
     read: (gift: Uint8Array) => `${readGift(gift).items.length} items`,
+  },
+  /** A Moodle XML file of questions of two answers, whose items hold the most elements, the limit. */
+  moodleXmlQuestions: {
+    input: () => repeated("<quiz>", MOODLE_XML_QUESTION, GIFT_SHORT_QUESTIONS, "</quiz>"),
+    read: (xml: Uint8Array) => `${readMoodleXml(xml).items.length} items`,
+  },
+  /**
+   * A Moodle XML file of questions of two answers, each padded with elements that the reader passes over, to the most nodes
+   * of the XML reader's tree and the most elements of the items together.
+   */
+  moodleXmlNodes: {
+    input: () => repeated("<quiz>", MOODLE_XML_PADDED, GIFT_SHORT_QUESTIONS, "</quiz>"),
+    read: (xml: Uint8Array) => `${readMoodleXml(xml).items.length} items`,
   },
   mathSteps: {
     input: () =>

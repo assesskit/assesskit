@@ -4,7 +4,14 @@ import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { type AssessmentItem, readAsi, writeAsi } from "../src/asi/index.js";
 import { DataError, ReadError, SecurityError } from "../src/errors.js";
-import { readGift, writeGift } from "../src/item-formats/index.js";
+import {
+  type ConversionLoss,
+  type ImportedItems,
+  readGift,
+  readMoodleXml,
+  writeGift,
+  writeMoodleXml,
+} from "../src/item-formats/index.js";
 import { createScoringOperators } from "../src/operators/index.js";
 import { createItemVariables, runResponseProcessing } from "../src/processing/index.js";
 import { createRandom } from "../src/random.js";
@@ -13,22 +20,28 @@ import { parseXml, type XmlElement, type XmlNode } from "../src/xml/index.js";
 import { giftMutations, markedText, weightedChoices } from "./arbitraries/item-formats.js";
 import { mutateText } from "./arbitraries/xml.js";
 import { readFixture } from "./fixtures.js";
-import { expectOutcome, FUZZ } from "./fuzz.js";
+import { expectOutcome, FUZZ, fuzzReader } from "./fuzz.js";
 import {
   buildMoodleCases,
   buildWrittenItems,
   type CaseResponse,
+  HTML_EDGES,
   type MoodleCase,
   WRITE_OPTIONS,
+  XML_EDGES,
+  XML_WRITE_OPTIONS,
 } from "./item-formats-cases.js";
+import { buildRuleItems } from "./item-formats-rules.js";
 
 /** What Moodle stored of a question, as validation/moodle/questions.php records it. */
 interface MoodleQuestion {
   readonly read: {
     readonly qtype: string;
     readonly name: string;
+    readonly usecase?: number;
     readonly questiontext: { readonly text: string; readonly format: string };
     readonly answers?: readonly { readonly answer: string; readonly fraction: number }[];
+    readonly subquestions?: readonly { readonly questiontext: string; readonly answertext: string }[];
   };
   readonly grades: readonly (number | null)[];
   readonly gift: string;
@@ -152,25 +165,52 @@ function expectMoodleGrades(
   }
 }
 
-describe("readGift", () => {
-  for (const name of ["gift-written", "gift-edges", "gift-rewritten"]) {
+/** The reader of a case's format; Moodle exports one question of XML without the root of a file. */
+function readCase(format: "gift" | "xml", text: string): ImportedItems {
+  if (format === "gift") return readGift(text);
+  return readMoodleXml(/^\s*<(?:\?xml|quiz)/.test(text) ? text : `<quiz>${text}</quiz>`);
+}
+
+describe("readGift and readMoodleXml", () => {
+  const read = ["gift-written", "gift-edges", "gift-rewritten", "xml-written", "xml-edges", "xml-rewritten"];
+  for (const name of [...read, "gift-names", "gift-returns", "xml-formats", "xml-one-pair"]) {
     it(`reads each question of ${name} as Moodle 5.3 does, and scores each response as Moodle grades it`, () => {
       const testCase = caseNamed(name);
-      const { items } = readGift(testCase.file);
+      const { items } = readCase(testCase.format, testCase.file);
       for (const question of testCase.moodle.questions) {
         const read = items.find(({ item }) => item.title === question.read.name);
+        // A cloze question holds several answers in its text, which no item of one interaction holds.
+        if (question.read.qtype === "multianswer") {
+          expect(read).toBeUndefined();
+          continue;
+        }
         expect(read, question.read.name).toBeDefined();
         if (read === undefined) continue;
         expectMoodleGrades(read.item, testCase.responses[question.read.name] ?? [], question.grades);
       }
     });
 
-    it(`reads the GIFT that Moodle exports of each question of ${name} as Moodle grades it`, () => {
+    it(`reads the GIFT and the XML that Moodle exports of each question of ${name} as Moodle grades it`, () => {
       const testCase = caseNamed(name);
       for (const question of testCase.moodle.questions) {
+        const xml = readCase("xml", question.xml);
+        expect(xml.losses.filter(({ omitted }) => omitted).length, question.read.name).toBe(
+          question.read.qtype === "multianswer" ? 1 : 0,
+        );
+        if (xml.items[0] !== undefined) {
+          expectMoodleGrades(xml.items[0].item, testCase.responses[question.read.name] ?? [], question.grades);
+        }
+        // GIFT holds no case, so Moodle's own GIFT of a question that keeps case reads back without it.
+        if (question.read.qtype === "multianswer" || question.read.usecase === 1) continue;
         const { items, losses } = readGift(question.gift);
-        // Moodle exports an answer "*" of full credit as "~#", which leaves the question no answer: its own importer refuses it.
-        if (question.read.qtype === "numerical" && !/^\t=/m.test(question.gift)) {
+        // Moodle's GIFT of a name of two lines puts its second line in the text of the file, which reads as text again.
+        if (question.read.name.includes("\n")) continue;
+        // Moodle exports an answer "*" of full credit as "~#", which leaves the question no answer, and a match of one pair:
+        // its own importer refuses both.
+        if (
+          (question.read.qtype === "numerical" && !/^\t=/m.test(question.gift)) ||
+          (question.read.qtype === "match" && (question.read.subquestions?.length ?? 0) < 2)
+        ) {
           expect(losses.map(({ omitted, reason }) => [omitted, reason])).toStrictEqual([[true, "item"]]);
           continue;
         }
@@ -197,6 +237,52 @@ describe("readGift", () => {
     }
   });
 
+  it("writes back what it reads of Moodle XML, with its files, so that Moodle grades each response alike", () => {
+    const edges = caseNamed("xml-edges").moodle.questions;
+    const rewritten = caseNamed("xml-rewritten");
+    expect(rewritten.moodle.failure).toBeNull();
+    for (const question of edges.filter(({ read }) => read.qtype !== "multianswer")) {
+      const again = rewritten.moodle.questions.find(({ read }) => read.name === question.read.name);
+      expect(again?.grades, question.read.name).toStrictEqual(question.grades);
+    }
+    expect(rewritten.moodle.questions.map(({ read }) => read.name)).not.toContain("Cloze");
+  });
+
+  it("reads the files that a text embeds, under the item, and writes them back where a text names them", () => {
+    const { items, files } = readMoodleXml(XML_EDGES);
+    expect([...files.keys()]).toStrictEqual(["files/item-9/dot%20one.png"]);
+    const picture = items.find(({ item }) => item.title === "Picture")?.item;
+    expect(picture === undefined ? "" : writeAsi({ kind: "item", item: picture })).toContain(
+      '<img src="files/item-9/dot%20one.png" alt="A dot"/>',
+    );
+    const { text, losses } = writeMoodleXml(items, { files });
+    expect(text).toContain('src="@@PLUGINFILE@@/files/item-9/dot%20one.png"');
+    expect(text).toContain('<file name="dot one.png" path="/files/item-9/" encoding="base64">');
+    expect(losses.filter(({ reason }) => reason === "content" && /files/.test(reason))).toStrictEqual([]);
+    const remote = readGift('[html]<img src="https://example.org/a.png" alt="a">{=a ~b}').items;
+    expect(writeMoodleXml(remote, { files }).text).toContain('src="https://example.org/a.png"');
+    const missing = writeMoodleXml(items).losses.filter(({ message }) => message.startsWith("The files"));
+    expect(missing.map(({ item, reason }) => [item, reason])).toStrictEqual([["item-9", "content"]]);
+    expect(
+      writeGift(items)
+        .losses.filter(({ message }) => message.startsWith("GIFT holds no files"))
+        .map(({ item }) => item),
+    ).toStrictEqual(["item-9"]);
+  });
+
+  it("leaves out the questions of a type that does not convert, and keeps Moodle XML's settings and feedback", () => {
+    const { items, losses } = readMoodleXml(XML_EDGES);
+    expect(losses.filter(({ omitted }) => omitted).map(({ item, reason }) => [item, reason])).toStrictEqual([
+      ["Cloze", "item"],
+    ]);
+    const several = items.find(({ item }) => item.title === "Several with feedback")?.item;
+    const xml = several === undefined ? "" : writeAsi({ kind: "item", item: several });
+    expect(xml).toContain('identifier="correct"');
+    expect(xml).toContain('shuffle="false"');
+    expect(xml).toContain("<qti-value>2</qti-value></qti-default-value></qti-outcome-declaration>");
+    expect(items.map(({ category }) => category)).toStrictEqual(Array(9).fill("$course$/top/Edges"));
+  });
+
   it("leaves out the questions that Moodle refuses, with Moodle's reason, and keeps the rest", () => {
     const { items, losses } = readGift(caseNamed("gift-edges").file);
     expect(caseNamed("gift-edges").moodle.log).toContain("Could not find {...} around answers");
@@ -219,6 +305,41 @@ describe("readGift", () => {
       expect(losses.map(({ omitted, reason }) => [omitted, reason])).toStrictEqual([[true, "item"]]);
     }
   });
+
+  it("leaves out a question of Moodle XML at which Moodle stops, and reads past those that Moodle reads past", () => {
+    for (const name of ["xml-fraction-error", "xml-number-error", "xml-mark-error", "xml-one-answer"]) {
+      const { moodle, file, responses } = caseNamed(name);
+      expect(moodle.failure ?? moodle.log, name).toMatch(/^(?:TypeError|dml_write_exception|!! This type)/);
+      expect(moodle.questions.map(({ read }) => read.name)).not.toContain("After");
+      const { items, losses } = readMoodleXml(file);
+      expect(items.map(({ item }) => item.title)).toStrictEqual(["Fine", "After"]);
+      expect(losses.map(({ omitted, reason }) => [omitted, reason])).toStrictEqual([[true, "item"]]);
+      // Moodle keeps what it saved before it stopped, unless it undoes the import.
+      for (const question of moodle.questions) {
+        const read = items.find(({ item }) => item.title === question.read.name)?.item;
+        if (read !== undefined) expectMoodleGrades(read, responses[question.read.name] ?? [], question.grades);
+      }
+    }
+    for (const name of ["xml-tolerance-error", "xml-no-name", "xml-bad-file", "xml-essay-format"]) {
+      const { moodle, file, responses } = caseNamed(name);
+      const { items } = readMoodleXml(file);
+      // An item without a name is titled by its identifier.
+      const titles = moodle.questions.map(({ read }, index) => read.name || `item-${index + 1}`);
+      expect(items.map(({ item }) => item.title)).toStrictEqual(titles);
+      for (const [index, question] of moodle.questions.entries()) {
+        const read = items[index]?.item;
+        if (read !== undefined) expectMoodleGrades(read, responses[question.read.name] ?? [], question.grades);
+      }
+    }
+    // Moodle decodes base64 as PHP does, skipping what is not of its alphabet, and keeps an essay's unknown response format.
+    expect([...readMoodleXml(caseNamed("xml-bad-file").file).files.values()]).toStrictEqual([
+      new TextEncoder().encode("ABC"),
+    ]);
+    const essay = readMoodleXml(caseNamed("xml-essay-format").file);
+    expect(essay.losses.map(({ item, reason }) => [item, reason])).toStrictEqual([["item-2", "setting"]]);
+    expect(writeMoodleXml(essay.items).text).toContain("<responseformat>editor</responseformat>");
+    expect(caseNamed("xml-essay-format").moodle.questions[1]?.xml).toContain("<responseformat>canvas</responseformat>");
+  });
 });
 
 describe("writeGift", () => {
@@ -229,24 +350,30 @@ describe("writeGift", () => {
     );
   });
 
-  it("writes items that Moodle grades as the items score, except where a loss says the scoring changes", () => {
-    const items = buildWrittenItems();
-    const { losses } = writeGift(items, WRITE_OPTIONS);
-    const testCase = caseNamed("gift-written");
-    for (const { item } of items) {
-      const question = testCase.moodle.questions.find(({ read }) => read.name === item.title);
-      expect(question, item.title).toBeDefined();
-      if (question === undefined) continue;
-      const responses = testCase.responses[item.title] ?? [];
-      const differs = responses.some(
-        (response, index) => Math.abs(scoreOf(item, response) - (question.grades[index] ?? 0)) > 1e-9,
-      );
-      const scoringLoss = losses.some(
-        ({ item: identifier, reason }) => identifier === item.identifier && reason === "scoring",
-      );
-      expect(differs, item.title).toBe(scoringLoss && item.identifier !== "text-operator");
-    }
-  });
+  it.each([
+    ["gift-written", () => writeGift(buildWrittenItems(), WRITE_OPTIONS).losses],
+    ["xml-written", () => writeMoodleXml(buildWrittenItems(), XML_WRITE_OPTIONS).losses],
+  ] as const)(
+    "writes items that Moodle grades as the items score in %s, except where a loss says the scoring changes",
+    (name, write) => {
+      const items = buildWrittenItems();
+      const losses = write();
+      const testCase = caseNamed(name);
+      for (const { item } of items) {
+        const question = testCase.moodle.questions.find(({ read }) => read.name === item.title);
+        expect(question, item.title).toBeDefined();
+        if (question === undefined) continue;
+        const responses = testCase.responses[item.title] ?? [];
+        const differs = responses.some(
+          (response, index) => Math.abs(scoreOf(item, response) - (question.grades[index] ?? 0)) > 1e-9,
+        );
+        const scoringLoss = losses.some(
+          ({ item: identifier, reason }) => identifier === item.identifier && reason === "scoring",
+        );
+        expect(differs, item.title).toBe(scoringLoss && item.identifier !== "text-operator");
+      }
+    },
+  );
 });
 
 const QTI = 'xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"';
@@ -290,9 +417,7 @@ function choiceTexts(item: AssessmentItem): string[] {
 
 describe("the content of a question", () => {
   it("keeps QTI's HTML, gives the content of other elements to their parents, and leaves out code, each with a loss", () => {
-    const { items, losses } = readGift(
-      '::Html::[html]<p style="color:red" class="lead">A <font>red</font> <b>word</b><script>alert(1)</script></p><img src="a.png">{=x ~y}',
-    );
+    const { items, losses } = readGift(HTML_EDGES.markup);
     const item = items[0]?.item;
     expect(item === undefined ? "" : writeAsi({ kind: "item", item })).toContain(
       '<p class="lead">A red <b>word</b></p><div><img src="a.png" alt=""/></div>',
@@ -301,6 +426,19 @@ describe("the content of a question", () => {
       ["content", "The elements font are not QTI content where they stand: their content is kept without them."],
       ["content", "The elements script are not QTI content: they are left out with what they hold."],
       ["content", "The attributes style are not QTI content or have invalid values: they are left out."],
+    ]);
+  });
+
+  it("keeps MathML, tables, lists and figures, and gives up an element without the children that QTI needs", () => {
+    const { items, losses } = readGift(HTML_EDGES.structure);
+    const item = items[0]?.item;
+    expect(item === undefined ? "" : writeAsi({ kind: "item", item })).toContain(
+      '<qti-item-body><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>x</mi><mtext/></math><table/><ul/><dl><dt>t</dt></dl><figure><figcaption>c</figcaption><img src="a.png" alt=""/></figure><p id="a" data-x="1">one</p><p>two</p><table><tbody><tr><td>cell</td></tr></tbody></table><qti-choice-interaction',
+    );
+    expect(losses.map(({ message }) => message)).toStrictEqual([
+      "The elements tbody are not QTI content where they stand: their content is kept without them.",
+      "The elements span, svg are not QTI content: they are left out with what they hold.",
+      "The attributes id, colspan are not QTI content or have invalid values: they are left out.",
     ]);
   });
 
@@ -408,6 +546,92 @@ describe("writeGift and the items that do not convert", () => {
   });
 });
 
+describe("the rules of an item that a writer meets", () => {
+  it("writes each rule that a question holds, and lists each other with its reason, alike in both formats", () => {
+    const items = buildRuleItems().map((item) => ({ item }));
+    const gift = writeGift(items, WRITE_OPTIONS);
+    const xml = writeMoodleXml(items, WRITE_OPTIONS);
+    const summary = (losses: readonly ConversionLoss[]) =>
+      losses.map(({ item, omitted, reason }) => `${item} ${omitted ? "omitted" : reason}`);
+    expect(summary(xml.losses)).toStrictEqual([
+      "fixed-and-limited setting",
+      "fixed-and-limited setting",
+      "one-choice omitted",
+      "no-credit omitted",
+      "match-all-or-nothing scoring",
+      "match-all-or-nothing scoring",
+      "match-all-or-nothing setting",
+      "match-all-or-nothing content",
+      "match-two-right scoring",
+      "match-two-right setting",
+      "match-empty omitted",
+      "numbers scoring",
+      "number-no-credit omitted",
+      "text-rules scoring",
+      "text-rules scoring",
+      "text-no-credit omitted",
+      "essay-scored setting",
+      "essay-scored setting",
+      "essay-scored scoring",
+      "uri-entry omitted",
+      "undeclared omitted",
+      "description-feedback feedback",
+      "content-after content",
+      "content-after content",
+      "operator-number scoring",
+    ]);
+    // GIFT loses what Moodle XML loses, and what GIFT itself does not say: shuffling, a mark, case, an essay's options.
+    const own = gift.losses.filter(({ message }) => message.startsWith("GIFT"));
+    expect(gift.losses.filter((loss) => !own.includes(loss))).toStrictEqual(xml.losses);
+    expect(new Set(own.map(({ item }) => item))).toStrictEqual(
+      new Set([
+        "twelve-choices",
+        "labels-of-markup",
+        "match-all-or-nothing",
+        "match-two-right",
+        "text-format-name",
+        "essay-scored",
+        "content-after",
+      ]),
+    );
+    for (const answers of [
+      "~%-100%c11\n",
+      "= -> T2\n",
+      "=100:10\n\t=%50%51:2\n\t=%50%3.14:0\n",
+      "=10:2\n",
+      "=Alpha\n\t=%50%Beta\n",
+    ]) {
+      expect(gift.text).toContain(answers);
+    }
+    expect(xml.text).toContain("<responseformat>monospaced</responseformat>");
+    // An answer that starts as a format's name would read as that format: its own format says it is plain.
+    expect(gift.text).toContain("=[plain][html]x\n");
+  });
+
+  it("writes a number's tolerances and a credit's sums so that the items read back score as the item does", () => {
+    const items = buildRuleItems().map((item) => ({ item }));
+    const read = readGift(writeGift(items, WRITE_OPTIONS).text).items;
+    const expectSameScores = (name: string, responses: readonly CaseResponse[]) => {
+      const item = items.find(({ item }) => item.identifier === name)?.item;
+      const again = read.find(({ item }) => item.identifier === name)?.item;
+      if (item === undefined || again === undefined) throw new Error(`No item ${name}.`);
+      for (const response of responses) {
+        expect(scoreOf(again, response), `${name}, ${JSON.stringify(response)}`).toBeCloseTo(
+          scoreOf(item, response),
+          9,
+        );
+      }
+    };
+    expectSameScores("numbers", [{ text: "95" }, { text: "52" }, { text: "3.14" }, { text: "48.5" }]);
+    expectSameScores("operator-float", [{ text: "0.505" }, { text: "0.49" }]);
+    expectSameScores("twelve-choices", [
+      { choices: [0, 1, 2] },
+      { choices: [...Array(11).keys()] },
+      { choices: [0, 11] },
+    ]);
+  });
+});
+
 describe("errors", () => {
   it("refuses arguments and options of other types, as JSON passes them", () => {
     const wrong = JSON.parse(
@@ -420,6 +644,20 @@ describe("errors", () => {
     expect(() => writeGift(JSON.parse("{}"))).toThrow(DataError);
     expect(() => writeGift([JSON.parse("null")])).toThrow(DataError);
     expect(() => writeGift([], JSON.parse('{"customOperators": {}}'))).toThrow(DataError);
+    const item = qtiItem(`<qti-item-body><p>x</p></qti-item-body>`);
+    expect(() => writeGift([{ item, category: JSON.parse("5") }])).toThrow(DataError);
+    expect(() => writeMoodleXml([{ item, tags: JSON.parse("[1]") }])).toThrow(DataError);
+  });
+
+  it("refuses Moodle XML that is not a file of questions, or that declares a DOCTYPE", () => {
+    expect(() => readMoodleXml("<questions/>")).toThrow(ReadError);
+    expect(() => readMoodleXml("<quiz>")).toThrow(ReadError);
+    expect(() => readMoodleXml('<!DOCTYPE quiz [<!ENTITY a "b">]><quiz/>')).toThrow(
+      expect.objectContaining({ limit: "doctype" }),
+    );
+    expect(() => readMoodleXml(JSON.parse("5"))).toThrow(DataError);
+    expect(() => writeMoodleXml([], JSON.parse('{"files": {"a": 1}}'))).toThrow(DataError);
+    expect(readMoodleXml("<quiz/>")).toStrictEqual({ items: [], files: new Map(), losses: [] });
   });
 
   it("reads UTF-8 bytes without their mark, and refuses other bytes as Moodle does", () => {
@@ -438,7 +676,25 @@ describe("errors", () => {
       return "no error";
     };
     expect(limit(() => readGift("Q{}", { limits: { maxBytes: 2 } }))).toStrictEqual(["maxBytes", 2]);
+    const question =
+      '<question type="essay"><name><text>q</text></name><questiontext><text>q</text></questiontext></question>';
+    expect(
+      limit(() => readMoodleXml(`<quiz>${question.repeat(3)}</quiz>`, { limits: { maxQuestions: 2 } })),
+    ).toStrictEqual(["maxQuestions", 2]);
+    const answers = '<answer fraction="100"><text>a</text></answer>'.repeat(3);
+    const choice = `<question type="multichoice"><name><text>q</text></name>${answers}</question>`;
+    expect(limit(() => readMoodleXml(`<quiz>${choice}</quiz>`, { limits: { maxAnswers: 2 } }))).toStrictEqual([
+      "maxAnswers",
+      2,
+    ]);
+    expect(limit(() => readMoodleXml(`<quiz>${question}</quiz>`, { limits: { maxBytes: 20 } }))).toStrictEqual([
+      "maxBytes",
+      20,
+    ]);
     expect(limit(() => readGift(new Uint8Array(3), { limits: { maxBytes: 2 } }))).toStrictEqual(["maxBytes", 2]);
+    // Two, three and four bytes of UTF-8: the limit counts bytes, not the characters of the string.
+    expect(limit(() => readGift("é€😀{}", { limits: { maxBytes: 10 } }))).toStrictEqual(["maxBytes", 10]);
+    expect(readGift("é€😀{}", { limits: { maxBytes: 11 } }).items).toHaveLength(1);
     expect(limit(() => readGift("a{}\n\nb{}\n\nc{}", { limits: { maxQuestions: 2 } }))).toStrictEqual([
       "maxQuestions",
       2,
@@ -451,6 +707,10 @@ describe("errors", () => {
     expect(limit(() => readGift(`[html]${"<span>".repeat(5)}x{}`, { limits: { maxDepth: 4 } }))).toStrictEqual([
       "maxDepth",
       4,
+    ]);
+    expect(limit(() => readGift(`[html]${"<b>a</b>".repeat(3)}{}`, { limits: { maxTextTags: 5 } }))).toStrictEqual([
+      "maxTextTags",
+      5,
     ]);
     expect(() => readGift("x", { limits: { maxDepth: 257 } })).toThrow(DataError);
   });
@@ -504,6 +764,11 @@ describe("properties", () => {
       }),
       FUZZ,
     );
+  });
+
+  it("reads mutated Moodle XML or refuses it with a ReadError or a SecurityError, and writes back what it reads", () => {
+    const written = caseNamed("xml-written").file;
+    fuzzReader(fc.constantFrom(XML_EDGES, written), (input) => writeMoodleXml(readMoodleXml(input).items));
   });
 
   it("reads any text, and mutated files, or refuses them with a SecurityError, and writes back what it reads", () => {

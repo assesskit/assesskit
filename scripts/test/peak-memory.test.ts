@@ -220,6 +220,18 @@ const READINGS: readonly {
     outcome: "47 items",
   },
   {
+    title: "reads a Moodle XML file of questions of two answers, whose items hold the most elements",
+    name: "moodleXmlQuestions",
+    heapMiB: 112,
+    outcome: "4000 items",
+  },
+  {
+    title: "reads a Moodle XML file of the most nodes of its tree and the most elements of its items",
+    name: "moodleXmlNodes",
+    heapMiB: 192,
+    outcome: "4000 items",
+  },
+  {
     title: "checks the most lines of worked steps, each of the most characters",
     name: "mathSteps",
     heapMiB: 64,

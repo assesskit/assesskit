@@ -41,14 +41,18 @@ export const BUDGETS = {
   compileItem: 0.2,
   /** Compiling 64 orders of 1,000 choices, scored per position: the default limits of keys. */
   compileLimits: 300,
-  // The budgets of the item formats are five times the fastest sample of a laptop (0.32, 0.43 and 87.8 ms), rounded up to one
-  // significant digit, until the CI runner's samples replace them.
+  // The budgets of the item formats are five times the fastest sample of a laptop (0.32, 0.56, 87.8, 0.26 and 0.69 ms),
+  // rounded up to one significant digit, until the CI runner's samples replace them.
   /** Reading the edge cases of GIFT, 18 items and two questions that Moodle refuses. */
   giftRead: 2,
-  /** Writing the 13 items of the written cases as GIFT, running their response processing. */
+  /** Writing the 14 items of the written cases as GIFT, running their response processing. */
   giftWrite: 3,
   /** Reading 47 essays of the most tags of a text, to the limit of elements. */
   giftTags: 500,
+  /** Reading the edge cases of Moodle XML, 9 items and a question of a type that does not convert. */
+  moodleXmlRead: 2,
+  /** Writing the 14 items of the written cases as Moodle XML, with an image. */
+  moodleXmlWrite: 4,
 } as const;
 
 /**

@@ -87,3 +87,14 @@ export function sortedLosses(plan: ExportPlan): readonly ConversionLoss[] {
     .sort((a, b) => a.loss.index - b.loss.index || a.order - b.order)
     .map(({ loss }) => loss);
 }
+
+/**
+ * The reason Moodle's importer refuses a question of either format, which stops the import of the file: a short answer
+ * without an answer of 100%, which its type's save refuses.
+ */
+export function moodleRefusal(question: Question): string | undefined {
+  if (question.qtype === "shortanswer" && !question.answers.some(({ fraction }) => fraction === 1)) {
+    return "No answer earns the item's full credit, and Moodle refuses a short answer without one of 100%.";
+  }
+  return undefined;
+}

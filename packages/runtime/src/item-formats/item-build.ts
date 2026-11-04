@@ -5,7 +5,7 @@ import type { XmlElement, XmlNode } from "../xml/index.js";
 import { type Blank, type ContentState, childType, countElements, readMoodleText, startItem } from "./html-content.js";
 import type { LossReason, TrueFalseLabels } from "./model.js";
 import { baseValue, condition, floatOutcome, formatFloat, isNull, qti, setOutcome, variable } from "./qti-elements.js";
-import type { CombinedFeedback, FormattedText, NumberAnswer, Question, TextAnswer } from "./question.js";
+import type { CombinedFeedback, EssayFormat, FormattedText, NumberAnswer, Question, TextAnswer } from "./question.js";
 
 // The QTI item of a question, as Moodle scores it: QTI's own expressions in response processing, the per-answer, general and
 // combined feedback as modal feedback that the outcome FEEDBACK shows, and the question's text as the item's content.
@@ -65,6 +65,8 @@ interface Part {
 export interface BuildContext {
   readonly state: ContentState;
   readonly labels: TrueFalseLabels;
+  /** The files that the items' texts embed, by the reference that their content gives them. */
+  readonly files: Map<string, Uint8Array>;
 }
 
 /** Returns the identifier of the choice at a position: `A` to `Z`, then `AA`, `AB` and on. */
@@ -408,14 +410,23 @@ function matchPart(question: Extract<Question, { qtype: "match" }>, content: Con
   };
 }
 
+/** The format of the text of an extended text by the response format of an essay. */
+const ESSAY_FORMATS: ReadonlyMap<string, string> = new Map<EssayFormat, string>([
+  ["editor", "xhtml"],
+  ["editorfilepicker", "xhtml"],
+  ["plain", "plain"],
+  ["monospaced", "preformatted"],
+  ["noinline", "plain"],
+]);
+
 function essayPart(question: Extract<Question, { qtype: "essay" }>, content: Content, losses: ItemLoss[]): Part {
-  const format = {
-    editor: "xhtml",
-    editorfilepicker: "xhtml",
-    plain: "plain",
-    monospaced: "preformatted",
-    noinline: "plain",
-  }[question.responseFormat];
+  const format = ESSAY_FORMATS.get(question.responseFormat);
+  if (format === undefined) {
+    losses.push({
+      reason: "setting",
+      message: `The response format ${question.responseFormat} is not one of Moodle's: the item takes rich text.`,
+    });
+  }
   if (question.responseFormat === "noinline" || question.attachments !== 0) {
     losses.push({
       reason: "setting",
@@ -442,7 +453,7 @@ function essayPart(question: Extract<Question, { qtype: "essay" }>, content: Con
     ),
     interaction: qti("qti-extended-text-interaction", {
       "response-identifier": RESPONSE,
-      format,
+      format: format ?? "xhtml",
       "expected-lines": String(question.fieldLines),
     }),
     inline: false,
@@ -474,6 +485,12 @@ function partOf(question: Question, context: BuildContext, content: Content, los
     case "shortanswer":
       return shortAnswerPart(question.answers, question.caseSensitive, mark);
     case "numerical":
+      if ((question.units ?? 0) > 0) {
+        losses.push({
+          reason: "setting",
+          message: "The question's units have no place in a QTI number: a response is the number alone.",
+        });
+      }
       return numericalPart(question.answers, mark);
     case "match":
       return matchPart(question, content, mark);
@@ -621,7 +638,7 @@ function assemble(question: Question, identifier: string, context: BuildContext,
   if (question.hints.length > 0) {
     losses.push({
       reason: "setting",
-      message: `The ${question.hints.length} hints of Moodle's interactive modes have no place in a QTI item.`,
+      message: `The ${question.hints.length === 1 ? "hint" : `${question.hints.length} hints`} of Moodle's interactive modes ${question.hints.length === 1 ? "has" : "have"} no place in a QTI item.`,
     });
   }
   const general = question.generalFeedback.text !== "" && part !== undefined;
@@ -653,6 +670,33 @@ function treeSize(element: XmlElement): number {
   let size = 1;
   for (const child of element.children) if (child.kind === "element") size += treeSize(child);
   return size;
+}
+
+/** The prefix by which Moodle's texts name the files of their area. */
+const PLUGIN_FILE = "@@PLUGINFILE@@/";
+
+/** Moodle's `rawurlencode` of each part of a path, which its texts write. */
+function encodePath(path: string): string {
+  return path
+    .split("/")
+    .map((part) =>
+      encodeURIComponent(part).replaceAll(
+        /[!'()*]/g,
+        (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+      ),
+    )
+    .join("/");
+}
+
+/**
+ * Names the files of a text by the item, `files/<identifier>/` in place of `@@PLUGINFILE@@/`, and adds each file the text
+ * embeds to those of the file, by that reference.
+ */
+function withFiles(text: FormattedText, identifier: string, files: Map<string, Uint8Array>): FormattedText {
+  if (!text.text.includes(PLUGIN_FILE)) return text;
+  const base = `files/${encodePath(identifier)}/`;
+  for (const { path, bytes } of text.files ?? []) files.set(`${base}${encodePath(path.replace(/^\//, ""))}`, bytes);
+  return { ...text, text: text.text.replaceAll(PLUGIN_FILE, base) };
 }
 
 /** Removes the tags of a text, for content that QTI could not take as HTML. */
@@ -690,14 +734,16 @@ function contentLosses(state: ContentState): ItemLoss[] {
 export function buildItem(question: Question, identifier: string, context: BuildContext): BuiltItem {
   const { state } = context;
   startItem(state);
-  const content: Content = (text, parent, blank) => readMoodleText(text, parent, state, blank);
+  const content: Content = (text, parent, blank) =>
+    readMoodleText(withFiles(text, identifier, context.files), parent, state, blank);
   let built: BuiltItem;
   try {
     built = assemble(question, identifier, context, content);
   } catch (error) {
     if (!(error instanceof ReadError)) throw error;
     startItem(state);
-    const plain: Content = (text, parent, blank) => readMoodleText(asPlainText(text), parent, state, blank);
+    const plain: Content = (text, parent, blank) =>
+      readMoodleText(asPlainText(withFiles(text, identifier, context.files)), parent, state, blank);
     const fallback = assemble(question, identifier, context, plain);
     built = {
       item: fallback.item,
