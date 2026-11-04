@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
+import { CUSTOM_INTERACTION_COMMANDS } from "./packages/custom-interactions/test/fixtures/commands.js";
 import { COMMANDS } from "./packages/player/test/fixtures/commands.js";
 
 /** Resolves the runtime and its subpaths to their sources, so that the player tests run the code and not a build. */
@@ -83,6 +84,8 @@ const FLOORS: Record<string, { statements: number; branches: number; functions: 
           functions: 96,
           lines: 97,
         },
+        // The modules of the custom interactions run in a frame, where the browser tests run them; Node runs the reader of files.
+        "packages/custom-interactions/src/node/**": { statements: 88, branches: 75, functions: 100, lines: 89 },
       };
 
 // biome-ignore lint/style/noDefaultExport: Vitest reads its configuration from the default export.
@@ -154,6 +157,38 @@ export default defineConfig({
         test: {
           name: "player-xsd",
           include: ["packages/player/test/**/*.xsd.test.ts"],
+          testTimeout: 60_000,
+          hookTimeout: 60_000,
+        },
+      },
+      {
+        // The custom interactions in Node: their keyboards and shortcuts against the reader, and the files of their modules,
+        // which the setup builds into the package's `modules/` as `pnpm build` does.
+        resolve: { alias: [...RUNTIME_SOURCES, ...PLAYER_SOURCES] },
+        test: {
+          name: "custom-interactions",
+          include: ["packages/custom-interactions/test/**/*.test.ts"],
+          exclude: ["**/*.browser.test.ts", "**/*.xsd.test.ts"],
+          globalSetup: ["packages/custom-interactions/test/fixtures/modules-setup.ts"],
+          testTimeout: HANG_LIMIT,
+        },
+      },
+      {
+        // The modules of the custom interactions in the player's frame, in the three engines, with real keys and pointers.
+        resolve: { alias: [...RUNTIME_SOURCES, ...PLAYER_SOURCES] },
+        test: {
+          name: "custom-interactions-browser",
+          include: ["packages/custom-interactions/test/**/*.browser.test.ts"],
+          globalSetup: ["packages/custom-interactions/test/fixtures/browser-setup.ts"],
+          browser: { ...browser(), commands: { ...COMMANDS, ...CUSTOM_INTERACTION_COMMANDS } },
+        },
+      },
+      {
+        // The items of the custom interactions against the official XSDs: `pnpm schemas` downloads them.
+        resolve: { alias: RUNTIME_SOURCES },
+        test: {
+          name: "custom-interactions-xsd",
+          include: ["packages/custom-interactions/test/**/*.xsd.test.ts"],
           testTimeout: 60_000,
           hookTimeout: 60_000,
         },

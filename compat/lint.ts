@@ -22,31 +22,52 @@ export interface BaselineProblem {
   readonly message: string;
 }
 
+/** The options of {@link lintBaseline}. */
+export interface LintBaselineOptions {
+  /**
+   * The built scripts to lint, as globs relative to the package.
+   *
+   * @defaultValue `["dist/**\/*.js"]`
+   */
+  readonly scripts?: readonly string[];
+  /**
+   * The APIs that the scripts call only after testing that the browser has them, as eslint-plugin-compat names them, which
+   * the lint then leaves.
+   *
+   * @defaultValue none
+   */
+  readonly tested?: readonly string[];
+}
+
 /**
  * Lints the built JavaScript and the CSS of the package for features that the baseline browsers lack: the JavaScript with
  * eslint-plugin-compat and the CSS with stylelint-no-unsupported-browser-features, both on caniuse and MDN data, for the
  * browsers that the `browserslist` of the package names.
  *
- * @param packageDirectory - The package whose `dist/` and `*.css` files to lint.
+ * @param packageDirectory - The package whose built scripts and `*.css` files to lint.
+ * @param options - The scripts to lint, and the APIs they test before they call them.
  * @returns the problems, and how many JavaScript files were linted, so that an empty `dist/` is not a pass.
  */
 export async function lintBaseline(
   packageDirectory: string,
+  options: LintBaselineOptions = {},
 ): Promise<{ readonly problems: readonly BaselineProblem[]; readonly scripts: number }> {
+  const { scripts: globs = ["dist/**/*.js"], tested = [] } = options;
   const eslint = new ESLint({
     cwd: packageDirectory,
     overrideConfigFile: true,
     overrideConfig: [
       { ignores: SERVER_FOLDERS.map((folder) => `dist/${folder}/**`) },
       compat.configs["flat/recommended"],
+      { settings: { polyfills: [...tested] } },
     ],
     errorOnUnmatchedPattern: false,
   });
-  const scripts = await eslint.lintFiles(["dist/**/*.js"]);
+  const scripts = await eslint.lintFiles([...globs]);
   const styles = await stylelint.lint({
     cwd: packageDirectory,
     files: ["**/*.css"],
-    ignorePattern: ["node_modules", "dist"],
+    ignorePattern: ["node_modules", "dist", "modules"],
     allowEmptyInput: true,
     configBasedir: import.meta.dirname,
     config: {

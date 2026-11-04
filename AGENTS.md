@@ -41,6 +41,8 @@ Use these words with these meanings in code, comments and docs.
 | `packages/runtime/test/`                                         | `<module>.test.ts` for each source folder; `fixtures/` (oracle output, stored states); `differential/` (the harness against Longsight `qti3-core` and Amp-up `qti3-item-player`)                                                                                  |
 | `packages/player/src/`                                           | `errors.ts`, `checks.ts`, `messages/`, `protocol/`, `player/`, `client/`, `server/`, `scoring/`, `cat/`, `cat-rest/`                                                                                                                                              |
 | `packages/player/{player.css,scripts/,test/}`                    | The stylesheet of a content root; `build-static.ts` (the PCI frame and the recording worklet); `<folder>.test.ts`, `fixtures/` (servers and commands of the browser tests)                                                                                        |
+| `packages/custom-interactions/src/`                              | `index.ts` and `interaction-types.ts`, the root entry; `node/`, the reader of the built modules; `frame/`, what the modules share in the frame; a folder for each interaction, its AMD module from `module.ts`                                                    |
+| `packages/custom-interactions/{scripts,test,licenses}/`          | `build-modules.ts`, which bundles each module into `modules/` (ignored by git); the tests, with `fixtures/` (the asset origin and the commands of the browser tests); the licenses of files that a module carries beside it                                       |
 | `examples/<package>/<name>/`                                     | A runnable example, a package of its own; its `test/` runs it                                                                                                                                                                                                     |
 | `docs/<package>/`                                                | The guides of a package, one per module, with architecture, evidence and supported; TypeDoc publishes them                                                                                                                                                        |
 | `compat/`, `scripts/`, `validation/`, `biome/`                   | The browser baseline (`compat/`) and the runtimes (`compat/runtimes/`); downloads, generators, CI checks (`check-*.ts`, `rules/`), the peak-memory harness, the runner of the samples of the guides and `prepare.ts`; fixture scripts (Python); GritQL lint rules |
@@ -94,18 +96,18 @@ Biome enforces, folder by folder.
   only when it passes, so that per-push CI stays short as Actions minutes are limited. A builder runs the rules of its package
   before a merge (`pnpm check:rules packages/<package>`).
 
-| Job                   | Runs when the change reaches                                     | Minutes |
-| --------------------- | ---------------------------------------------------------------- | ------: |
-| `check`               | every push                                                       |      12 |
-| `test` (Node 22, 24)  | any package, example, compat or script                           |      20 |
-| `bench`               | the runtime                                                      |      10 |
-| `player-bench`        | the player                                                       |      10 |
-| `browsers`            | the player or its guides                                         |      45 |
-| `engines`             | the player or compat                                             |      15 |
-| `runtimes`            | the runtime, the player or compat/runtimes                       |      10 |
-| `corpus`              | the runtime, its guides or an example of it                      |      10 |
-| `xsd`                 | the runtime, its guides, the player or an example of the runtime |      12 |
-| `rules` (`rules.yml`) | each Monday, on dispatch and at a release                        |     120 |
+| Job                   | Runs when the change reaches                                                              | Minutes |
+| --------------------- | ----------------------------------------------------------------------------------------- | ------: |
+| `check`               | every push                                                                                |      12 |
+| `test` (Node 22, 24)  | any package, example, compat or script                                                    |      20 |
+| `bench`               | the runtime                                                                               |      10 |
+| `player-bench`        | the player                                                                                |      10 |
+| `browsers`            | the player, its guides, or the custom interactions                                        |      45 |
+| `engines`             | the player or compat                                                                      |      15 |
+| `runtimes`            | the runtime, the player or compat/runtimes                                                |      10 |
+| `corpus`              | the runtime, its guides or an example of it                                               |      10 |
+| `xsd`                 | the runtime, its guides, the player, the custom interactions or an example of the runtime |      12 |
+| `rules` (`rules.yml`) | each Monday, on dispatch and at a release                                                 |     120 |
 
 - The scripts in `compat/` and `scripts/` are TypeScript that Node runs directly, so their relative imports end in `.ts`.
 - The Firefox of Playwright does not start on some macOS versions (it did not on macOS 27): run the browser tests in the Linux
@@ -143,6 +145,10 @@ that the player needs and the runtime lacks is a change in the runtime, with its
   uses alone is a subpath of its own, so that an exam page and a practice page each import only what they run, in every
   bundler.
 - `scripts/measurekit.lock.json` and `scripts/interopkit.lock.json` change with the library that an example needs.
+- A library that a module of `@assesskit/custom-interactions` holds is a development dependency of that package, bundled at
+  build time and pinned, with its row in [SECURITY.md](SECURITY.md#runtime-dependencies): `scripts/build-modules.ts` heads the
+  module with the library's license and fails on one that `check:licenses` refuses, and a file that the module loads beside it,
+  such as a font, carries its own license into the module's folder.
 - The JSON of the bodies of the CAT REST binding is written once, in `packages/player/src/cat-rest/binding.ts`, and the client
   and the handler both use it.
 
@@ -325,6 +331,10 @@ tests of every engine, and waits for the next change to that part.
 - A player folder: its row in the table of [architecture.md](docs/player/architecture.md#layers), its Biome overrides and its entry in
   `lint.test.ts`, a subpath in `package.json` `exports` with its budget in `test/size-budgets.ts` and in `typedoc.json` when the host
   imports it, a test file and a guide in `docs/`.
+- A custom interaction: a folder in `packages/custom-interactions/src/` with `module.ts`, its type identifier in
+  `INTERACTION_TYPES`, its entry in `MODULES` of `scripts/build-modules.ts` and its budget in `test/size-budgets.ts`, its rules
+  in `scripts/rules/custom-interactions.ts`, a guide in `docs/custom-interactions/`, a browser test in the player's frame and
+  its items in `items.xsd.test.ts`.
 - A check shared by modules: of a value of a JavaScript type in `checks.ts` when the player uses it, else in `checks-internal.ts`; of a value that a module defines, in the `internal.ts` of
   that module.
 - A place where the specifications contradict themselves or are silent: as CONTRIBUTING says, and a mention in the guide of the module.

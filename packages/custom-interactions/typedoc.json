@@ -1,0 +1,16 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts", "src/node/index.ts"],
+  "tsconfig": "tsconfig.build.json",
+  "sourceLinkTemplate": "https://github.com/assesskit/assesskit/blob/{gitRevision}/packages/custom-interactions/{path}#L{line}",
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": true
+  },
+  "readme": "README.md",
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "projectDocuments": ["../../docs/custom-interactions/*.md"],
+  "treatWarningsAsErrors": true
+}

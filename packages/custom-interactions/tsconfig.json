@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "allowImportingTsExtensions": true,
+    "types": ["node"],
+    "customConditions": ["browser", "production"],
+    "paths": {
+      "@assesskit/runtime": ["../runtime/src/index.ts"],
+      "@assesskit/runtime/checks": ["../runtime/src/checks.ts"],
+      "@assesskit/runtime/errors": ["../runtime/src/errors.ts"],
+      "@assesskit/runtime/delivery/wire": ["../runtime/src/delivery/wire.ts"],
+      "@assesskit/runtime/*": ["../runtime/src/*/index.ts"],
+      "@assesskit/player": ["../player/src/index.ts"],
+      "@assesskit/player/*": ["../player/src/*/index.ts"]
+    }
+  },
+  "include": ["src", "scripts", "test"]
+}

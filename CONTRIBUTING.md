@@ -8,7 +8,8 @@ flowchart LR
   subgraph repo["The repository"]
     runtime["packages/runtime<br/>src, test"]
     player["packages/player<br/>src, test"]
-    docs["docs/runtime, docs/player<br/>guides that run in tests"]
+    interactions["packages/custom-interactions<br/>src, scripts, test"]
+    docs["docs/runtime, docs/player, docs/custom-interactions<br/>guides that run in tests"]
     examples["examples<br/>run by a test"]
     tooling["scripts, validation, compat"]
   end

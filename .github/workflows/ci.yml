@@ -39,6 +39,8 @@ jobs:
       projects: ${{ steps.filter.outputs.projects }}
       packages: ${{ steps.filter.outputs.packages }}
       browsers: ${{ steps.filter.outputs.browsers }}
+      player_browsers: ${{ steps.filter.outputs.player_browsers }}
+      interaction_browsers: ${{ steps.filter.outputs.interaction_browsers }}
       bench: ${{ steps.filter.outputs.bench }}
       player_bench: ${{ steps.filter.outputs.player_bench }}
       engines: ${{ steps.filter.outputs.engines }}
@@ -173,8 +175,11 @@ jobs:
             test,
             projects: [...projects].join(" "),
             packages: [...tested].map((dir) => dir.slice(9)).join(" "),
-            // The rendering tests of the player, which include the samples of its guides, in Chromium, Firefox and WebKit.
-            browsers: guided.has("packages/player"),
+            // The rendering tests of the player, which include the samples of its guides, in Chromium, Firefox and WebKit, and
+            // the modules of the custom interactions in the player's frame.
+            browsers: guided.has("packages/player") || guided.has("packages/custom-interactions"),
+            player_browsers: guided.has("packages/player"),
+            interaction_browsers: guided.has("packages/custom-interactions"),
             // The mount benchmark of the player and the benchmarks of the runtime read no guide.
             player_bench: code.has("packages/player"),
             bench: code.has("packages/runtime"),
@@ -184,8 +189,13 @@ jobs:
             runtimes: reached.has("compat/runtimes"),
             // The tests of the runtime, which run the samples of its guides, and of its examples that read the 1EdTech examples.
             corpus: guided.has("packages/runtime") || runtimeExamples,
-            // The tests of the runtime, of the player and of the examples of the runtime that read the official XSDs.
-            xsd: guided.has("packages/runtime") || code.has("packages/player") || runtimeExamples,
+            // The tests of the runtime, of the player, of the custom interactions and of the examples of the runtime that read
+            // the official XSDs.
+            xsd:
+              guided.has("packages/runtime") ||
+              code.has("packages/player") ||
+              guided.has("packages/custom-interactions") ||
+              runtimeExamples,
           };
           for (const [name, value] of Object.entries(outputs)) {
             console.log(`${name}=${value}`);
@@ -328,7 +338,8 @@ jobs:
       - run: pnpm --filter @assesskit/player bench
 
   # The rendering tests of the player, and its tests that render the 1EdTech examples, in the current Chromium, Firefox and
-  # WebKit, and its tests of the asset gate over the same examples, which run in Node.
+  # WebKit, and its tests of the asset gate over the same examples, which run in Node; and the modules of the custom
+  # interactions in the player's frame, in the three engines.
   browsers:
     needs: changes
     if: needs.changes.outputs.browsers == 'true'
@@ -359,9 +370,14 @@ jobs:
       - run: sudo apt-get install -y pulseaudio
       - run: scripts/linux-audio.sh
       # Chromium runs with coverage, the one engine that reports it, and holds the floors of the folders that draw a page.
-      - run: pnpm test:coverage:browser
-      - run: BROWSERS=firefox,webkit pnpm test:browser
-      - run: pnpm test:corpus --project '!runtime*'
+      - if: needs.changes.outputs.player_browsers == 'true'
+        run: pnpm test:coverage:browser
+      - if: needs.changes.outputs.player_browsers == 'true'
+        run: BROWSERS=firefox,webkit pnpm vitest run --project player-browser
+      - if: needs.changes.outputs.player_browsers == 'true'
+        run: pnpm test:corpus --project '!runtime*'
+      - if: needs.changes.outputs.interaction_browsers == 'true'
+        run: pnpm vitest run --project custom-interactions-browser
 
   # The built code of the player in the oldest browsers of its baseline, in the container images of the Playwright
   # releases that ship them (docs/player/baseline.md).

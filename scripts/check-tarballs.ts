@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 /** The packages that the check packs, installs and imports. */
-const PACKAGES = ["runtime", "player"] as const;
+const PACKAGES = ["runtime", "player", "custom-interactions"] as const;
 
 /** The fields of a `package.json` that tell which specifiers a user can import. */
 export interface Manifest {

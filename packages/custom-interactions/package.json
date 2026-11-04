@@ -1,0 +1,69 @@
+{
+  "name": "@assesskit/custom-interactions",
+  "version": "0.0.0",
+  "description": "Portable custom interactions for QTI 3.0 items: math entry on MathLive and stroke writing on Hanzi Writer, as AMD modules that load entirely from the item's package.",
+  "keywords": [
+    "assesskit",
+    "qti",
+    "qti3",
+    "1edtech",
+    "assessment",
+    "portable-custom-interaction",
+    "math-input",
+    "stroke-order"
+  ],
+  "author": "Fariz Wakan",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/assesskit/assesskit.git",
+    "directory": "packages/custom-interactions"
+  },
+  "homepage": "https://github.com/assesskit/assesskit/tree/main/packages/custom-interactions#readme",
+  "bugs": "https://github.com/assesskit/assesskit/issues",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "default": "./dist/node/index.js"
+    },
+    "./modules/*": "./modules/*"
+  },
+  "files": [
+    "dist",
+    "modules",
+    "licenses",
+    "src",
+    "NOTICE"
+  ],
+  "browserslist": [
+    "chrome >= 111",
+    "firefox >= 115",
+    "safari >= 16.4"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "clean": "node --eval \"for (const path of ['dist', 'modules', 'tsconfig.build.tsbuildinfo']) fs.rmSync(path, { recursive: true, force: true })\"",
+    "build": "pnpm clean && tsc -b tsconfig.build.json && node scripts/build-modules.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "check:packages": "pnpm build && publint --pack pnpm --strict && attw --pack . --profile esm-only --exclude-entrypoints ./modules/*"
+  },
+  "dependencies": {
+    "@assesskit/runtime": "workspace:^"
+  },
+  "devDependencies": {
+    "@assesskit/player": "workspace:^",
+    "esbuild": "0.28.2",
+    "mathlive": "0.111.1"
+  }
+}

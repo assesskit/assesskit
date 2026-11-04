@@ -20,6 +20,9 @@
       "ignore": ["test/fixtures/**"],
       "ignoreDependencies": ["requirejs", "mathjax"]
     },
+    "packages/custom-interactions": {
+      "entry": ["src/index.ts", "src/node/index.ts", "src/*/module.ts"]
+    },
     "examples/*/*": {
       "entry": ["src/index.ts"]
     },

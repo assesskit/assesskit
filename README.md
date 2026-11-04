@@ -22,10 +22,11 @@ flowchart LR
   engine --> content
 ```
 
-| Package                                            | What it is                                                                                                                                                                                                                                                  |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`@assesskit/runtime`](packages/runtime/README.md) | Reads, writes, validates and executes everything in QTI 3.0 that is not presentation or platform, with a headless delivery engine that serves exams on a server and practice on a device.                                                                   |
-| [`@assesskit/player`](packages/player/README.md)   | Rendering, the host of portable custom interactions, accessibility applied in the interface, and the server-side session host and integrations. It uses the runtime only through its published subpaths. Its README says what the current version contains. |
+| Package                                                                    | What it is                                                                                                                                                                                                                                                  |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@assesskit/runtime`](packages/runtime/README.md)                         | Reads, writes, validates and executes everything in QTI 3.0 that is not presentation or platform, with a headless delivery engine that serves exams on a server and practice on a device.                                                                   |
+| [`@assesskit/player`](packages/player/README.md)                           | Rendering, the host of portable custom interactions, accessibility applied in the interface, and the server-side session host and integrations. It uses the runtime only through its published subpaths. Its README says what the current version contains. |
+| [`@assesskit/custom-interactions`](packages/custom-interactions/README.md) | Portable custom interactions that any item may use, each an AMD module that the item's package carries: math entry on MathLive.                                                                                                                             |
 
 assesskit is not certified by 1EdTech. What each package supports, and what it does not, is in
 [Supported](docs/runtime/supported.md) for the runtime and [Supported](docs/player/supported.md) for the player, and
@@ -64,6 +65,7 @@ has the full list of who owns what, and [Delivery](docs/runtime/delivery.md#mode
 | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | [Runtime guides](packages/runtime/README.md#documentation)                          | One guide for each module of the runtime, with its architecture, performance, evidence and conformance |
 | [Player guides](packages/player/README.md#documentation)                            | One guide for each part of the player, with its architecture, size, evidence and the browser baseline  |
+| [Custom interactions](packages/custom-interactions/README.md#documentation)         | One guide for each interaction, with the architecture of the package                                   |
 | [Supported: runtime](docs/runtime/supported.md), [player](docs/player/supported.md) | What each package supports, and what it does not                                                       |
 | [Conformance](docs/runtime/conformance.md)                                          | Every feature ID of the 1EdTech conformance document, with its guide and its test                      |
 | [Spec gaps](docs/runtime/spec-gaps.md)                                              | Where the specifications contradict themselves or are silent, and what the runtime does                |
@@ -99,17 +101,19 @@ Node.js 22.18+ and pnpm 12 are required. One command sets up the repository: `pn
 
 ## Layout
 
-| Folder              | Holds                                                                                                         |
-| ------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `packages/runtime/` | The QTI 3.0 runtime                                                                                           |
-| `packages/player/`  | The player                                                                                                    |
-| `docs/runtime/`     | Guides of the runtime                                                                                         |
-| `docs/player/`      | Guides of the player                                                                                          |
-| `examples/`         | Runnable examples, each a package of its own, run by a test                                                   |
-| `compat/`           | Private packages: the browser baseline of the player, its lint and the pinned old browsers                    |
-| `scripts/`          | Corpus and schema downloads, the pinned corpus, the Unicode and element table generators, the standards check |
-| `validation/`       | Python scripts that write fixtures                                                                            |
-| `biome/`            | GritQL lint rules                                                                                             |
+| Folder                          | Holds                                                                                                         |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `packages/runtime/`             | The QTI 3.0 runtime                                                                                           |
+| `packages/player/`              | The player                                                                                                    |
+| `packages/custom-interactions/` | The portable custom interactions and the build of their modules                                               |
+| `docs/runtime/`                 | Guides of the runtime                                                                                         |
+| `docs/player/`                  | Guides of the player                                                                                          |
+| `docs/custom-interactions/`     | Guides of the custom interactions                                                                             |
+| `examples/`                     | Runnable examples, each a package of its own, run by a test                                                   |
+| `compat/`                       | Private packages: the browser baseline of the player, its lint and the pinned old browsers                    |
+| `scripts/`                      | Corpus and schema downloads, the pinned corpus, the Unicode and element table generators, the standards check |
+| `validation/`                   | Python scripts that write fixtures                                                                            |
+| `biome/`                        | GritQL lint rules                                                                                             |
 
 ## License
 

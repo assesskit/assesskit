@@ -12,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { CAT_REST_RULES } from "./rules/cat-rest.ts";
+import { CUSTOM_INTERACTION_RULES } from "./rules/custom-interactions.ts";
 import { PLAYER_RULES } from "./rules/player.ts";
 import { REPOSITORY_RULES } from "./rules/repository.ts";
 import type { Rule } from "./rules/rule.ts";
@@ -23,7 +24,13 @@ export type { Rule };
  * The security-critical rules of the player, of the runtime and of the CAT binding, and the rule that keeps member-only material
  * out of the repository, each with the test that guards it.
  */
-export const RULES: readonly Rule[] = [...PLAYER_RULES, ...RUNTIME_RULES, ...CAT_REST_RULES, ...REPOSITORY_RULES];
+export const RULES: readonly Rule[] = [
+  ...PLAYER_RULES,
+  ...RUNTIME_RULES,
+  ...CAT_REST_RULES,
+  ...CUSTOM_INTERACTION_RULES,
+  ...REPOSITORY_RULES,
+];
 
 /** The folders that a scratch copy leaves out: generated output and installed packages, which it links instead. */
 const SKIPPED = new Set(["node_modules", ".git", "dist", "coverage", ".cache", ".vitest"]);
@@ -133,7 +140,8 @@ interface TestRun {
 function runTest(root: string, scratch: string, test: string, browser: boolean, limit: number): TestRun {
   const vitest = join(root, "node_modules/vitest/vitest.mjs");
   const testTimeout = `--testTimeout=${browser ? BROWSER_TEST_TIMEOUT_MS : TEST_TIMEOUT_MS}`;
-  const where = browser ? ["--project", "player-browser"] : [];
+  // A browser test runs in the browser project of its package: packages/<package>/test/ is in <package>-browser.
+  const where = browser ? ["--project", `${/^packages\/([^/]+)\//.exec(test)?.[1] ?? "player"}-browser`] : [];
   const run = spawnSync(
     process.execPath,
     [vitest, "run", "--reporter=default", "--maxWorkers=2", testTimeout, ...where, test],

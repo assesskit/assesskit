@@ -9,3 +9,4 @@ coverage/
 .vitest/
 compat/.smoke/
 compat/runtimes/.dist/
+packages/custom-interactions/modules/

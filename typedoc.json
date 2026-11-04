@@ -2,7 +2,7 @@
   "$schema": "https://typedoc.org/schema.json",
   "name": "assesskit",
   "entryPointStrategy": "packages",
-  "entryPoints": ["packages/runtime", "packages/player"],
+  "entryPoints": ["packages/runtime", "packages/player", "packages/custom-interactions"],
   "readme": "README.md",
   "out": "docs/api",
   "plugin": ["typedoc-plugin-mermaid"],

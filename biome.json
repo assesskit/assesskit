@@ -980,7 +980,7 @@
       }
     },
     {
-      "includes": ["scripts/**", "compat/**", "examples/**"],
+      "includes": ["scripts/**", "compat/**", "examples/**", "packages/*/scripts/**"],
       "linter": {
         "rules": {
           "correctness": {
@@ -1548,6 +1548,59 @@
                   {
                     "group": ["**/*.json"],
                     "message": "Read a fixture with a typed loader of the package's test folder: the type checker builds a type for every element of an imported JSON file."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/custom-interactions/src/**"],
+      "linter": {
+        "rules": {
+          "security": {
+            "noGlobalEval": "error"
+          }
+        }
+      },
+      "plugins": ["./biome/no-math-random.grit", "./biome/no-clock.grit"]
+    },
+    {
+      "includes": ["packages/custom-interactions/src/**", "!packages/custom-interactions/src/node/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "error"
+          },
+          "style": {
+            "noProcessEnv": "error",
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "fetch": "A module runs in a frame that reaches no network; what it loads comes from the package through its loader.",
+                  "XMLHttpRequest": "A module runs in a frame that reaches no network; what it loads comes from the package through its loader."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/custom-interactions/src/node/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["../frame/**", "../math-entry/**", "../stroke-writing/**", "mathlive", "hanzi-writer"],
+                    "message": "node/ reads the built modules; it never imports the code of a module."
                   }
                 ]
               }
