@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import { checkString, mapSchema, nonEmptyStringSchema, parseWith, recordSchema, type Schema } from "../checks.js";
 import { nonNegativeSchema } from "../checks-internal.js";
-import { DataError } from "../errors.js";
+import { DataError, SecurityError } from "../errors.js";
 
 /**
  * The seconds to wait for a script when a configuration file gives no `waitSeconds`.
@@ -47,20 +47,24 @@ const resolutionSchema: Schema<ModuleResolution> = v.pipe(
  * Reads a module resolution configuration file: JSON with `waitSeconds` and `paths`.
  *
  * @remarks
- * Other properties are ignored. A text longer than 65,536 code units is refused before it is parsed.
+ * Other properties are ignored. A text longer than 65,536 code units is refused before it is parsed, with the
+ * `SecurityError` of the limit `maxModuleResolutionLength`.
  *
  * @param text - The content of the file, such as `modules/module_resolution.js`.
  * @returns The configuration, with the default `waitSeconds` and no paths when the file omits them.
- * @throws `DataError` when the text is longer than 65,536 code units, is not JSON, is not an object, `waitSeconds` is not
- * a non-negative number, or `paths` is not an object of non-empty strings.
+ * @throws `SecurityError` when the text is longer than 65,536 code units.
+ * @throws `DataError` when the text is not JSON, is not an object, `waitSeconds` is not a non-negative number, or `paths` is
+ * not an object of non-empty strings.
  * @see
  * {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, module resolution}
  */
 export function readModuleResolution(text: string): ModuleResolution {
   checkString(text, "The module resolution file");
   if (text.length > MAX_LENGTH) {
-    throw new DataError(
+    throw new SecurityError(
       `The module resolution file has ${text.length} characters, more than the ${MAX_LENGTH} that a module resolution file may have.`,
+      "maxModuleResolutionLength",
+      MAX_LENGTH,
     );
   }
   let json: unknown;

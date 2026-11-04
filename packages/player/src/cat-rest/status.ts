@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers and of the status fields are those of the binding.
 
-import { DataError } from "@assesskit/runtime/errors";
+import { DataError, SecurityError } from "@assesskit/runtime/errors";
 import { ServiceError } from "../errors.js";
 import { TokenEndpointError } from "./rest-client.js";
 import type { CatOperation } from "./route.js";
@@ -25,6 +25,7 @@ const MINORS: ReadonlyMap<number, string> = new Map([
   [401, "unauthorisedrequest"],
   [403, "forbidden"],
   [404, "unknownobject"],
+  [413, "invaliddata"],
   [429, "server_busy"],
   [500, "internal_server_error"],
   [503, "server_busy"],
@@ -44,7 +45,7 @@ const BASE_HEADERS = { "Cache-Control": "no-store" } as const;
 
 /** A failure to answer with: a status, what to tell the caller, and whether it is a fault that the operator should see. */
 export interface Failure {
-  readonly status: 400 | 404 | 429 | 500 | 503;
+  readonly status: 400 | 404 | 413 | 429 | 500 | 503;
   readonly description: string;
   /** Whether the engine or the host failed, which `onError` reports. A refusal of the caller is not a fault. */
   readonly fault: boolean;
@@ -54,10 +55,12 @@ export interface Failure {
  * Maps an error of reading the body of a request to the failure that the binding defines for it.
  *
  * @remarks
+ * A `SecurityError` of the reader is a body above `maxBodyBytes` or `maxTokens`: 413 with the message, which names the limit.
  * A `DataError` of the readers says what is wrong with the caller's own request, and names the path of the value: 400 with
  * the message. Any other error is not the caller's: a stream that fails, or a body that `authorize` read.
  */
 export function bodyFailure(error: unknown): Failure {
+  if (error instanceof SecurityError) return { status: 413, description: error.message, fault: false };
   if (error instanceof DataError) return { status: 400, description: error.message, fault: false };
   return { status: 500, description: FAULT, fault: true };
 }

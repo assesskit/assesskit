@@ -1,6 +1,6 @@
 import type { Interaction, PortableCustomInteraction } from "@assesskit/runtime/asi";
 import type { CandidateItem, ItemKey, PciView } from "@assesskit/runtime/delivery";
-import { DataError } from "@assesskit/runtime/errors";
+import { DataError, SecurityError } from "@assesskit/runtime/errors";
 import {
   type PciModuleConfiguration,
   readModuleResolution,
@@ -106,7 +106,7 @@ async function loadConfiguration(context: PciContext, path: string): Promise<Pci
   try {
     return readModuleResolution(await response.text());
   } catch (error) {
-    if (error instanceof DataError) return undefined;
+    if (error instanceof DataError || error instanceof SecurityError) return undefined;
     throw error;
   }
 }

@@ -200,8 +200,8 @@ items to present. It trusts nothing it is sent.
   valid token can read and end every section, and the guide shows the pattern.
 - A body must be `application/json`, at most `maxBodyBytes` (32 MiB by default), counted as it arrives, with at most
   `maxTokens` tokens of JSON (a million by default), counted before the parse, whose memory follows the tokens, and valid UTF-8 and
-  JSON. Each body is read with a strict schema of the binding, so an unknown property is a 400; the assessment result is read
-  by the runtime's codec.
+  JSON. A body above a limit is the `SecurityError` of that limit, which the handler answers with 413. Each body is read with
+  a strict schema of the binding, so an unknown property is a 400; the assessment result is read by the runtime's codec.
 - The status follows the origin of an error. What the caller sent wrong is a 400 that names the path of the caller's own value.
   An error of the port is never shown: a `ServiceError` of status 400, 404 (not for Create Section), 429 or 503 is the refusal that
   the binding has for it, with a fixed text, and any other error, a `DataError` of a gateway that names its upstream address
@@ -348,13 +348,13 @@ Regular expressions (`XsdRegexLimits`; option `limits` of `compileXsdRegex`, who
 
 These numbers are fixed and cannot be replaced:
 
-| Number    | Applies to                                                                                                                          |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| 100       | Runs of template processing for its constraints (INFO section 5.150), fixed by the specification.                                   |
-| 256       | Levels of the JSON content of a view that `readView` reads, the depth that the XML reader allows.                                   |
-| 65,536    | Characters of a module resolution file that `readModuleResolution` reads; a longer file is a `DataError` before it is parsed.       |
-| 1,100     | The width and the precision of a printed variable format; a larger one is ignored.                                                  |
-| 1,000,000 | Entries, states and transitions together, that the matcher of a pattern keeps of its automaton; beyond it the matcher starts again. |
+| Number    | Applies to                                                                                                                                                      |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 100       | Runs of template processing for its constraints (INFO section 5.150), fixed by the specification.                                                               |
+| 256       | Levels of the JSON content of a view that `readView` reads, the depth that the XML reader allows.                                                               |
+| 65,536    | Characters of a module resolution file that `readModuleResolution` reads; a longer file is a `SecurityError` (`maxModuleResolutionLength`) before it is parsed. |
+| 1,100     | The width and the precision of a printed variable format; a larger one is ignored.                                                                              |
+| 1,000,000 | Entries, states and transitions together, that the matcher of a pattern keeps of its automaton; beyond it the matcher starts again.                             |
 
 Measured on Node.js 26 with documents built to reach each XML limit, a document at the limits takes under 2.5 seconds and
 250 MB of heap to read. An archive or a container at the limits is bounded by its size: an entry is inflated in steps of

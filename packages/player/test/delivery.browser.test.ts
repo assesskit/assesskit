@@ -1,7 +1,7 @@
 import { ASI_NAMESPACE } from "@assesskit/runtime/asi";
 import type { CandidateAction } from "@assesskit/runtime/delivery";
 import { createEngine } from "@assesskit/runtime/delivery";
-import { DataError } from "@assesskit/runtime/errors";
+import { AssesskitError, DataError } from "@assesskit/runtime/errors";
 import { readPnp } from "@assesskit/runtime/pnp";
 import { buildSingle, type FileValue } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
@@ -1070,6 +1070,35 @@ describe("a portable custom interaction in the player", () => {
     expect(s.client.view.current?.responses.get("PCI")).toEqual(buildSingle("integer", 1));
     expect(s.client.view.current?.pci.get("PCI")?.state).toBe('{"count":1}');
     expect(view?.key.ref).toBe("q3");
+  });
+});
+
+describe("a module resolution file longer than its limit", () => {
+  it("is left out as one that is no module resolution file, and the interaction starts from its primary path", async () => {
+    const errors: unknown[] = [];
+    const s = await shell({
+      files: pciFiles(),
+      onError: (error) => errors.push(error),
+      fetch: async (url, request) =>
+        url.endsWith("/module_resolution.js")
+          ? { ok: true, status: 200, text: async () => `{"paths": {}}${" ".repeat(70_000)}` }
+          : fetch(url, request),
+      wrap: (client) =>
+        Object.create(client, { assets: { value: (path: string) => `${inject("fixtures").asset}/g/pci/${path}` } }),
+    });
+    await shown(s);
+    await s.client.dispatch({ type: "move", to: { ref: "q3", instance: 1 } });
+    await waitFor(() => expect(contentOf(s.ui).querySelector("iframe")).not.toBeNull());
+    await waitFor(
+      async () => {
+        await commands.clickInFrame("Press the button", "#press");
+      },
+      { timeout: 15_000 },
+    );
+    // The assets of this page come from the server of the modules, which has no stylesheets: those are the only failures.
+    expect(
+      errors.filter((error) => !(error instanceof AssesskitError && error.message.startsWith("The stylesheet"))),
+    ).toEqual([]);
   });
 });
 

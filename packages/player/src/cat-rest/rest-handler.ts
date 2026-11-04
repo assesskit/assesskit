@@ -55,7 +55,7 @@ export interface CatRestHandlerOptions {
    */
   readonly prefix?: string;
   /**
-   * The most bytes of a request body, counted as the stream is read. A larger body answers 400 and is not read to its end.
+   * The most bytes of a request body, counted as the stream is read. A larger body answers 413 and is not read to its end.
    * It holds a base64 field of about 24 MiB of file.
    *
    * @defaultValue `33554432` (32 MiB, the default size limit of an XML file in the runtime)
@@ -63,7 +63,7 @@ export interface CatRestHandlerOptions {
   readonly maxBodyBytes?: number;
   /**
    * The most tokens of the JSON of a request body, counted before it is parsed: a structural character, a string, a number
-   * or a literal each count one. A body with more answers 400. The memory of a parse follows its tokens, not its bytes:
+   * or a literal each count one. A body with more answers 413. The memory of a parse follows its tokens, not its bytes:
    * 32 MiB of empty objects parse into more than a gigabyte, and a million tokens into tens of megabytes. A base64 file is
    * one token, and a report of a section of a hundred items a few tens of thousands.
    *
@@ -134,12 +134,13 @@ type Invocation = () => Promise<() => unknown>;
  * the codec of the runtime and the shapes of `createRestCatPort`, and calls the `CatPort` with the `prefix` of the engine.
  *
  * - **Order.** The path and method select the operation (404 or 405 if none), `authorize` decides (401 or 403) before any of
- *   the body is read, then the body is read and checked (400), then the port is called.
+ *   the body is read, then the body is read and checked (413 above a limit, else 400), then the port is called.
  * - **Authorization.** The handler holds no credentials. The authorization server issues the tokens of the OAuth 2.0
  *   client credentials grant, and `authorize` checks the bearer token and its scope. It may answer with the port of the
  *   caller, so that several clients share one root and one engine without seeing each other's sections. TLS is the host's.
  * - **Failures.** The answers are those of table 2.4 of the binding and its `default` response, with the status
- *   information as JSON. The status follows the origin of the error: a malformed request is 400 with the path of the value;
+ *   information as JSON. The status follows the origin of the error: a malformed request is 400 with the path of the value,
+ *   and a body above `maxBodyBytes` or `maxTokens` 413 with the name and the value of the limit;
  *   a `ServiceError` of the port is 404 (an unknown object, but not for Create Section), 400, or 429 and 503 for an engine
  *   that is busy; every other error of the port, of `authorize` or of the encoding is 500 with a fixed text, and goes to
  *   `onError`.

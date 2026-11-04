@@ -1250,7 +1250,7 @@ describe("createCatRestHandler", () => {
     expect(calls()).toEqual([]);
   });
 
-  it("answers 400 for a body with more tokens of JSON than the limit, before it parses it", async () => {
+  it("answers 413 for a body with more tokens of JSON than the limit maxTokens, before it parses it", async () => {
     const { port, calls } = stubPort();
     // Five tokens: the braces, the name, the colon and the value; white space and the escaped quote count nothing.
     const exact = ' { "sectionConfiguration" : "x\\"y" } ';
@@ -1259,14 +1259,14 @@ describe("createCatRestHandler", () => {
     const many = '{"sectionConfiguration":"x","qtiUsagedata":null}';
     await expectFailure(
       await handler(requestOf("POST", "/sections", { body: many })),
-      400,
+      413,
       "invaliddata",
       "The JSON of the request has more than 5 tokens, above the limit of the option maxTokens.",
     );
     // A run of a number counts once, and the count stops at the first token above the limit.
     await expectFailure(
       await handler(requestOf("POST", "/sections", { body: `[${"123,".repeat(1000)}1]` })),
-      400,
+      413,
       "invaliddata",
       /^The JSON of the request has more than 5 tokens/,
     );
@@ -1275,7 +1275,7 @@ describe("createCatRestHandler", () => {
     // The default is a million: a body of 2 MiB of empty objects is refused before the parse would build them.
     await expectFailure(
       await handlerOf(port)(requestOf("POST", "/sections", { body: `[${"{},".repeat(700_000)}{}]` })),
-      400,
+      413,
       "invaliddata",
       "The JSON of the request has more than 1000000 tokens, above the limit of the option maxTokens.",
     );
@@ -1286,14 +1286,14 @@ describe("createCatRestHandler", () => {
     }
   });
 
-  it("answers 400 for a body above the limit without reading it to its end", async () => {
+  it("answers 413 for a body above the limit maxBodyBytes without reading it to its end", async () => {
     const { port, calls } = stubPort();
     const exact = JSON.stringify({ sectionConfiguration: "x" });
     const handler = handlerOf(port, { maxBodyBytes: exact.length });
-    const message = `The body of the request is larger than the limit of ${exact.length} bytes.`;
+    const message = `The body of the request is larger than the limit maxBodyBytes of ${exact.length} bytes.`;
     await expectFailure(
       await handler(requestOf("POST", "/sections", { body: `${exact} ` })),
-      400,
+      413,
       "invaliddata",
       message,
     );
@@ -1303,7 +1303,7 @@ describe("createCatRestHandler", () => {
       body: exact,
       headers: { ...JSON_HEADERS, "content-length": String(exact.length + 1) },
     });
-    await expectFailure(await handler(declared), 400, "invaliddata", message);
+    await expectFailure(await handler(declared), 413, "invaliddata", message);
     expect(declared.bodyUsed).toBe(false);
 
     // A body that declares no length is counted as it arrives, and the source is cancelled at the first byte above.
@@ -1325,7 +1325,7 @@ describe("createCatRestHandler", () => {
       body: stream,
       duplex: "half",
     } as RequestInit);
-    await expectFailure(await handler(streamed), 400, "invaliddata", message);
+    await expectFailure(await handler(streamed), 413, "invaliddata", message);
     expect(cancelled).toBe(true);
     expect(sent).toBeLessThan(10);
     expect(calls()).toEqual([]);

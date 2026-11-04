@@ -2202,12 +2202,18 @@ describe("the files that documents name", () => {
     ).toContain("assesskit/pci/no-module");
   });
 
-  it("reports a module resolution file that is not valid", () => {
-    const pkg = packageOf(
-      [{ identifier: "p1", type: ITEM_TYPE, href: "p1.xml", files: ["modules/module_resolution.js"] }],
-      { "p1.xml": pci('module="tap"'), "modules/module_resolution.js": "not json" },
-    );
-    expect(only(validatePackage(pkg), "assesskit/validate/module-resolution")).toMatchObject([{ severity: "error" }]);
+  it("reports a module resolution file that is not valid, or that is longer than its limit", () => {
+    const withFile = (text: string) =>
+      packageOf([{ identifier: "p1", type: ITEM_TYPE, href: "p1.xml", files: ["modules/module_resolution.js"] }], {
+        "p1.xml": pci('module="tap"'),
+        "modules/module_resolution.js": text,
+      });
+    expect(only(validatePackage(withFile("not json")), "assesskit/validate/module-resolution")).toMatchObject([
+      { severity: "error" },
+    ]);
+    expect(
+      only(validatePackage(withFile(`{"paths":{}}${" ".repeat(70_000)}`)), "assesskit/validate/module-resolution"),
+    ).toMatchObject([{ severity: "error", message: expect.stringContaining("more than the 65536") }]);
   });
 });
 

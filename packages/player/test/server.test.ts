@@ -100,6 +100,17 @@ describe("collectAssetPrefixes", () => {
     expect(Object.keys(moved.assets).sort()).toEqual(["items/q3/", "modules/pci/"]);
   });
 
+  it("reads a module resolution file longer than its limit as one that is no module resolution file", async () => {
+    const prefixesWith = async (text: string): Promise<ReadonlySet<string>> => {
+      const { host, pkg } = await examHost({}, { ...examFiles(), "modules/pci/module_resolution.js": text });
+      await host.start(ALICE, { seed: 1 });
+      const moved = await host.handle(ALICE, request(1, { type: "move", to: { ref: "q3", instance: 1 } }));
+      return collectAssetPrefixes(viewOf(moved), pkg);
+    };
+    const longer = `{"waitSeconds": 7, "paths": {"pci-module": "modules/pci/main"}}${" ".repeat(70_000)}`;
+    expect(await prefixesWith(longer)).toEqual(await prefixesWith("not json"));
+  });
+
   it("widens the prefix of the content root to the stylesheet of the test, after the end too", async () => {
     const files: Record<string, string | Uint8Array> = {
       ...examFiles(),

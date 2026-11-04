@@ -159,7 +159,7 @@ QTI's own and are not properties.
 | A file that is not `{ data, mime, name }` with strings                          | `DataError`                                            |
 | A callback that returns anything but a string                                   | `DataError`                                            |
 | A module resolution file that is not JSON or has a bad `waitSeconds` or `paths` | `DataError`                                            |
-| A module resolution file longer than 65,536 characters, before it is parsed     | `DataError`                                            |
+| A module resolution file longer than 65,536 characters, before it is parsed     | `SecurityError`, `limit` `"maxModuleResolutionLength"` |
 
 ## Not included
 

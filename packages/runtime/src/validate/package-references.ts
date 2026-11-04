@@ -7,7 +7,7 @@ import {
   walkDocument,
 } from "../asi/index.js";
 import { isRecord } from "../checks.js";
-import { DataError } from "../errors.js";
+import { DataError, SecurityError } from "../errors.js";
 import {
   isPackageRelative,
   type PciModule,
@@ -77,7 +77,8 @@ function readConfiguration(
   try {
     return readModuleResolution(new TextDecoder().decode(bytes));
   } catch (error) {
-    if (!(error instanceof DataError)) throw error;
+    // A file above its limit is as unusable as one that is not a module resolution file.
+    if (!(error instanceof DataError || error instanceof SecurityError)) throw error;
     findings.error(
       "assesskit/validate/module-resolution",
       `The module resolution file ${JSON.stringify(path)} is not valid: ${error.message}`,

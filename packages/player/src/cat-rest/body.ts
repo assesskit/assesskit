@@ -1,4 +1,4 @@
-import { DataError } from "@assesskit/runtime/errors";
+import { DataError, SecurityError } from "@assesskit/runtime/errors";
 import { hasMoreTokensThan } from "./json-tokens.js";
 
 /** The media type of every body of the binding. */
@@ -15,7 +15,10 @@ function join(chunks: readonly Uint8Array[], length: number): Uint8Array {
   return bytes;
 }
 
-/** The limits of a body: its bytes, counted as it arrives, and the tokens of its JSON, counted before it is parsed. */
+/**
+ * The limits of a body: its bytes, counted as it arrives, and the tokens of its JSON, counted before it is parsed. They are
+ * the options `maxBodyBytes` and `maxTokens` of `createCatRestHandler`.
+ */
 export interface BodyLimits {
   readonly maxBytes: number;
   readonly maxTokens: number;
@@ -29,8 +32,9 @@ export interface BodyLimits {
  * which bound the memory of the parse.
  * @param signal - The signal of the caller: when it aborts, the stream is cancelled with its reason and nothing more is read.
  * @returns The parsed JSON.
- * @throws `DataError` when the content type is not `application/json`, the body is larger than a limit, empty, not UTF-8,
- * or not JSON.
+ * @throws `DataError` when the content type is not `application/json`, or the body is empty, not UTF-8 or not JSON.
+ * @throws `SecurityError` when the body has more bytes than `maxBodyBytes` or its JSON more tokens than `maxTokens`, with
+ * the name and the value of the limit.
  * @throws `signal.reason` when the signal aborts.
  */
 export async function readJsonBody(request: Request, limits: BodyLimits, signal: AbortSignal): Promise<unknown> {
@@ -39,7 +43,11 @@ export async function readJsonBody(request: Request, limits: BodyLimits, signal:
   if (mediaType !== JSON_MEDIA_TYPE) {
     throw new DataError(`The request must have the content type ${JSON_MEDIA_TYPE}, found ${mediaType ?? "none"}.`);
   }
-  const tooLarge = new DataError(`The body of the request is larger than the limit of ${maxBytes} bytes.`);
+  const tooLarge = new SecurityError(
+    `The body of the request is larger than the limit maxBodyBytes of ${maxBytes} bytes.`,
+    "maxBodyBytes",
+    maxBytes,
+  );
   // The declared length is a hint that spares the read; the count below is what holds.
   if (Number(request.headers.get("content-length")) > maxBytes) throw tooLarge;
   const chunks: Uint8Array[] = [];
@@ -70,8 +78,10 @@ export async function readJsonBody(request: Request, limits: BodyLimits, signal:
     throw new DataError("The body of the request is not valid UTF-8.", { cause: error });
   }
   if (hasMoreTokensThan(text, maxTokens)) {
-    throw new DataError(
+    throw new SecurityError(
       `The JSON of the request has more than ${maxTokens} tokens, above the limit of the option maxTokens.`,
+      "maxTokens",
+      maxTokens,
     );
   }
   try {

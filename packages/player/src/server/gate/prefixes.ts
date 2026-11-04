@@ -1,6 +1,6 @@
 import { listDescendantNodes, type ModelNode, type PortableCustomInteraction } from "@assesskit/runtime/asi";
 import type { CandidateView } from "@assesskit/runtime/delivery";
-import { DataError } from "@assesskit/runtime/errors";
+import { DataError, SecurityError } from "@assesskit/runtime/errors";
 import { type QtiPackage, resolveResourcePath } from "@assesskit/runtime/package";
 import {
   isPackageRelative,
@@ -89,7 +89,7 @@ function configurationOf(pkg: QtiPackage, path: string): PciModuleConfiguration[
     return readModuleResolution(new TextDecoder().decode(bytes));
   } catch (error) {
     // The frame reports the failure of the modules; the gate only has no files to name for it.
-    if (error instanceof DataError) return undefined;
+    if (error instanceof DataError || error instanceof SecurityError) return undefined;
     throw error;
   }
 }

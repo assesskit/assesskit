@@ -465,7 +465,13 @@ describe("module resolution files", () => {
     expect(filled(65_536)).toHaveLength(65_536);
     expect(readModuleResolution(filled(65_536)).paths.get("a")).toMatch(/^modules\/a+$/);
     expect(() => readModuleResolution(filled(65_537))).toThrow(
-      "The module resolution file has 65537 characters, more than the 65536 that a module resolution file may have.",
+      expect.objectContaining({
+        name: "SecurityError",
+        message:
+          "The module resolution file has 65537 characters, more than the 65536 that a module resolution file may have.",
+        limit: "maxModuleResolutionLength",
+        maximum: 65_536,
+      }),
     );
     // Text that would parse into millions of objects is refused by its length, as it is not read.
     expect(() => readModuleResolution(`[${"{},".repeat(1_000_000)}{}]`)).toThrow(/more than the 65536/);
