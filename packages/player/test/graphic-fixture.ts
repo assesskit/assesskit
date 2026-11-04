@@ -67,7 +67,8 @@ export function memoryFiles(upload?: InteractionFiles["upload"]): {
   const files: InteractionFiles = {
     upload:
       upload ??
-      (async (bytes, mimeType, fileName) => {
+      (async (bytes, mimeType, options) => {
+        const fileName = options?.fileName;
         uploads.push({ bytes, mimeType });
         return { reference: `file-${uploads.length}`, mimeType, ...(fileName === undefined ? {} : { fileName }) };
       }),

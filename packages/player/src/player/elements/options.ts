@@ -21,10 +21,10 @@ export interface InteractionFiles {
    *
    * @param bytes - The bytes.
    * @param mimeType - Their media type.
-   * @param fileName - The name of the file, if it has one.
+   * @param options - Its `fileName` is the name of the file, if it has one.
    * @returns The file value.
    */
-  upload(bytes: Blob, mimeType: string, fileName?: string): Promise<FileValue>;
+  upload(bytes: Blob, mimeType: string, options?: { readonly fileName?: string }): Promise<FileValue>;
   /**
    * Returns the URL to play or show a stored file from.
    *
@@ -37,11 +37,10 @@ export interface InteractionFiles {
    * option `record` is `false`.
    *
    * @param mimeType - Their media type.
-   * @param fileName - The name of the file, if it has one.
-   * @param options - Its `signal` aborts when the mount is destroyed.
+   * @param options - Its `fileName` is the name of the file, if it has one; its `signal` aborts when the mount is destroyed.
    * @returns The file value, which the response holds until the bytes are stored with {@link InteractionFiles.fill}.
    */
-  reserve?(mimeType: string, fileName?: string, options?: CallOptions): Promise<FileValue>;
+  reserve?(mimeType: string, options?: CallOptions & { readonly fileName?: string }): Promise<FileValue>;
   /**
    * Stores the bytes of a reserved file, retrying as the host sees fit. The end of the mount does not abort it, because a
    * recording that a time limit or a destroy stops still has to arrive. Required unless the option `record` is `false`.
@@ -156,7 +155,7 @@ function checkedFiles(files: Readonly<Record<string, unknown>>, record: boolean)
     return file;
   };
   return {
-    upload: (bytes, mimeType, fileName) => named("upload", upload, [bytes, mimeType, fileName]),
+    upload: (bytes, mimeType, options) => named("upload", upload, [bytes, mimeType, options]),
     url: (file) => {
       const found: unknown = Reflect.apply(url, files, [file]);
       checkString(found, "The URL that the method url of the option files returned");
@@ -164,8 +163,8 @@ function checkedFiles(files: Readonly<Record<string, unknown>>, record: boolean)
     },
     ...(typeof reserve === "function"
       ? {
-          reserve: (mimeType: string, fileName?: string, options?: CallOptions) =>
-            named("reserve", reserve, [mimeType, fileName, options]),
+          reserve: (mimeType: string, options?: CallOptions & { readonly fileName?: string }) =>
+            named("reserve", reserve, [mimeType, options]),
         }
       : {}),
     ...(typeof fill === "function"

@@ -8,11 +8,11 @@ export interface FileStore {
    *
    * @param bytes - The content.
    * @param mimeType - The media type.
-   * @param fileName - The name that the candidate's file had.
-   * @param options - Its `signal` ends the wait of the call that asked.
+   * @param options - Its `fileName` is the name that the candidate's file had; its `signal` ends the wait of the call that
+   * asked.
    * @returns The file value, whose reference names the stored file.
    */
-  put(bytes: Uint8Array, mimeType: string, fileName?: string, options?: CallOptions): Promise<FileValue>;
+  put(bytes: Uint8Array, mimeType: string, options?: CallOptions & { readonly fileName?: string }): Promise<FileValue>;
   /**
    * Returns the bytes of a stored file.
    *

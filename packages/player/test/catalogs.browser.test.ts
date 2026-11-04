@@ -104,7 +104,7 @@ describe("catalogs", () => {
   it("chooses the entry by language as the runtime does: the language itself, its primary language, then the default", async () => {
     const { root } = await openRoot();
     const text = (language: string | undefined): string | undefined => {
-      const card = root.card("photosynthesis", "glossary-on-screen", language);
+      const card = root.card("photosynthesis", "glossary-on-screen", { language });
       const holder = document.createElement("div");
       if (card !== undefined) holder.append(card);
       return holder.textContent ?? undefined;
@@ -119,7 +119,7 @@ describe("catalogs", () => {
   it("marks the language of a card that has one, so that a screen reader speaks it in that language", async () => {
     const { root } = await openRoot();
     const holder = document.createElement("div");
-    const card = root.card("photosynthesis", "glossary-on-screen", "fr");
+    const card = root.card("photosynthesis", "glossary-on-screen", { language: "fr" });
     if (card !== undefined) holder.append(card);
     expect(holder.querySelector("qti-html-content")?.getAttribute("lang")).toBe("fr");
   });

@@ -158,7 +158,7 @@ const SHARED_MODULES = `(async () => {
   } catch (error) {
     refused = error.name;
   }
-  return { rule: selectMessages("id-ID", { id: ID_MESSAGES }).toolRule, refused };
+  return { rule: selectMessages("id-ID", { catalogs: { id: ID_MESSAGES } }).toolRule, refused };
 })()`;
 
 /** The check of the stylesheet, which runs in the page: a content root that adopts it, as the player makes one. */

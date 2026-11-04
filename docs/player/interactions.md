@@ -242,7 +242,7 @@ A recording is offered when the item accepts an audio type that the browser can 
 | `audio/wav`, `audio/wave` or `audio/x-wav`, and no such type | 16-bit mono PCM, written as WAV, from an audio worklet. `recorder-worklet.js` under `staticUrl` is its program.                                |
 | Only other types, such as `audio/mpeg`, or any type          | None: an MP3 encoder would be a dependency.                                                                                                    |
 
-A recording names its file as it starts. `files.reserve(mimeType, fileName?)` gives the file value, which the response holds from then
+A recording names its file as it starts. `files.reserve(mimeType, { fileName })` gives the file value, which the response holds from then
 on, and `files.fill(file, bytes)` stores the bytes when the recording ends, however it ends. So a time limit that closes the item while
 the candidate speaks keeps the answer: the item ends with the file as its response, and the bytes follow.
 
@@ -253,7 +253,7 @@ sequenceDiagram
   participant F as files (host)
   participant H as Session
   Note over E: Item shown, data-ak-record-start="15"
-  E->>F: reserve(mimeType, name)
+  E->>F: reserve(mimeType, { fileName })
   F-->>E: FileValue
   E->>E: microphone, countdown 15 s
   E->>H: set-responses with the file, as recording starts

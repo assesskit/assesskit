@@ -1070,12 +1070,14 @@ function fakeFiles(failures: { readonly reserve?: boolean; readonly fill?: boole
     release: () => {
       for (const go of held.splice(0)) go();
     },
-    upload: async (bytes, mimeType, fileName) => {
+    upload: async (bytes, mimeType, options) => {
+      const fileName = options?.fileName;
       uploads.push({ bytes, mimeType, ...(fileName === undefined ? {} : { fileName }) });
       return { reference: `ref-${uploads.length}`, mimeType, ...(fileName === undefined ? {} : { fileName }) };
     },
     url: (file) => `https://files.example/${file.reference}`,
-    reserve: async (mimeType, fileName) => {
+    reserve: async (mimeType, options) => {
+      const fileName = options?.fileName;
       if (failures.reserve === true) throw new Error("The host is down.");
       const file = {
         reference: `reserved-${reserved.length + 1}`,

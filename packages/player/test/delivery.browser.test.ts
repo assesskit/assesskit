@@ -2291,7 +2291,8 @@ describe("a recording kept at the clock", () => {
       release: () => {
         for (const go of held.splice(0)) go();
       },
-      reserve: async (mimeType: string, fileName?: string, options?: { readonly signal?: AbortSignal }) => {
+      reserve: async (mimeType: string, options?: { readonly fileName?: string; readonly signal?: AbortSignal }) => {
+        const fileName = options?.fileName;
         reserveSignals.push(options?.signal);
         const file = {
           reference: `recording-${reserved.length + 1}`,

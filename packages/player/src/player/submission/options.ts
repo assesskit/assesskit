@@ -99,7 +99,7 @@ export function readSubmissionOptions(options: unknown): SubmissionSettings {
     fileUrl = returningHttpUrl((file) => Reflect.apply(url, files, [file]));
   }
   // `selectMessages` checks the catalogs, language by language, down to each message.
-  const text = selectMessages(language, catalogs as Readonly<Record<string, Partial<Messages>>>);
+  const text = selectMessages(language, { catalogs: catalogs as Readonly<Record<string, Partial<Messages>>> });
   const { assets, origins } = readRenderOptions({
     messages: text,
     assets: options.assets,

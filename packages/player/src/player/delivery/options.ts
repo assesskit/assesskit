@@ -34,11 +34,11 @@ export interface MountFiles {
    *
    * @param bytes - The bytes.
    * @param mimeType - Their media type.
-   * @param fileName - The name of the file, if it has one.
-   * @param options - Its `signal` aborts when the mount is destroyed; a host that can, stops the upload.
+   * @param options - Its `fileName` is the name of the file, if it has one; its `signal` aborts when the mount is destroyed,
+   * and a host that can stops the upload.
    * @returns The file value.
    */
-  upload(bytes: Blob, mimeType: string, fileName?: string, options?: CallOptions): Promise<FileValue>;
+  upload(bytes: Blob, mimeType: string, options?: CallOptions & { readonly fileName?: string }): Promise<FileValue>;
   /**
    * Reads the bytes of a stored file, for a portable custom interaction.
    *
@@ -59,12 +59,11 @@ export interface MountFiles {
    * unless `hooks.record` is `false`.
    *
    * @param mimeType - Their media type.
-   * @param fileName - The name of the file, if it has one.
-   * @param options - Its `signal` aborts when the mount is destroyed.
+   * @param options - Its `fileName` is the name of the file, if it has one; its `signal` aborts when the mount is destroyed.
    * @returns The file value that the response holds until the bytes are stored with `fill`. It exists before its bytes do,
    * so a host that scores holds the request until `fill` ends or times out.
    */
-  reserve?(mimeType: string, fileName?: string, options?: CallOptions): Promise<FileValue>;
+  reserve?(mimeType: string, options?: CallOptions & { readonly fileName?: string }): Promise<FileValue>;
   /**
    * Stores the bytes of a reserved file, retrying as the host sees fit. The end of the mount does not abort it, because a
    * recording that a time limit, a proctor or a destroy stops still has to arrive; the host's own timeout ends a store that

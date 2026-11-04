@@ -428,7 +428,7 @@ export class DrawingInteractionElement extends InteractionElement {
     const composite = await this.#composite(canvas);
     const blob = await new Promise<Blob | null>((resolve) => composite.toBlob(resolve, this.#type));
     if (blob === null) throw new AssesskitError(`The canvas gave no picture of the type ${this.#type}.`);
-    const file = await files.upload(blob, blob.type, `drawing.${blob.type.split("/")[1] ?? "png"}`);
+    const file = await files.upload(blob, blob.type, { fileName: `drawing.${blob.type.split("/")[1] ?? "png"}` });
     this.#known = file.reference;
     this.respond(buildSingle("file", file));
   }

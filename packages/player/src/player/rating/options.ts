@@ -77,7 +77,7 @@ export function readRatingOptions(options: unknown): RatingSettings {
   const format = numberFormatter(language);
   return {
     // `selectMessages` checks the catalogs, language by language, down to each message.
-    messages: selectMessages(language, catalogs as Readonly<Record<string, Partial<Messages>>>),
+    messages: selectMessages(language, { catalogs: catalogs as Readonly<Record<string, Partial<Messages>>> }),
     language,
     stylesheet,
     ratings: ratings as readonly RubricRating[],

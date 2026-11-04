@@ -244,7 +244,8 @@ describe("properties", () => {
 describe("bindToLifetime", () => {
   /** The settings of a mount that record what the host's functions receive. */
   function settings() {
-    const received: { readonly what: string; readonly signal: AbortSignal | undefined }[] = [];
+    const received: { readonly what: string; readonly signal: AbortSignal | undefined; readonly fileName?: string }[] =
+      [];
     const reports: unknown[] = [];
     const bytes = new Blob(["x"]);
     const file = { reference: "f", mimeType: "x/y" };
@@ -254,8 +255,16 @@ describe("bindToLifetime", () => {
         return { ok: true, status: 200, text: async () => "" };
       },
       files: {
-        upload: async (_bytes: Blob, _type: string, _name?: string, options?: { readonly signal?: AbortSignal }) => {
-          received.push({ what: "upload", signal: options?.signal });
+        upload: async (
+          _bytes: Blob,
+          _type: string,
+          options?: { readonly fileName?: string; readonly signal?: AbortSignal },
+        ) => {
+          received.push({
+            what: "upload",
+            signal: options?.signal,
+            ...(options?.fileName === undefined ? {} : { fileName: options.fileName }),
+          });
           return file;
         },
         read: async (_file: unknown, options?: { readonly signal?: AbortSignal }) => {
@@ -263,8 +272,12 @@ describe("bindToLifetime", () => {
           return new Uint8Array();
         },
         url: (_file: unknown) => "https://assets.example/f",
-        reserve: async (_type: string, _name?: string, options?: { readonly signal?: AbortSignal }) => {
-          received.push({ what: "reserve", signal: options?.signal });
+        reserve: async (_type: string, options?: { readonly fileName?: string; readonly signal?: AbortSignal }) => {
+          received.push({
+            what: "reserve",
+            signal: options?.signal,
+            ...(options?.fileName === undefined ? {} : { fileName: options.fileName }),
+          });
           return file;
         },
         fill: async (_file: unknown, _bytes: Blob, options?: { readonly signal?: AbortSignal }) => {
@@ -282,19 +295,21 @@ describe("bindToLifetime", () => {
   it("gives the signal of the mount to every fetch and to every call of the host's files", async () => {
     const { bound, received, state, bytes, file } = settings();
     await bound.fetch("https://assets.example/a.css", { credentials: "omit", referrerPolicy: "no-referrer" } as never);
-    await bound.files.upload(bytes, "x/y", "a.txt");
+    await bound.files.upload(bytes, "x/y", { fileName: "a.txt" });
     await bound.files.read(file);
     expect(received.map(({ what }) => what)).toEqual(["fetch", "upload", "read"]);
     expect(received.every(({ signal }) => signal === state.stop.signal)).toBe(true);
+    expect(received.find(({ what }) => what === "upload")?.fileName).toBe("a.txt");
     expect(bound.files.url(file)).toBe("https://assets.example/f");
   });
 
   it("ends the reservation of a file with the mount and leaves the store of its bytes to the caller's signal", async () => {
     const { bound, received, state, bytes, file } = settings();
-    await bound.files.reserve("audio/webm", "recording.webm");
+    await bound.files.reserve("audio/webm", { fileName: "recording.webm" });
     await bound.files.fill(file, bytes);
     const own = new AbortController();
     await bound.files.fill(file, bytes, { signal: own.signal });
+    expect(received.find(({ what }) => what === "reserve")?.fileName).toBe("recording.webm");
     expect(received.map(({ what, signal }) => [what, signal])).toEqual([
       ["reserve", state.stop.signal],
       ["fill", undefined],

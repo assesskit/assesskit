@@ -105,7 +105,7 @@ of a catalog or a module that loads late. Choose `ttlSeconds` above the longest 
 
 `sign`, `signFile` and `serve` take `options.signal` last. A signal that has aborted rejects the call with its reason before
 anything is asked; `serve` passes the signal to the `packages` function and to `FileStore.read`, and its wait ends at the abort
-though the store never answers. `FileStore.put` and `read` take the options after their arguments.
+though the store never answers. `FileStore.put` takes its `fileName` and `signal` in one options object after its arguments, and `read` takes the `signal`.
 
 ## Prefixes
 

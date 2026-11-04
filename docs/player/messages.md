@@ -22,24 +22,24 @@ import { selectMessages } from "@assesskit/player";
 import { ID_MESSAGES } from "@assesskit/player/messages-id";
 
 selectMessages("id-ID").toolRule; // => "Ruler"
-selectMessages("id-ID", { id: ID_MESSAGES }).toolRule; // => "Penggaris"
-selectMessages("jv", { id: ID_MESSAGES }).toolRule; // => "Ruler"
-selectMessages("id", { id: { ...ID_MESSAGES, toolRule: "Mistar" } }).toolRule; // => "Mistar"
-selectMessages("id-ID", { id: ID_MESSAGES, "id-ID": { toolRule: "Penggaris kelas" } }).toolRule; // => "Penggaris kelas"
+selectMessages("id-ID", { catalogs: { id: ID_MESSAGES } }).toolRule; // => "Penggaris"
+selectMessages("jv", { catalogs: { id: ID_MESSAGES } }).toolRule; // => "Ruler"
+selectMessages("id", { catalogs: { id: { ...ID_MESSAGES, toolRule: "Mistar" } } }).toolRule; // => "Mistar"
+selectMessages("id-ID", { catalogs: { id: ID_MESSAGES, "id-ID": { toolRule: "Penggaris kelas" } } }).toolRule; // => "Penggaris kelas"
 ```
 
 ## Choosing a catalog
 
-`selectMessages(language, catalogs)` returns the messages for the language of the interface. Each step of the diagram
+`selectMessages(language, options)` returns the messages for the language of the interface. Each step of the diagram
 replaces the keys that it has; a language without a catalog gets English. The mounts of the player take the same `catalogs` as
 their option `catalogs`, with `language`, and call `selectMessages` themselves.
 
-| Parameter  | Type                                | Meaning                                                                                                                                                                        |
-| ---------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `language` | `string`                            | A BCP 47 tag, such as `id` or `id-ID`. Case is ignored.                                                                                                                        |
-| `catalogs` | `Record<string, Partial<Messages>>` | The catalogs of the host by language tag; a catalog may have only some keys, and one for a tag may change a few messages of its language. Without it the messages are English. |
+| Parameter          | Type                                | Meaning                                                                                                                                                                        |
+| ------------------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `language`         | `string`                            | A BCP 47 tag, such as `id` or `id-ID`. Case is ignored.                                                                                                                        |
+| `options.catalogs` | `Record<string, Partial<Messages>>` | The catalogs of the host by language tag; a catalog may have only some keys, and one for a tag may change a few messages of its language. Without it the messages are English. |
 
-`selectMessages` throws `DataError` when `language` is not a string, `catalogs` is not an object of objects, a catalog
+`selectMessages` throws `DataError` when `language` is not a string, `options` has another property than `catalogs`, `catalogs` is not an object of objects, a catalog
 has a key that is not a message key, or a message is not a string.
 
 The size of what a host loads for its language is in [size](size.md): about 5.7 kB after gzip for English, in the player, and
@@ -458,9 +458,9 @@ refuses a catalog that lacks one. Its text names a function of the interface, ne
 
 ## Errors
 
-| Situation                                                                                                                                                             | Result                                         | What to do                                                                                |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `selectMessages` gets a `language` that is not a string, `catalogs` that are not an object of objects, a key that is not a message, or a message that is not a string | `DataError` that names the argument or the key | Pass a BCP 47 tag and catalogs of `Partial<Messages>`, whose keys are those of `Messages` |
+| Situation                                                                                                                                                                                                              | Result                                         | What to do                                                                                |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `selectMessages` gets a `language` that is not a string, `options` with another property than `catalogs`, `catalogs` that are not an object of objects, a key that is not a message, or a message that is not a string | `DataError` that names the argument or the key | Pass a BCP 47 tag and catalogs of `Partial<Messages>`, whose keys are those of `Messages` |
 
 ## Not included
 

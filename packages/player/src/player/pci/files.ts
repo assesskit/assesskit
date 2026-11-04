@@ -45,10 +45,10 @@ export interface PciFiles {
    *
    * @param bytes - The bytes.
    * @param mimeType - Their media type.
-   * @param fileName - The name of the file, if it has one.
+   * @param options - Its `fileName` is the name of the file, if it has one.
    * @returns The file value.
    */
-  upload(bytes: Blob, mimeType: string, fileName?: string): Promise<FileValue>;
+  upload(bytes: Blob, mimeType: string, options?: { readonly fileName?: string }): Promise<FileValue>;
 }
 
 /** Decodes the base64 of an inline file; text that is not base64 is a `DataError`. */
@@ -126,7 +126,7 @@ const keyOf = ({ data, mimeType, fileName }: InlineFile): string => JSON.stringi
 
 async function upload({ data, mimeType, fileName }: InlineFile, files: PciFiles): Promise<string> {
   const blob = new Blob([fromBase64(data)], { type: mimeType });
-  const stored = await (fileName === undefined ? files.upload(blob, mimeType) : files.upload(blob, mimeType, fileName));
+  const stored = await files.upload(blob, mimeType, fileName === undefined ? {} : { fileName });
   checkRecord(stored, "The file that upload resolves with must be an object");
   checkString(stored.reference, "The reference of an uploaded file");
   return stored.reference;

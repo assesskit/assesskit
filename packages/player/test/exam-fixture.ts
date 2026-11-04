@@ -326,14 +326,15 @@ export function recordingScheduler(): RecordingScheduler {
 
 /** A file store in memory. */
 export function memoryFileStore(): {
-  put(bytes: Uint8Array, mimeType: string, fileName?: string): Promise<FileValue>;
+  put(bytes: Uint8Array, mimeType: string, options?: { readonly fileName?: string }): Promise<FileValue>;
   read(file: FileValue): Promise<Uint8Array | undefined>;
   readonly bytes: Map<string, Uint8Array>;
 } {
   const bytes = new Map<string, Uint8Array>();
   return {
     bytes,
-    put: async (content, mimeType, fileName) => {
+    put: async (content, mimeType, options) => {
+      const fileName = options?.fileName;
       const reference = `file-${bytes.size + 1}`;
       bytes.set(reference, content);
       return { reference, mimeType, ...(fileName === undefined ? {} : { fileName }) };

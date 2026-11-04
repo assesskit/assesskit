@@ -288,7 +288,7 @@ describe("readInteractionOptions", () => {
 
   it("gives back the file value that the host stores, and checks it", async () => {
     const settings = readInteractionOptions(valid());
-    expect(await settings.files.upload(new Blob(["x"]), "image/png", "a.png")).toEqual({
+    expect(await settings.files.upload(new Blob(["x"]), "image/png", { fileName: "a.png" })).toEqual({
       reference: "r",
       mimeType: "image/png",
     });
@@ -320,14 +320,14 @@ describe("readInteractionOptions", () => {
       }),
     );
     const signal = new AbortController().signal;
-    expect(await settings.files.reserve?.("audio/webm", "recording.webm", { signal })).toEqual({
+    expect(await settings.files.reserve?.("audio/webm", { fileName: "recording.webm", signal })).toEqual({
       reference: "r",
       mimeType: "audio/webm",
     });
     const bytes = new Blob(["x"]);
     await settings.files.fill?.({ reference: "r", mimeType: "audio/webm" }, bytes, { signal });
     expect(calls).toEqual([
-      ["reserve", "audio/webm", "recording.webm", { signal }],
+      ["reserve", "audio/webm", { fileName: "recording.webm", signal }],
       ["fill", { reference: "r", mimeType: "audio/webm" }, bytes, { signal }],
     ]);
     const bad = readInteractionOptions(valid({ files: { ...Files, reserve: () => Promise.resolve(3) } }));

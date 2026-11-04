@@ -99,7 +99,7 @@ export function mountContentSupports(root: ContentRoot, options: ContentSupports
         const idref = element.getAttribute("data-catalog-idref") ?? "";
         for (const kind of CARD_KIND_ORDER) {
           for (const support of on.filter(({ name }) => cardKindOf(name) === kind)) {
-            const content = root.card(idref, support.name, languageFor(supports, support), braille);
+            const content = root.card(idref, support.name, { language: languageFor(supports, support), braille });
             if (content !== undefined) undo.push(showCard(kind, { messages, element, support, content, boundary }));
           }
         }

@@ -577,7 +577,7 @@ describe("the asset gate", () => {
 
   it("signs the URL of a file of the candidate, and serves it for five minutes in a sandbox", async () => {
     const { gate, fileStore } = await gateOf();
-    const file = await fileStore.put(new TextEncoder().encode("RIFF"), "audio/wav", "answer.wav");
+    const file = await fileStore.put(new TextEncoder().encode("RIFF"), "audio/wav", { fileName: "answer.wav" });
     const url = await gate.signFile("s1", file, NOW);
     expect(url).toMatch(/^https:\/\/assets\.example\/f\/[\w-]+\.[\w-]+\.[\w-]+\/file-1$/u);
     const path = new URL(url).pathname;

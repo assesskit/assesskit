@@ -81,7 +81,8 @@ export function memoryFiles(stored: ReadonlyMap<string, Uint8Array> = new Map())
     [];
   const files: PciFiles = {
     read: async ({ reference }) => stored.get(reference) ?? new Uint8Array(),
-    upload: async (blob, mimeType, fileName) => {
+    upload: async (blob, mimeType, options) => {
+      const fileName = options?.fileName;
       uploads.push({ bytes: new Uint8Array(await blob.arrayBuffer()), mimeType, fileName });
       return { reference: `uploaded-${uploads.length}`, mimeType, ...(fileName === undefined ? {} : { fileName }) };
     },

@@ -83,13 +83,17 @@ export interface ContentRoot {
    *
    * @param idref - The `data-catalog-idref` of the element that the candidate asks about.
    * @param support - The support that the candidate turned on.
-   * @param language - The language of the candidate's PNP; without it the card gives its default entry.
-   * @param braille - The settings of the candidate's `braille` while it is on, which choose among entries that state a kind,
-   * grade or mathematics of braille.
+   * @param preferences - The `language` of the candidate's PNP, without which the card gives its default entry, and the
+   * settings of the candidate's `braille` while it is on, which choose among entries that state a kind, grade or mathematics
+   * of braille.
    * @returns The content, or `undefined` when no catalog has the id or no card fits.
    * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, catalogs and cards}
    */
-  card(idref: string, support: SupportName, language?: string, braille?: Braille): DocumentFragment | undefined;
+  card(
+    idref: string,
+    support: SupportName,
+    preferences?: { readonly language?: string; readonly braille?: Braille },
+  ): DocumentFragment | undefined;
   /**
    * Sets the factor for the pixel sizes of media, which the magnification of non-text content gives.
    *
@@ -232,7 +236,7 @@ export function buildContentRoot(
       const failed = loaded.find((result) => result.status === "rejected");
       if (failed?.status === "rejected") throw failed.reason;
     },
-    card: (idref, support, language, braille) => {
+    card: (idref, support, { language, braille } = {}) => {
       const card = renderCard(catalogs, idref, support, { language, braille }, itemRenderer);
       if (card !== undefined) scaleDeclaredSizes(card, mediaScale);
       return card;

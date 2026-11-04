@@ -322,7 +322,7 @@ export class UploadInteractionElement extends InteractionElement {
     if (!this.#accepts(method.mimeType, fileName)) return { key: undefined, error: undefined };
     let file: FileValue;
     try {
-      file = await reserve(method.mimeType, fileName);
+      file = await reserve(method.mimeType, { fileName });
     } catch (error) {
       return { key: "uploadFailed", error };
     }
@@ -516,7 +516,7 @@ export class UploadInteractionElement extends InteractionElement {
     this.#status.textContent = messages.uploadUploading;
     this.refresh();
     try {
-      const file = await services.files.upload(bytes, mimeType, fileName);
+      const file = await services.files.upload(bytes, mimeType, { fileName });
       this.#status.textContent = "";
       this.#busy = false;
       this.respond(buildSingle("file", file));

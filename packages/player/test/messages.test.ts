@@ -8,7 +8,7 @@ import { fuzzJson } from "./fuzz.js";
 
 /** Passes catalogs to `selectMessages` as JSON delivers them, which TypeScript does not check. */
 const select = (language: string, catalogs: unknown = {}): Messages =>
-  selectMessages(language, JSON.parse(JSON.stringify(catalogs)));
+  selectMessages(language, { catalogs: JSON.parse(JSON.stringify(catalogs)) });
 
 /** The catalog of Indonesian, which a host imports from its module and gives to `selectMessages`. */
 const INDONESIAN = { id: ID_MESSAGES };
@@ -83,13 +83,13 @@ describe("selectMessages", () => {
 
   it("does not change the catalogs it is given", () => {
     select("id", { id: { toolRule: "Mistar" } });
-    selectMessages("id", INDONESIAN);
+    selectMessages("id", { catalogs: INDONESIAN });
     expect(ID_MESSAGES.toolRule).toBe("Penggaris");
   });
 
   it("treats a language named __proto__ as a language without a catalog", () => {
     expect(select("__proto__")).toEqual(EN_MESSAGES);
-    expect(selectMessages("__proto__", JSON.parse('{"__proto__":{"toolRule":"x"}}')).toolRule).toBe("x");
+    expect(selectMessages("__proto__", { catalogs: JSON.parse('{"__proto__":{"toolRule":"x"}}') }).toolRule).toBe("x");
   });
 
   it("rejects a language that is not a string", () => {
@@ -99,7 +99,7 @@ describe("selectMessages", () => {
   });
 
   it("rejects catalogs that are not an object of catalogs of strings", () => {
-    expect(() => selectMessages("id", JSON.parse("null"))).toThrow(
+    expect(() => selectMessages("id", { catalogs: JSON.parse("null") })).toThrow(
       new DataError("The catalogs is invalid: expected an object, found null."),
     );
     expect(() => select("id", { id: [] })).toThrow(
@@ -107,6 +107,16 @@ describe("selectMessages", () => {
     );
     expect(() => select("id", { id: { toolRule: 5 } })).toThrow(
       new DataError('The catalogs is invalid: the property "id" at toolRule is invalid: expected a string, found 5.'),
+    );
+  });
+
+  it("rejects options that are not an object and an option that selectMessages does not take", () => {
+    expect(() => selectMessages("id", JSON.parse("null"))).toThrow(
+      new DataError("The options is invalid: expected an object, found null."),
+    );
+    expect(() => selectMessages("id", JSON.parse("[]"))).toThrow(DataError);
+    expect(() => selectMessages("id", JSON.parse('{"catalog":{}}'))).toThrow(
+      new DataError('The options is invalid: unexpected property "catalog".'),
     );
   });
 
@@ -122,7 +132,7 @@ describe("selectMessages", () => {
 
   it("reads or refuses arbitrary JSON catalogs with a DataError, and nothing else", () => {
     fuzzJson(
-      (catalogs) => selectMessages("id", catalogs as Record<string, Partial<Messages>>),
+      (catalogs) => selectMessages("id", { catalogs: catalogs as Record<string, Partial<Messages>> }),
       [{}, { id: { toolRule: "Penggaris" }, "id-ID": {} }],
     );
   });

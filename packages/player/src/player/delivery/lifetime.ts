@@ -15,19 +15,20 @@ export function bindToLifetime<T extends ItemSettings>(settings: T, state: Mount
   const { fetch, files, report } = settings;
   const { reserve, fill } = files;
   const { signal } = state.stop;
-  const within = (options: CallOptions | undefined): CallOptions => ({
+  const within = (options: (CallOptions & { readonly fileName?: string }) | undefined) => ({
+    ...options,
     signal: options?.signal ?? signal,
   });
   return {
     ...settings,
     fetch: (url, request) => fetch(url, { ...request, signal }),
     files: {
-      upload: (bytes, mimeType, fileName, options) => files.upload(bytes, mimeType, fileName, within(options)),
+      upload: (bytes, mimeType, options) => files.upload(bytes, mimeType, within(options)),
       read: (file, options) => files.read(file, within(options)),
       url: (file) => files.url(file),
       ...(reserve === undefined
         ? {}
-        : { reserve: (mimeType, fileName, options) => reserve.call(files, mimeType, fileName, within(options)) }),
+        : { reserve: (mimeType, options) => reserve.call(files, mimeType, within(options)) }),
       // The bytes of a recording that the end of the mount stops still arrive: only the caller's signal ends `fill`.
       ...(fill === undefined ? {} : { fill: (file, bytes, options) => fill.call(files, file, bytes, options) }),
     },

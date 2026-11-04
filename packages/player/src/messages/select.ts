@@ -11,6 +11,19 @@ const catalogsSchema = mapSchema(
   ),
 );
 
+/** The options of {@link selectMessages}. */
+export interface SelectMessagesOptions {
+  /**
+   * The catalogs of the host by language tag; a catalog may leave messages out, and one for a tag may change a few messages
+   * of the one for its language.
+   *
+   * @defaultValue None, so that the messages are English
+   */
+  readonly catalogs?: Readonly<Record<string, Partial<Messages>>>;
+}
+
+const optionsSchema = v.pipe(recordSchema, v.strictObject({ catalogs: v.optional(v.unknown()) }));
+
 /**
  * Selects the messages for the language of the interface.
  *
@@ -21,15 +34,15 @@ const catalogsSchema = mapSchema(
  * `@assesskit/player/messages-id`, which the host imports and passes here, so that a host loads only the languages it shows.
  *
  * @param language - A BCP 47 language tag, such as `id` or `id-ID`. Case is ignored.
- * @param catalogs - The catalogs of the host by language tag; a catalog may leave messages out, and one for a tag may
- * change a few messages of the one for its language. Without them the messages are English.
+ * @param options - See {@link SelectMessagesOptions}.
  * @returns The messages.
- * @throws `DataError` when `language` is not a string, `catalogs` is not an object of objects, a catalog has a key that is
- * not a message key, or a message is not a string.
+ * @throws `DataError` when `language` is not a string, `options` has another property than `catalogs`, `catalogs` is not an
+ * object of objects, a catalog has a key that is not a message key, or a message is not a string.
  * @see {@link https://www.rfc-editor.org/rfc/rfc5646 | RFC 5646, tags for identifying languages}
  */
-export function selectMessages(language: string, catalogs: Readonly<Record<string, Partial<Messages>>> = {}): Messages {
+export function selectMessages(language: string, options: SelectMessagesOptions = {}): Messages {
   checkString(language, "The language");
+  const { catalogs = {} } = parseWith(optionsSchema, options, "The options");
   const byTag = new Map(
     [...parseWith(catalogsSchema, catalogs, "The catalogs")].map(([tag, catalog]) => [tag.toLowerCase(), catalog]),
   );

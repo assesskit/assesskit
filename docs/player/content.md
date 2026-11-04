@@ -92,14 +92,14 @@ the item's stylesheets are adopted and the expressions are typeset.
 MathJax cannot be loaded; the content is on the screen by then, the stylesheets that loaded are adopted and the
 expressions stay MathML. A stylesheet that failed is fetched again by the next `show`.
 
-| Member                            | Meaning                                                                                                                              |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `root`                            | The shadow root.                                                                                                                     |
-| `stage`                           | The positioned element in the shadow root that holds the content, and stays when the content is replaced ([The stage](#the-stage)).  |
-| `card(idref, support, language?)` | The card that the catalogs of the shown content have for a support ([Catalogs](#catalogs-and-cards)).                                |
-| `setMediaScale(scale)`            | Changes the factor for the pixel sizes of media, in the content shown and in what comes later ([The media scale](#the-media-scale)). |
-| `showFeedback(feedback)`          | Shows modal feedback in a dialog and resolves when the candidate closes it ([Feedback](#feedback)).                                  |
-| `destroy()`                       | Takes the content and the listeners away. The shadow root stays, empty.                                                              |
+| Member                                        | Meaning                                                                                                                              |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `root`                                        | The shadow root.                                                                                                                     |
+| `stage`                                       | The positioned element in the shadow root that holds the content, and stays when the content is replaced ([The stage](#the-stage)).  |
+| `card(idref, support, { language, braille })` | The card that the catalogs of the shown content have for a support ([Catalogs](#catalogs-and-cards)).                                |
+| `setMediaScale(scale)`                        | Changes the factor for the pixel sizes of media, in the content shown and in what comes later ([The media scale](#the-media-scale)). |
+| `showFeedback(feedback)`                      | Shows modal feedback in a dialog and resolves when the candidate closes it ([Feedback](#feedback)).                                  |
+| `destroy()`                                   | Takes the content and the listeners away. The shadow root stays, empty.                                                              |
 
 A link to an `id` of the content (`href="#note"`) moves the focus to that element inside the shadow root. The browser
 cannot find the target of the fragment inside it and would only change the address of the page.
@@ -310,7 +310,7 @@ does not rely on it.
 
 ## Catalogs and cards
 
-A catalog is not drawn with the item. `root.card(idref, support, language, braille)` renders the card of the catalog whose `id` is
+A catalog is not drawn with the item. `root.card(idref, support, { language, braille })` renders the card of the catalog whose `id` is
 `idref`, for a support, with the runtime's `selectCard`: the card entry whose `xml:lang` is the language, ignoring case; else the
 first with the same primary language; else the entry marked `default`. With the settings of the candidate's `braille`, the
 entries that state another kind, grade or mathematics of braille are left out first ([runtime](../runtime/content.md#catalogs-and-cards)). The result is a `DocumentFragment` of the card's HTML
