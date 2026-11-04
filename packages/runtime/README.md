@@ -5,7 +5,7 @@ results, usage data and personal needs and preferences; runs template, response 
 test session without presenting it: on a server, where the answer keys never reach a candidate's device, or on the device
 for practice. Presentation, the host of portable custom interactions, accessibility in the user interface and the
 integrations with other systems belong to the player, [`@assesskit/player`](../player/README.md), which is built on the runtime. The core runs in
-any JavaScript runtime; the `node` and `cli` subpaths need Node.js 22 or later.
+any JavaScript runtime with the web standards, and is tested on Node.js, Deno, Bun and workerd ([evidence](../../docs/runtime/evidence.md#runtimes)); the `node` and `cli` subpaths need Node.js 22 or later.
 
 ```mermaid
 flowchart LR

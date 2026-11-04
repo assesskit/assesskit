@@ -1,0 +1,17 @@
+{
+  "name": "@assesskit/runtime-compat",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Runs the runtime and the handler of the CAT binding, built as the packages ship, on Node.js, Deno, Bun and workerd, the runtime of Cloudflare Workers. Never published.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@assesskit/player": "workspace:^",
+    "@assesskit/runtime": "workspace:^",
+    "esbuild": "0.28.2",
+    "workerd": "1.20261016.1"
+  }
+}

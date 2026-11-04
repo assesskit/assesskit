@@ -25,6 +25,10 @@
       "entry": ["smoke.ts"],
       "ignoreDependencies": ["stylelint-no-unsupported-browser-features"]
     },
+    "compat/runtimes": {
+      "entry": ["run.ts", "worker.ts"],
+      "ignoreDependencies": ["workerd"]
+    },
     "compat/engines/*": {
       "entry": ["playwright.config.ts"],
       "playwright": false

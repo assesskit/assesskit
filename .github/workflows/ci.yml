@@ -21,12 +21,12 @@ jobs:
   # What a push or a pull request changed since the last commit of main whose run passed, or since the base of a pull request,
   # and so which jobs have something to check. A job that is skipped passes a required check. When nothing can be compared,
   # for instance when no run has passed yet, every job runs. A job runs when a member of the workspace that it reads, or a member
-  # that uses that one, changed (the packages, the examples and compat, with their dependencies read from their package.json
-  # files, and the player build that compat reads); the lock file, the root configuration, the scripts that the tests share
+  # that uses that one, changed (the packages, the examples, compat and compat/runtimes, with their dependencies read from their
+  # package.json files, and the player build that compat reads); the lock file, the root configuration, the scripts that the tests share
   # and this workflow reach every job; the Markdown, the changesets and the configuration of the linters reach none but check.
   # A file that no rule names reaches every job. The guides of a package are read by the tests that run their samples, and not
-  # by the members that use the package. Outputs: test, browsers, bench, player_bench, engines, corpus and xsd say whether the
-  # job runs; projects and packages are the Vitest projects and the packages whose coverage floors the test job checks. The
+  # by the members that use the package. Outputs: test, browsers, bench, player_bench, engines, runtimes, corpus and xsd say
+  # whether the job runs; projects and packages are the Vitest projects and the packages whose coverage floors the test job checks. The
   # rules job is in rules.yml.
   changes:
     runs-on: ubuntu-latest
@@ -42,6 +42,7 @@ jobs:
       bench: ${{ steps.filter.outputs.bench }}
       player_bench: ${{ steps.filter.outputs.player_bench }}
       engines: ${{ steps.filter.outputs.engines }}
+      runtimes: ${{ steps.filter.outputs.runtimes }}
       corpus: ${{ steps.filter.outputs.corpus }}
       xsd: ${{ steps.filter.outputs.xsd }}
     steps:
@@ -79,7 +80,7 @@ jobs:
               .map((entry) => `${parent}/${entry.name}`);
           const members = new Map();
           const names = new Map();
-          for (const dir of [...folders("packages"), ...folders("examples").flatMap(folders), "compat"]) {
+          for (const dir of [...folders("packages"), ...folders("examples").flatMap(folders), "compat", "compat/runtimes"]) {
             const manifest = JSON.parse(readFileSync(`${dir}/package.json`, "utf8"));
             members.set(dir, manifest);
             names.set(manifest.name, dir);
@@ -134,6 +135,7 @@ jobs:
             const [top, name, third] = file.split("/");
             if (top === "packages" && members.has(`packages/${name}`)) touched.add(`packages/${name}`);
             else if (top === "examples" && members.has(`examples/${name}/${third}`)) touched.add(`examples/${name}/${third}`);
+            else if (top === "compat" && name === "runtimes") touched.add("compat/runtimes");
             else if (top === "compat") touched.add("compat");
             else if (top === "docs" && third !== undefined && members.has(`packages/${name}`)) guides.add(`packages/${name}`);
             else if (MEMBER_SCRIPTS.has(file)) for (const dir of MEMBER_SCRIPTS.get(file)) touched.add(dir);
@@ -178,6 +180,8 @@ jobs:
             bench: code.has("packages/runtime"),
             // The built player in the oldest browsers of its baseline.
             engines: code.has("packages/player") || reached.has("compat"),
+            // The built runtime and the handler of the CAT binding on Node.js, Deno, Bun and workerd.
+            runtimes: reached.has("compat/runtimes"),
             // The tests of the runtime, which run the samples of its guides, and of its examples that read the 1EdTech examples.
             corpus: guided.has("packages/runtime") || runtimeExamples,
             // The tests of the runtime, of the player and of the examples of the runtime that read the official XSDs.
@@ -211,7 +215,7 @@ jobs:
       - run: pnpm check:tarballs
       - run: pnpm check:licenses
       - run: pnpm check:audit
-      - run: pnpm compat
+      - run: pnpm compat:baseline
       - run: pnpm docs:api
       # Version and Dependabot pull requests change package files without a changeset of their own.
       - if: >-
@@ -374,6 +378,29 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm compat:engines
+
+  # The built runtime and the handler of the CAT binding on Node.js, Deno, Bun and workerd, the runtime of Cloudflare Workers
+  # (compat/runtimes), in the releases that the scenario was written against.
+  runtimes:
+    needs: changes
+    if: needs.changes.outputs.runtimes == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.9.6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm compat:runtimes
 
   # Tests of the runtime and of its examples that read the 1EdTech examples and the W3C regular expression suite, downloaded at the commits and hashes
   # that scripts/corpus.lock.json pins. The tests of the player that read them run in the browsers job.

@@ -1,0 +1,216 @@
+import { createCatRestHandler } from "@assesskit/player/cat-rest";
+import {
+  type Action,
+  buildSingle,
+  compileXsdRegex,
+  createEngine,
+  createPackageResolvers,
+  type DeliveryState,
+  deserializeState,
+  parseXml,
+  readManifest,
+  readPackage,
+  readView,
+  SecurityError,
+  serializeState,
+  validatePackage,
+  writePackage,
+  writeResults,
+  writeView,
+} from "@assesskit/runtime";
+
+/** What every runtime must give: plain data, the same on each. */
+export interface Results {
+  /** The package that the scenario writes, reads back and validates. */
+  readonly pkg: { readonly paths: readonly string[]; readonly resources: number; readonly issues: number };
+  /** The test session: what the candidate sees and does not see, and what each step gives. */
+  readonly session: {
+    readonly title: string | undefined;
+    readonly choices: readonly string[] | undefined;
+    readonly actions: readonly string[];
+    readonly viewHoldsKey: boolean;
+    readonly viewRead: string | undefined;
+    readonly steps: readonly string[];
+    readonly refusal: string;
+    readonly status: string;
+    readonly total: string;
+    readonly reported: readonly string[];
+    readonly totalXml: string | undefined;
+  };
+  /** The state of the session, written and read again. */
+  readonly state: { readonly bytes: number; readonly equal: boolean };
+  /** The limits and the pattern language, which use no platform API. */
+  readonly limits: { readonly doctype: string; readonly nodes: string; readonly pattern: readonly boolean[] };
+  /** The handler of the CAT binding over the `Request` and `Response` of the runtime. */
+  readonly cat: { readonly refused: number; readonly oversize: number; readonly missing: number };
+}
+
+const NAMESPACE = 'xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"';
+const encoder = new TextEncoder();
+
+/** An item with one choice interaction whose correct answer is `correct`. */
+const item = (identifier: string, title: string, correct: string): string => `<qti-assessment-item ${NAMESPACE}
+    identifier="${identifier}" title="${title}" adaptive="false" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
+    <qti-correct-response><qti-value>${correct}</qti-value></qti-correct-response>
+  </qti-response-declaration>
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
+  <qti-item-body>
+    <qti-choice-interaction response-identifier="RESPONSE" max-choices="1">
+      <qti-prompt>${title}</qti-prompt>
+      <qti-simple-choice identifier="A">Paris</qti-simple-choice>
+      <qti-simple-choice identifier="B">Rome</qti-simple-choice>
+    </qti-choice-interaction>
+  </qti-item-body>
+  <qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct"/>
+</qti-assessment-item>`;
+
+const TEST = `<qti-assessment-test ${NAMESPACE} identifier="quiz" title="Quiz">
+  <qti-outcome-declaration identifier="TOTAL" cardinality="single" base-type="float"/>
+  <qti-test-part identifier="part" navigation-mode="linear" submission-mode="individual">
+    <qti-assessment-section identifier="main" title="Main" visible="true">
+      <qti-assessment-item-ref identifier="q1" href="items/q1.xml"/>
+      <qti-assessment-item-ref identifier="q2" href="items/q2.xml"/>
+    </qti-assessment-section>
+  </qti-test-part>
+  <qti-outcome-processing>
+    <qti-set-outcome-value identifier="TOTAL">
+      <qti-sum><qti-test-variables variable-identifier="SCORE"/></qti-sum>
+    </qti-set-outcome-value>
+  </qti-outcome-processing>
+</qti-assessment-test>`;
+
+const MANIFEST =
+  readManifest(`<manifest xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1" identifier="quiz-package">
+  <metadata><schema>QTI Package</schema><schemaversion>3.0.0</schemaversion></metadata>
+  <organizations/>
+  <resources>
+    <resource identifier="quiz" type="imsqti_test_xmlv3p0" href="test.xml">
+      <file href="test.xml"/><dependency identifierref="q1"/><dependency identifierref="q2"/>
+    </resource>
+    <resource identifier="q1" type="imsqti_item_xmlv3p0" href="items/q1.xml"><file href="items/q1.xml"/></resource>
+    <resource identifier="q2" type="imsqti_item_xmlv3p0" href="items/q2.xml"><file href="items/q2.xml"/></resource>
+  </resources>
+</manifest>`);
+
+/** Writes a package, reads it back, validates it, and runs the session of its test from start to end. */
+function runSession(): Pick<Results, "pkg" | "session" | "state"> {
+  const zip = writePackage(
+    MANIFEST,
+    new Map([
+      ["test.xml", encoder.encode(TEST)],
+      ["items/q1.xml", encoder.encode(item("q1", "Capital of France?", "A"))],
+      ["items/q2.xml", encoder.encode(item("q2", "Capital of Italy?", "B"))],
+    ]),
+  );
+  const pkg = readPackage(zip);
+  const document = pkg.document("test.xml");
+  if (document.kind !== "test") throw new Error("Expected a test.");
+  const engine = createEngine({
+    kind: "test",
+    test: document.test,
+    base: "test.xml",
+    resolvers: createPackageResolvers(pkg),
+  });
+  const steps: string[] = [];
+  const apply = (state: DeliveryState, action: Action) => {
+    const step = engine.apply(state, action);
+    if (!step.ok) throw new Error(step.refusal.message);
+    steps.push(step.events.map(({ type }) => type).join(" "));
+    return step;
+  };
+  const started = engine.start({ seed: 7, at: 0 });
+  if (!started.ok) throw new Error(started.refusal.message);
+  const view = engine.view(started.state, 0);
+  const wire = JSON.stringify(writeView(view));
+  const answered = apply(started.state, {
+    type: "set-responses",
+    item: { ref: "q1", instance: 1 },
+    responses: new Map([["RESPONSE", buildSingle("identifier", "A")]]),
+    at: 1_000,
+  });
+  const moved = apply(answered.state, { type: "move", to: "next", at: 2_000 });
+  const refused = engine.apply(moved.state, { type: "move", to: "previous", at: 2_500 });
+  const second = apply(moved.state, {
+    type: "set-responses",
+    item: { ref: "q2", instance: 1 },
+    responses: new Map([["RESPONSE", buildSingle("identifier", "A")]]),
+    at: 3_000,
+  });
+  const ended = apply(second.state, { type: "end-test", at: 4_000 });
+  const report = engine.results(ended.state);
+  const text = serializeState(ended.state);
+  return {
+    pkg: {
+      paths: [...pkg.paths].sort(),
+      resources: pkg.manifest.resources.length,
+      issues: validatePackage(pkg).length,
+    },
+    session: {
+      title: view.current?.title,
+      choices: view.current?.interactions[0]?.choices.map(({ identifier }) => identifier),
+      actions: view.actions,
+      viewHoldsKey: wire.includes("qti-correct-response"),
+      viewRead: readView(JSON.parse(wire)).current?.title,
+      steps,
+      refusal: refused.ok ? "accepted" : refused.refusal.reason,
+      status: ended.state.status,
+      total: JSON.stringify(ended.state.outcomes.get("TOTAL")),
+      reported: report.itemResults.map(({ identifier, sessionStatus }) => `${identifier} ${sessionStatus}`),
+      totalXml: writeResults(report).match(/<outcomeVariable identifier="TOTAL".*?<\/outcomeVariable>/)?.[0],
+    },
+    state: { bytes: text.length, equal: serializeState(deserializeState(text)) === text },
+  };
+}
+
+/** What the limits of the XML reader and the pattern language give, which no platform decides. */
+function runLimits(): Results["limits"] {
+  const refusal = (xml: string, limits: object): string => {
+    try {
+      parseXml(xml, { limits });
+      return "no error";
+    } catch (error) {
+      return error instanceof SecurityError ? `SecurityError ${error.limit}` : String(error);
+    }
+  };
+  const pattern = compileXsdRegex("[a-c]{2,3}\\d?");
+  return {
+    doctype: refusal('<!DOCTYPE a [<!ENTITY e "x">]><a>&e;</a>', {}),
+    nodes: refusal(`<a>${"<b/>".repeat(100)}</a>`, { maxNodes: 50 }),
+    pattern: ["ab", "abc7", "a", "abcd"].map((text) => pattern.matches(text)),
+  };
+}
+
+/** The statuses that the handler of the CAT binding answers to requests it refuses, from the `Request` and `Response` of the runtime. */
+async function runCat(): Promise<Results["cat"]> {
+  const unused = () => Promise.reject(new Error("The port is not called."));
+  const handle = createCatRestHandler(
+    {
+      createSection: unused,
+      getSection: unused,
+      createSession: unused,
+      submitResults: unused,
+      endSession: unused,
+      endSection: unused,
+    },
+    { authorize: () => true, maxBodyBytes: 64 },
+  );
+  const post = (path: string, body: string) =>
+    handle(
+      new Request(`https://engine.example/ims/cat/v1p0/${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body,
+      }),
+    );
+  return {
+    refused: (await post("sections", "{}")).status,
+    oversize: (await post("sections", JSON.stringify({ padding: "x".repeat(100) }))).status,
+    missing: (await post("elsewhere", "{}")).status,
+  };
+}
+
+/** Runs the scenario: a package, a session, its state and report, the limits, and the CAT handler. */
+export async function runAll(): Promise<Results> {
+  return { ...runSession(), limits: runLimits(), cat: await runCat() };
+}

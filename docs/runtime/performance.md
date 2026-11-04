@@ -22,15 +22,15 @@ xychart-beta
 | Row              | The runtime                                                                                          | The reference                                                                         | Runtime  | Reference | Ratio | Budget (time, ratio) |
 | ---------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | -------- | --------- | ----- | -------------------- |
 | parse            | `readAsi` on the 215 example items that both read                                                    | Longsight: `parseQtiXml` on the same items                                            | 13.63 ms | 20.05 ms  | 0.68  | 500 ms, 1.5          |
-| validate         | `validateAsi` of each                                                                                | Longsight: `validateAssessmentItem` of each                                           | 5.06 ms  | 1.85 ms   | 2.73  | 80 ms, 4.5           |
+| validate         | `validateAsi` of each                                                                                | Longsight: `validateAssessmentItem` of each                                           | 5.06 ms  | 1.85 ms   | 2.73  | 60 ms, 4.5           |
 | start            | `startItemSession` and `presentItem` for each: variables, template processing, first attempt         | Longsight: `createItemSession` for each                                               | 0.374 ms | 0.351 ms  | 1.07  | 7 ms, 2              |
 | start + template | the same for the 8 items with template processing, 20 times each                                     | Longsight: the same                                                                   | 1.833 ms | 1.685 ms  | 1.09  | 40 ms, 2             |
 | submit           | `set-responses` and `submit` of the correct responses in presented sessions                          | Longsight: `respond` for each response, then `score`                                  | 0.615 ms | 0.605 ms  | 1.02  | 20 ms, 2             |
 | item end to end  | `readAsi`, start, present, set the responses and submit                                              | Longsight: `parseQtiXml`, `createItemSession`, `respond`, `score`                     | 16.18 ms | 19.84 ms  | 0.82  | 400 ms, 1.5          |
-| package          | `readPackage` of 200 generated items, then each item through `createPackageResolvers`                | Longsight: `parseQtiPackage`, with the inflation of fflate that the runtime uses      | 75.2 ms  | 141.4 ms  | 0.53  | 2,000 ms, 1          |
-| start a test     | `start` of a test of 10 sections of 10 choice items, 100 times                                       | Longsight: `startQtiTest` and `createItemSession` of its first item, 100 times        | 0.206 ms | 0.412 ms  | 0.50  | 4 ms, 1              |
+| package          | `readPackage` of 200 generated items, then each item through `createPackageResolvers`                | Longsight: `parseQtiPackage`, with the inflation of fflate that the runtime uses      | 75.2 ms  | 141.4 ms  | 0.53  | 800 ms, 1            |
+| start a test     | `start` of a test of 10 sections of 10 choice items, 100 times                                       | Longsight: `startQtiTest` and `createItemSession` of its first item, 100 times        | 0.206 ms | 0.412 ms  | 0.50  | 3 ms, 1              |
 | submit in a test | `apply` of `submit` for the 51st of 100 items, 100 times: response processing, the sum of the scores | Longsight: `score` of the item, then `submitQtiTestAnswer` with the 50 earlier scores | 1.10 ms  | 0.680 ms  | 1.62  | 20 ms, 3             |
-| XML (libxml2)    | `parseXml` of the bytes of the 325 XML files of the examples that both read                          | libxml2-wasm: `XmlDocument.fromBuffer` with the options of `validateXmlFiles`         | 14.94 ms | 9.53 ms   | 1.57  | 300 ms, 2.5          |
+| XML (libxml2)    | `parseXml` of the bytes of the 325 XML files of the examples that both read                          | libxml2-wasm: `XmlDocument.fromBuffer` with the options of `validateXmlFiles`         | 14.94 ms | 9.53 ms   | 1.57  | 200 ms, 2.5          |
 
 The times are those of a laptop with an Apple M5 and Node.js 26.8, where both sides of a row run in one process. The inputs
 are the 1EdTech examples that both implementations read and score (`pnpm corpus`), with the correct responses the oracle
@@ -70,9 +70,10 @@ allows for more:
   reads with saxes, a parser in JavaScript, which takes about half of the time of `parseXml` on these documents, and builds a
   tree of JavaScript objects whose names, namespaces and limits it checks as it goes; the readers of the runtime take that tree.
 
-The rows of validation, of a package, of the start of a test and of XML have no sample of the CI runner yet: their times are
-five times the sample of the laptop times 3, what the runner takes against the laptop on the other rows, rounded up to one
-significant digit, until a run of CI gives their sample.
+The times of the budget column are five times the fastest sample that the CI runner took in the last four green runs of `bench`
+on main, rounded up to one significant digit: 11.2 ms for validate, 146 ms for package, 0.42 ms for start a test and 28.1 ms
+for XML. The ratios stay between 2.6 and 3.0 for validate, 0.50 and 0.53 for package, 0.55 and 0.61 for start a test and 1.8
+and 1.9 for XML.
 
 ## Budgets
 

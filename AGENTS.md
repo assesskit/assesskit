@@ -1,7 +1,7 @@
 # AGENTS.md
 
 The working rules of this repository for people and coding agents. The gates enforce most of them (`pnpm lint`,
-`check:standards`, `typecheck`, `knip`, `compat`, `docs:api`); this file holds the rest. The workspace's engineering standards
+`check:standards`, `typecheck`, `knip`, `compat:baseline`, `docs:api`); this file holds the rest. The workspace's engineering standards
 apply, and the deviations from them are recorded below.
 
 ## Terms
@@ -34,16 +34,16 @@ Use these words with these meanings in code, comments and docs.
 
 ## Layout
 
-| Path                                                             | Holds                                                                                                                                                                            |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/runtime/src/<module>/`                                 | One folder per module: `index.ts`, `internal.ts` where other modules or the tests need more, a file per concept                                                                  |
-| `packages/runtime/src/{errors,checks,checks-internal,random}.ts` | The errors, the checks of one value, the checks that only the runtime uses, the random number generator; the subpaths `errors` and `checks` serve the player                     |
-| `packages/runtime/test/`                                         | `<module>.test.ts` for each source folder; `fixtures/` (oracle output, stored states); `differential/` (the harness against Longsight `qti3-core` and Amp-up `qti3-item-player`) |
-| `packages/player/src/`                                           | `errors.ts`, `checks.ts`, `messages/`, `protocol/`, `player/`, `client/`, `server/`, `scoring/`, `cat/`, `cat-rest/`                                                             |
-| `packages/player/{player.css,scripts/,test/}`                    | The stylesheet of a content root; `build-static.ts` (the PCI frame and the recording worklet); `<folder>.test.ts`, `fixtures/` (servers and commands of the browser tests)       |
-| `examples/<package>/<name>/`                                     | A runnable example, a package of its own; its `test/` runs it                                                                                                                    |
-| `docs/<package>/`                                                | The guides of a package, one per module, with architecture, evidence and supported; TypeDoc publishes them                                                                       |
-| `compat/`, `scripts/`, `validation/`, `biome/`                   | The browser baseline; downloads, generators, CI checks (`check-*.ts`, `rules/`) and the peak-memory harness; fixture scripts (Python); GritQL lint rules                         |
+| Path                                                             | Holds                                                                                                                                                                                                      |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/runtime/src/<module>/`                                 | One folder per module: `index.ts`, `internal.ts` where other modules or the tests need more, a file per concept                                                                                            |
+| `packages/runtime/src/{errors,checks,checks-internal,random}.ts` | The errors, the checks of one value, the checks that only the runtime uses, the random number generator; the subpaths `errors` and `checks` serve the player                                               |
+| `packages/runtime/test/`                                         | `<module>.test.ts` for each source folder; `fixtures/` (oracle output, stored states); `differential/` (the harness against Longsight `qti3-core` and Amp-up `qti3-item-player`)                           |
+| `packages/player/src/`                                           | `errors.ts`, `checks.ts`, `messages/`, `protocol/`, `player/`, `client/`, `server/`, `scoring/`, `cat/`, `cat-rest/`                                                                                       |
+| `packages/player/{player.css,scripts/,test/}`                    | The stylesheet of a content root; `build-static.ts` (the PCI frame and the recording worklet); `<folder>.test.ts`, `fixtures/` (servers and commands of the browser tests)                                 |
+| `examples/<package>/<name>/`                                     | A runnable example, a package of its own; its `test/` runs it                                                                                                                                              |
+| `docs/<package>/`                                                | The guides of a package, one per module, with architecture, evidence and supported; TypeDoc publishes them                                                                                                 |
+| `compat/`, `scripts/`, `validation/`, `biome/`                   | The browser baseline (`compat/`) and the runtimes (`compat/runtimes/`); downloads, generators, CI checks (`check-*.ts`, `rules/`) and the peak-memory harness; fixture scripts (Python); GritQL lint rules |
 
 [Layers](docs/runtime/architecture.md#layers) and [player layers](docs/player/architecture.md#layers) are rows of tables that
 Biome enforces, folder by folder.
@@ -63,7 +63,7 @@ Biome enforces, folder by folder.
 | `pnpm test:coverage:browser`     | The browser tests in Chromium with the floors of the folders that draw a page and of the client                                                                                                                                                                      |
 | `pnpm test:corpus`               | The tests that read the corpus; needs `pnpm corpus`                                                                                                                                                                                                                  |
 | `pnpm test:xsd`                  | The tests that read the official XSDs; needs `pnpm schemas` and `pnpm corpus`                                                                                                                                                                                        |
-| `pnpm bench`                     | The benchmarks of the runtime and the mount time of the player in Chromium with the CPU slowed 4 times, against budgets and against Longsight, libxml2 and the Amp-up player                                                                                         |
+| `pnpm bench`                     | The benchmarks of the runtime, then the mount time of the player in Chromium with the CPU slowed 4 times, one package at a time, against budgets and against Longsight, libxml2 and the Amp-up player                                                                |
 | `pnpm build`                     | `tsc -b` after deleting `dist/`, so that no stale output ships                                                                                                                                                                                                       |
 | `pnpm check:packages`            | publint and Are the Types Wrong on the packed packages                                                                                                                                                                                                               |
 | `pnpm check:release`             | Fails when a package that a changeset releases is private or lacks `publishConfig.access`, or is at 0.0.0 and its changesets give it less than `major`, which would release below 1.0.0                                                                              |
@@ -72,8 +72,9 @@ Biome enforces, folder by folder.
 | `pnpm check:audit`               | `pnpm audit` of the production dependencies at any severity and of all dependencies at high; needs the network                                                                                                                                                       |
 | `pnpm check:rules`               | Removes each security rule of `scripts/rules/` from a copy of the code and fails when its test still passes (exit 1); a run that takes too long is reported as `TIMED OUT` (exit 2), never as unguarded; needs Chromium; takes the source files whose rules to check |
 | `pnpm docs:api`                  | TypeDoc into `docs/api`, with the pinned Mermaid copied in so that no page loads a script from elsewhere; fails on undocumented exports                                                                                                                              |
-| `pnpm compat`                    | The built JavaScript and the CSS of the player stay inside the browser baseline                                                                                                                                                                                      |
+| `pnpm compat:baseline`           | The built JavaScript and the CSS of the player stay inside the browser baseline                                                                                                                                                                                      |
 | `pnpm compat:engines`            | The smoke test in the pinned old browsers; needs Docker                                                                                                                                                                                                              |
+| `pnpm compat:runtimes`           | The built runtime and the handler of the CAT binding give the same results on Node.js, Deno, Bun and workerd; needs Deno and Bun                                                                                                                                     |
 | `pnpm corpus`, `pnpm schemas`    | Download the 1EdTech examples into `.cache/corpus` and the XSDs into `.cache/schemas`, which CI keeps by the hash of their locks; `corpus:pin` and `schemas:pin` write new hashes                                                                                    |
 | `pnpm conformance`               | Takes the official packages of a 1EdTech member through the runtime, outside the repository; `conformance:pin` rewrites the feature list                                                                                                                             |
 | `pnpm unicode`, `pnpm asi-table` | Regenerate the Unicode tables of `values` and the element table of `asi` (needs `pnpm schemas`) from the pinned files                                                                                                                                                |
@@ -81,7 +82,7 @@ Biome enforces, folder by folder.
 - A gate that reads `dist/` builds it first, so a fresh clone passes every gate.
 - Run the gates that the change touches before finishing; [CONTRIBUTING.md](CONTRIBUTING.md#before-opening-a-pull-request) says which.
 - The `changes` job of `ci.yml` compares the commit with the last green run of main and gives each job to the packages it reads.
-  A package's change reaches the members that use it (the player, the examples and compat use the runtime); the guides in
+  A package's change reaches the members that use it (the player, the examples and compat/runtimes use the runtime); the guides in
   `docs/<package>/` reach the jobs that run their samples, not the members that use the package, except that the player's
   tests hold the runtime's delivery guide to the wire format; the lock file, the root configuration, `ci.yml` and the scripts
   that the tests share reach every job, and Markdown, changesets and the configuration of the linters reach `check` alone. The
@@ -100,6 +101,7 @@ Biome enforces, folder by folder.
 | `player-bench`        | the player                                                       |      10 |
 | `browsers`            | the player or its guides                                         |      45 |
 | `engines`             | the player or compat                                             |      15 |
+| `runtimes`            | the runtime, the player or compat/runtimes                       |      10 |
 | `corpus`              | the runtime, its guides or an example of it                      |      10 |
 | `xsd`                 | the runtime, its guides, the player or an example of the runtime |      12 |
 | `rules` (`rules.yml`) | each Monday, on dispatch and at a release                        |     120 |
@@ -208,7 +210,7 @@ that the player needs and the runtime lacks is a change in the runtime, with its
 
 ## Browser baseline
 
-[baseline.md](docs/player/baseline.md) names the browsers, and `pnpm compat` holds the shared and browser folders of the player to
+[baseline.md](docs/player/baseline.md) names the browsers, and `pnpm compat:baseline` holds the shared and browser folders of the player to
 them. Do not guard a feature that a baseline browser lacks with a support check: the code would be dead in some browsers and
 untested in the others.
 

@@ -2,9 +2,11 @@ packages:
   - packages/*
   - examples/*/*
   - compat
+  - compat/runtimes
   - compat/engines/*
 
 allowBuilds:
   core-js: false
   esbuild: false
   lefthook: false
+  workerd: false

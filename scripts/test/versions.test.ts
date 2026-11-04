@@ -22,6 +22,7 @@ const WORKSPACE = [
   ...foldersIn("packages"),
   ...foldersIn("examples").flatMap(foldersIn),
   "compat",
+  "compat/runtimes",
   ...foldersIn("compat/engines"),
 ];
 
@@ -42,6 +43,8 @@ describe("the versions of the dependencies", () => {
   });
 
   it("find the packages of the workspace", () => {
-    expect(WORKSPACE).toEqual(expect.arrayContaining([".", "packages/runtime", "packages/player", "compat"]));
+    expect(WORKSPACE).toEqual(
+      expect.arrayContaining([".", "packages/runtime", "packages/player", "compat", "compat/runtimes"]),
+    );
   });
 });

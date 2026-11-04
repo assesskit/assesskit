@@ -186,6 +186,37 @@ The rules for the player's server, protocol, frames and `cat-rest` are in the sa
 
 The text to find occurs once in its file, which `scripts/test/check-rules.test.ts` checks, so a refactor that moves the line fails that test and not silently.
 
+## Runtimes
+
+The core of the runtime uses no platform API, and `pnpm compat:runtimes` shows that it runs where the web standards are: it
+bundles a scenario with the packages as `pnpm build` makes them and runs the bundle on Node.js, Deno, Bun and workerd, the
+runtime of Cloudflare Workers. The bundle is for the browser platform, so it holds no module of Node.js, and workerd runs it
+without the `nodejs_compat` flag.
+
+```mermaid
+flowchart LR
+  build["pnpm build<br/>dist of the runtime and the player"] --> bundle["esbuild: run.js,<br/>worker.js"]
+  bundle --> node["node run.js"]
+  bundle --> deno["deno run run.js"]
+  bundle --> bun["bun run run.js"]
+  bundle --> workerd["workerd serve worker.capnp"]
+  node --> compare{"Same results as Node.js,<br/>and as promised?"}
+  deno --> compare
+  bun --> compare
+  workerd --> compare
+```
+
+| Step of the scenario (`compat/runtimes/scenario.ts`) | Shown                                                                                                                              |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| A package written, read and validated                | ZIP in `fflate`, the manifest and the XML reader give the same paths, resources and no issue                                       |
+| A session of a test from start to end                | The same view, steps, refusal, outcome and report; the view holds no correct response and reads back                               |
+| The state written and read again                     | The same JSON text, byte for byte, and the same state                                                                              |
+| The limits and the pattern language                  | A DOCTYPE and too many nodes are `SecurityError`s; `compileXsdRegex` matches the same texts                                        |
+| The handler of the CAT binding                       | `createCatRestHandler` answers 400, 413 and 404 to a bad body, a large body and an unknown path from the `Request` of each runtime |
+
+Node.js must give what the packages promise (the values in `compat/runtimes/check.ts`), and each other runtime what Node.js
+gives. The releases are pinned in `ci.yml`: Deno 2.9.6, Bun 1.4.3, and workerd in `compat/runtimes/package.json`.
+
 ## Test sessions
 
 No independent implementation of a QTI 3 test session was found, so test sessions are not compared with another

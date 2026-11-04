@@ -75,8 +75,9 @@ Node.js 22.18+ and pnpm 12 are required. One command sets up the repository: `pn
 | `pnpm knip`            | Unused files, exports and dependencies                                                |
 | `pnpm build`           | The built packages                                                                    |
 | `pnpm check:packages`  | publint and Are the Types Wrong on the packed packages                                |
-| `pnpm compat`          | The built code of the player stays inside its browser baseline                        |
+| `pnpm compat:baseline` | The built code of the player stays inside its browser baseline                        |
 | `pnpm compat:engines`  | The smoke test in the pinned old browsers, in Docker                                  |
+| `pnpm compat:runtimes` | The built runtime gives the same results on Node.js, Deno, Bun and workerd            |
 | `pnpm docs:api`        | TypeDoc into `docs/api`; fails on undocumented exports                                |
 | `pnpm corpus`          | Downloads the 1EdTech examples and the W3C regular expression suite                   |
 | `pnpm schemas`         | Downloads the official XSDs (about 140 MB) into `.cache/schemas`                      |
