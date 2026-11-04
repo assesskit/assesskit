@@ -29,7 +29,7 @@ async function encodeAll(
  * Derives from the options what the frame needs: its title, and the message that starts it once the bytes of the files that
  * go to the interaction are read.
  *
- * @param options - Options that {@link checkPciFrameOptions} accepted.
+ * @param options - The options that the mounts build from the view.
  * @returns The title and the means to build the start message.
  * @throws `DataError` when the interaction names no module to load, a module has no location, or a location in the package
  * is on an origin that the frame loads no scripts from.

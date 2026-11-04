@@ -23,7 +23,7 @@ flowchart LR
 | `mountContentSupports`                     | Cards of the catalog, text tracks of media and the alternative text of images                              |
 | `mountSpoken`                              | Reading aloud: the controls, the word-by-word cursor, the typing echo and the reading type                 |
 | `mountVariantNotice`                       | The variant that the runtime delivered, and its language                                                   |
-| `PciFrame.setPresentation`                 | The look inside the frame of a portable custom interaction ([PCI](pci.md))                                 |
+| The frame of a portable custom interaction | The look inside it ([PCI](pci.md))                                                                         |
 | `mountTools`                               | The tools that supports put on the screen ([tools](tools.md))                                              |
 
 The parts do not navigate and do not build the chrome. The chrome mounts them, calls `update` with `view.supports` for every

@@ -1,8 +1,7 @@
-import { checkString, describe } from "@assesskit/runtime/checks";
+import { checkString } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import type { Presentation } from "../presentation/index.js";
 import { checkPresentation } from "../presentation/internal.js";
-import { checkPciFrameOptions } from "./check-options.js";
 import { describeFrame } from "./describe-frame.js";
 import { createResponseDecoder, responseKey } from "./files.js";
 import type { PciEvent, PciFrameOptions } from "./options.js";
@@ -135,16 +134,13 @@ function createFrameElement(staticUrl: string, title: string): HTMLIFrameElement
  * host before the event is delivered.
  *
  * @param parent - The element that gets the frame.
- * @param options - See {@link PciFrameOptions}.
+ * @param options - See {@link PciFrameOptions}; the mounts build them from the view.
  * @returns The frame and the means to drive it.
- * @throws `DataError` when `parent` is not an element, an option is not valid, the interaction names no module to load, a
- * module has no location, or a location in the package is on an origin that the frame loads no scripts from.
+ * @throws `DataError` when the interaction names no module to load, a module has no location, or a location in the package
+ * is on an origin that the frame loads no scripts from.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, portable custom interactions}
  */
 export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): PciFrame {
-  if (!(parent instanceof HTMLElement))
-    throw new DataError(`The parent must be an element, found ${describe(parent)}.`);
-  checkPciFrameOptions(options);
   const { title, prepare } = describeFrame(options);
   const { onError = (error: unknown) => reportError(error) } = options;
   const frame = createFrameElement(options.staticUrl, title);

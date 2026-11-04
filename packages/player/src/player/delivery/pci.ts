@@ -18,7 +18,7 @@ import {
   type PciFrameOptions,
   type PciStatus,
   type PciVariable,
-} from "../pci/index.js";
+} from "../pci/internal.js";
 import type { StylesheetFetch } from "../roots/index.js";
 import type { Presentation } from "../supports/index.js";
 

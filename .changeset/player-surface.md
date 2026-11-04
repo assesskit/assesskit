@@ -11,3 +11,5 @@
 `AUTOSAVE_MS`, `FLUSH_BEFORE_DEADLINE_MS` (`@assesskit/player/client`), `MAX_SAVE_RETRIES`, `DEFAULT_TTL_SECONDS`, `DEFAULT_UPLOAD_TTL_SECONDS` and `collectAssetPrefixes` (`@assesskit/player/server`) are no longer exported: no consumer reads them, the guides state each value, and the session host collects the prefixes itself.
 
 The option that holds catalogs by language is `catalogs` (was `messages`) on `mountDelivery`, `mountItem`, `mountSubmission` and `mountRatingForm`, as `selectMessages` calls it; `messages` keeps meaning one `Messages` everywhere else.
+
+`mountPciFrame`, `PciFrame`, `PciFrameOptions`, `PciEvent`, `PciFailure`, `PciFiles`, `PciRequestedStatus`, `PciStatus`, `PciVariable`, `MIN_PCI_HEIGHT` and `MAX_PCI_HEIGHT` are no longer exported from `@assesskit/player/player`, and the 132 lines that checked the options of the frame are gone: `mountItem` and `mountDelivery` host each portable custom interaction in the same frame, from a view. The origins that a mount gives to the frames are the normalized `URL.origin` of the option `origins`.

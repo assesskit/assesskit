@@ -1,5 +1,6 @@
 import type { Messages } from "../../messages/index.js";
 import { selectMessages } from "../../messages/index.js";
+import { readOrigins } from "../content/internal.js";
 import type { DeliveryOptions, ItemMountOptions } from "./options.js";
 import { DEFAULT_RESUME_CHECK_MS } from "./resume.js";
 
@@ -50,7 +51,7 @@ export function resolveItemSettings(options: ItemMountOptions): ItemSettings {
     fetch,
     mathjax,
     language,
-    origins,
+    origins: [...readOrigins(origins)],
     hooks,
     report: hooks.onError ?? ((error) => reportError(error)),
     messages: selectMessages(language, options.catalogs),

@@ -1,6 +1,6 @@
 # Portable custom interactions
 
-A portable custom interaction (PCI) is code that an item brings with it: an AMD module that builds its own interface. The code is the package author's, so it runs where it can do no harm. `mountPciFrame` puts each
+A portable custom interaction (PCI) is code that an item brings with it: an AMD module that builds its own interface. The code is the package author's, so it runs where it can do no harm. `mountItem` and `mountDelivery` put each
 interaction in a frame of its own, loads its modules with RequireJS, and passes what it does to the player as events.
 The interaction, the module resolution and the JSON of its variables are the runtime's (`@assesskit/runtime/pci`); the frame is
 the player's.
@@ -10,7 +10,7 @@ sequenceDiagram
   participant P as Player
   participant F as Frame, sandboxed
   participant I as Interaction
-  P->>F: mountPciFrame appends the iframe
+  P->>F: the mount appends the iframe
   F->>P: loaded
   P->>F: start: markup, modules, variables, state, status
   F->>I: loads the modules with RequireJS, creates the interaction
@@ -28,58 +28,60 @@ sequenceDiagram
 
 ## Quick start
 
-Mount the frame of a portable custom interaction, and take it down:
+Mount an item that has a portable custom interaction, and take it down:
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
-import { resolveModuleConfigurationPaths, readModuleResolution } from "@assesskit/runtime/pci";
-import { buildSingle } from "@assesskit/runtime/values";
-import { EN_MESSAGES } from "@assesskit/player";
-import { mountPciFrame } from "@assesskit/player/player";
+import { createLocalSession } from "@assesskit/player/client/local";
+import { mountItem } from "@assesskit/player/player";
 
-const gate = "https://assets.example/g/dGFwLXRva2Vu.c2ln/";
-const item = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
-    identifier="pci" title="PCI" time-dependent="false">
+const parsed = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+    identifier="pci" title="PCI" adaptive="false" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="integer"/>
   <qti-item-body>
     <qti-portable-custom-interaction response-identifier="RESPONSE" module="tap"
         custom-interaction-type-identifier="urn:fdc:hmhco.com:pci:tapToReveal" data-toggle="true">
-      <qti-interaction-markup/>
+      <qti-interaction-markup><p>Tap each picture to reveal it.</p></qti-interaction-markup>
     </qti-portable-custom-interaction>
   </qti-item-body>
 </qti-assessment-item>`);
-const [interaction] = item.kind === "item" ? (item.item.body?.children ?? []) : [];
-if (interaction?.kind !== "portable-custom-interaction") throw new Error("The item has no interaction.");
+if (parsed.kind !== "item") throw new Error("The document is not an item.");
 
-// The host reads the file at resolveModuleConfigurationPaths(interaction).primary from the package.
-const primary = readModuleResolution('{"waitSeconds": 60, "paths": {"tap": "modules/tap"}}');
-
-const events = [];
-const host = document.createElement("div");
-document.body.append(host);
-
-const frame = mountPciFrame(host, {
-  staticUrl: "https://assets.example/static/",
-  messages: EN_MESSAGES,
-  language: "en",
-  interaction,
-  configuration: { primary },
-  assets: (path) => `${gate}${path}`,
-  prompt: "Tap each picture to reveal it.",
-  markup: `<qti-interaction-markup><img class="tap" src="${gate}ammonia.svg" alt="Ammonia"></qti-interaction-markup>`,
-  stylesheets: [`${gate}styles/item.css`],
-  status: "interacting",
-  response: { value: buildSingle("integer", 0), declaration: { cardinality: "single", baseType: "integer" } },
-  files: {
-    read: async () => new Uint8Array(),
-    upload: async (_bytes, mimeType) => ({ reference: "file-1", mimeType }),
+const saved = new Map();
+const client = await createLocalSession({
+  definition: { kind: "item", item: parsed.item, base: "items/pci.xml" },
+  store: {
+    load: async (session) => saved.get(session),
+    save: async (session, { state }) => void saved.set(session, state),
   },
-  onEvent: (event) => events.push(event.type),
+  session: "pci-1",
+  seed: 1,
+  assets: (path) => `https://assets.example/g/dGFwLXRva2Vu.c2ln/${path}`,
 });
 
-frame.element.getAttribute("sandbox"); // => "allow-scripts"
-frame.element.title; // => "Tap each picture to reveal it."
-await frame.destroy();
-frame.element.isConnected; // => false
+// The player reads the module resolution file of the package through `fetch`, from the asset gate.
+const resolution = '{"waitSeconds": 60, "paths": {"tap": "modules/tap"}}';
+const host = document.createElement("div");
+document.body.append(host);
+const mounted = mountItem(host, {
+  client,
+  files: {
+    upload: async (bytes, mimeType) => ({ reference: "file-1", mimeType }),
+    read: async () => new Uint8Array(),
+    url: (file) => `/files/${file.reference}`,
+  },
+  staticUrl: "https://assets.example/static/",
+  stylesheet: new CSSStyleSheet(),
+  fetch: async () => ({ ok: true, status: 200, text: async () => resolution }),
+});
+
+const content = host.shadowRoot.querySelector(".ak-content-host").shadowRoot;
+while (content.querySelector("iframe") === null) await new Promise((resolve) => setTimeout(resolve, 10));
+const frame = content.querySelector("iframe");
+frame.getAttribute("sandbox"); // => "allow-scripts"
+frame.title; // => "Interactive question"
+mounted.destroy();
+host.remove();
 ```
 
 ## Serving the frame
@@ -101,11 +103,12 @@ no CSP header. A header can only restrict the frame further.
 The page that mounts the player needs the origin of `staticUrl` in the `frame-src` of its content security policy. That
 also keeps a module from navigating its own frame to another site.
 
-## Options
+## What the frame gets
 
-`mountPciFrame(parent, options)` appends the `iframe` to `parent` and returns a `PciFrame`. It throws `DataError` when
-`parent` is not an element, an option is not valid, the interaction names no module to load, a module has no location, or a
-module in the package is on an origin that the frame loads no scripts from.
+The mounts build the frame from the view and the options of the mount, and no host calls the frame by hand. It throws
+`DataError` when the interaction names no module to load, a module has no location, or a module in the package is on an
+origin that the frame loads no scripts from. The mount reports it through `hooks.onError` and shows the notice that the
+interaction could not start.
 
 | Option              | Type                              | Meaning                                                                                                                                    |
 | ------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -119,14 +122,14 @@ module in the package is on an origin that the frame loads no scripts from.
 | `prompt`            | `string \| null`                  | The text of the interaction's prompt, which names the frame                                                                                |
 | `markup`            | `string`                          | The HTML of `qti-interaction-markup`, with the URLs in it resolved                                                                         |
 | `stylesheets`       | `string[]`                        | URLs of the item's stylesheets, loaded after `player.css`                                                                                  |
-| `status`            | `PciStatus`                       | `interacting`, `suspended`, `closed`, `solution` or `review`; the interaction is not to accept input in the last three                     |
+| `status`            | one of the five statuses          | `interacting`, `suspended`, `closed`, `solution` or `review`; the interaction is not to accept input in the last three                     |
 | `state`             | `string \| null`                  | The state that `getState` gave before, to restore. Default: `null`                                                                         |
-| `presentation`      | `Presentation`                    | The look that the candidate's supports ask for, from `resolvePresentation` ([supports](supports.md)). Default: none                        |
-| `response`          | `PciVariable`                     | The response variable the interaction is bound to, with its value                                                                          |
-| `templateVariables` | `Map<string, PciVariable>`        | The template variables bound to the interaction, by identifier. Default: empty                                                             |
-| `contextVariables`  | `Map<string, PciVariable>`        | The context variables bound to it, by identifier. Default: empty                                                                           |
-| `files`             | `PciFiles`                        | The host's storage of files, below                                                                                                         |
-| `onEvent`           | `(event: PciEvent) => void`       | Receives what the interaction does, in order                                                                                               |
+| `presentation`      | the look                          | The look that the candidate's supports ask for, from `resolvePresentation` ([supports](supports.md)). Default: none                        |
+| `response`          | a variable                        | The response variable the interaction is bound to, with its value                                                                          |
+| `templateVariables` | `Map` of variables                | The template variables bound to the interaction, by identifier. Default: empty                                                             |
+| `contextVariables`  | `Map` of variables                | The context variables bound to it, by identifier. Default: empty                                                                           |
+| `files`             | `read` and `upload`               | The host's storage of files, below                                                                                                         |
+| `onEvent`           | a function                        | Receives what the interaction does, in order                                                                                               |
 
 The type identifier, the response identifier, the `class` and the properties come from the interaction: the
 identifiers as written, the `class` as the `class` of the element that holds the markup in the frame, so that the item's
@@ -134,7 +137,7 @@ stylesheets select its markup as they do in the item, and the properties from `d
 attributes named as `dataset` names them. Maps keep names such as `__proto__` as data. A stylesheet URL is an absolute
 `http` or `https` URL, and an origin is only a scheme, a host and a port.
 
-`PciVariable` is `{ value, declaration }`: a `Value` of the runtime or `null` for NULL, and the cardinality and base type of the
+A variable is `{ value, declaration }`: a `Value` of the runtime or `null` for NULL, and the cardinality and base type of the
 variable. The value is checked against the declaration when the frame is mounted.
 
 ## Variables and files
@@ -148,12 +151,11 @@ of the runtime's codec are synchronous, so the host's storage, which is not, is 
   with `files.read(file)` and writes them inline. If `read` rejects, the interaction does not start: the event `failed`
   with the reason `files`, and the error goes to `reportError`.
 - **From the interaction.** The player reads the JSON of a response to find the inline files, stores each with
-  `files.upload(bytes, mimeType, fileName?)`, and reads it again so that each file value holds the reference that `upload`
+  `files.upload`, and reads it again so that each file value holds the reference that `upload`
   resolved with. A file that an earlier response held, byte for byte, is not stored again, since an interaction that draws
   gives the same image with every change.
 
-`PciFiles` is `{ read(file: FileValue): Promise<Uint8Array>; upload(bytes: Blob, mimeType: string, fileName?: string):
-Promise<FileValue> }`.
+The `files` are the `read` and the `upload` of the mount's `files`.
 
 A response is untrusted until `decodePciValue` has read it. JSON that is not a value of the declaration of the response
 variable, or a file whose data is not canonical base64, is dropped: the player delivers no event for it, and stores nothing. The
@@ -179,7 +181,7 @@ or the directory of the primary configuration file when every location has a pro
 stylesheets that they add, stay under the prefix that the asset gate signed for the interaction.
 
 The frame loads scripts from its own origin and from `origins` only. A location on another origin fails, and so does the
-module that needs it, with the failure `modules`. A path in the package is a location the host chooses, so `mountPciFrame`
+module that needs it, with the failure `modules`. A path in the package is a location the host chooses, so the frame
 refuses one whose URL, a relative one resolved against the base URL of the page, is on any other origin than that of
 `staticUrl` and `origins`: serve the files of the package from the asset origin, or list their origin in `origins`.
 
@@ -228,7 +230,7 @@ may honor. A `failed` reason is one of:
 | `instance` | The factory threw                                                               |
 | `files`    | The host's storage could not give the bytes of a file that the interaction gets |
 
-## The `PciFrame`
+## The frame's handle
 
 | Member                    | Meaning                                                                                       |
 | ------------------------- | --------------------------------------------------------------------------------------------- |
@@ -280,7 +282,7 @@ nothing.
 
 Everything a module sends is untrusted. The player reads a message only from the frame's window, only with the shape of
 the table above, and a response only as a value of its declaration. It sets the height of the frame to the content height the frame
-reports, between 48 and 4096 CSS pixels (`MIN_PCI_HEIGHT` and `MAX_PCI_HEIGHT`); taller content scrolls in the frame.
+reports, between 48 and 4096 CSS pixels ; taller content scrolls in the frame.
 
 A module is code of the package and its source is visible to the candidate, so it must not hold an answer key.
 
@@ -311,11 +313,10 @@ prevent.
 
 ## Errors
 
-`mountPciFrame` throws `DataError` for an option of the wrong type, a variable that does not have its declared type, a URL
-that is not absolute `http` or `https`, a base URL that does not end in `/`, an origin that is more than a scheme, a host
-and a port, an interaction that names no module to load, a module without a location, and a module in the package on an
-origin that the frame loads no scripts from. The runtime's `DataError` passes
-through unchanged. A message from the frame that fails its check, and a response that is not a value of its declaration,
+The mounts check their options once, where they read them (`staticUrl`, `origins` and `files` among them). The frame throws
+`DataError` for a variable that does not have its declared type, an interaction that names no module to load, a module
+without a location, and a module in the package on an origin that the frame loads no scripts from; the mount reports it
+through `hooks.onError`. The runtime's `DataError` passes through unchanged. A message from the frame that fails its check, and a response that is not a value of its declaration,
 are dropped, not thrown. An error of the host's storage goes to `reportError`.
 
 ## Not included
@@ -335,19 +336,17 @@ None for the protocol: the player loads modules by the configuration files of th
 
 Each file of `src/player/pci/` holds one concept.
 
-| File                | Concept                                                                       |
-| ------------------- | ----------------------------------------------------------------------------- |
-| `check-options.ts`  | The check of the options of a frame                                           |
-| `csp.ts`            | The content security policy of a frame                                        |
-| `describe-frame.ts` | The title of a frame and the message that starts it                           |
-| `files.ts`          | Variables and files: encoding and decoding                                    |
-| `host.ts`           | `mountPciFrame`                                                               |
-| `index.ts`          | The public API                                                                |
-| `internal.ts`       | Helpers that other folders and tests share, which the package does not export |
-| `modules.ts`        | Locating the modules of an interaction                                        |
-| `options.ts`        | The events and the options of a frame                                         |
-| `protocol.ts`       | The messages between the player and the frame                                 |
-| `read-message.ts`   | Reading a message of the frame                                                |
+| File                | Concept                                                                         |
+| ------------------- | ------------------------------------------------------------------------------- |
+| `csp.ts`            | The content security policy of a frame                                          |
+| `describe-frame.ts` | The title of a frame and the message that starts it                             |
+| `files.ts`          | Variables and files: encoding and decoding                                      |
+| `host.ts`           | The frame of an interaction                                                     |
+| `internal.ts`       | What other folders and tests use of the host, which the package does not export |
+| `modules.ts`        | Locating the modules of an interaction                                          |
+| `options.ts`        | The events and the options of a frame                                           |
+| `protocol.ts`       | The messages between the player and the frame                                   |
+| `read-message.ts`   | Reading a message of the frame                                                  |
 
 ## References
 

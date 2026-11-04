@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import { ID_MESSAGES } from "../src/messages/id/index.js";
 import { EN_MESSAGES } from "../src/messages/index.js";
+import { resolvePresentation } from "../src/player/index.js";
 import {
   MAX_PCI_HEIGHT,
   MIN_PCI_HEIGHT,
@@ -11,8 +12,7 @@ import {
   type PciEvent,
   type PciFiles,
   type PciFrameOptions,
-  resolvePresentation,
-} from "../src/player/index.js";
+} from "../src/player/pci/internal.js";
 import type { FrameTheme } from "./fixtures/commands.js";
 import {
   asset,
@@ -612,7 +612,7 @@ describe("mountPciFrame", () => {
   });
 
   describe("options", () => {
-    it("refuses a parent that is not an element, options that are not valid, and an interaction with no module", () => {
+    it("refuses an interaction with no module, and leaves no frame behind", () => {
       const parent = document.createElement("div");
       const options: PciFrameOptions = {
         staticUrl: `${asset}/static/`,
@@ -629,11 +629,6 @@ describe("mountPciFrame", () => {
         files: memoryFiles().files,
         onEvent: () => undefined,
       };
-      expect(() => mountPciFrame(JSON.parse("null"), options)).toThrow("The parent must be an element, found null.");
-      expect(() => mountPciFrame(parent, JSON.parse('{"staticUrl":"x"}'))).toThrow(/staticUrl/u);
-      expect(() => mountPciFrame(parent, { ...options, staticUrl: "https://cdn.example/static" })).toThrow(
-        'The option staticUrl must end in "/"',
-      );
       expect(() => mountPciFrame(parent, { ...options, configuration: {} })).toThrow(
         'The module "simple" has no location',
       );

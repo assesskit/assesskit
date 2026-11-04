@@ -10,7 +10,6 @@ export * from "./delivery/index.js";
 export * from "./elements/index.js";
 export type { LtiLogin } from "./lti-frame/index.js";
 export * from "./math/index.js";
-export * from "./pci/index.js";
 export * from "./rating/index.js";
 export * from "./roots/index.js";
 export * from "./speech/index.js";

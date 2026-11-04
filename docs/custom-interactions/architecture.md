@@ -18,7 +18,7 @@ flowchart LR
     char["modules/characters/5341.js<br/>a character's strokes"]
   end
   subgraph page["The candidate's page"]
-    player["@assesskit/player<br/>mountPciFrame"]
+    player["@assesskit/player<br/>mountItem, mountDelivery"]
     frame["Frame: sandboxed, no network<br/>RequireJS loads the module"]
   end
   ids --> item

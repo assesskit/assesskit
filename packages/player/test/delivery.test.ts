@@ -12,6 +12,7 @@ import {
   REFUSAL_MESSAGES,
   spokenText,
 } from "../src/player/delivery/internal.js";
+import { resolveItemSettings } from "../src/player/delivery/settings.js";
 import { REFUSAL_REASONS } from "../src/protocol/index.js";
 import { examDefinition, examFiles, packageOf } from "./exam-fixture.js";
 
@@ -206,6 +207,13 @@ describe("REFUSAL_MESSAGES", () => {
       for (const text of texts) expect(text.trim()).not.toBe("");
       expect(new Set(texts).size).toBe(texts.length);
     }
+  });
+});
+
+describe("resolveItemSettings", () => {
+  it("gives the frames of the interactions the origins as URL.origin writes them, so that no path or directive reaches their policy", () => {
+    const options = JSON.parse('{"origins":["https://cdn.example/a;script-src *","HTTP://Other.Example:80/"]}');
+    expect(resolveItemSettings(options).origins).toEqual(["https://cdn.example", "http://other.example"]);
   });
 });
 

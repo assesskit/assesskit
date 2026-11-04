@@ -6,10 +6,9 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES } from "../src/index.js";
 import { ID_MESSAGES } from "../src/messages/id/index.js";
-import type { PciFiles, PciFrameOptions } from "../src/player/pci/index.js";
+import type { PciFiles, PciFrameOptions } from "../src/player/pci/internal.js";
 import {
   buildFrameCsp,
-  checkPciFrameOptions,
   checkVariable,
   createResponseDecoder,
   describeFrame,
@@ -395,7 +394,7 @@ describe("pciModules", () => {
   });
 });
 
-/** The smallest options that `checkPciFrameOptions` accepts. */
+/** The smallest options of a frame. */
 const MINIMAL: PciFrameOptions = {
   staticUrl: "https://assets.example/static/",
   messages: EN_MESSAGES,
@@ -411,113 +410,6 @@ const MINIMAL: PciFrameOptions = {
   files: memoryFiles().files,
   onEvent: () => undefined,
 };
-
-/** Calls `checkPciFrameOptions` with the options changed, as plain JavaScript passes them. */
-const check = (changes: Readonly<Record<string, unknown>>): void => checkPciFrameOptions({ ...MINIMAL, ...changes });
-
-describe("checkPciFrameOptions", () => {
-  it("accepts the smallest options, and the options with every optional one", () => {
-    expect(() => checkPciFrameOptions(MINIMAL)).not.toThrow();
-    expect(() =>
-      check({
-        origins: ["https://cdn.example", "http://localhost:8080"],
-        templateVariables: new Map([["X", { value: buildSingle("integer", 1), declaration: INTEGER }]]),
-        contextVariables: new Map(),
-        state: "{}",
-        prompt: "Tap the picture.",
-      }),
-    ).not.toThrow();
-  });
-
-  it("rejects options that are not an object, and an option that is not known", () => {
-    for (const text of ["null", "[]", '"x"']) {
-      expect(() => checkPciFrameOptions(json(text)), text).toThrow(/^The options must be an object, found /);
-    }
-    expect(() => check({ origin: "https://cdn.example" })).toThrow(
-      /^The options has the properties "staticUrl", .* found "origin"\.$/,
-    );
-    expect(() => check({ modules: {} })).toThrow(/found "modules"\.$/);
-  });
-
-  it("rejects a static URL that is not an absolute http URL ending in a slash", () => {
-    expect(() => check({ staticUrl: "https://assets.example/static" })).toThrow(
-      new DataError('The option staticUrl must end in "/", found "https://assets.example/static".'),
-    );
-    expect(() => check({ staticUrl: "/static/" })).toThrow(
-      /^The option staticUrl must be an absolute http or https URL/,
-    );
-    expect(() => check({ staticUrl: "javascript:alert(1)//" })).toThrow(
-      /^The option staticUrl must be an absolute http or https URL/,
-    );
-    expect(() => check({ staticUrl: json("5") })).toThrow("The option staticUrl must be a string, found 5.");
-  });
-
-  it("rejects an origin that is more than a scheme, a host and a port", () => {
-    for (const origin of [
-      "https://cdn.example/",
-      "https://cdn.example/path",
-      "cdn.example",
-      "ftp://cdn.example",
-      "*",
-    ]) {
-      expect(() => check({ origins: [origin] }), origin).toThrow(DataError);
-    }
-    expect(() => check({ origins: [json("5")] })).toThrow("An origin must be a string, found 5.");
-    expect(() => check({ origins: json("{}") })).toThrow("The option origins must be an array, found an object.");
-    expect(() => check({ origins: json("null") })).toThrow("The option origins must be an array, found null.");
-  });
-
-  it("rejects an interaction that is not a portable custom interaction", () => {
-    expect(() => check({ interaction: json("null") })).toThrow("The option interaction must be an object, found null.");
-    expect(() => check({ interaction: json('{"kind":"choice-interaction"}') })).toThrow(
-      'The option interaction must be a qti-portable-custom-interaction, found the kind "choice-interaction".',
-    );
-    expect(() => check({ interaction: json('{"kind":"portable-custom-interaction"}') })).toThrow(
-      "The custom-interaction-type-identifier of the interaction must be a non-empty string",
-    );
-    expect(() => check({ configuration: json("null") })).toThrow(
-      "The option configuration must be an object, found null.",
-    );
-    expect(() => check({ assets: json("null") })).toThrow("The option assets must be a function, found null.");
-  });
-
-  it("rejects the variables, the state and the status of the wrong type", () => {
-    expect(() => check({ response: json("null") })).toThrow(
-      "A variable must be an object with a value and a declaration",
-    );
-    expect(() => check({ response: { value: buildSingle("string", "a"), declaration: INTEGER } })).toThrow(DATA_ERROR);
-    expect(() => check({ templateVariables: json("{}") })).toThrow(
-      "The option templateVariables must be a Map, found an object.",
-    );
-    expect(() => check({ templateVariables: json("null") })).toThrow("must be a Map, found null.");
-    expect(() => check({ contextVariables: new Map([["", { value: null, declaration: INTEGER }]]) })).toThrow(
-      "A name in The option contextVariables",
-    );
-    expect(() => check({ contextVariables: new Map([["X", json("5")]]) })).toThrow("A variable must be an object");
-    expect(() => check({ state: json("5") })).toThrow("The option state must be a string, found 5.");
-    expect(() => check({ state: json("null") })).not.toThrow();
-    expect(() => check({ status: "paused" })).toThrow(
-      'The option status must be "interacting", "suspended", "closed", "solution" or "review", found "paused".',
-    );
-  });
-
-  it("rejects a prompt, a language, markup, stylesheets, messages, files and a listener of the wrong type", () => {
-    expect(() => check({ prompt: json("5") })).toThrow("The option prompt must be a string, found 5.");
-    expect(() => check({ prompt: undefined })).toThrow("The option prompt must be a string, found undefined.");
-    expect(() => check({ language: "" })).toThrow("The option language must be a non-empty string");
-    expect(() => check({ markup: json("null") })).toThrow("The option markup must be a string, found null.");
-    expect(() => check({ stylesheets: ["item.css"] })).toThrow(
-      /^A stylesheet of the option stylesheets must be an absolute/,
-    );
-    expect(() => check({ messages: json("null") })).toThrow("The option messages must be an object, found null.");
-    expect(() => check({ messages: {} })).toThrow("The message interactiveQuestion must be a non-empty string");
-    expect(() => check({ files: json("null") })).toThrow("The option files must be an object");
-    expect(() => check({ files: { read: () => 1 } })).toThrow(
-      "The function upload of the option files must be a function",
-    );
-    expect(() => check({ onEvent: json("null") })).toThrow("The option onEvent must be a function, found null.");
-  });
-});
 
 describe("describeFrame", () => {
   it("gives the interaction its identifiers, class, properties and modules, from the interaction itself", async () => {
