@@ -13,10 +13,10 @@ Hanzi Writer 3.7.3 (MIT).
 ## Quick start
 
 ```ts
-import { INTERACTION_TYPES } from "@assesskit/custom-interactions";
+import { PCI_TYPE_IDENTIFIERS } from "@assesskit/custom-interactions";
 import { readModuleFiles } from "@assesskit/custom-interactions/node";
 
-INTERACTION_TYPES["math-entry"]; // => "urn:fdc:assesskit.wakan.dev:2026:math-entry"
+PCI_TYPE_IDENTIFIERS["math-entry"]; // => "urn:fdc:assesskit.wakan.dev:2026:math-entry"
 const files = await readModuleFiles("math-entry");
 [...files.keys()][0]; // => "modules/math-entry.js"
 ```
@@ -31,7 +31,7 @@ An author's tool puts the module into the item's package, and the player's frame
 
 ```mermaid
 flowchart LR
-  tool["An author's tool<br/>INTERACTION_TYPES, readModuleFiles,<br/>writeCharacterModule"] --> pkg["The item's package<br/>item.xml, modules/*.js"]
+  tool["An author's tool<br/>PCI_TYPE_IDENTIFIERS, readModuleFiles,<br/>writeCharacterModule"] --> pkg["The item's package<br/>item.xml, modules/*.js"]
   pkg --> frame["The player's frame<br/>loads the module"]
   frame -- "the response" --> rp["Response processing<br/>@assesskit/runtime/operators"]
 ```
@@ -40,7 +40,7 @@ flowchart LR
 
 | Import                                     | Contents                                                                                                         |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `@assesskit/custom-interactions`           | `INTERACTION_TYPES`, the type identifier of each interaction by its name, and `InteractionName`                  |
+| `@assesskit/custom-interactions`           | `PCI_TYPE_IDENTIFIERS`, the type identifier of each interaction by its name, and `InteractionName`               |
 | `@assesskit/custom-interactions/node`      | `readModuleFiles`, `ReadModuleFilesOptions`: the files of an interaction's module, by their paths in the package |
 | `@assesskit/custom-interactions/modules/*` | The built modules and the files beside them, for a tool that copies them                                         |
 

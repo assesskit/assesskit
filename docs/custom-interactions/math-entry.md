@@ -16,7 +16,7 @@ flowchart LR
 
 | Export                                                | Does                                                                                     |
 | ----------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `INTERACTION_TYPES["math-entry"]`                     | The `custom-interaction-type-identifier`, `urn:fdc:assesskit.wakan.dev:2026:math-entry`. |
+| `PCI_TYPE_IDENTIFIERS["math-entry"]`                  | The `custom-interaction-type-identifier`, `urn:fdc:assesskit.wakan.dev:2026:math-entry`. |
 | `readModuleFiles("math-entry", options?)` of `/node`  | The module, MathLive's fonts and their license, by their paths in the package.           |
 | `modules/math-entry.js`, `modules/math-entry/fonts/*` | The same files, as files of the npm package, for a tool that copies them.                |
 
@@ -25,7 +25,7 @@ flowchart LR
 Write an item that asks for an expression and scores it by its key, and a package that carries the module:
 
 ```ts
-import { INTERACTION_TYPES } from "@assesskit/custom-interactions";
+import { PCI_TYPE_IDENTIFIERS } from "@assesskit/custom-interactions";
 import { readModuleFiles } from "@assesskit/custom-interactions/node";
 import { readAsi, writeAsi } from "@assesskit/runtime/asi";
 import { createScoringOperators } from "@assesskit/runtime/operators";
@@ -37,7 +37,7 @@ const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/x
     identifier="expand" title="Expand" adaptive="false" time-dependent="false">
   <qti-item-body>
     <qti-portable-custom-interaction response-identifier="RESPONSE" module="math-entry"
-        custom-interaction-type-identifier="${INTERACTION_TYPES["math-entry"]}">
+        custom-interaction-type-identifier="${PCI_TYPE_IDENTIFIERS["math-entry"]}">
       <qti-prompt>Expand 2(x + 1).</qti-prompt>
       <qti-interaction-modules>
         <qti-interaction-module id="math-entry" primary-path="modules/math-entry"/>
@@ -80,7 +80,7 @@ validatePackage(pkg, { customOperators: createScoringOperators() }); // => []
 
 | Part                                  | Value                                                                                                                                      |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `custom-interaction-type-identifier`  | `urn:fdc:assesskit.wakan.dev:2026:math-entry`, `INTERACTION_TYPES["math-entry"]`                                                           |
+| `custom-interaction-type-identifier`  | `urn:fdc:assesskit.wakan.dev:2026:math-entry`, `PCI_TYPE_IDENTIFIERS["math-entry"]`                                                        |
 | `module`, `qti-interaction-module id` | `math-entry`, the id that the module defines                                                                                               |
 | `primary-path`                        | The module's path in the package without `.js`, from the root of the package: `modules/math-entry` with `readModuleFiles`'s default folder |
 | Response, an answer                   | `cardinality="single" base-type="string"`: the field's LaTeX; NULL while the field is empty                                                |

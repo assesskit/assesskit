@@ -25,7 +25,7 @@ flowchart LR
 | Size of math entry     | 228,053 bytes gzip and 264,499 bytes of fonts | `test/size-budgets.ts`, held by `size.test.ts` to budgets of 285,500 and 331,000 bytes                                     |
 | Size of stroke writing | 13,159 bytes gzip                             | `test/size-budgets.ts`, held to a budget of 16,500 bytes                                                                   |
 | Libraries              | MathLive 0.111.1 and Hanzi Writer 3.7.3, MIT  | `package.json` of the package, pinned exactly; the license of each heads its module                                        |
-| Interactions           | 2                                             | `INTERACTION_TYPES` of `src/interaction-types.ts`                                                                          |
+| Interactions           | 2                                             | `PCI_TYPE_IDENTIFIERS` of `src/interaction-types.ts`                                                                       |
 
 What each layer holds is in [architecture](architecture.md#tests): the keys of the virtual keyboard of math entry and its shortcuts write
 LaTeX that the reader of `@assesskit/runtime/operators` reads; the built module runs in the frame with real keys and taps, and the

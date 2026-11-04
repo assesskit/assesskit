@@ -5,5 +5,5 @@
  *
  * @module @assesskit/custom-interactions
  */
-export { INTERACTION_TYPES, type InteractionName } from "./interaction-types.js";
+export { type InteractionName, PCI_TYPE_IDENTIFIERS } from "./interaction-types.js";
 export { type CharacterStrokes, writeCharacterModule } from "./write-character-module.js";

@@ -8,7 +8,7 @@ the identifiers and a reader of the module files for an author's tool; the modul
 ```mermaid
 flowchart LR
   subgraph tool["An author's tool, in Node.js"]
-    ids["INTERACTION_TYPES"]
+    ids["PCI_TYPE_IDENTIFIERS"]
     read["readModuleFiles"]
     write
   end
@@ -47,7 +47,7 @@ host that uses one interaction still has the others' files on disk.
 
 | Path                                       | Holds                                                                                                                              |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `src/index.ts`, `src/interaction-types.ts` | The root entry: `INTERACTION_TYPES` and `InteractionName`                                                                          |
+| `src/index.ts`, `src/interaction-types.ts` | The root entry: `PCI_TYPE_IDENTIFIERS` and `InteractionName`                                                                       |
 | `src/node/`                                | `@assesskit/custom-interactions/node`: `readModuleFiles`                                                                           |
 | `src/frame/`                               | What the modules share in the frame: `defineInteraction`, `notifyChange`, the configuration of the binding                         |
 | `src/<interaction>/`                       | The module of an interaction: `module.ts`, its entry, and the files it imports                                                     |

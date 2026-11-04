@@ -12,7 +12,7 @@ export type InteractionName = "math-entry" | "stroke-writing";
  * @see {@link https://www.rfc-editor.org/rfc/rfc4198 | RFC 4198, A Uniform Resource Name (URN) Namespace for Federated Content}
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, portable custom interactions}
  */
-export const INTERACTION_TYPES: Readonly<Record<InteractionName, string>> = {
+export const PCI_TYPE_IDENTIFIERS: Readonly<Record<InteractionName, string>> = {
   "math-entry": "urn:fdc:assesskit.wakan.dev:2026:math-entry",
   "stroke-writing": "urn:fdc:assesskit.wakan.dev:2026:stroke-writing",
 };

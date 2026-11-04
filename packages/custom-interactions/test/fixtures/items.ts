@@ -1,7 +1,7 @@
 import { type AssessmentItem, readAsi, writeAsi } from "@assesskit/runtime/asi";
 import type { ExpressionKey } from "@assesskit/runtime/keys";
 import { compileScoring } from "@assesskit/runtime/scoring";
-import { INTERACTION_TYPES } from "../../src/index.js";
+import { PCI_TYPE_IDENTIFIERS } from "../../src/index.js";
 
 const NS = 'xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"';
 
@@ -16,7 +16,7 @@ function itemOf(xml: string): AssessmentItem {
 function mathEntryBody(prompt: string, attributes: string): string {
   return `<qti-item-body>
     <qti-portable-custom-interaction response-identifier="RESPONSE" module="math-entry"
-        custom-interaction-type-identifier="${INTERACTION_TYPES["math-entry"]}" ${attributes}>
+        custom-interaction-type-identifier="${PCI_TYPE_IDENTIFIERS["math-entry"]}" ${attributes}>
       <qti-prompt>${prompt}</qti-prompt>
       <qti-interaction-modules>
         <qti-interaction-module id="math-entry" primary-path="modules/math-entry"/>
@@ -122,7 +122,7 @@ export function writeStrokeWritingItem(prompt: string, attributes = ""): string 
       </qti-outcome-declaration>
       <qti-item-body>
         <qti-portable-custom-interaction response-identifier="RESPONSE" module="stroke-writing"
-            custom-interaction-type-identifier="${INTERACTION_TYPES["stroke-writing"]}" ${attributes}>
+            custom-interaction-type-identifier="${PCI_TYPE_IDENTIFIERS["stroke-writing"]}" ${attributes}>
           <qti-prompt>${prompt}</qti-prompt>
           <qti-interaction-modules>
             <qti-interaction-module id="stroke-writing" primary-path="modules/stroke-writing"/>

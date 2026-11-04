@@ -4,7 +4,7 @@
  * module resolution names `stroke-writing-character`, and registers the interaction with the communication bridge.
  */
 import { defineInteraction } from "../frame/internal.js";
-import { INTERACTION_TYPES } from "../interaction-types.js";
+import { PCI_TYPE_IDENTIFIERS } from "../interaction-types.js";
 import { createStrokeWriting } from "./interaction.js";
 
-defineInteraction(INTERACTION_TYPES["stroke-writing"], ["stroke-writing-character"], createStrokeWriting);
+defineInteraction(PCI_TYPE_IDENTIFIERS["stroke-writing"], ["stroke-writing-character"], createStrokeWriting);

@@ -3,7 +3,7 @@
  * runs in the frame of a portable custom interaction and registers the interaction with the communication bridge.
  */
 import { defineInteraction } from "../frame/internal.js";
-import { INTERACTION_TYPES } from "../interaction-types.js";
+import { PCI_TYPE_IDENTIFIERS } from "../interaction-types.js";
 import { createMathEntry } from "./interaction.js";
 
-defineInteraction(INTERACTION_TYPES["math-entry"], [], createMathEntry);
+defineInteraction(PCI_TYPE_IDENTIFIERS["math-entry"], [], createMathEntry);

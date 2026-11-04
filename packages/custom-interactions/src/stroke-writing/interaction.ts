@@ -1,7 +1,7 @@
 import { DataError } from "@assesskit/runtime/errors";
 import HanziWriter, { type CharacterJson } from "hanzi-writer";
 import { type InstanceArguments, notifyChange, type PciInstance, takesInput } from "../frame/internal.js";
-import { INTERACTION_TYPES } from "../interaction-types.js";
+import { PCI_TYPE_IDENTIFIERS } from "../interaction-types.js";
 
 /** The class of the drawing area, which an item's stylesheet may style. */
 const AREA_CLASS = "stroke-writing-area";
@@ -155,7 +155,7 @@ export function createStrokeWriting(args: InstanceArguments): PciInstance {
   dom.append(area);
 
   const instance: PciInstance = {
-    typeIdentifier: INTERACTION_TYPES["stroke-writing"],
+    typeIdentifier: PCI_TYPE_IDENTIFIERS["stroke-writing"],
     getResponse: () => responseOf(progress),
     getState: () => JSON.stringify(progress),
     oncompleted: () => writer.cancelQuiz(),

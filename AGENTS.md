@@ -379,7 +379,7 @@ tests of every engine, and waits for the next change to that part.
   `lint.test.ts`, a subpath in `package.json` `exports` with its budget in `test/size-budgets.ts` and in `typedoc.json` when the host
   imports it, a test file and a guide in `docs/`.
 - A custom interaction: a folder in `packages/custom-interactions/src/` with `module.ts`, its type identifier in
-  `INTERACTION_TYPES`, its entry in `MODULES` of `scripts/build-modules.ts` and its budget in `test/size-budgets.ts`, its rules
+  `PCI_TYPE_IDENTIFIERS`, its entry in `MODULES` of `scripts/build-modules.ts` and its budget in `test/size-budgets.ts`, its rules
   in `scripts/rules/custom-interactions.ts`, a guide in `docs/custom-interactions/`, a browser test in the player's frame and
   its items in `items.xsd.test.ts`.
 - A check shared by modules: of a value of a JavaScript type in `checks.ts` when the player uses it, else in `checks-internal.ts`; of a value that a module defines, in the `internal.ts` of

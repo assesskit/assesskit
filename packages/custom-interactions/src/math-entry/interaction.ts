@@ -1,7 +1,7 @@
 import { DataError } from "@assesskit/runtime/errors";
 import { initVirtualKeyboardInCurrentBrowsingContext, MathfieldElement } from "mathlive";
 import { type InstanceArguments, notifyChange, type PciInstance, takesInput } from "../frame/internal.js";
-import { INTERACTION_TYPES } from "../interaction-types.js";
+import { PCI_TYPE_IDENTIFIERS } from "../interaction-types.js";
 import { buildKeyboardLayouts, type DecimalSeparator } from "./keyboard.js";
 import { type StepWords, selectStepWords } from "./messages.js";
 import { INLINE_SHORTCUTS } from "./shortcuts.js";
@@ -104,7 +104,7 @@ export function createMathEntry(args: InstanceArguments): PciInstance {
   };
 
   const instance: PciInstance = {
-    typeIdentifier: INTERACTION_TYPES["math-entry"],
+    typeIdentifier: PCI_TYPE_IDENTIFIERS["math-entry"],
     getResponse: () => {
       const values = fields.map((field) => field.value).filter((value) => value !== "");
       if (steps) return { list: values.length === 0 ? null : { string: values } };

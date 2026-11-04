@@ -18,7 +18,7 @@ flowchart LR
 
 | Export                                                   | Does                                                                                                |
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `INTERACTION_TYPES["stroke-writing"]`                    | The `custom-interaction-type-identifier`, `urn:fdc:assesskit.wakan.dev:2026:stroke-writing`.        |
+| `PCI_TYPE_IDENTIFIERS["stroke-writing"]`                 | The `custom-interaction-type-identifier`, `urn:fdc:assesskit.wakan.dev:2026:stroke-writing`.        |
 | `writeCharacterModule(character, strokes)`               | The AMD module of a character, which the item's module resolution names `stroke-writing-character`. |
 | `CharacterStrokes`                                       | The reference strokes, in the form of Hanzi Writer's data: `strokes`, `medians` and `radStrokes`.   |
 | `readModuleFiles("stroke-writing", options?)` of `/node` | The module, by its path in the package.                                                             |
@@ -28,10 +28,10 @@ flowchart LR
 Write the module of a character, and read the module of the interaction, for an item's package:
 
 ```ts
-import { INTERACTION_TYPES, writeCharacterModule } from "@assesskit/custom-interactions";
+import { PCI_TYPE_IDENTIFIERS, writeCharacterModule } from "@assesskit/custom-interactions";
 import { readModuleFiles } from "@assesskit/custom-interactions/node";
 
-INTERACTION_TYPES["stroke-writing"]; // => "urn:fdc:assesskit.wakan.dev:2026:stroke-writing"
+PCI_TYPE_IDENTIFIERS["stroke-writing"]; // => "urn:fdc:assesskit.wakan.dev:2026:stroke-writing"
 
 // One horizontal stroke, as an author draws it in the 1024 box of Hanzi Writer's data.
 const character = writeCharacterModule("一", {
@@ -70,7 +70,7 @@ The package holds both, at the paths that the item names:
 
 | Part                                                   | Value                                                                                                                                                             |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `custom-interaction-type-identifier`                   | `urn:fdc:assesskit.wakan.dev:2026:stroke-writing`, `INTERACTION_TYPES["stroke-writing"]`                                                                          |
+| `custom-interaction-type-identifier`                   | `urn:fdc:assesskit.wakan.dev:2026:stroke-writing`, `PCI_TYPE_IDENTIFIERS["stroke-writing"]`                                                                       |
 | `module`, `qti-interaction-module id`                  | `stroke-writing`, the id that the module defines                                                                                                                  |
 | `qti-interaction-module id="stroke-writing-character"` | The character's module, which `writeCharacterModule` writes; its `primary-path` names the file without `.js`, from the root of the package                        |
 | Response                                               | `cardinality="record"`: `strokes`, the strokes written so far, and `mistakes`, the strokes drawn that did not match, both `integer`; NULL before the first stroke |

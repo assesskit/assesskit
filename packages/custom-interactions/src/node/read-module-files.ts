@@ -10,7 +10,7 @@ import {
   describe,
 } from "@assesskit/runtime/checks";
 import { AssesskitError, DataError } from "@assesskit/runtime/errors";
-import { INTERACTION_TYPES, type InteractionName } from "../interaction-types.js";
+import { type InteractionName, PCI_TYPE_IDENTIFIERS } from "../interaction-types.js";
 
 /** The folder of the built modules: `modules/` of the package, which `src/node/` and `dist/node/` both reach as `../../modules/`. */
 const MODULES = fileURLToPath(new URL("../../modules/", import.meta.url));
@@ -84,8 +84,8 @@ export async function readModuleFiles(
   name: InteractionName,
   options: ReadModuleFilesOptions = {},
 ): Promise<ReadonlyMap<string, Uint8Array>> {
-  if (typeof name !== "string" || !Object.hasOwn(INTERACTION_TYPES, name)) {
-    const names = Object.keys(INTERACTION_TYPES).map((known) => JSON.stringify(known));
+  if (typeof name !== "string" || !Object.hasOwn(PCI_TYPE_IDENTIFIERS, name)) {
+    const names = Object.keys(PCI_TYPE_IDENTIFIERS).map((known) => JSON.stringify(known));
     throw new DataError(`The name of an interaction must be one of ${names.join(", ")}, found ${describe(name)}.`);
   }
   checkRecord(options, "The options must be an object");
