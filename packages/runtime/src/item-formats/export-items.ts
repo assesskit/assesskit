@@ -38,7 +38,7 @@ export function planExport(items: readonly BankItem[], options: WriteItemsOption
   const { customOperators, limits = {} } = parseWith(writeItemsOptionsSchema, options, "The options");
   const context = {
     operators: customOperators ?? new Map<string, CustomOperator>(),
-    limits: resolveItemFormatLimits(limits),
+    limits: resolveItemFormatLimits(limits, ["maxAnswers"]),
   };
   const entries: ExportEntry[] = [];
   const losses: ConversionLoss[] = [];

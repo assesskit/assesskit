@@ -64,13 +64,17 @@ const NAMES: readonly (keyof ItemFormatLimits)[] = [
 /**
  * Applies the defaults to the limits that a caller sets.
  *
- * @throws `DataError` when `limits` is not an object, names an unknown limit or a limit is not a positive integer.
+ * @param names - The limits that the caller may set: all of them for a reader, `maxAnswers` alone for a writer.
+ * @throws `DataError` when `limits` is not an object, names a limit not in `names` or a limit is not a positive integer.
  */
-export function resolveItemFormatLimits(limits: unknown): ItemFormatLimits {
+export function resolveItemFormatLimits(
+  limits: unknown,
+  names: readonly (keyof ItemFormatLimits)[] = NAMES,
+): ItemFormatLimits {
   checkRecord(limits, `The option limits must be an object, found ${describe(limits)}`);
-  checkProperties(limits, "The option limits", NAMES);
+  checkProperties(limits, "The option limits", names);
   const resolved: Record<keyof ItemFormatLimits, number> = { ...DEFAULT_ITEM_FORMAT_LIMITS };
-  for (const name of NAMES) {
+  for (const name of names) {
     const value = limits[name];
     if (value === undefined) continue;
     checkPositiveInteger(value, `The limit ${name}`);

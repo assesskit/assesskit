@@ -510,6 +510,22 @@ describe("writeGift and the items that do not convert", () => {
     expect(writeGift(items, WRITE_OPTIONS).text).toContain("=Paris\n");
   });
 
+  it("holds a writer to the limit maxAnswers, the only limit that it takes", () => {
+    const item = qtiItem(
+      `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"><qti-correct-response><qti-value>A</qti-value></qti-correct-response></qti-response-declaration>${SCORE}<qti-item-body><qti-choice-interaction response-identifier="RESPONSE" max-choices="1" shuffle="false"><qti-simple-choice identifier="A">a</qti-simple-choice><qti-simple-choice identifier="B">b</qti-simple-choice></qti-choice-interaction></qti-item-body><qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct.xml"/>`,
+    );
+    expect(writeGift([{ item }], { limits: { maxAnswers: 2 } }).text).toContain("=a");
+    const { losses } = writeGift([{ item }], { limits: { maxAnswers: 1 } });
+    expect(losses.map(({ omitted, reason }) => [omitted, reason])).toStrictEqual([[true, "item"]]);
+    expect(losses[0]?.message).toBe("The interaction has 2 choices, over the limit maxAnswers of 1.");
+    expect(
+      writeMoodleXml([{ item }], { limits: { maxAnswers: 1 } }).losses.map(({ omitted }) => omitted),
+    ).toStrictEqual([true]);
+    const wrong = JSON.parse('{"limits": {"maxBytes": 5}}');
+    expect(() => writeGift([{ item }], wrong)).toThrow("maxBytes");
+    expect(() => writeMoodleXml([{ item }], wrong)).toThrow("maxBytes");
+  });
+
   it("writes a credit outside Moodle's grades as the nearest grade, with a loss", () => {
     const item = qtiItem(
       `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"><qti-mapping default-value="0"><qti-map-entry map-key="A" mapped-value="1"/><qti-map-entry map-key="B" mapped-value="0.35"/></qti-mapping></qti-response-declaration>${SCORE}<qti-item-body><qti-choice-interaction response-identifier="RESPONSE" max-choices="1" shuffle="true"><qti-simple-choice identifier="A">a</qti-simple-choice><qti-simple-choice identifier="B">b</qti-simple-choice></qti-choice-interaction></qti-item-body><qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/map_response.xml"/>`,

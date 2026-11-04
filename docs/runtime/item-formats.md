@@ -182,7 +182,7 @@ identifier or name, `omitted`, and a `message` that says what the result holds i
 | `trueFalseLabels` | the readers             | The labels of the choices of a true-false question, which Moodle draws in its user's language                                | `{ true: "True", false: "False" }`   |
 | `customOperators` | the writers             | The custom operators that the items' processing calls: `createScoringOperators()` for the items that `compileScoring` writes | none                                 |
 | `files`           | `writeMoodleXml`        | The files that the items' content names, by the reference as written, which the questions embed                              | none: a reference stays, with a loss |
-| `limits`          | the readers and writers | The limits below, each replacing its default                                                                                 | `DEFAULT_ITEM_FORMAT_LIMITS`         |
+| `limits`          | the readers and writers | The limits below, each replacing its default; a writer takes `maxAnswers` alone and refuses any other                        | `DEFAULT_ITEM_FORMAT_LIMITS`         |
 
 ## Limits
 

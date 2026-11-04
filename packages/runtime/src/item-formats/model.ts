@@ -103,11 +103,12 @@ export interface WriteItemsOptions {
    */
   readonly customOperators?: ReadonlyMap<string, CustomOperator>;
   /**
-   * The limits of the items: `maxAnswers` bounds the choices of an interaction that a writer scores.
+   * The limits of the items: `maxAnswers` bounds the choices of an interaction that a writer scores, and is the only limit
+   * that a writer takes.
    *
    * @defaultValue `DEFAULT_ITEM_FORMAT_LIMITS`
    */
-  readonly limits?: Partial<ItemFormatLimits>;
+  readonly limits?: Partial<Pick<ItemFormatLimits, "maxAnswers">>;
 }
 
 /** The options of `writeMoodleXml`. */

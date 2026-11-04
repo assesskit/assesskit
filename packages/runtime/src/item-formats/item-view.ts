@@ -20,7 +20,7 @@ export const SAME = 1e-9;
 /** The context of the items that a writer converts. */
 export interface ConvertContext {
   readonly operators: ReadonlyMap<string, CustomOperator>;
-  readonly limits: ItemFormatLimits;
+  readonly limits: Pick<ItemFormatLimits, "maxAnswers">;
 }
 
 /** An item left out, by the reason in the message. */
