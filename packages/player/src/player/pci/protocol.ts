@@ -1,4 +1,4 @@
-import type { PciJson } from "@assesskit/runtime/pci";
+import type { JsonValue } from "@assesskit/runtime/values";
 import type { Presentation } from "../presentation/index.js";
 
 /**
@@ -110,11 +110,11 @@ export interface PciStart {
   /** The `data-*` attributes of the interaction. */
   readonly properties: ReadonlyMap<string, string>;
   /** The template variables bound to the interaction, as JSON. */
-  readonly templateVariables: ReadonlyMap<string, PciJson>;
+  readonly templateVariables: ReadonlyMap<string, JsonValue>;
   /** The context variables bound to the interaction, as JSON. */
-  readonly contextVariables: ReadonlyMap<string, PciJson>;
+  readonly contextVariables: ReadonlyMap<string, JsonValue>;
   /** The value of the response variable, as JSON. */
-  readonly boundTo: PciJson;
+  readonly boundTo: JsonValue;
   /** The look that the candidate's supports ask for, which the frame sets on its `html` element. */
   readonly presentation: Presentation;
   /** The state to restore, or `null` for a new interaction. */

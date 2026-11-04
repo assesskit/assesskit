@@ -1,15 +1,8 @@
 import { type Stats, statSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
 import { checkString } from "../checks.js";
 import { checkOptions } from "../checks-internal.js";
 import { DataError, SecurityError } from "../errors.js";
-import {
-  type Manifest,
-  openPackage,
-  type QtiPackage,
-  type ReadPackageOptions,
-  writePackage,
-} from "../package/index.js";
+import { openPackage, type QtiPackage, type ReadPackageOptions } from "../package/index.js";
 import { openZip, resolveZipLimits } from "../package/internal.js";
 import { openDirectory } from "./directory-files.js";
 import { fileSource } from "./file-source.js";
@@ -56,26 +49,4 @@ export async function readPackageFile(path: string, options: ReadPackageOptions 
     );
   }
   return openPackage(openZip(fileSource(path, stat.size), resolved), packageOptions);
-}
-
-/**
- * Writes a package as a ZIP file, as {@link writePackage} builds it. An existing file at the path is replaced.
- *
- * @param path - The path of the ZIP file to write.
- * @param manifest - The manifest, written as in `writePackage`.
- * @param files - The other files by path.
- * @throws `DataError` as {@link writePackage} does, and when the file cannot be written.
- */
-export async function writePackageFile(
-  path: string,
-  manifest: Manifest,
-  files: ReadonlyMap<string, Uint8Array>,
-): Promise<void> {
-  checkString(path, "The path");
-  const bytes = writePackage(manifest, files);
-  try {
-    await writeFile(path, bytes);
-  } catch (error) {
-    throw new DataError(`The package ${path} cannot be written: ${reasonOf(error)}`, { cause: error });
-  }
 }

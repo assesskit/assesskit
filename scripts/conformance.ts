@@ -241,7 +241,7 @@ function startTest({ runtime }: RuntimeModules, pkg: QtiPackage, href: string): 
  * Writes a package as this runtime exports it: each QTI document goes through the model, so that the validator of 1EdTech judges
  * what the writer makes and not what the package held.
  */
-async function exportPackage({ node, runtime }: RuntimeModules, pkg: QtiPackage, target: string): Promise<void> {
+function exportPackage({ runtime }: RuntimeModules, pkg: QtiPackage, target: string): void {
   const files = new Map<string, Uint8Array>();
   for (const path of pkg.paths.filter((each) => each !== MANIFEST)) {
     const bytes = pkg.file(path);
@@ -252,7 +252,7 @@ async function exportPackage({ node, runtime }: RuntimeModules, pkg: QtiPackage,
     if (path === undefined || !ASI_RESOURCES.includes(resource.type)) continue;
     files.set(path, new TextEncoder().encode(runtime.writeAsi(pkg.document(path))));
   }
-  await node.writePackageFile(target, pkg.manifest, files);
+  writeFileSync(target, runtime.writePackage(pkg.manifest, files));
 }
 
 /** Starts the tests of a package and exports it, for an input that is valid. */
@@ -269,7 +269,7 @@ async function exerciseInput(
     );
     const exported = join(EXPORTS_DIRECTORY, `${input.path.replace(/\.zip$/, "")}.zip`);
     mkdirSync(dirname(join(reports, exported)), { recursive: true });
-    await exportPackage(modules, pkg, join(reports, exported));
+    exportPackage(modules, pkg, join(reports, exported));
     return { exported, tests: tests.map((href) => startTest(modules, pkg, href)) };
   } catch (error) {
     return { failure: messageOf(error) };

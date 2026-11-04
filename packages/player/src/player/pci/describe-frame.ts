@@ -1,4 +1,5 @@
-import { derivePciProperties, type PciJson } from "@assesskit/runtime/pci";
+import { derivePciProperties } from "@assesskit/runtime/pci";
+import type { JsonValue } from "@assesskit/runtime/values";
 import { encodeVariable, type PciFiles, type PciVariable } from "./files.js";
 import { pciModules } from "./modules.js";
 import type { PciFrameOptions } from "./options.js";
@@ -18,7 +19,7 @@ export interface FrameDescription {
 async function encodeAll(
   variables: ReadonlyMap<string, PciVariable>,
   files: PciFiles,
-): Promise<ReadonlyMap<string, PciJson>> {
+): Promise<ReadonlyMap<string, JsonValue>> {
   const encoded = await Promise.all(
     [...variables].map(async ([name, variable]) => [name, await encodeVariable(variable, files)] as const),
   );

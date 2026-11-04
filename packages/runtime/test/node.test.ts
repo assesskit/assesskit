@@ -34,7 +34,6 @@ import {
   SCHEMA_FILES,
   type SchemaFile,
   validateXmlFiles,
-  writePackageFile,
 } from "../src/node/index.js";
 import { PRIMARY_SCHEMAS, pinnedSchemaDirectory, selectSchema, userCacheDirectory } from "../src/node/internal.js";
 import { parseXml } from "../src/xml/index.js";
@@ -114,9 +113,9 @@ describe("reading package files", () => {
     return target;
   }
 
-  it("reads a ZIP file that writePackageFile writes", async () => {
+  it("reads a ZIP file that writePackage writes", async () => {
     const file = join(directory, "package.zip");
-    await writePackageFile(file, MANIFEST, new Map([["a.txt", bytes("hello")]]));
+    writeFileSync(file, writePackage(MANIFEST, new Map([["a.txt", bytes("hello")]])));
     const pkg = await readPackageFile(file);
     expect(pkg.paths).toEqual(["imsmanifest.xml", "a.txt"]);
     expect(pkg.file("a.txt")).toEqual(bytes("hello"));
@@ -330,10 +329,9 @@ describe("reading package files", () => {
     expect(await limit({ maxTotalBytes: 150 })).toBe("maxTotalBytes");
     expect(await limit({})).toBeUndefined();
     const file = join(directory, "limited.zip");
-    await writePackageFile(
+    writeFileSync(
       file,
-      MANIFEST,
-      new Map([["a.txt", new Uint8Array(5000).map((_, index) => (index * 7919) % 251)]]),
+      writePackage(MANIFEST, new Map([["a.txt", new Uint8Array(5000).map((_, index) => (index * 7919) % 251)]])),
     );
     const error = await readPackageFile(file, { limits: { maxTotalBytes: 1000 } }).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(SecurityError);
@@ -359,37 +357,6 @@ describe("reading package files", () => {
     await expect(readPackageFile(JSON.parse("null"))).rejects.toThrow(DataError);
     await expect(readPackageFile(directory, JSON.parse("null"))).rejects.toThrow(DataError);
     await expect(readPackageFile(directory, JSON.parse('{"limits":{"maxEntries":-1}}'))).rejects.toThrow(DataError);
-  });
-});
-
-describe("writing package files", () => {
-  let directory: string;
-
-  beforeAll(() => {
-    directory = mkdtempSync(join(tmpdir(), "runtime-write-"));
-  });
-
-  afterAll(() => {
-    rmSync(directory, { recursive: true, force: true });
-  });
-
-  it("writes the bytes that writePackage returns and replaces an existing file", async () => {
-    const file = join(directory, "a.zip");
-    writeFileSync(file, "old");
-    const files = new Map([["a.txt", bytes("hello")]]);
-    await writePackageFile(file, MANIFEST, files);
-    expect(new Uint8Array(readFileSync(file))).toEqual(writePackage(MANIFEST, files));
-  });
-
-  it("throws DataError when the file cannot be written, the package is not valid or an argument has another type", async () => {
-    await expect(writePackageFile(join(directory, "missing", "a.zip"), MANIFEST, new Map())).rejects.toThrow(DataError);
-    await expect(writePackageFile(join(directory, "b.zip"), MANIFEST, new Map([["../x", bytes("x")]]))).rejects.toThrow(
-      DataError,
-    );
-    await expect(writePackageFile(JSON.parse("5"), MANIFEST, new Map())).rejects.toThrow(
-      "The path must be a string, found 5.",
-    );
-    await expect(writePackageFile(join(directory, "c.zip"), JSON.parse("null"), new Map())).rejects.toThrow(DataError);
   });
 });
 

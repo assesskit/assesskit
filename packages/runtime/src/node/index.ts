@@ -1,10 +1,10 @@
 /**
  * Node.js only: validation of XML documents against the official XSD schemas, compiled with libxml2 in WebAssembly, and
- * QTI content packages read from and written to files.
+ * QTI content packages read from files and directories.
  *
  * @module @assesskit/runtime/node
  */
-export { readPackageFile, writePackageFile } from "./package-file.js";
+export { readPackageFile } from "./package-file.js";
 export { defaultSchemaDirectory } from "./schema-directory.js";
 export { SCHEMA_FILES, type SchemaFile } from "./schema-files.js";
 export { loadSchemaSet, type SchemaSet } from "./schema-set.js";

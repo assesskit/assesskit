@@ -1,10 +1,11 @@
 import { checkRecord, checkString } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
-import { decodePciValue, encodePciValue, type PciJson } from "@assesskit/runtime/pci";
+import { decodePciValue, encodePciValue } from "@assesskit/runtime/pci";
 import {
   decodeBase64,
   encodeBase64,
   type FileValue,
+  type JsonValue,
   type Value,
   type ValueDeclaration,
 } from "@assesskit/runtime/values";
@@ -105,7 +106,7 @@ export function checkVariable(variable: unknown): asserts variable is PciVariabl
  * @throws `DataError` when the variable is not valid. The error of `files.read` passes through.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, portable custom interactions}
  */
-export async function encodeVariable(variable: PciVariable, files: PciFiles): Promise<PciJson> {
+export async function encodeVariable(variable: PciVariable, files: PciFiles): Promise<JsonValue> {
   const loaded = new Map<string, string>();
   for (const file of filesOf(variable.value)) loaded.set(file.reference, encodeBase64(await files.read(file)));
   return encodePciValue(variable.value, variable.declaration, { load: loader(loaded) });

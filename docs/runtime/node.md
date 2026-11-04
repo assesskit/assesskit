@@ -18,7 +18,6 @@ flowchart LR
   set --> select
   select -- "libxml2" --> issues
   zip["ZIP file or<br/>package directory"] -- "readPackageFile" --> pkg["QtiPackage"]
-  pkg -- "writePackageFile" --> zip
 ```
 
 | Export                                       | Purpose                                                                                                                                                                                |
@@ -30,7 +29,6 @@ flowchart LR
 | `validateXmlFiles(schemas, files, options?)` | Parses each document with `parseXml`, then validates it; returns `Issue`s, at most `maxFindings` (1,000 by default) over all the files.                                                |
 | `XmlFile`                                    | A document: `path` and `content` (text or bytes).                                                                                                                                      |
 | `readPackageFile(path, options?)`            | Reads a package from a ZIP file or an unpacked directory.                                                                                                                              |
-| `writePackageFile(path, manifest, files)`    | Writes a package as a ZIP file.                                                                                                                                                        |
 
 ## Quick start
 
@@ -68,8 +66,9 @@ A directory is read with these rules:
 - `maxEntries`, `maxEntryBytes` and `maxTotalBytes` apply to the files and directories, by their size on disk.
 - The path given to `readPackageFile` may itself be a link; the runtime resolves it once and reads below the result.
 
-`writePackageFile(path, manifest, files)` writes what `writePackage` returns to a ZIP file and replaces a file that is there. It
-does not write unpacked directories. Both functions throw a `DataError` for a path that cannot be read or written.
+To write a package as a ZIP file, write what `writePackage` returns: `await writeFile(path, writePackage(manifest, files))` with
+`writeFile` of `node:fs/promises`. The runtime writes no unpacked directories. `readPackageFile` throws a `DataError` for a path
+that cannot be read.
 
 ## Getting the schemas
 
@@ -188,14 +187,13 @@ is process-wide. Both are covered by the tests, which compile each primary schem
 | `readPackageFile` cannot read the path                                                 | `DataError` that names the path and the reason                | Check the path and the permissions                                                 |
 | A package or a directory breaks a rule of the security model                           | `SecurityError`, `limit` names the limit or the rule          | Do not read it; for a package you trust, raise the option `limits`                 |
 | The archive or the manifest cannot be read as a package                                | `ReadError` as `readPackage` gives it                         | See the [errors of package](package.md#errors)                                     |
-| `writePackageFile` cannot write the file                                               | `DataError` that names the path and the reason                | Check the path and the permissions                                                 |
 
 ## Not included
 
 | Not included                                                 | Why                                                                                                                  |
 | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | The schemas themselves                                       | They are copyrighted files of 1EdTech and W3C; the module pins and verifies them, and a script fetches them          |
-| Writing unpacked package directories                         | `writePackageFile` writes ZIP files, which is the form that packages are exchanged in                                |
+| Writing a package to a file                                  | `writePackage` returns the bytes of a ZIP file, the form that packages are exchanged in; the host writes them        |
 | Protection against a directory that changes while it is read | A race between the check and the read needs the host to keep the directory private                                   |
 | Validation in a browser                                      | The compiled libxml2 and the schema files are Node.js concerns; the runtime core validates the model with `validate` |
 | Business rules                                               | XSD checks structure; [validate](validate.md) checks what the schemas cannot express                                 |

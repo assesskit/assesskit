@@ -1,8 +1,7 @@
 import { checkFunction, checkRecord, checkString } from "../checks.js";
-import { type Value, type ValueDeclaration, writeJsonValue } from "../values/index.js";
+import { type JsonValue, type Value, type ValueDeclaration, writeJsonValue } from "../values/index.js";
 import { convertFiles } from "./convert-files.js";
 import type { PciFileLoader } from "./file-callbacks.js";
-import type { PciJson } from "./pci-json.js";
 
 /** Turns the file of the JSON of a value, a reference as `writeJsonValue` writes it, into the inline file of a PCI. */
 function inlineFile(file: unknown, files: PciFileLoader): unknown {
@@ -31,7 +30,7 @@ function inlineFile(file: unknown, files: PciFileLoader): unknown {
  * @see
  * {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, JSON binding of values}
  */
-export function encodePciValue(value: Value | null, declaration: ValueDeclaration, files: PciFileLoader): PciJson {
+export function encodePciValue(value: Value | null, declaration: ValueDeclaration, files: PciFileLoader): JsonValue {
   checkRecord(files, "The files must be an object with a function load");
   checkFunction(files.load, "The files must be an object with a function load");
   return convertFiles(writeJsonValue(value, declaration), (file) => inlineFile(file, files));

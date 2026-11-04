@@ -8,7 +8,6 @@ export { listDependencies } from "./closure.js";
 export { type LtiExtensions, type LtiLink, type LtiVendor, readLtiLink, resolveLaunchUrl } from "./lti-link.js";
 export {
   CPX_NAMESPACE,
-  MANIFEST_SCHEMA_VERSION,
   MANIFEST_SCHEMAS,
   type Manifest,
   type ManifestMetadata,

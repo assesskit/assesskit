@@ -1,5 +1,5 @@
 import { isRecord } from "../checks.js";
-import type { PciJson } from "./pci-json.js";
+import type { JsonValue } from "../values/index.js";
 
 type Convert = (file: unknown) => unknown;
 
@@ -29,7 +29,7 @@ function convertFields(fields: unknown, convert: Convert): unknown {
  * @param convert - Turns the JSON of one file into the JSON of another form of it.
  * @returns A copy of `json` with each file converted.
  */
-export function convertFiles(json: PciJson, convert: Convert): PciJson {
+export function convertFiles(json: JsonValue, convert: Convert): JsonValue {
   if ("base" in json) return { ...json, base: convertTyped(json.base, convert) };
   if ("list" in json) return { ...json, list: convertList(json.list, convert) };
   return { ...json, record: convertFields(json.record, convert) };

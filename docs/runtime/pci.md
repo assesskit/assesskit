@@ -33,7 +33,7 @@ flowchart LR
 | `derivePciProperties(interaction)`                        | Gives the `data-*` attributes as the properties a module receives                                   |
 | `validatePortableInteraction(interaction, configuration)` | Returns `Issue`s for modules that no configuration locates and for a type identifier that is no URN |
 
-The types are `PciJson`, `PciFileLoader`, `PciFileStore`, `ModuleResolution`, `ModuleConfigurationPaths`, `PciModule` and
+The types are `PciFileLoader`, `PciFileStore`, `ModuleResolution`, `ModuleConfigurationPaths`, `PciModule` and
 `PciModuleConfiguration`.
 
 ## Quick start
