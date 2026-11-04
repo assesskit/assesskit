@@ -1,5 +1,8 @@
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { downloadText } from "../download.ts";
+import { downloadFile, downloadText } from "../download.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -30,5 +33,16 @@ describe("the downloads of the scripts", () => {
     });
     expect(told).toEqual(["Downloading https://example.test/b failed: HTTP 429. Trying again (2 of 3)."]);
     expect(reported).not.toHaveBeenCalled();
+  });
+
+  it("writes what arrives to a file", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "scripts-download-"));
+    try {
+      const file = join(directory, "file");
+      await downloadFile("https://example.test/c", file, { fetch: async () => new Response("served") });
+      expect(readFileSync(file, "utf8")).toBe("served");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });

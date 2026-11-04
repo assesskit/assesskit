@@ -7,8 +7,6 @@ export { pathIssues } from "./check-path.js";
 export {
   DownloadStatusError,
   downloadBytes,
-  downloadFile,
-  downloadText,
   fetchSchemas,
   mapConcurrently,
   sha256,

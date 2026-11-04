@@ -11,7 +11,9 @@ export type { SchemaFile };
 /** Downloads that run at once; the schemas total about 140 MB. */
 const CONCURRENCY = 4;
 
-/** How long a download may go without a byte before it counts as stalled, in milliseconds. */
+/** How long the server may take to answer a request, in milliseconds. */
+const ANSWER_MS = 30_000;
+/** How long the body of an answer may go without a byte before it counts as stalled, in milliseconds. */
 const STALL_MS = 30_000;
 /** The tries of a download that fails or stalls, the first included. */
 const DOWNLOAD_TRIES = 3;
@@ -63,24 +65,6 @@ export interface DownloadOptions {
    */
   readonly headers?: Readonly<Record<string, string>>;
   /**
-   * How long the server may take to answer the request, in milliseconds.
-   *
-   * @defaultValue 30,000
-   */
-  readonly answerMs?: number;
-  /**
-   * How long the body of the answer may go without a byte, in milliseconds.
-   *
-   * @defaultValue 30,000
-   */
-  readonly stallMs?: number;
-  /**
-   * The tries, the first included.
-   *
-   * @defaultValue 3
-   */
-  readonly tries?: number;
-  /**
    * The wait before the second try, in milliseconds, doubled at each further one.
    *
    * @defaultValue 2,000
@@ -115,47 +99,47 @@ function isPassing(error: unknown): boolean {
 }
 
 /**
- * Runs a download again after a failure that may pass, up to `tries` times in all, waiting longer each time.
+ * Runs a download again after a failure that may pass, three times in all, waiting longer each time.
  *
  * @param run - Makes one try.
- * @param options - The tries, the wait and where to tell of a retry; the other options of a download are ignored.
+ * @param options - The wait and where to tell of a retry; the other options of a download are ignored.
  * @returns What the first successful try returned.
  * @throws The last failure after the tries, or at once a failure that will not change, such as the status 404.
  */
 export async function withRetries<T>(run: () => Promise<T>, options: DownloadOptions = {}): Promise<T> {
-  const { tries = DOWNLOAD_TRIES, retryMs = RETRY_MS, onRetry } = options;
+  const { retryMs = RETRY_MS, onRetry } = options;
   for (let attempt = 1; ; attempt += 1) {
     try {
       return await run();
     } catch (error) {
-      if (attempt >= tries || !isPassing(error)) throw error;
-      onRetry?.(`${reasonOf(error)} Trying again (${attempt + 1} of ${tries}).`);
+      if (attempt >= DOWNLOAD_TRIES || !isPassing(error)) throw error;
+      onRetry?.(`${reasonOf(error)} Trying again (${attempt + 1} of ${DOWNLOAD_TRIES}).`);
       await new Promise((done) => setTimeout(done, retryMs * 2 ** (attempt - 1)));
     }
   }
 }
 
 /**
- * Requests an address and reads the body of its answer: it aborts when the server does not answer within `answerMs`, and when
- * the body brings no byte for `stallMs` once the answer began, so that a stalled connection fails fast instead of holding the
+ * Requests an address and reads the body of its answer: it aborts when the server does not answer in 30 seconds, and when
+ * the body brings no byte for 30 seconds once the answer began, so that a stalled connection fails fast instead of holding the
  * process. The clock of the body starts with the answer, so the time a request takes to reach the server never counts as a
  * stall. The body is read chunk by chunk from the stream of `fetch`.
  */
 async function once(url: string, options: DownloadOptions): Promise<Uint8Array> {
-  const { fetch: fetchUrl = fetch, headers, answerMs = STALL_MS, stallMs = STALL_MS } = options;
+  const { fetch: fetchUrl = fetch, headers } = options;
   const controller = new AbortController();
-  const stall = () => controller.abort(new Error(`No byte of ${url} arrived for ${stallMs} ms.`));
-  let timer = setTimeout(() => controller.abort(new Error(`${url} did not answer in ${answerMs} ms.`)), answerMs);
+  const stall = () => controller.abort(new Error(`No byte of ${url} arrived for ${STALL_MS} ms.`));
+  let timer = setTimeout(() => controller.abort(new Error(`${url} did not answer in ${ANSWER_MS} ms.`)), ANSWER_MS);
   try {
     const response = await fetchUrl(url, { signal: controller.signal, headers: { ...headers } });
     clearTimeout(timer);
-    timer = setTimeout(stall, stallMs);
+    timer = setTimeout(stall, STALL_MS);
     if (!response.ok) throw new DownloadStatusError(url, response.status);
     const chunks: Uint8Array[] = [];
     const reader = response.body?.getReader();
     for (let chunk = await reader?.read(); chunk !== undefined && !chunk.done; chunk = await reader?.read()) {
       clearTimeout(timer);
-      timer = setTimeout(stall, stallMs);
+      timer = setTimeout(stall, STALL_MS);
       chunks.push(chunk.value);
     }
     return new Uint8Array(Buffer.concat(chunks));
@@ -170,22 +154,12 @@ async function once(url: string, options: DownloadOptions): Promise<Uint8Array> 
  * Downloads an address into memory, with the stall timeout and the retries.
  *
  * @param url - The address.
- * @param options - The function to download with, the timeouts and the tries.
+ * @param options - The function to download with, the headers, the wait between tries and where to tell of a retry.
  * @returns The bytes of the response.
  * @throws `Error` when the request fails or stalls on every try, or the status is not a success.
  */
 export function downloadBytes(url: string, options: DownloadOptions = {}): Promise<Uint8Array> {
   return withRetries(() => once(url, options), options);
-}
-
-/** Downloads an address as UTF-8 text, with the stall timeout and the retries. */
-export async function downloadText(url: string, options: DownloadOptions = {}): Promise<string> {
-  return new TextDecoder().decode(await downloadBytes(url, options));
-}
-
-/** Downloads an address to a file, with the stall timeout and the retries; the file is written once all of it arrived. */
-export async function downloadFile(url: string, file: string, options: DownloadOptions = {}): Promise<void> {
-  await writeFile(file, await downloadBytes(url, options));
 }
 
 /**
@@ -237,7 +211,7 @@ async function fetchOne(directory: string, schema: SchemaFile, options: Download
  *
  * @param directory - The directory to write to; it is created when it is missing.
  * @param schemas - The schemas, which are the ones `SCHEMA_FILES` pins.
- * @param options - The function to download with, the timeouts and the tries of each download.
+ * @param options - The function to download with, the wait between tries and where to tell of a retry.
  * @returns The schemas that were downloaded and those that failed.
  */
 export async function fetchSchemas(
