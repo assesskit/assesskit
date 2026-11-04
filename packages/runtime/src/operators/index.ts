@@ -8,12 +8,7 @@
  */
 export {
   buildOperatorCall,
-  type ExpressionCall,
-  type HotspotCall,
-  type NumberCall,
   type OperatorCall,
-  type ReadableCall,
-  type TextCall,
 } from "./build-operator-call.js";
 export { countLength } from "./count-length.js";
 export { type CreateScoringOperatorsOptions, createScoringOperators } from "./create-scoring-operators.js";

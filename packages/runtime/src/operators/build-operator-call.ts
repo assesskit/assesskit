@@ -23,60 +23,24 @@ import type { AreasKeyData, NumberKeyData } from "./schemas.js";
 import { resolveKeyDefaults } from "./schemas.js";
 import { type PreparedText, prepareText } from "./text-equivalent.js";
 
-/** The call of `expression-equivalent`. */
-export interface ExpressionCall {
-  /** The operator. */
-  readonly operator: "expression-equivalent";
-  /** The key. */
-  readonly key: ExpressionKey;
-  /**
-   * Credit for an answer that follows from an earlier response.
-   *
-   * @defaultValue none
-   */
-  readonly followThrough?: FollowThrough;
-}
-
-/** The call of `number-equivalent`. */
-export interface NumberCall {
-  /** The operator. */
-  readonly operator: "number-equivalent";
-  /** The key. */
-  readonly key: NumberKey;
-  /**
-   * Credit for an answer that follows from an earlier response.
-   *
-   * @defaultValue none
-   */
-  readonly followThrough?: FollowThrough;
-}
-
-/** The call of `text-equivalent`. */
-export interface TextCall {
-  /** The operator. */
-  readonly operator: "text-equivalent";
-  /** The key. */
-  readonly key: TextKey;
-}
-
-/** The call of `hotspot-matching`, on an `areas` key of the scheme `keyed`. */
-export interface HotspotCall {
-  /** The operator. */
-  readonly operator: "hotspot-matching";
-  /** The key. */
-  readonly key: KeyedAreasKey;
-}
-
-/** The call of `readable`, on the key that the response is scored by. */
-export interface ReadableCall {
-  /** The operator. */
-  readonly operator: "readable";
-  /** The key. */
-  readonly key: ExpressionKey | NumberKey | TextKey;
-}
-
-/** One call of an operator: which operator, the key it scores by, and for an expression or a number, its follow-through. */
-export type OperatorCall = ExpressionCall | NumberCall | TextCall | HotspotCall | ReadableCall;
+/**
+ * One call of an operator: which operator, and the key it scores by.
+ *
+ * @remarks
+ * | `operator`              | `key`                                                            | `followThrough`                                                              |
+ * | ----------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+ * | `expression-equivalent` | an `ExpressionKey`                                               | optional: credit for an answer that follows from an earlier response (none) |
+ * | `number-equivalent`     | a `NumberKey`                                                    | optional, as above                                                           |
+ * | `text-equivalent`       | a `TextKey`                                                      | none                                                                         |
+ * | `hotspot-matching`      | an `areas` key of the scheme `keyed`                             | none                                                                         |
+ * | `readable`              | the key that the response is scored by: expression, number, text | none                                                                         |
+ */
+export type OperatorCall =
+  | { readonly operator: "expression-equivalent"; readonly key: ExpressionKey; readonly followThrough?: FollowThrough }
+  | { readonly operator: "number-equivalent"; readonly key: NumberKey; readonly followThrough?: FollowThrough }
+  | { readonly operator: "text-equivalent"; readonly key: TextKey }
+  | { readonly operator: "hotspot-matching"; readonly key: KeyedAreasKey }
+  | { readonly operator: "readable"; readonly key: ExpressionKey | NumberKey | TextKey };
 
 /** The properties of a call and no other; its operator's schema reads the key and the expression of its follow-through. */
 const callSchema = strictRecord({
