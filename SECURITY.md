@@ -107,10 +107,11 @@ The points below are the runtime's; the sections that start with "The player" ho
   pause filters them before it applies them (the exam default of the player does).
 - **Names that reach the prototype.** A reader of untrusted input refuses a property named `__proto__`, `prototype` or
   `constructor` with a `DataError`, as a schema's objects would drop it unseen and an assignment would misread it: at any depth
-  in an action, an assessment result, the content of a view, and the body of a request and the answer of an engine or a token
-  endpoint in CAT; and on the object it reads in an item stage, a key of `compileScoring`, a call of `buildOperatorCall` and a
-  module resolution file. A name that is data stays data, in a `Map` or a list of entries: the identifier of an option in
-  `points`, a module id, a variable.
+  in an action, an assessment result, the content of a view or a submission, and the body of a request and the answer of an
+  engine or a token endpoint in CAT; and on the object it reads in an item stage, a key of `compileScoring`, a call of
+  `buildOperatorCall` and a module resolution file. A name that is data stays data, in a `Map` or a list of entries: the
+  identifier of an option in `points`, a module id, a variable. The prefixes of the assets of an envelope are directories, so
+  only a name that ends in `/` can hold such a word.
 - **Readers of trusted input.** `deserializeState` and `readView` have no limit of size, because what they read is not input of
   a client: the first reads the state that `serializeState` wrote, from the host's own store, and the second the view that the
   host's server built with `writeView`. Both check the form strictly (the version and the type of every field, and the depth of

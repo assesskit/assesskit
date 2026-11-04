@@ -167,6 +167,14 @@ describe("checkViewEnvelope", () => {
 
   it("accepts an envelope without asset prefixes", () => {
     expect(() => checkViewEnvelope(json('{"seq":0,"view":{},"assets":{}}'))).not.toThrow();
+    expect(() => checkViewEnvelope(json('{"seq":0,"view":{},"assets":{"":"u","__proto__/":"v"}}'))).not.toThrow();
+    for (const name of ["__proto__", "prototype", "constructor"]) {
+      expect(() => checkViewEnvelope(json(`{"seq":0,"view":{},"assets":{"${name}":"u"}}`))).toThrow(
+        new DataError(
+          'A view envelope is invalid at assets: expected every prefix to be a directory, empty or ending in "/".',
+        ),
+      );
+    }
   });
 
   it("rejects what is not an object", () => {
@@ -870,7 +878,11 @@ describe("checkSubmission", () => {
       [["parts", 0, "label"], 1, "A submission is invalid at parts[0].label: expected a string, found 1."],
       [["parts", 0, "value"], [1], "A submission is invalid at parts[0].value: expected an object, found an array."],
       [["items", 0, "title"], null, "A submission is invalid at items[0].title: expected a string, found null."],
-      [["items", 0, "body"], [null], "A submission is invalid at items[0].body[0]: expected an object, found null."],
+      [
+        ["items", 0, "body"],
+        [null],
+        "A submission is invalid at items[0].body: must hold only strings, finite numbers, booleans, arrays and objects, found null.",
+      ],
       [
         ["items", 0, "templateValues"],
         {},
@@ -889,6 +901,22 @@ describe("checkSubmission", () => {
       );
     }
   });
+
+  it.each(["__proto__", "prototype", "constructor"])(
+    "rejects content with a property named %s at any depth, in the body and in the rubric",
+    (name) => {
+      const problem = `holds a property "${name}", a name that reaches the prototype.`;
+      const nodes = (text: string): unknown => JSON.parse(text);
+      for (const text of [`[{"kind":"p","${name}":1}]`, `[{"kind":"p","children":[{"kind":"x","a":{"${name}":1}}]}]`]) {
+        expect(() => checkSubmission(changed(["rubric"], nodes(text))), text).toThrow(
+          new DataError(`A submission is invalid at rubric: ${problem}`),
+        );
+        expect(() => checkSubmission(changed(["items", 0, "body"], nodes(text))), text).toThrow(
+          new DataError(`A submission is invalid at items[0].body: ${problem}`),
+        );
+      }
+    },
+  );
 
   it("rejects a scoring rubric that the runtime refuses, with the rule it breaks", () => {
     const cases: readonly (readonly [readonly Step[], unknown, RegExp])[] = [
@@ -1121,12 +1149,26 @@ describe("properties", () => {
   });
 
   it("accepts every view envelope with a sequence number, a view and string base URLs", () => {
-    const assetsOf = fc.dictionary(fc.string(), fc.string());
+    const prefix = fc.oneof(
+      fc.constant(""),
+      fc.string().map((directory) => `${directory}/`),
+    );
+    const assetsOf = fc.dictionary(prefix, fc.string());
     fc.assert(
       fc.property(seq, payload, assetsOf, (number, anyView, assets) => {
         const envelope: unknown = json(JSON.stringify({ seq: number, view: anyView, assets }));
         checkViewEnvelope(envelope);
         expect(Object.keys(envelope.assets)).toEqual(Object.keys(assets));
+      }),
+    );
+  });
+
+  it("rejects a view envelope with a prefix of assets that is not a directory", () => {
+    const name = fc.string({ minLength: 1 }).filter((text) => !text.endsWith("/"));
+    fc.assert(
+      fc.property(name, (prefix) => {
+        const envelope = json(JSON.stringify({ seq: 0, view: {}, assets: { [prefix]: "https://assets.example/" } }));
+        expect(() => checkViewEnvelope(envelope)).toThrow(DataError);
       }),
     );
   });

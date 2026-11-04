@@ -143,7 +143,7 @@ rates one outcome. It is JSON text as it is: `JSON.parse(JSON.stringify(submissi
 - The content is the runtime's typed nodes, as JSON.
 
 `checkSubmission(value)` of `@assesskit/player/protocol` checks a submission that arrived as JSON: every property of its
-form and no other, the type of every field, the content as nodes, the scoring rubric as the runtime's `checkScoringRubric`
+form and no other, the type of every field, the content as nodes as a view carries them, the scoring rubric as the runtime's `checkScoringRubric`
 does, and that each part names an item the submission has once. It reads no value; `readWireValue` does when the value is
 shown.
 

@@ -27,11 +27,23 @@ export interface ViewEnvelope {
   readonly refusal?: Refusal;
 }
 
+/**
+ * The URLs of the assets by prefix. A prefix is a directory of the package, empty or ending in `/`, as the asset gate signs
+ * it, so a name such as `__proto__` is refused and a directory such as `__proto__/` is data; the record of valibot would
+ * skip the first unseen.
+ */
+const assetsSchema = v.pipe(
+  mapSchema(v.string()),
+  v.check(
+    (assets) => [...assets.keys()].every((prefix) => prefix === "" || prefix.endsWith("/")),
+    'expected every prefix to be a directory, empty or ending in "/"',
+  ),
+);
+
 const viewEnvelopeSchema: Schema<unknown> = v.strictObject({
   seq: nonNegativeIntegerSchema,
   view: definedSchema,
-  // The prefixes are data, `__proto__` included, so the record of valibot, which skips such a name, does not read them.
-  assets: mapSchema(v.string()),
+  assets: assetsSchema,
   documents: v.optional(viewDocumentsSchema),
   refusal: v.optional(refusalSchema),
 });
@@ -44,7 +56,7 @@ const viewEnvelopeSchema: Schema<unknown> = v.strictObject({
  *
  * @param value - The parsed JSON.
  * @throws `DataError` when it is not an object with the properties `seq`, `view`, `assets` and, optionally, `documents`
- * and `refusal` only, `seq` a non-negative integer, `assets` an object of strings, `documents` the documents of a view
+ * and `refusal` only, `seq` a non-negative integer, `assets` an object of strings by directories, `documents` the documents of a view
  * and `refusal` a refusal of the runtime.
  */
 export function checkViewEnvelope(value: unknown): asserts value is ViewEnvelope {

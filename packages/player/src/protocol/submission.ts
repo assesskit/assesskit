@@ -4,6 +4,7 @@ import {
   finiteSchema,
   nonEmptyStringSchema,
   parseWith,
+  plainSchema,
   positiveIntegerSchema,
   recordSchema,
   transformWith,
@@ -125,8 +126,8 @@ const scoringRubricSchema = v.pipe(
   }),
 );
 
-/** The nodes of content: an array of objects that each have a `kind`. */
-const nodesSchema = v.array(v.looseObject({ kind: v.string() }));
+/** The nodes of content: plain JSON, read as the runtime reads the content of a view, in an array of objects that each have a `kind`. */
+const nodesSchema = v.pipe(plainSchema, v.array(v.looseObject({ kind: v.string() })));
 
 const itemKeySchema = v.strictObject({ ref: nonEmptyStringSchema, instance: positiveIntegerSchema });
 
@@ -191,7 +192,7 @@ const submissionSchema = v.pipe(
 
 /**
  * Checks a submission that arrived as JSON: every property of its form and no other, the type of every field, the content
- * as nodes, the scoring rubric as the runtime's `checkScoringRubric` does, and that each part names an item the submission
+ * as nodes without a property named `__proto__`, `prototype` or `constructor`, the scoring rubric as the runtime's `checkScoringRubric` does, and that each part names an item the submission
  * has, which it has once.
  *
  * @remarks

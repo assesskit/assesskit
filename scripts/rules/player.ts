@@ -4,6 +4,20 @@ import type { Rule } from "./rule.ts";
 /** The security-critical rules of the player, each with the test that guards it. */
 export const PLAYER_RULES: readonly Rule[] = [
   {
+    rule: "A prefix of assets is a directory, so that a name that reaches the prototype is refused.",
+    file: "packages/player/src/protocol/view-envelope.ts",
+    find: '(assets) => [...assets.keys()].every((prefix) => prefix === "" || prefix.endsWith("/")),',
+    replace: "() => true,",
+    test: "packages/player/test/protocol.test.ts",
+  },
+  {
+    rule: "The content of a submission holds no name that reaches the prototype, at any depth.",
+    file: "packages/player/src/protocol/submission.ts",
+    find: "v.pipe(plainSchema, v.array(v.looseObject({ kind: v.string() })))",
+    replace: "v.array(v.looseObject({ kind: v.string() }))",
+    test: "packages/player/test/protocol.test.ts",
+  },
+  {
     rule: "A page, a drawing or a script of a package is served in a sandbox, so that a hostile package runs no script on the asset origin.",
     file: "packages/player/src/server/gate/gate.ts",
     find: "const headers = type === PDF_TYPE ? BASE_HEADERS : SANDBOXED_HEADERS;",
