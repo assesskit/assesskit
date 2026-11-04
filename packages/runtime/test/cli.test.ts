@@ -4,12 +4,11 @@ import { createServer, type Server } from "node:http";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import fc from "fast-check";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { runCli } from "../src/cli/index.js";
 import {
   buildReport,
   defaultSchemaDirectory,
-  download,
   EXIT_CODES,
   exitCodeOf,
   fetchSchemas,
@@ -183,16 +182,44 @@ describe("running the command line", () => {
   it("exits with 2 and lists every schema that cannot be downloaded", async () => {
     const target = freshDirectory("offline");
     const { code, stdout, stderr } = await run(["schemas", "fetch", "--dir", target], {
-      fetch: async () => new Response("", { status: 503 }),
+      fetch: async () => new Response("", { status: 404 }),
     });
     expect([code, stdout]).toEqual([2, ""]);
     const lines = stderr.split("\n");
     expect(lines[0]).toBe(
       `assesskit: ${SCHEMA_FILES.length} of ${SCHEMA_FILES.length} schemas could not be downloaded to ${target}:`,
     );
-    expect(lines.slice(1, -2)).toEqual(SCHEMA_FILES.map(({ url }) => `- Downloading ${url} failed: HTTP 503.`));
+    expect(lines.slice(1, -2)).toEqual(SCHEMA_FILES.map(({ url }) => `- Downloading ${url} failed: HTTP 404.`));
     expect(lines.at(-2)).toBe("Run the command again to download the rest.");
     expect(readdirSync(target)).toEqual([]);
+  });
+
+  it("tells on the standard error that it tries a failed download again, three times in all, before it lists the failure", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      let asked = 0;
+      let finished = false;
+      const running = run(["schemas", "fetch", "--dir", freshDirectory("flaky")], {
+        fetch: async () => {
+          asked += 1;
+          return new Response("", { status: 503 });
+        },
+      }).finally(() => {
+        finished = true;
+      });
+      // The waits are armed after the files of the directory are read, so the clock moves until the command ends: each
+      // schema waits 2 s and then 4 s, four at a time.
+      while (!finished) await vi.advanceTimersByTimeAsync(1000);
+      const { code, stderr } = await running;
+      const first = SCHEMA_FILES[0]?.url;
+      expect(code).toBe(2);
+      expect(asked).toBe(SCHEMA_FILES.length * 3);
+      expect(stderr).toContain(`assesskit: Downloading ${first} failed: HTTP 503. Trying again (2 of 3).\n`);
+      expect(stderr).toContain(`assesskit: Downloading ${first} failed: HTTP 503. Trying again (3 of 3).\n`);
+      expect(stderr).toContain(`- Downloading ${first} failed: HTTP 503.\n`);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("exits with 2 and writes no file for a download with another hash than the pinned one", async () => {
@@ -361,17 +388,6 @@ describe("hashing", () => {
   });
 });
 
-describe("downloading", () => {
-  it("returns the bytes of a successful answer", async () => {
-    routes.set("/x", { status: 200, body: "abc" });
-    expect(new TextDecoder().decode(await download(`${base}/x`))).toBe("abc");
-  });
-
-  it("rejects an answer that is not a success, naming the address and the status", async () => {
-    await expect(download(`${base}/missing`)).rejects.toThrow(`Downloading ${base}/missing failed: HTTP 404.`);
-  });
-});
-
 describe("running downloads a few at a time", () => {
   it("returns the results in the order of the items, whatever order they finish in", async () => {
     const results = await mapConcurrently([30, 1, 20, 2, 10], async (milliseconds) => {
@@ -460,7 +476,7 @@ describe("fetching the schemas", () => {
     await new Promise((resolve) => closed.close(resolve));
     if (address === null || typeof address === "string") throw new Error("The server has no port.");
     const unreachable = `http://127.0.0.1:${address.port}/c.xsd`;
-    const result = await fetchSchemas(freshDirectory("failing"), [a, b, { ...c, url: unreachable }]);
+    const result = await fetchSchemas(freshDirectory("failing"), [a, b, { ...c, url: unreachable }], { retryMs: 1 });
     expect(result.downloaded.map(({ file }) => file)).toEqual(["b.xsd"]);
     expect(result.failures.map(({ schema }) => schema.file)).toEqual(["a.xsd", "c.xsd"]);
     expect(result.failures[0]?.reason).toBe(`Downloading ${base}/a.xsd failed: HTTP 500.`);
@@ -484,7 +500,7 @@ describe("fetching the schemas", () => {
       asked.push(String(input));
       return new Response("abc");
     };
-    const result = await fetchSchemas(freshDirectory("own"), [a], fetchUrl);
+    const result = await fetchSchemas(freshDirectory("own"), [a], { fetch: fetchUrl });
     expect(asked).toEqual([`${base}/a.xsd`]);
     expect(result.failures).toEqual([]);
   });

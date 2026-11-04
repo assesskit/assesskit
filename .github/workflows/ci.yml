@@ -14,6 +14,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# The downloads of the jobs (pnpm schemas and pnpm corpus) are kept between runs by the hash of the lock that pins each, and a
+# file that holds its pinned hash is not fetched again. A download that stalls for 30 s or fails is tried again, three times in
+# all (scripts/download.ts).
 jobs:
   # What a push or a pull request changed since the last commit of main whose run passed, or since the base of a pull request,
   # and so which jobs have something to check. A job that is skipped passes a required check. When nothing can be compared,
@@ -294,6 +297,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v5
+        with:
+          path: .cache/corpus
+          key: corpus-${{ hashFiles('scripts/corpus.lock.json') }}
       - run: pnpm corpus
       - run: pnpm --filter @assesskit/runtime bench
 
@@ -333,7 +340,15 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v5
+        with:
+          path: .cache/schemas
+          key: schemas-${{ hashFiles('packages/runtime/src/node/schema-files.json') }}
       - run: pnpm schemas
+      - uses: actions/cache@v5
+        with:
+          path: .cache/corpus
+          key: corpus-${{ hashFiles('scripts/corpus.lock.json') }}
       - run: pnpm corpus
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - run: sudo apt-get install -y pulseaudio
@@ -375,6 +390,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v5
+        with:
+          path: .cache/corpus
+          key: corpus-${{ hashFiles('scripts/corpus.lock.json') }}
       - run: pnpm corpus
       - run: pnpm test:corpus --project '!player*'
 
@@ -393,6 +412,14 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v5
+        with:
+          path: .cache/schemas
+          key: schemas-${{ hashFiles('packages/runtime/src/node/schema-files.json') }}
       - run: pnpm schemas
+      - uses: actions/cache@v5
+        with:
+          path: .cache/corpus
+          key: corpus-${{ hashFiles('scripts/corpus.lock.json') }}
       - run: pnpm corpus
       - run: pnpm test:xsd

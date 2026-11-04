@@ -852,7 +852,7 @@
       }
     },
     {
-      "includes": ["**", "!packages/runtime/**", "!scripts/schemas.ts"],
+      "includes": ["**", "!packages/runtime/**", "!scripts/schemas.ts", "!scripts/download.ts"],
       "linter": {
         "rules": {
           "style": {

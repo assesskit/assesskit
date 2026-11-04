@@ -1,19 +1,9 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import {
-  createWriteStream,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { copyFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
-import { Readable } from "node:stream";
-import { pipeline } from "node:stream/promises";
+import { downloadFile, downloadText } from "./download.ts";
 
 /** A GitHub repository whose files tests read, pinned to a commit and to the SHA-256 of the archive of that commit. */
 export interface CorpusSource {
@@ -59,11 +49,8 @@ export function selectFiles(directory: string, include: readonly string[]): stri
 
 /** Downloads the archive of a commit to `<directory>/archive.tar.gz` and returns its SHA-256. */
 async function downloadArchive(repository: string, commit: string, directory: string): Promise<string> {
-  const response = await fetch(`https://codeload.github.com/${repository}/tar.gz/${commit}`);
-  if (!(response.ok && response.body))
-    throw new Error(`Downloading ${repository}@${commit} failed: HTTP ${response.status}.`);
   const archive = join(directory, "archive.tar.gz");
-  await pipeline(Readable.fromWeb(response.body), createWriteStream(archive));
+  await downloadFile(`https://codeload.github.com/${repository}/tar.gz/${commit}`, archive);
   return sha256(archive);
 }
 
@@ -77,11 +64,10 @@ function extractArchive(directory: string): string {
 
 /** Returns the commit that a branch, tag or commit of a repository points to. */
 async function resolveCommit(repository: string, ref: string): Promise<string> {
-  const response = await fetch(`https://api.github.com/repos/${repository}/commits/${ref}`, {
+  const commit = await downloadText(`https://api.github.com/repos/${repository}/commits/${ref}`, {
     headers: { accept: "application/vnd.github.sha" },
   });
-  if (!response.ok) throw new Error(`Resolving ${repository}@${ref} failed: HTTP ${response.status}.`);
-  return (await response.text()).trim();
+  return commit.trim();
 }
 
 /** Runs a function with a temporary directory below the corpus directory, which it removes afterwards. */

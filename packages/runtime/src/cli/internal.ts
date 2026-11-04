@@ -4,7 +4,16 @@
  * @module
  */
 export { pathIssues } from "./check-path.js";
-export { download, fetchSchemas, mapConcurrently, sha256 } from "./fetch-schemas.js";
+export {
+  DownloadStatusError,
+  downloadBytes,
+  downloadFile,
+  downloadText,
+  fetchSchemas,
+  mapConcurrently,
+  sha256,
+  withRetries,
+} from "./fetch-schemas.js";
 export { resolveOptions } from "./options.js";
 export { packageVersion } from "./package-version.js";
 export { buildReport, EXIT_CODES, exitCodeOf, formatJson, formatText } from "./report.js";

@@ -72,7 +72,8 @@ GitHub serves for it.
 | `xsdtests`     | `w3c/xsdtests`         | `msData/regex/` and `msMeta/Regex_w3c.xml`: the regular expression tests of the W3C XML Schema test suite |
 
 `pnpm corpus` downloads the sources into `.cache/corpus/<source>/` unless they were extracted from the pinned archive, and
-fails without writing when the archive has another hash. `pnpm test:corpus` runs the tests in files named `*.corpus.test.ts`,
+fails without writing when the archive has another hash. CI keeps `.cache/corpus` between runs by the hash of
+`scripts/corpus.lock.json`. `pnpm test:corpus` runs the tests in files named `*.corpus.test.ts`,
 which `pnpm test` leaves out so that it runs offline. A corpus
 test calls `requireCorpus` of `scripts/corpus.ts`, which fails with an instruction when the corpus is missing.
 
@@ -89,8 +90,13 @@ default branch when none is given), hashes its archive and writes the lock.
 The XSDs of QTI 3.0 are 1EdTech and W3C files with their own license, so the repository does not contain them.
 `packages/runtime/src/node/schema-files.json` pins each schema to its address and SHA-256 (it is `SCHEMA_FILES` of
 the `node` module). `pnpm schemas` downloads the files into `.cache/schemas` unless the files there already match their
-hashes, and fails without writing a file whose hash differs. `pnpm schemas:pin` downloads every file and writes the hashes
-that it finds, for the day a schema changes.
+hashes, and fails without writing a file whose hash differs. CI keeps `.cache/schemas` between runs by the hash of that list.
+`pnpm schemas:pin` downloads every file and writes the hashes that it finds, for the day a schema changes.
+
+Every download of the repository, the schemas, the corpus, the Unicode tables and the conformance document, goes through the
+function of `assesskit schemas fetch`, which `scripts/download.ts` hands to the scripts: it aborts a download that brings no byte
+for 30 seconds and tries one that fails or stalls three times in all. `cli.test.ts` and `download.test.ts` test it against
+servers that stall, drop the connection and answer 503, so that no test uses the network.
 
 Tests that validate against the schemas are in files named `*.xsd.test.ts`, which `pnpm test` leaves out so that it runs
 offline. `pnpm test:xsd` runs them: it needs `pnpm schemas`, and `pnpm corpus` when a test reads the examples. A file loads

@@ -154,8 +154,11 @@ issue, not a refusal.
 
 The command downloads the files of `SCHEMA_FILES` from their fixed addresses, four at a time, and writes a file only when the
 SHA-256 of what it received is the pinned one. A file that is in the directory with its pinned hash is not downloaded again.
-The addresses cannot be changed from the command line. When some downloads fail, the others are written, the command lists the
-failures and exits with 2, and running it again downloads the rest.
+The addresses cannot be changed from the command line. A download that gets no answer in 30 seconds, whose body brings no byte
+for 30 seconds, or that fails with a network error or the status 408, 429 or 5xx is tried again after 2 and then after 4
+seconds, three tries in all, and the command says so on the standard error; any other status is not tried again. When some
+downloads fail, the others are written, the command lists the failures and exits with 2, and running it again downloads the
+rest.
 
 ```console
 $ assesskit schemas fetch

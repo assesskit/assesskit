@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { downloadText } from "./download.ts";
 
 /** A file of the Unicode Character Database, pinned to the SHA-256 of its bytes. */
 interface UnicodeFile {
@@ -160,9 +161,7 @@ export const CATEGORY_RUNS =
 }
 
 async function download(file: UnicodeFile): Promise<string> {
-  const response = await fetch(file.url);
-  if (!response.ok) throw new Error(`Downloading ${file.url} failed: HTTP ${response.status}.`);
-  const text = await response.text();
+  const text = await downloadText(file.url);
   if (sha256(text) !== file.sha256) throw new Error(`${file.url} has another SHA-256 than the pinned ${file.sha256}.`);
   return text;
 }

@@ -25,7 +25,10 @@ export async function schemasCommand(args: readonly string[], options: Required<
   const { values, positionals } = parseCommand(rest, { dir: { type: "string" } });
   if (positionals.length > 0) throw new UsageError("The command schemas fetch takes no path.");
   const { dir = options.schemaDirectory } = values;
-  const { downloaded, failures } = await fetchSchemas(dir, SCHEMA_FILES, options.fetch);
+  const { downloaded, failures } = await fetchSchemas(dir, SCHEMA_FILES, {
+    fetch: options.fetch,
+    onRetry: (message) => options.stderr(`assesskit: ${message}\n`),
+  });
   if (failures.length > 0) {
     const list = failures.map(({ reason }) => `\n- ${reason}`).join("");
     throw new AssesskitError(

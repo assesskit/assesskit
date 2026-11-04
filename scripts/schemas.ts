@@ -2,13 +2,8 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 // `assesskit schemas fetch` runs the same code, so that one implementation downloads the schemas. This import names the file:
 // Node runs the script as TypeScript and does not resolve the `.js` specifiers that `cli/internal.ts` re-exports through.
-import {
-  download,
-  fetchSchemas,
-  mapConcurrently,
-  type SchemaFile,
-  sha256,
-} from "../packages/runtime/src/cli/fetch-schemas.ts";
+import { fetchSchemas, mapConcurrently, type SchemaFile, sha256 } from "../packages/runtime/src/cli/fetch-schemas.ts";
+import { downloadBytes } from "./download.ts";
 
 const LIST_PATH = "packages/runtime/src/node/schema-files.json";
 const CACHE_PATH = ".cache/schemas";
@@ -42,7 +37,9 @@ export function requireSchemas(root: string): string {
  * @throws `Error` when a download fails or differs from its pinned hash; that file is not written.
  */
 export async function downloadSchemas(root: string): Promise<string[]> {
-  const { downloaded, failures } = await fetchSchemas(schemaDirectory(root), loadList(root));
+  const { downloaded, failures } = await fetchSchemas(schemaDirectory(root), loadList(root), {
+    onRetry: console.error,
+  });
   if (failures.length > 0) {
     const list = failures.map(({ reason }) => `\n- ${reason}`).join("");
     throw new Error(`Not every schema could be downloaded:${list}\nRun pnpm schemas:pin if a schema changed.`);
@@ -53,7 +50,7 @@ export async function downloadSchemas(root: string): Promise<string[]> {
 /** Downloads every schema and writes its SHA-256 into the list. */
 export async function pinSchemas(root: string): Promise<void> {
   const list = loadList(root);
-  const hashes = await mapConcurrently(list, async (schema) => sha256(await download(schema.url)));
+  const hashes = await mapConcurrently(list, async (schema) => sha256(await downloadBytes(schema.url)));
   const pinned = list.map((schema, index) => ({ ...schema, sha256: hashes[index] }));
   writeFileSync(join(root, LIST_PATH), `${JSON.stringify(pinned, null, 2)}\n`);
   console.log(`Pinned ${pinned.length} schemas.`);

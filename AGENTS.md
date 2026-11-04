@@ -74,7 +74,7 @@ Biome enforces, folder by folder.
 | `pnpm docs:api`                  | TypeDoc into `docs/api`, with the pinned Mermaid copied in so that no page loads a script from elsewhere; fails on undocumented exports                                                                                                                              |
 | `pnpm compat`                    | The built JavaScript and the CSS of the player stay inside the browser baseline                                                                                                                                                                                      |
 | `pnpm compat:engines`            | The smoke test in the pinned old browsers; needs Docker                                                                                                                                                                                                              |
-| `pnpm corpus`, `pnpm schemas`    | Download the 1EdTech examples into `.cache/corpus` and the XSDs into `.cache/schemas`; `corpus:pin` and `schemas:pin` write new hashes                                                                                                                               |
+| `pnpm corpus`, `pnpm schemas`    | Download the 1EdTech examples into `.cache/corpus` and the XSDs into `.cache/schemas`, which CI keeps by the hash of their locks; `corpus:pin` and `schemas:pin` write new hashes                                                                                    |
 | `pnpm conformance`               | Takes the official packages of a 1EdTech member through the runtime, outside the repository; `conformance:pin` rewrites the feature list                                                                                                                             |
 | `pnpm unicode`, `pnpm asi-table` | Regenerate the Unicode tables of `values` and the element table of `asi` (needs `pnpm schemas`) from the pinned files                                                                                                                                                |
 
@@ -123,10 +123,12 @@ that the player needs and the runtime lacks is a change in the runtime, with its
 
 ## Dependencies
 
-- `scripts/schemas.ts` imports `packages/runtime/src/cli/fetch-schemas.ts` by relative path, so that `pnpm schemas` and
-  `assesskit schemas fetch` run one implementation. Node runs that file directly and does not resolve the `.js` specifiers of
-  an `internal.ts`, so it imports only `node:*` modules and types; `scripts/asi-table.ts` imports only types, through
-  `asi/internal.ts`.
+- `scripts/schemas.ts` and `scripts/download.ts` import `packages/runtime/src/cli/fetch-schemas.ts` by relative path, so that
+  `pnpm schemas`, `assesskit schemas fetch` and every other download of the repository (the corpus, the Unicode tables, the
+  conformance document) run one implementation, with a stall timeout of 30 s and three tries. Node runs that file directly and
+  does not resolve the `.js` specifiers of an `internal.ts`, so it imports only `node:*` modules and types;
+  `scripts/asi-table.ts` imports only types, through `asi/internal.ts`. A script downloads through
+  `scripts/download.ts`, which reports each retry on the standard error.
 - Dependencies are pinned to exact versions, development ones too; a runtime dependency has its row in
   [SECURITY.md](SECURITY.md#runtime-dependencies).
 - The player gets `AssesskitError` and `DataError` from `@assesskit/runtime/errors` and its checks from

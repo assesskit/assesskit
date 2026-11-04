@@ -13,7 +13,9 @@ Points to be aware of when deploying the runtime:
   runs no code it is given. Only the `node` and `cli` modules use Node.js. `node` reads only the paths it is given.
 - **No fetching.** Absolute URLs in content are data. The core never fetches them, and callers supply the callbacks that
   resolve references. The only network access in the runtime is the command `assesskit schemas fetch`: it downloads the addresses of
-  `SCHEMA_FILES`, which the command line cannot change, and writes a file only when its SHA-256 is the pinned one.
+  `SCHEMA_FILES`, which the command line cannot change, and writes a file only when its SHA-256 is the pinned one. A server
+  that does not answer or stops sending for 30 seconds cannot hold the command: the download is aborted and tried again twice
+  at most.
 - **CAT engines.** The core never calls a CAT engine. `qti-adaptive-engine-ref` names the URL prefix of an engine, so a
   document chooses where a host sends a candidate's results. A host that implements `CatPort` checks the prefix against
   the engines it trusts before it sends a request.

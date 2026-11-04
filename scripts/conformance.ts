@@ -6,6 +6,7 @@ import { parseArgs } from "node:util";
 import type { SchemaSet } from "../packages/runtime/src/node/index.ts";
 // biome-ignore lint/style/noRestrictedImports: The same.
 import type { QtiPackage } from "../packages/runtime/src/package/index.ts";
+import { downloadText } from "./download.ts";
 import { requireSchemas } from "./schemas.ts";
 
 /** The public conformance document, whose Appendix A lists the features and whose section 3 gives their levels. */
@@ -324,9 +325,7 @@ async function builtModules(root: string): Promise<RuntimeModules> {
 
 /** Downloads the conformance document and writes the features of the repository from it. */
 async function pin(root: string): Promise<void> {
-  const response = await fetch(CERT_URL);
-  if (!response.ok) throw new Error(`Downloading ${CERT_URL} failed: HTTP ${response.status}.`);
-  const features = parseFeatures(await response.text());
+  const features = parseFeatures(await downloadText(CERT_URL));
   writeFileSync(join(root, FEATURES_PATH), `${JSON.stringify(features, null, 2)}\n`);
   console.log(`Wrote the ${features.length} features of ${CERT_URL}.`);
 }
