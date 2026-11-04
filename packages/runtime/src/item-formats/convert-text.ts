@@ -1,4 +1,3 @@
-import { isRecord } from "../checks.js";
 import { buildSingle } from "../values/index.js";
 import type { XmlElement } from "../xml/index.js";
 import {
@@ -14,6 +13,7 @@ import {
   readCorrect,
   textOf,
 } from "./item-view.js";
+import { operatorKey } from "./operator-key.js";
 import { attribute, type Probe, type ProbeResult } from "./probe.js";
 import { emptyText, type Question, type QuestionCommon, type TextAnswer } from "./question.js";
 
@@ -97,20 +97,8 @@ function readPattern(pattern: string): PatternAnswer | undefined {
 
 /** The accepted texts in the key of an operator call, as `buildOperatorCall` writes it in the attribute `options`. */
 function operatorTexts(element: XmlElement): string[] {
-  const options = element.attributes.find(({ name }) => name === "options")?.value;
-  if (options === undefined) return [];
-  const texts: string[] = [];
-  const visit = (value: unknown, key: string) => {
-    if (Array.isArray(value)) for (const item of value) visit(item, key);
-    else if (isRecord(value)) for (const [name, item] of Object.entries(value)) visit(item, name);
-    else if (typeof value === "string" && key === "texts") texts.push(value);
-  };
-  try {
-    visit(JSON.parse(options), "");
-  } catch {
-    return [];
-  }
-  return texts;
+  const key = operatorKey(element);
+  return key?.kind === "text" ? key.answers.flatMap(({ texts }) => texts) : [];
 }
 
 /** Collects the answers that one element of the response processing names. */

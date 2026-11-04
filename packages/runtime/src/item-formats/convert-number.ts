@@ -1,4 +1,3 @@
-import { isRecord } from "../checks.js";
 import { buildSingle, type Value } from "../values/index.js";
 import type { XmlElement } from "../xml/index.js";
 import {
@@ -15,6 +14,7 @@ import {
   SAME,
   textOf,
 } from "./item-view.js";
+import { operatorKey } from "./operator-key.js";
 import { attribute, type Probe, type ProbeResult } from "./probe.js";
 import { emptyText, type NumberAnswer, type Question, type QuestionCommon } from "./question.js";
 
@@ -67,36 +67,13 @@ function equalInterval(element: XmlElement, value: number, view: ItemView): Inte
   return { value, below: 0, above: 0 };
 }
 
-/** The interval of a key of `number-equivalent`: its value and the wider of its tolerances. */
-function keyInterval(key: Readonly<Record<string, unknown>>): Interval | undefined {
-  if (typeof key.value !== "number") return undefined;
-  const tolerance = isRecord(key.tolerance) ? key.tolerance : {};
-  const absolute = typeof tolerance.absolute === "number" ? tolerance.absolute : 0;
-  const relative = typeof tolerance.relative === "number" ? Math.abs(key.value) * tolerance.relative : 0;
-  const width = Math.max(absolute, relative);
-  return { value: key.value, below: width, above: width };
-}
-
-/** Collects the intervals of every object in the JSON of a key. */
-function collectIntervals(value: unknown, intervals: Interval[]): void {
-  if (Array.isArray(value)) for (const item of value) collectIntervals(item, intervals);
-  if (!isRecord(value)) return;
-  const interval = keyInterval(value);
-  if (interval !== undefined) intervals.push(interval);
-  for (const item of Object.values(value)) collectIntervals(item, intervals);
-}
-
-/** The values and tolerances in the key of a call of `number-equivalent`. */
+/** The value and the wider tolerance of a call of `number-equivalent`, or of `readable` on a number key. */
 function operatorIntervals(element: XmlElement): Interval[] {
-  const options = element.attributes.find(({ name }) => name === "options")?.value;
-  if (options === undefined) return [];
-  const intervals: Interval[] = [];
-  try {
-    collectIntervals(JSON.parse(options), intervals);
-  } catch {
-    return [];
-  }
-  return intervals;
+  const key = operatorKey(element);
+  if (key?.kind !== "number") return [];
+  const { absolute, relative } = key.tolerance;
+  const width = Math.max(absolute ?? 0, relative === null ? 0 : Math.abs(key.value) * relative);
+  return [{ value: key.value, below: width, above: width }];
 }
 
 /** The intervals that one element of the response processing names. */

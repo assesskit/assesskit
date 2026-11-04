@@ -55,7 +55,7 @@ checks that only the runtime uses and imports `errors.ts` and `checks.ts`, and `
 | 5     | `operators/`                                                | `values/`, `asi/`, `processing/`, `keys/`                                                                                               |
 | 6     | `validate/`                                                 | every module of layers 2 to 5                                                                                                           |
 | 6     | `scoring/`                                                  | `values/`, `asi/`, `processing/`, `keys/`, `operators/`                                                                                 |
-| 6     | `item-formats/`                                             | `xml/`, `values/`, `asi/`, `processing/`, `content/`; parse5                                                                            |
+| 6     | `item-formats/`                                             | `xml/`, `values/`, `asi/`, `processing/`, `content/`, `operators/`; parse5                                                              |
 | 7     | `delivery/`                                                 | `values/`, `asi/`, `results/`, `pnp/`, `processing/`, `interactions/`, `pci/`, `content/`, `metadata/`, `cat/`, `package/`, `validate/` |
 | 8     | `node/`                                                     | `xml/`, `package/`, `validate/`, `node:*`                                                                                               |
 | 9     | `cli/`                                                      | `xml/`, `asi/`, `results/`, `usage/`, `pnp/`, `package/`, `validate/`, `node/`, `node:*`                                                |
