@@ -1,11 +1,4 @@
-import {
-  checkArray,
-  checkFunction,
-  checkNonEmptyString,
-  checkProperties,
-  checkRecord,
-  describe,
-} from "@assesskit/runtime/checks";
+import { checkFunction, checkNonEmptyString, checkProperties, checkRecord, describe } from "@assesskit/runtime/checks";
 import type { SupportView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import type { ReadingType, TypingEcho } from "@assesskit/runtime/pnp";
@@ -13,16 +6,14 @@ import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";
 import { html } from "../internal.js";
 import type { ContentRoot } from "../roots/index.js";
+import type { Lexicon, SpeechHook, SpeechRequest, SpeechSettings } from "../speech/index.js";
 import {
   applyReadingType,
   buildSpeechRequest,
+  checkLexicons,
+  checkSpeechSettings,
   echoTyping,
-  type Lexicon,
-  type SpeechHook,
-  type SpeechRequest,
-  type SpeechSettings,
-} from "../speech/index.js";
-import { checkLexicons, checkSpeechSettings } from "../speech/internal.js";
+} from "../speech/internal.js";
 import { activeSupport, checkSupportViews } from "./check.js";
 import { adoptSupportStyles } from "./styles.js";
 
@@ -138,7 +129,7 @@ function checkSpokenOptions(host: unknown, root: unknown, options: unknown): ass
   checkRecord(options.voice, "The option voice must be an object");
   checkFunction(options.voice.speak, "The method speak of the option voice must be a function");
   checkFunction(options.voice.stop, "The method stop of the option voice must be a function");
-  if (options.lexicons !== undefined) checkArray(options.lexicons, "The option lexicons must be an array");
+  if (options.lexicons !== undefined) checkLexicons(options.lexicons);
 }
 
 /**

@@ -1,9 +1,5 @@
-import { checkFunction, checkNonEmptyString, checkRecord } from "@assesskit/runtime/checks";
-import { DataError } from "@assesskit/runtime/errors";
 import type { TypingEcho } from "@assesskit/runtime/pnp";
-import { PNP_TYPING_ECHOES } from "@assesskit/runtime/pnp";
 import type { Messages } from "../../messages/index.js";
-import { checkTerm } from "./checks.js";
 import { languageOf } from "./language.js";
 import type { SpeechHook, SpeechRequest } from "./request.js";
 import { speakDocument, ssmlElement } from "./ssml.js";
@@ -15,7 +11,7 @@ const WORD_END = /[\p{L}\p{M}\p{N}]+$/u;
 const WORD_CHARACTER = /^[\p{L}\p{M}\p{N}]$/u;
 
 /** The options of {@link echoTyping}. */
-export interface TypingEchoOptions {
+interface TypingEchoOptions {
   /** The voice that speaks. */
   readonly hook: SpeechHook;
   /** What is repeated while the candidate types. */
@@ -65,20 +61,9 @@ function echoed(echo: TypingEcho, typed: string, word: string | undefined, space
  * @param field - A text input or a text area.
  * @param options - See {@link TypingEchoOptions}.
  * @returns A function that stops the echo.
- * @throws `DataError` when the field is not a text input or a text area, or an option is not valid.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, typing echo}
  */
 export function echoTyping(field: HTMLInputElement | HTMLTextAreaElement, options: TypingEchoOptions): () => void {
-  if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) {
-    throw new DataError("The field must be an input or a textarea.");
-  }
-  checkRecord(options, "The options must be an object");
-  checkRecord(options.hook, "The option hook must be an object");
-  checkFunction(options.hook.speak, "The method speak of the option hook must be a function");
-  checkTerm(options.echo, PNP_TYPING_ECHOES, "The option echo");
-  checkRecord(options.messages, "The option messages must be an object");
-  checkNonEmptyString(options.messages.typingSpace, "The message typingSpace");
-  checkNonEmptyString(options.language, "The option language");
   const { hook, echo, messages, language } = options;
   const lang = languageOf(field) ?? language;
   // A voice that fails must not get in the way of typing, so the promise of a request is not awaited.

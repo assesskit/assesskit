@@ -9,14 +9,8 @@ import { userEvent } from "vitest/browser";
 import { createLocalSession } from "../src/client/local/index.js";
 import { EN_MESSAGES } from "../src/index.js";
 import { enableSorting } from "../src/player/content/internal.js";
-import {
-  buildSpeechRequest,
-  type ContentRoot,
-  createContentRoot,
-  mountItem,
-  mountTools,
-  type RootContent,
-} from "../src/player/index.js";
+import { type ContentRoot, createContentRoot, mountItem, mountTools, type RootContent } from "../src/player/index.js";
+import { buildSpeechRequest } from "../src/player/speech/internal.js";
 import { PLAYER_CSS, stylesheet } from "./css-fixture.js";
 import { NO_RECORDING } from "./files-fixture.js";
 import { axeViolations, ITEM_PATH, itemBody, renderBody, testRenderer } from "./renderer-fixture.js";

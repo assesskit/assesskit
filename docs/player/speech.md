@@ -16,55 +16,70 @@ flowchart LR
 
 ## Quick start
 
-Build the speech request of a range of content, with a lexicon, and give it to a voice:
+Mount reading aloud on a content root, with a lexicon and a voice, and read the content:
 
 ```ts
 import { EN_MESSAGES } from "@assesskit/player";
-import { buildSpeechRequest, readLexicon } from "@assesskit/player/player";
+import { createContentRoot, mountSpoken, readLexicon } from "@assesskit/player/player";
+import { readAsi } from "@assesskit/runtime/asi";
+
+const parsed = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+    identifier="read" title="Read" adaptive="false" time-dependent="false">
+  <qti-item-body>
+    <p xml:lang="en">Sigmund <span data-ssml='{"sub":{"alias":"Froyd"}}'>Freud</span> works at the W3C.</p>
+  </qti-item-body>
+</qti-assessment-item>`);
+if (parsed.kind !== "item" || parsed.item.body === undefined) throw new Error("The document is not an item.");
 
 const host = document.createElement("div");
-const root = host.attachShadow({ mode: "open" });
-root.innerHTML = `<p>Sigmund <span data-ssml='{"sub":{"alias":"Froyd"}}'>Freud</span> works at the W3C.</p>`;
 document.body.append(host);
+const root = createContentRoot(host, {
+  messages: EN_MESSAGES,
+  assets: (path) => `https://assets.example/g/token/${path}`,
+  fetch: (url, request) => fetch(url, request),
+  stylesheet: new CSSStyleSheet(),
+});
+await root.show({ body: { nodes: parsed.item.body.children, base: "items/read/item.xml" } });
 
 const lexicon = readLexicon(`<lexicon xmlns="http://www.w3.org/2005/01/pronunciation-lexicon" version="1.0"
   alphabet="ipa" xml:lang="en"><lexeme><grapheme>W3C</grapheme><alias>World Wide Web Consortium</alias></lexeme></lexicon>`);
+const requests = [];
+const voice = { speak: async (request) => void requests.push(request), stop: () => undefined };
 
-const range = document.createRange();
-range.selectNodeContents(root);
-const request = buildSpeechRequest(range, {
-  settings: { readingType: "computer-read-aloud", restrictionTypes: [], speechRate: 240 },
-  messages: EN_MESSAGES,
-  language: "en",
-  lexicons: [lexicon],
-});
-request?.text; // => "Sigmund Froyd works at the World Wide Web Consortium."
-request?.ssml; // => `<?xml version="1.0" encoding="UTF-8"?>\n<speak version="1.1" xml:lang="en" xmlns="http://www.w3.org/2001/10/synthesis"><p>Sigmund <sub alias="Froyd">Freud</sub> works at the <sub alias="World Wide Web Consortium">W3C</sub>.</p></speak>`
-request?.rate; // => 240
-
-const spoken = [];
-const voice = { speak: async (said) => void spoken.push(said.text), stop: () => undefined };
-await voice.speak(request);
-spoken; // => ["Sigmund Froyd works at the World Wide Web Consortium."]
+const chrome = document.createElement("div");
+document.body.append(chrome);
+const spoken = mountSpoken(chrome, root, { messages: EN_MESSAGES, language: "en", voice, lexicons: [lexicon] });
+spoken.update([
+  {
+    name: "spoken",
+    state: "active",
+    active: true,
+    settings: {
+      name: "spoken",
+      replaceAccessModes: [],
+      restrictionTypes: [],
+      readingType: "computer-read-aloud",
+      speechRate: 240,
+    },
+  },
+]);
+chrome.querySelector("button")?.click();
+requests[0]?.text; // => "Sigmund Froyd works at the World Wide Web Consortium."
+requests[0]?.rate; // => 240
+spoken.destroy();
+root.destroy();
 ```
 
 ## The request
 
-`buildSpeechRequest(range, options)` reads the content of a range in reading order and returns a `SpeechRequest`, or
-`undefined` when there is nothing to say. The range is a content root (`selectNodeContents`), a paragraph, a selection
-or a word.
+`mountSpoken` ([supports](supports.md#reading-aloud)) reads the content of a range in reading order and gives the voice a
+`SpeechRequest`. The range is the whole content root, or a word with `word-by-word`. Nothing is read, and the voice gets no
+request, when there is nothing to say.
 
-| Option     | Type             | Meaning                                                                       |
-| ---------- | ---------------- | ----------------------------------------------------------------------------- |
-| `settings` | `SpeechSettings` | The candidate's spoken support; the runtime's `Spoken` fits                   |
-| `messages` | `{ speechLink }` | The interface text; `Messages` fits                                           |
-| `language` | `string`         | The language of content that states none, a BCP 47 tag                        |
-| `lexicons` | `Lexicon[]`      | The pronunciation lexicons of the item, in order of preference. Default: none |
-
-It throws `DataError` when `range` is not a `Range` or an option is not valid. `SpeechSettings` holds the fields of
-the runtime's `Spoken` that decide the reading, all optional: `readingType`, `restrictionTypes`, `speechRate`, `pitch`,
-`volume`, `linkIndication` and `typingEcho`. The profile sets them when the session starts, and the candidate changes the last
-five during the session with the lists of the panel ([supports](supports.md#the-settings)); the next reading and typing follow.
+`SpeechSettings` holds the fields of the runtime's `Spoken` that decide the reading, all optional: `readingType`,
+`restrictionTypes`, `speechRate`, `pitch`, `volume`, `linkIndication` and `typingEcho`. The profile sets them when the session
+starts, and the candidate changes the last five during the session with the lists of the panel
+([supports](supports.md#the-settings)); the next reading and typing follow.
 
 | `SpeechRequest` field | Meaning                                                                                                                                  |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
@@ -193,8 +208,8 @@ the language of parts are lost with `createWebSpeech()`; use a host voice for fu
 
 ## Typing echo
 
-`echoTyping(field, options)` says what the candidate types in a text input or a text area, as the support's `typingEcho`
-says, and returns a function that stops it.
+With a `typingEcho` other than `none`, `mountSpoken` says what the candidate types in a text input or a text area of the
+content root, as the support's `typingEcho` says, and stops when the support goes.
 
 | `echo`                 | The voice says                                                                            |
 | ---------------------- | ----------------------------------------------------------------------------------------- |
@@ -203,13 +218,12 @@ says, and returns a function that stops it.
 | `characters-and-words` | Each character, and the word in place of the character that ends it                       |
 | `none`                 | Nothing                                                                                   |
 
-Only typed characters are echoed, not pasted or deleted text. A voice that fails does not stop the typing. The options
-are `hook`, `echo`, `messages` (`{ typingSpace }`) and `language`, which a `lang` of the field's ancestors replaces. It
-throws `DataError` when the field is not an `input` or a `textarea` or an option is not valid.
+Only typed characters are echoed, not pasted or deleted text. A voice that fails does not stop the typing. The `language` option
+of `mountSpoken` is replaced by a `lang` of the field's ancestors.
 
 ## The accessible structure
 
-`applyReadingType(root, readingType)` sets `aria-hidden="true"` where the reading type of the support asks the content
+`mountSpoken` sets `aria-hidden="true"` where the reading type of the support asks the content
 to be out of the accessibility tree that a screen reader reads:
 
 | Reading type          | Hidden                                                            |
@@ -218,16 +232,15 @@ to be out of the accessibility tree that a screen reader reads:
 | `computer-read-aloud` | Elements with the content role `screen-reader-orientation`        |
 | `undefined`           | Nothing: the candidate has no spoken support                      |
 
-It removes what an earlier call set and nothing else: an `aria-hidden` of the content stays. Call it again when the
-support changes or the content is replaced. It throws `DataError` for a value that is neither a reading type nor
-`undefined`.
+It removes what an earlier update set and nothing else: an `aria-hidden` of the content stays. `update` applies it again when
+the support changes.
 
 ## Errors
 
 | Error                                      | When                                                                                                                                                                                                                     | What to do                                                                                                |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
 | `DataError`                                | An option of a request is not of its type: a reading type or a restriction type that is not a term of the vocabulary, a rate that is not a positive whole number of words per minute, a pitch or a volume outside 0 to 1 | Fix the value; the message names it and says what is valid                                                |
-| `DataError`                                | The range is not a `Range`, a lexicon is not a PLS document (its root, version `1.0`, an alphabet and an `xml:lang`), or the field of the typing echo is not an `input` or a `textarea`                                  | Pass what the call asks for                                                                               |
+| `DataError`                                | A lexicon is not a PLS document (its root, version `1.0`, an alphabet and an `xml:lang`), or the lexicons that `mountSpoken` gets are not what `readLexicon` makes                                                       | Pass what the call asks for                                                                               |
 | `DataError`                                | `speak` gets something that is not a speech request                                                                                                                                                                      | Pass the request that `buildSpeechRequest` returned                                                       |
 | `AssesskitError`                           | The voice fails: the utterance of `createWebSpeech()` reports an error that is not a stop, `The voice failed: …`                                                                                                         | Read the reason in the message; check that the browser has a voice for the language, or give a host voice |
 | No sound, no error                         | The reading type is `screen-reader`, or the range holds only what the restrictions leave out                                                                                                                             | `buildSpeechRequest` returns `undefined`; there is nothing to say                                         |
@@ -260,16 +273,16 @@ Each file of `src/player/speech/` holds one concept.
 | `block-elements.ts` | Which elements are paragraphs, and which are expressions                      |
 | `checks.ts`         | The checks of rates, pitches and terms                                        |
 | `data-ssml.ts`      | The `data-ssml` attribute                                                     |
-| `index.ts`          | The public API                                                                |
+| `index.ts`          | The public API: the lexicons, the voice and its request                       |
 | `internal.ts`       | Helpers that other folders and tests share, which the package does not export |
 | `language.ts`       | The language of a node                                                        |
 | `lexicon.ts`        | Pronunciation lexicons: reading and checking                                  |
-| `options.ts`        | The options of `buildSpeechRequest`                                           |
+| `options.ts`        | The options of the reading of a range                                         |
 | `paragraphs.ts`     | Paragraphs of SSML nodes                                                      |
 | `pronounce.ts`      | Looking up words in lexicons                                                  |
 | `reader.ts`         | Reading a range into SSML                                                     |
 | `reading-type.ts`   | The reading type and the accessible structure                                 |
-| `reading.ts`        | `buildSpeechRequest`                                                          |
+| `reading.ts`        | The reading of a range into a request                                         |
 | `request.ts`        | The request and the voice                                                     |
 | `settings.ts`       | The settings of the spoken support                                            |
 | `ssml.ts`           | SSML elements and documents                                                   |

@@ -1,6 +1,4 @@
 import type { ReadingType } from "@assesskit/runtime/pnp";
-import { PNP_READING_TYPES } from "@assesskit/runtime/pnp";
-import { checkTerm } from "./checks.js";
 
 /** The elements that this module hid from assistive technology, so that it removes only what it set. */
 const HIDDEN = new WeakSet<Element>();
@@ -29,12 +27,10 @@ function hides(element: Element, readingType: ReadingType | undefined): boolean 
  *
  * @param root - A content root, or an element of one.
  * @param readingType - The reading type of the spoken support, or `undefined` for a candidate without one.
- * @throws `DataError` when `readingType` is neither a reading type nor `undefined`.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, reading type}
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/vocab/ | QTI 3 Standardized Shared Vocabulary, text to speech suppression}
  */
 export function applyReadingType(root: ParentNode, readingType: ReadingType | undefined): void {
-  if (readingType !== undefined) checkTerm(readingType, PNP_READING_TYPES, "The reading type");
   for (const element of root.querySelectorAll("[data-qti-suppress-tts], [data-qti-a11y-content-role]")) {
     if (hides(element, readingType)) {
       if (element.getAttribute("aria-hidden") !== "true") {

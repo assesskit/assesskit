@@ -1,7 +1,8 @@
 import { DataError } from "@assesskit/runtime/errors";
 import { describe, expect, inject, it } from "vitest";
 import { EN_MESSAGES } from "../src/index.js";
-import { buildSpeechRequest, createMathTypesetter } from "../src/player/index.js";
+import { createMathTypesetter } from "../src/player/index.js";
+import { buildSpeechRequest } from "../src/player/speech/internal.js";
 import { mountContent, wholeRoot } from "./content-fixture.js";
 import { mount } from "./css-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";

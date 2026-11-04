@@ -341,7 +341,7 @@ unless `lexicons` is a list of what `readLexicon` makes.
 
 | Reading type                           | What it does                                                                                                                               |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `screen-reader`, or none (the default) | No controls. `applyReadingType` keeps what `data-qti-suppress-tts` marks out of the accessibility tree                                     |
+| `screen-reader`, or none (the default) | No controls. `update` keeps what `data-qti-suppress-tts` marks out of the accessibility tree                                               |
 | `computer-read-aloud`                  | A group Spoken with Read aloud and Stop reading. Read aloud reads the content with the settings of the support; the voice gets the request |
 | No spoken support                      | No controls; the voice is stopped                                                                                                          |
 
@@ -350,7 +350,7 @@ after the one read last, and Read aloud reads that word again. The candidate cho
 selection inside a shadow root cannot be read in every browser. A word that the speech model leaves out is skipped. The
 text of the word shows in an output, which also says when there is nothing to read or the voice failed.
 
-With a `typingEcho` other than `none`, `echoTyping` repeats what the candidate types in the text areas and text inputs of
+With a `typingEcho` other than `none`, the player repeats what the candidate types in the text areas and text inputs of
 the root, and stops when the support goes.
 
 ## The variant

@@ -5,17 +5,14 @@ import { userEvent } from "vitest/browser";
 import { EN_MESSAGES } from "../src/index.js";
 import { ID_MESSAGES } from "../src/messages/id/index.js";
 import {
-  applyReadingType,
-  buildSpeechRequest,
   createWebSpeech,
-  echoTyping,
   type Lexicon,
   readLexicon,
   type SpeechHook,
-  type SpeechOptions,
   type SpeechRequest,
   type SpeechSettings,
 } from "../src/player/index.js";
+import { applyReadingType, buildSpeechRequest, echoTyping, type SpeechOptions } from "../src/player/speech/internal.js";
 import { mountContent, wholeRoot } from "./content-fixture.js";
 import type { ContentRoot } from "./css-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
@@ -135,12 +132,6 @@ describe("applyReadingType", () => {
       applyReadingType(content.root, readingType);
       expect(await axeViolations(content.host), String(readingType)).toEqual([]);
     }
-  });
-
-  it("refuses a reading type that PNP does not have", () => {
-    const content = mountContent(markup);
-    expect(() => applyReadingType(content.root, JSON.parse('"tts"'))).toThrow(DataError);
-    expect(() => applyReadingType(content.root, JSON.parse("null"))).toThrow(DataError);
   });
 });
 
@@ -578,34 +569,6 @@ describe("buildSpeechRequest", () => {
       whole.selectNode(sub ?? text);
       expect(built(whole, options)?.text).toBe("World Wide Web");
     });
-
-    it("refuses what is not a range, options that are not an object and settings outside PNP", () => {
-      const content = mountContent("<p>Hello</p>");
-      const options = { settings: READ_ALOUD, messages: EN_MESSAGES, language: "en" };
-      expect(() => buildSpeechRequest(JSON.parse("null"), options)).toThrow(DataError);
-      expect(() => buildSpeechRequest(wholeRoot(content), JSON.parse("null"))).toThrow(DataError);
-      expect(() =>
-        buildSpeechRequest(wholeRoot(content), { ...options, settings: JSON.parse('{"readingType":"tts"}') }),
-      ).toThrow(DataError);
-      expect(() => buildSpeechRequest(wholeRoot(content), { ...options, messages: JSON.parse("{}") })).toThrow(
-        DataError,
-      );
-      expect(() => buildSpeechRequest(wholeRoot(content), { ...options, language: JSON.parse("3") })).toThrow(
-        DataError,
-      );
-      expect(() => buildSpeechRequest(wholeRoot(content), { ...options, lexicons: JSON.parse("{}") })).toThrow(
-        /lexicons/u,
-      );
-      expect(() => buildSpeechRequest(wholeRoot(content), { ...options, lexicons: JSON.parse("[3]") })).toThrow(
-        DataError,
-      );
-      expect(() =>
-        buildSpeechRequest(wholeRoot(content), {
-          ...options,
-          lexicons: JSON.parse('[{"language":"en","entries":{}}]'),
-        }),
-      ).toThrow(/Map/u);
-    });
   });
 
   it("leaves no axe violation in a content root that is read", async () => {
@@ -771,19 +734,6 @@ describe("echoTyping", () => {
     stops.push(echoTyping(field, { hook, echo: "characters", messages: EN_MESSAGES, language: "en" }));
     await userEvent.type(field, "ab");
     expect(field.value).toBe("ab");
-  });
-
-  it("refuses a field that is not a text input, and options outside the vocabulary", () => {
-    const { hook } = recorder();
-    const options = { hook, echo: "characters" as const, messages: EN_MESSAGES, language: "en" };
-    const content = mountContent("<input/><p>x</p>");
-    expect(() => echoTyping(content.find("p") as unknown as HTMLInputElement, options)).toThrow(DataError);
-    const field = content.find<HTMLInputElement>("input");
-    expect(() => echoTyping(field, { ...options, echo: JSON.parse('"letters"') })).toThrow(DataError);
-    expect(() => echoTyping(field, JSON.parse("null"))).toThrow(DataError);
-    expect(() => echoTyping(field, { ...options, hook: JSON.parse("{}") })).toThrow(DataError);
-    expect(() => echoTyping(field, { ...options, messages: JSON.parse("{}") })).toThrow(DataError);
-    expect(() => echoTyping(field, { ...options, language: JSON.parse("null") })).toThrow(DataError);
   });
 });
 

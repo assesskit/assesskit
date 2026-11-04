@@ -1631,12 +1631,20 @@ describe("mountSpoken", () => {
     expect(() => mountSpoken(chrome, root, { ...valid, lexicons: JSON.parse("{}") })).toThrow(
       new DataError("The option lexicons must be an array, found an object."),
     );
+    expect(() => mountSpoken(chrome, root, { ...valid, lexicons: JSON.parse("[3]") })).toThrow(
+      new DataError("A lexicon must be an object, found 3."),
+    );
+    expect(() =>
+      mountSpoken(chrome, root, { ...valid, lexicons: JSON.parse('[{"language":"en","entries":{}}]') }),
+    ).toThrow(new DataError("The entries of a lexicon must be a Map, found an object."));
     expect(() => spoken.update(JSON.parse("{}"))).toThrow(
       new DataError("The list of supports is invalid: expected an array, found an object."),
     );
     expect(() => spoken.update([reading({ pitch: 2 })])).toThrow(
       new DataError("The pitch must be a number from 0 to 1, found 2."),
     );
+    expect(() => spoken.update([reading({ readingType: JSON.parse('"tts"') })])).toThrow(DataError);
+    expect(() => spoken.update([reading({ typingEcho: JSON.parse('"letters"') })])).toThrow(DataError);
   });
 });
 
