@@ -41,24 +41,24 @@ checks that only the runtime uses and imports `errors.ts` and `checks.ts`, and `
 `delivery` is the top library layer, and no runtime module imports it. `packages/runtime` never imports `@assesskit/player`, and
 `@assesskit/player` imports the runtime only through its published subpaths, never by relative path.
 
-| Layer | Modules                                                     | Imports                                                                                                                    |
-| ----- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| 1     | `errors.ts`, `checks.ts`, `checks-internal.ts`, `random.ts` | as above                                                                                                                   |
-| 2     | `xml/`, `values/`, `keys/`                                  | none                                                                                                                       |
-| 3     | `asi/`, `results/`, `usage/`                                | `xml/`, `values/`                                                                                                          |
-| 3     | `pnp/`                                                      | `xml/`                                                                                                                     |
-| 4     | `metadata/`                                                 | `xml/`, `asi/`                                                                                                             |
-| 4     | `processing/`, `interactions/`, `pci/`                      | `values/`, `asi/`                                                                                                          |
-| 4     | `content/`                                                  | `values/`, `asi/`, `pnp/`                                                                                                  |
-| 5     | `cat/`                                                      | `values/`, `asi/`, `results/`, `metadata/`                                                                                 |
-| 5     | `package/`                                                  | `xml/`, `asi/`, `metadata/`, `usage/`                                                                                      |
-| 5     | `operators/`                                                | `values/`, `asi/`, `processing/`, `keys/`                                                                                  |
-| 6     | `validate/`                                                 | every module of layers 2 to 5                                                                                              |
-| 6     | `scoring/`                                                  | `values/`, `asi/`, `processing/`, `keys/`, `operators/`                                                                    |
-| 6     | `item-formats/`                                             | `xml/`, `values/`, `asi/`, `processing/`, `content/`; parse5                                                               |
-| 7     | `delivery/`                                                 | `values/`, `asi/`, `results/`, `pnp/`, `processing/`, `interactions/`, `pci/`, `content/`, `cat/`, `package/`, `validate/` |
-| 8     | `node/`                                                     | `xml/`, `package/`, `validate/`, `node:*`                                                                                  |
-| 9     | `cli/`                                                      | `xml/`, `asi/`, `results/`, `usage/`, `pnp/`, `package/`, `validate/`, `node/`, `node:*`                                   |
+| Layer | Modules                                                     | Imports                                                                                                                                 |
+| ----- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `errors.ts`, `checks.ts`, `checks-internal.ts`, `random.ts` | as above                                                                                                                                |
+| 2     | `xml/`, `values/`, `keys/`                                  | none                                                                                                                                    |
+| 3     | `asi/`, `results/`, `usage/`                                | `xml/`, `values/`                                                                                                                       |
+| 3     | `pnp/`                                                      | `xml/`                                                                                                                                  |
+| 4     | `metadata/`                                                 | `xml/`, `asi/`                                                                                                                          |
+| 4     | `processing/`, `interactions/`, `pci/`                      | `values/`, `asi/`                                                                                                                       |
+| 5     | `content/`                                                  | `values/`, `asi/`, `pnp/`, `metadata/`                                                                                                  |
+| 5     | `cat/`                                                      | `values/`, `asi/`, `results/`, `metadata/`                                                                                              |
+| 5     | `package/`                                                  | `xml/`, `asi/`, `metadata/`, `usage/`                                                                                                   |
+| 5     | `operators/`                                                | `values/`, `asi/`, `processing/`, `keys/`                                                                                               |
+| 6     | `validate/`                                                 | every module of layers 2 to 5                                                                                                           |
+| 6     | `scoring/`                                                  | `values/`, `asi/`, `processing/`, `keys/`, `operators/`                                                                                 |
+| 6     | `item-formats/`                                             | `xml/`, `values/`, `asi/`, `processing/`, `content/`; parse5                                                                            |
+| 7     | `delivery/`                                                 | `values/`, `asi/`, `results/`, `pnp/`, `processing/`, `interactions/`, `pci/`, `content/`, `metadata/`, `cat/`, `package/`, `validate/` |
+| 8     | `node/`                                                     | `xml/`, `package/`, `validate/`, `node:*`                                                                                               |
+| 9     | `cli/`                                                      | `xml/`, `asi/`, `results/`, `usage/`, `pnp/`, `package/`, `validate/`, `node/`, `node:*`                                                |
 
 ## Principles
 

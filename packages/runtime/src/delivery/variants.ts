@@ -1,4 +1,5 @@
-import { HAZARD_TERMS, type PnpHazardTerm } from "../content/index.js";
+import { HAZARD_TERMS } from "../content/internal.js";
+import type { PnpHazard } from "../pnp/index.js";
 import type { Candidate } from "./course.js";
 import type { CandidateNeeds } from "./delivery-state.js";
 
@@ -7,11 +8,11 @@ export interface VariantChoice {
   /** The item itself or one of its variants. */
   readonly candidate: Candidate;
   /** The hazards of the item presented that the candidate avoids: none unless every candidate has such a hazard. */
-  readonly unavoidable: readonly PnpHazardTerm[];
+  readonly unavoidable: readonly PnpHazard[];
 }
 
 /** Returns the hazards of a candidate that the candidate avoids, in the terms of the PNP. */
-function avoidedIn(candidate: Candidate, avoided: ReadonlySet<PnpHazardTerm>): PnpHazardTerm[] {
+function avoidedIn(candidate: Candidate, avoided: ReadonlySet<PnpHazard>): PnpHazard[] {
   return candidate.hazards.flatMap((hazard) => {
     const term = HAZARD_TERMS.get(hazard);
     return term !== undefined && avoided.has(term) ? [term] : [];

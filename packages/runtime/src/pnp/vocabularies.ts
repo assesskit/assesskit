@@ -24,8 +24,11 @@ export type PnpAccessMode = (typeof PNP_ACCESS_MODES)[number];
 /** The terms of `hazard-avoidance`; the names that the DRD schema gives them differ. */
 export const PNP_HAZARDS = ["flashing", "sound", "olfactory-hazard", "motion-simulation"] as const;
 
+/** A hazard in the terms of `hazard-avoidance`, as the PNP schema names it. */
+export type PnpHazard = (typeof PNP_HAZARDS)[number];
+
 /** A stimulus a candidate avoids: a term of `hazard-avoidance`, or an extension term. */
-export type HazardTerm = (typeof PNP_HAZARDS)[number] | PnpExtensionTerm;
+export type HazardTerm = PnpHazard | PnpExtensionTerm;
 
 /** The terms of `input-requirements`. */
 export const PNP_INPUT_REQUIREMENTS = ["full-keyboard-control", "full-mouse-control"] as const;

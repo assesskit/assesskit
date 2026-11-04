@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
+import { HAZARD_TERMS, isShown } from "../src/content/internal.js";
 import {
   ASI_NAMESPACE,
   type AssessmentItem,
@@ -18,9 +19,6 @@ import {
   DRD_HAZARDS,
   deriveHazardExposure,
   formatPrintedVariable,
-  HAZARD_TERMS,
-  isShown,
-  listCatalogs,
   listDescendantNodes,
   type ModelNode,
   type PersonalNeedsProfile,
@@ -257,17 +255,6 @@ describe("catalogs and cards", () => {
     );
   });
 
-  it("finds the catalog that data-catalog-idref names, wherever the item keeps it", () => {
-    const [first, plain, missing, feedback] = catalogItem.body?.children ?? [];
-    const reference = (node: BodyNode | undefined): string[] =>
-      node === undefined ? [] : listCatalogs(catalogItem, node).map((found) => found.id);
-    expect(reference(first)).toEqual(["c1"]);
-    expect(reference(plain)).toEqual([]);
-    expect(reference(missing)).toEqual([]);
-    const inside = feedback?.kind === "feedback-block" ? feedback.contentBody?.children[0] : undefined;
-    expect(reference(inside)).toEqual(["c2"]);
-  });
-
   it("SupportEnum and SupportEnumExt: a card names one of the 15 supports, or ext: and a name, and no other term", () => {
     const supports = [
       "additional-directions",
@@ -352,8 +339,6 @@ describe("catalogs and cards", () => {
     expect(() => selectCard(catalog(), json("1"))).toThrow(DataError);
     expect(() => selectCard(catalog(), "spoken", { language: json("1") })).toThrow(DataError);
     expect(() => selectCard(catalog(), "spoken", json("null"))).toThrow("The options must be an object, found null.");
-    expect(() => listCatalogs(json("null"), { kind: "text", value: "x" })).toThrow(DataError);
-    expect(() => listCatalogs(catalogItem, json("null"))).toThrow(DataError);
     expect(() => validateCatalog(json("null"))).toThrow(DataError);
   });
 });
@@ -1016,6 +1001,7 @@ describe("the guide", () => {
     const modules = {
       "@assesskit/runtime/asi": await import("../src/asi/index.js"),
       "@assesskit/runtime/content": await import("../src/content/index.js"),
+      "../content/internal.js": await import("../src/content/internal.js"),
       "@assesskit/runtime/processing": await import("../src/processing/index.js"),
       "@assesskit/runtime/values": await import("../src/values/index.js"),
     };

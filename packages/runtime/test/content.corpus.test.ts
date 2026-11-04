@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isShown } from "../src/content/internal.js";
 import {
   type AssessmentItem,
   type BodyNode,
@@ -6,7 +7,6 @@ import {
   createItemVariables,
   createRandom,
   type ItemVariables,
-  isShown,
   listDescendantNodes,
   type ModelNode,
   ProcessingError,

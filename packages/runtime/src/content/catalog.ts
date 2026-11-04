@@ -1,5 +1,4 @@
-import type { AssessmentItem, BodyNode, Catalog, FileHref, HtmlContent } from "../asi/index.js";
-import { withDescendants } from "../asi/internal.js";
+import type { Catalog, FileHref, HtmlContent } from "../asi/index.js";
 import { checkArray, checkOptional, checkPositiveInteger, checkRecord, checkString, describe } from "../checks.js";
 import { checkOptions } from "../checks-internal.js";
 import type { Issue } from "../errors.js";
@@ -162,36 +161,6 @@ export function selectCard(
     ...(chosen.htmlContent === undefined ? {} : { htmlContent: chosen.htmlContent }),
     fileHrefs: chosen.fileHrefs,
   };
-}
-
-/**
- * Returns the catalogs that a node refers to with `data-catalog-idref`.
- *
- * @remarks
- * A catalog may be anywhere in the item, in its `qti-catalog-info` or in that of feedback or a rubric block, and its
- * `id` is unique.
- *
- * @param item - The item.
- * @param node - A node of the item's content, such as an interaction or a paragraph.
- * @returns The catalogs with the node's `data-catalog-idref` as their `id`; none when the node has no such attribute.
- * @throws `DataError` when an argument has the wrong type.
- * @see
- * {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, qti-catalog-info}
- */
-export function listCatalogs(item: AssessmentItem, node: BodyNode): readonly Catalog[] {
-  const input: unknown = item;
-  checkRecord(input, "The item must be an object of the model of qti-assessment-item");
-  checkRecord(node, "The node must be an object of the model");
-  const idref = "dataCatalogIdref" in node ? node.dataCatalogIdref : undefined;
-  if (idref === undefined) return [];
-  const roots = [
-    ...(item.body?.children ?? []),
-    ...item.modalFeedback,
-    ...(item.catalogInfo === undefined ? [] : [item.catalogInfo]),
-  ];
-  return withDescendants(roots).filter(
-    (candidate): candidate is Catalog => candidate.kind === "catalog" && "id" in candidate && candidate.id === idref,
-  );
 }
 
 /**

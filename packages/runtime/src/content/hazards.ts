@@ -1,13 +1,8 @@
 import { checkArray, checkRecord, describe } from "../checks.js";
 import { checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
-import type { PersonalNeedsProfile, PNP_HAZARDS } from "../pnp/index.js";
-
-/** A hazard of a digital resource in the terms of the DRD schema (DRD XSD `Hazard`). */
-export type DrdHazardTerm = "flashing" | "motionSimulation" | "olfactoryHazard" | "sound";
-
-/** A hazard in the terms of `hazard-avoidance` in a PNP (PNP XSD). */
-export type PnpHazardTerm = (typeof PNP_HAZARDS)[number];
+import type { DrdHazard } from "../metadata/index.js";
+import type { PersonalNeedsProfile, PnpHazard } from "../pnp/index.js";
 
 /**
  * The term that a PNP uses for each hazard term of the DRD: `flashing` and `sound` are the same, `olfactoryHazard` is
@@ -15,7 +10,7 @@ export type PnpHazardTerm = (typeof PNP_HAZARDS)[number];
  *
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
  */
-export const HAZARD_TERMS: ReadonlyMap<DrdHazardTerm, PnpHazardTerm> = new Map<DrdHazardTerm, PnpHazardTerm>([
+export const HAZARD_TERMS: ReadonlyMap<DrdHazard, PnpHazard> = new Map<DrdHazard, PnpHazard>([
   ["flashing", "flashing"],
   ["motionSimulation", "motion-simulation"],
   ["olfactoryHazard", "olfactory-hazard"],
@@ -25,7 +20,7 @@ export const HAZARD_TERMS: ReadonlyMap<DrdHazardTerm, PnpHazardTerm> = new Map<D
 /** A hazard that content has, with whether the candidate avoids it. */
 export interface HazardExposure {
   /** The hazard, in the terms of the PNP. */
-  readonly hazard: PnpHazardTerm;
+  readonly hazard: PnpHazard;
   /** Whether the profile lists the hazard under `hazard-avoidance`, so that the candidate should not be exposed to it. */
   readonly avoided: boolean;
 }
@@ -54,7 +49,7 @@ export interface DeriveHazardExposureOptions {
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
  */
 export function deriveHazardExposure(
-  hazards: readonly DrdHazardTerm[],
+  hazards: readonly DrdHazard[],
   options: DeriveHazardExposureOptions = {},
 ): readonly HazardExposure[] {
   checkArray(hazards, "The hazards must be an array");

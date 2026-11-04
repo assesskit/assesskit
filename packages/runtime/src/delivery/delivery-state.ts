@@ -1,8 +1,7 @@
 import { checkArray, checkChoice, checkRecord, checkString, describe } from "../checks.js";
 import { checkFinite } from "../checks-internal.js";
-import type { PnpHazardTerm } from "../content/index.js";
 import { DataError } from "../errors.js";
-import type { SupportName, SupportSetting, SupportState, TestingTime } from "../pnp/index.js";
+import type { PnpHazard, SupportName, SupportSetting, SupportState, TestingTime } from "../pnp/index.js";
 import type { RandomState } from "../random.js";
 import type { ResultContext } from "../results/index.js";
 import type { Value } from "../values/index.js";
@@ -102,7 +101,7 @@ export interface CandidateNeeds {
   /** The extra testing time, from `additionalTestingTime`; absent when the profile gives none. */
   readonly testingTime?: TestingTime;
   /** The hazards the candidate avoids, in the terms of the PNP. */
-  readonly avoidedHazards: readonly PnpHazardTerm[];
+  readonly avoidedHazards: readonly PnpHazard[];
   /** The language of `item-translation`, a BCP 47 tag; absent when the profile asks for no translation. */
   readonly translation?: string;
   /**

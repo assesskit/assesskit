@@ -571,9 +571,10 @@
                       "!../random.js",
                       "!../values/**",
                       "!../asi/**",
-                      "!../pnp/**"
+                      "!../pnp/**",
+                      "!../metadata/**"
                     ],
-                    "message": "content/ builds on values/, asi/ and pnp/ only."
+                    "message": "content/ builds on values/, asi/, pnp/ and metadata/ only."
                   },
                   {
                     "group": ["@assesskit/player", "@assesskit/player/**"],
@@ -864,11 +865,12 @@
                       "!../interactions/**",
                       "!../pci/**",
                       "!../content/**",
+                      "!../metadata/**",
                       "!../cat/**",
                       "!../package/**",
                       "!../validate/**"
                     ],
-                    "message": "delivery/ builds on values/, asi/, results/, pnp/, processing/, interactions/, pci/, content/, cat/, package/ and validate/ only."
+                    "message": "delivery/ builds on values/, asi/, results/, pnp/, processing/, interactions/, pci/, content/, metadata/, cat/, package/ and validate/ only."
                   },
                   {
                     "group": ["@assesskit/player", "@assesskit/player/**"],

@@ -1,4 +1,5 @@
-import type { HazardExposure, PnpHazardTerm } from "@assesskit/runtime/content";
+import type { HazardExposure } from "@assesskit/runtime/content";
+import type { PnpHazard } from "@assesskit/runtime/pnp";
 import type { Messages } from "../../messages/index.js";
 import { html } from "../internal.js";
 
@@ -7,7 +8,7 @@ import { html } from "../internal.js";
  *
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, hazards}
  */
-const HAZARD_NAMES: Readonly<Record<PnpHazardTerm, keyof Messages>> = {
+const HAZARD_NAMES: Readonly<Record<PnpHazard, keyof Messages>> = {
   flashing: "hazardFlashing",
   sound: "hazardSound",
   "olfactory-hazard": "hazardOlfactory",
@@ -23,7 +24,7 @@ const HAZARD_NAMES: Readonly<Record<PnpHazardTerm, keyof Messages>> = {
  * @param hazards - The hazards of the delivered content.
  * @returns The terms of the hazards that remain.
  */
-export function remainingHazards(hazards: readonly HazardExposure[]): readonly PnpHazardTerm[] {
+export function remainingHazards(hazards: readonly HazardExposure[]): readonly PnpHazard[] {
   return hazards.filter(({ avoided }) => avoided).map(({ hazard }) => hazard);
 }
 
@@ -34,7 +35,7 @@ export function remainingHazards(hazards: readonly HazardExposure[]): readonly P
  * @param messages - The interface messages.
  * @returns The notice.
  */
-export function hazardNotice(hazards: readonly PnpHazardTerm[], messages: Messages): HTMLElement {
+export function hazardNotice(hazards: readonly PnpHazard[], messages: Messages): HTMLElement {
   const names = hazards.map((hazard) => messages[HAZARD_NAMES[hazard]]);
   return html(
     "div",

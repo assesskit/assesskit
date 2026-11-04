@@ -171,7 +171,7 @@ function checkVariables(variables: unknown): asserts variables is ContentVariabl
  * | Content                                                            | Resolution                                                                   |
  * | ------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
  * | `qti-printed-variable`                                             | text, by {@link formatPrintedVariable}; a response variable prints nothing   |
- * | `qti-feedback-block`, `qti-feedback-inline`                        | kept when {@link isShown} for the outcome, else removed                      |
+ * | `qti-feedback-block`, `qti-feedback-inline`                        | kept when `isShown` for the outcome, else removed                           |
  * | `qti-template-block`, `qti-template-inline`                        | kept when shown for the template variable, else removed                      |
  * | choices, gaps, hotspots and hot texts with a `template-identifier` | removed when the template variable hides them                                |
  * | `qti-rubric-block`                                                 | kept when its `view` lists the view, else removed                            |

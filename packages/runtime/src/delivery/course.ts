@@ -17,8 +17,9 @@ import {
   describe,
 } from "../checks.js";
 import { checkOptions } from "../checks-internal.js";
-import { type DrdHazardTerm, HAZARD_TERMS } from "../content/index.js";
+import { HAZARD_TERMS } from "../content/internal.js";
 import { DataError, type Issue } from "../errors.js";
+import type { DrdHazard } from "../metadata/index.js";
 import type { DeliverableItem, LtiLink, ResolvedItem, Resolvers } from "../package/index.js";
 import { resolveReference } from "../package/index.js";
 import { checkSynchronous } from "../package/internal.js";
@@ -168,7 +169,7 @@ export interface Candidate {
   /** The stimuli the item names, in the order it names them. */
   readonly stimuli: readonly CandidateStimulus[];
   /** The hazards of the resource, in the terms of the DRD. */
-  readonly hazards: readonly DrdHazardTerm[];
+  readonly hazards: readonly DrdHazard[];
   /** The languages of a variant's adaptation, BCP 47 tags; none for the item itself. */
   readonly languages: readonly string[];
 }
@@ -305,7 +306,7 @@ function itemOf(deliverable: DeliverableItem): AssessmentItem {
   return deliverable.kind === "qti" ? deliverable.item : ltiItem(deliverable.identifier);
 }
 
-const isDrdHazard = (term: string): term is DrdHazardTerm => [...HAZARD_TERMS.keys()].some((known) => known === term);
+const isDrdHazard = (term: string): term is DrdHazard => [...HAZARD_TERMS.keys()].some((known) => known === term);
 
 /**
  * Returns the stimuli an item names, each resolved against the document of the item. Without resolvers an item has

@@ -1,5 +1,5 @@
 import type { AssessmentItem } from "../asi/index.js";
-import { isShown } from "../content/index.js";
+import { isShown } from "../content/internal.js";
 import { ProcessingError } from "../errors.js";
 import {
   type CustomOperator,

@@ -25,19 +25,18 @@ flowchart LR
 | Function                                           | Does                                                                                             |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `resolveContent(nodes, variables, item, options)`  | Returns the nodes with hidden content removed, variables printed and template values substituted |
-| `isShown(showHide, identifier, value)`             | Tells whether feedback, template content or a choice is visible                                  |
 | `formatPrintedVariable(printed, value, variables)` | Writes the text of a `qti-printed-variable`                                                      |
 | `selectModalFeedback(item, outcomes)`              | Returns the modal feedback an item shows                                                         |
 | `selectTestFeedback(feedback, outcomes, access)`   | Returns the test feedback of one access, `during` or `atEnd`                                     |
 | `selectRubricBlocks(blocks, view)`                 | Returns the rubric blocks whose `view` lists the view                                            |
 | `selectTestRubricBlocks(position, view)`           | Returns the rubric of a test, its part and its sections, in the order the candidate meets it     |
 | `selectCard(catalog, support, options?)`           | Returns the content of the card for a support, by `language` and the preferences of `braille`    |
-| `listCatalogs(item, node)`                         | Returns the catalogs that `data-catalog-idref` of a node names                                   |
 | `validateCatalog(catalog)`                         | Returns `Issue`s for a catalog that breaks the rules of cards                                    |
 | `deriveHazardExposure(hazards, options?)`          | Returns the hazards of a resource in the terms of a PNP, each marked avoided or not              |
 
-`HAZARD_TERMS` maps a DRD hazard term to the PNP term, and `VIEWS` lists the six views. The types are `ContentVariables`, `View`,
-`TestPosition`, `CardContent`, `HazardExposure`, `DrdHazardTerm`, `PnpHazardTerm` and `ResolveContentOptions`.
+`VIEWS` lists the six views. The types are `ContentVariables`, `View`, `TestPosition`, `CardContent`, `HazardExposure` and
+`ResolveContentOptions`. A hazard is a `DrdHazard` of [metadata](metadata.md) in a resource and a `PnpHazard` of [pnp](pnp.md) in a
+profile; the map from one to the other, `HAZARD_TERMS`, is in `content/internal`, with `isShown`, and not exported.
 
 ## Quick start
 
@@ -72,7 +71,7 @@ resolved.map(({ kind }) => kind); // => ["p", "feedback-block"]
 
 ## Visibility
 
-`isShown` decides whether content is visible given the variable that controls it. The same rule governs feedback (an outcome),
+`isShown` of `content/internal`, which the runtime calls and does not export, decides whether content is visible given the variable that controls it. The same rule governs feedback (an outcome),
 template blocks and inlines (a template variable), and choices, gaps, hotspots and hot texts that have a `template-identifier`.
 
 | `show-hide`      | The variable matches or contains the identifier | Content |
@@ -88,7 +87,7 @@ which the default values of the outcomes give, and with feedback it is the outco
 engine decides.
 
 ```ts
-import { isShown } from "@assesskit/runtime/content";
+import { isShown } from "../content/internal.js";
 import { buildSingle } from "@assesskit/runtime/values";
 
 isShown("show", "right", buildSingle("identifier", "right")); // => true
@@ -170,8 +169,8 @@ rubric block: the reader refuses it.
 
 `selectCard` takes the card of the support. A card without card entries gives its own content; with entries it gives the entry
 whose `xml:lang` is the option `language`, ignoring case, then the first entry with the same primary language (`fr` for `fr-CA`), then the
-entry marked `default`. The content is HTML or references to files in the package. `listCatalogs` finds the catalog that
-`data-catalog-idref` names wherever the item keeps it.
+entry marked `default`. The content is HTML or references to files in the package. A node names its catalog by `data-catalog-idref`,
+and the catalog may be anywhere in the item: in its `qti-catalog-info` or in that of feedback or a rubric block.
 
 The best practices guide tells braille and tactile files apart by attributes of the card entries, the parameters of the PNP with
 `data-` before them. With the candidate's `braille` settings as the option `braille`, `selectCard` chooses among them:

@@ -74,6 +74,7 @@ export {
   PNP_TYPING_ECHOES,
   type PnpAccessMode,
   type PnpExtensionTerm,
+  type PnpHazard,
   type ReadingType,
   type RestrictionType,
   type TypingEcho,

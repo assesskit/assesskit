@@ -1,7 +1,6 @@
 import type { BodyNode, Catalog, CompanionMaterialsInfo } from "../asi/index.js";
-import type { PnpHazardTerm } from "../content/index.js";
 import type { InteractionDescriptor } from "../interactions/index.js";
-import type { SupportName, SupportSetting, SupportState } from "../pnp/index.js";
+import type { PnpHazard, SupportName, SupportSetting, SupportState } from "../pnp/index.js";
 import type { Value } from "../values/index.js";
 import type { CandidateAction } from "./action.js";
 import type { Deadline } from "./deadlines.js";
@@ -130,7 +129,7 @@ export interface PciView {
 /** A hazard of the item presented, in the terms of the PNP. */
 export interface HazardView {
   /** The hazard. */
-  readonly hazard: PnpHazardTerm;
+  readonly hazard: PnpHazard;
   /** Whether the candidate avoids it, so that the player withholds the media that has it. */
   readonly avoided: boolean;
 }
