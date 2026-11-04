@@ -109,7 +109,7 @@ jobs:
             /^(\.changeset\/|\.github\/(?!workflows\/ci\.yml$)|[^/]+\.md$|LICENSE$|biome\.json$|biome\/|cspell\.json$|knip\.json$|typedoc\.json$|lefthook\.yml$|\.editorconfig$|validation\/|examples\/[^/]+\/README\.md$|scripts\/self-host-mermaid\.ts$)/;
           // The scripts that only check, or are checked by the tests of scripts, which run with every test job. Every other
           // script serves the tests of the packages: the downloads, which every corpus, XSD and browser test reads.
-          const OWN_SCRIPTS = /^scripts\/(test\/|rules\/|check-[a-z]+\.ts$|unicode\.ts$)/;
+          const OWN_SCRIPTS = /^scripts\/(test\/|rules\/|check-[a-z]+\.ts$|unicode\.ts$|peak-memory(-[a-z]+)?\.ts$)/;
           // The files that a test of scripts reads besides the scripts: the changesets, which it holds to published packages,
           // and the README, which it holds to the claim of conformance.
           const SCRIPT_TESTED = /^(README\.md|\.changeset\/.+\.md)$/;

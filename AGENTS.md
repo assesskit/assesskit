@@ -43,7 +43,7 @@ Use these words with these meanings in code, comments and docs.
 | `packages/player/{player.css,scripts/,test/}`                    | The stylesheet of a content root; `build-static.ts` (the PCI frame and the recording worklet); `<folder>.test.ts`, `fixtures/` (servers and commands of the browser tests)       |
 | `examples/<package>/<name>/`                                     | A runnable example, a package of its own; its `test/` runs it                                                                                                                    |
 | `docs/<package>/`                                                | The guides of a package, one per module, with architecture, evidence and supported; TypeDoc publishes them                                                                       |
-| `compat/`, `scripts/`, `validation/`, `biome/`                   | The browser baseline; downloads, generators and CI checks (`check-*.ts`, `rules/`); fixture scripts (Python); GritQL lint rules                                                  |
+| `compat/`, `scripts/`, `validation/`, `biome/`                   | The browser baseline; downloads, generators, CI checks (`check-*.ts`, `rules/`) and the peak-memory harness; fixture scripts (Python); GritQL lint rules                         |
 
 [Layers](docs/runtime/architecture.md#layers) and [player layers](docs/player/architecture.md#layers) are rows of tables that
 Biome enforces, folder by folder.
@@ -85,8 +85,8 @@ Biome enforces, folder by folder.
   `docs/<package>/` reach the jobs that run their samples, not the members that use the package, except that the player's
   tests hold the runtime's delivery guide to the wire format; the lock file, the root configuration, `ci.yml` and the scripts
   that the tests share reach every job, and Markdown, changesets and the configuration of the linters reach `check` alone. The
-  tests of `scripts/` read the sources of the mutation rules, the changesets and the manifests, so every run of `test` holds
-  them. A newer push to the same ref cancels the run in progress; a cancelled run is not a failure. Every job has a
+  tests of `scripts/` read the sources of the mutation rules, the changesets and the manifests, and bundle the sources of the
+  packages for the peak-memory readings, so every run of `test` holds them. A newer push to the same ref cancels the run in progress; a cancelled run is not a failure. Every job has a
   `timeout-minutes` of about three times its last green time, so a hung job stops.
 - `rules` is not a job of `ci.yml`: `rules.yml` runs it each Monday, on `workflow_dispatch` and from `release.yml`, which publishes
   only when it passes, so that per-push CI stays short as Actions minutes are limited. A builder runs the rules of its package
@@ -243,6 +243,11 @@ untested in the others.
 - Every public function has a test of input of other types, as JavaScript or JSON pass it: `null` options and arguments, a string
   for a number, an object for an array. Such input comes from `JSON.parse`, not from a cast.
 - Properties that hold for any input are tested with fast-check, and its generators are in `test/arbitraries/`, a file for each module.
+- Peak memory is pinned in a process of its own, never in the test runner's: `scripts/test/peak-memory.test.ts` runs each
+  reader of untrusted input on its worst input within its limits in a Node.js process whose heap is twice the least heap in
+  which it ended on Node.js 22, 24 and 26, so a regression fails the reading and the load of the machine cannot. `node
+  scripts/peak-memory.ts [name...]` finds the least heap. The inputs are made in the process outside the heap, in
+  `scripts/peak-memory-readings.ts`.
 - A benchmark against a reference runs the two sides in turns on the same input, doing the same work to the same point, and
   gates the ratio; in the runtime it is `compareRow` of `test/budgets.ts`, which also gates the time.
 - Fuzz tests of readers use `FUZZ` of `test/fuzz.ts`: a fixed seed and a bounded number of runs, so that CI runs the inputs a laptop
@@ -256,6 +261,8 @@ untested in the others.
 
 ## Where things go
 
+- A reader of untrusted input or a limit: the worst input within it as a reading of `scripts/peak-memory-readings.ts`, its case in
+  `scripts/test/peak-memory.test.ts` and its row in the table of [SECURITY.md](SECURITY.md#default-limits).
 - A construct of the specifications: its test, and a line of `supported.md` of the package when what is supported changes.
 - A test that a row of [conformance.md](docs/runtime/conformance.md) cites: that row changes with it, and `scripts/test/conformance.test.ts`
   fails until it does. A row says `Implements` only for what the guide and the test show; the docs say "implements", never "certified".

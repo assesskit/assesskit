@@ -358,9 +358,37 @@ These numbers are fixed and cannot be replaced:
 | 1,100     | The width and the precision of a printed variable format; a larger one is ignored.                                                                              |
 | 1,000,000 | Entries, states and transitions together, that the matcher of a pattern keeps of its automaton; beyond it the matcher starts again.                             |
 
-Measured on Node.js 26 with documents built to reach each XML limit, a document at the limits takes under 2.5 seconds and
-250 MB of heap to read. An archive or a container at the limits is bounded by its size: an entry is inflated in steps of
-8 KiB of input and never beyond the size its header declares.
+A test pins the peak of each reader of untrusted input on its worst input within these limits
+(`scripts/test/peak-memory.test.ts`). Each reading runs in a Node.js process of its own whose heap holds twice the least heap
+in which it ended on Node.js 22, 24 and 26, so a regression fails it and the load of the machine cannot; `node
+scripts/peak-memory.ts` finds the least heap. The inputs are made in memory outside the heap. Memory follows the nodes and the
+attributes that a reader builds, not the bytes: a document of a million nodes peaks between 168 and 544 MiB of heap by what the
+reader keeps of it, so a host with less memory lowers `maxNodes` and `maxBytes`.
+
+| Reader                 | Worst input within the limits                                             | Least heap (MiB) |
+| ---------------------- | ------------------------------------------------------------------------- | ---------------: |
+| `parseXml`             | 1,000,000 nodes                                                           |              168 |
+| `parseXml`             | 32 MiB of elements with 256 attributes each                               |              288 |
+| `parseXml`             | One text of 32 MiB                                                        |               16 |
+| `parseXml`             | 8,000,000 nodes, stopped at the limit                                     |              192 |
+| `readAsi` of an item   | 1,000,000 nodes; or the most choices of one interaction that 32 MiB hold  |       320 to 424 |
+| `readAsi` of a test    | The most item references that 32 MiB hold                                 |              408 |
+| `readManifest`         | The most resources that 32 MiB hold                                       |              544 |
+| `readResults`          | The most item results with an outcome variable that 32 MiB hold           |              440 |
+| `readUsageData`        | The most statistics that 32 MiB hold                                      |              368 |
+| `validateAsi`          | An issue at every node of an item of 32 MiB, stopped at 1,000 issues      |              368 |
+| `readPackage`          | 100,000 entries                                                           |               40 |
+| `readPackage`          | A manifest of 32 MiB deflated at the ratio the limit allows               |              544 |
+| `planTest`             | A selection with replacement of 9,999 items                               |               16 |
+| `readCandidateAction`  | The most response entries, or the most integers of one response, that fit |       144 to 152 |
+| `readCandidateAction`  | A settings list of a million names, refused                               |               24 |
+| `compileXsdRegex`      | 100,000 states, matched against 100,000 characters                        |               64 |
+| `readModuleResolution` | 65,536 characters                                                         |               16 |
+| `createCatRestHandler` | A body of 32 MiB and a million tokens; or two million tokens, refused     |        56 and 40 |
+
+Without `maxFindings`, the same item makes 882,985 issues and needs 656 MiB; without `maxSettingListLength`, the settings list
+needs 216. An archive or a container at the limits is bounded by its size: an entry is inflated in steps of 8 KiB of input and
+never beyond the size its header declares.
 
 ## Runtime dependencies
 

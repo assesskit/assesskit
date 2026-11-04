@@ -852,7 +852,13 @@
       }
     },
     {
-      "includes": ["**", "!packages/runtime/**", "!scripts/schemas.ts", "!scripts/download.ts"],
+      "includes": [
+        "**",
+        "!packages/runtime/**",
+        "!scripts/schemas.ts",
+        "!scripts/download.ts",
+        "!scripts/peak-memory-readings.ts"
+      ],
       "linter": {
         "rules": {
           "style": {

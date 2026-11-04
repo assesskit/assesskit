@@ -1,6 +1,3 @@
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
-import { Worker } from "node:worker_threads";
 import { expect, test } from "vitest";
 import {
   type Action,
@@ -34,9 +31,6 @@ import {
   setOutcome,
   structureOf,
 } from "./pending-fixtures.js";
-
-/** The font names of the support-settings action whose heap is measured, within maxActionSize. */
-const FONT_NAMES = 1_000_000;
 
 /** The sections of the large test, and the items that each selects of those it lists. */
 const SECTIONS = 100;
@@ -216,47 +210,4 @@ test("reads the inputs of a report of 200 items and runs the outcome processing 
       reference: () => engine.apply(drafted, submission),
     },
   );
-});
-
-/**
- * Reads a `support-settings` action of {@link FONT_NAMES} font names with the build of `readCandidateAction`, in a worker
- * whose old generation holds at most `megabytes`, and answers how it ended: `read`, the name of the error it threw, or
- * `ERR_WORKER_OUT_OF_MEMORY` when the reading took more heap.
- */
-function readSettingsInHeap(megabytes: number, limits: object): Promise<string> {
-  const delivery = pathToFileURL(resolve(import.meta.dirname, "../dist/delivery/index.js")).href;
-  const program = `
-    const { parentPort, workerData } = require("node:worker_threads");
-    import(workerData.delivery).then(({ readCandidateAction }) => {
-      const fontFace = { fontNames: new Array(workerData.names).fill("") };
-      const action = { type: "support-settings", settings: { name: "text-appearance", replaceAccessModes: [], fontFace } };
-      try {
-        readCandidateAction(action, { limits: workerData.limits });
-        parentPort.postMessage("read");
-      } catch (error) {
-        parentPort.postMessage(error.name);
-      }
-    });`;
-  return new Promise((settle) => {
-    const worker = new Worker(program, {
-      eval: true,
-      workerData: { delivery, names: FONT_NAMES, limits },
-      resourceLimits: { maxOldGenerationSizeMb: megabytes },
-    });
-    worker.once("message", (outcome: string) => {
-      settle(outcome);
-      void worker.terminate();
-    });
-    worker.once("error", (error: NodeJS.ErrnoException) => settle(error.code ?? error.name));
-  });
-}
-
-test("refuses a support-settings action of a million font names within its heap, which reading the list would exceed", async ({
-  annotate,
-}) => {
-  const heap = BUDGETS.settingsHeap;
-  expect(await readSettingsInHeap(heap, {}), `The action in a heap of ${heap} MB`).toBe("SecurityError");
-  const unbounded = { maxSettingListLength: FONT_NAMES };
-  expect(await readSettingsInHeap(heap, unbounded), "The action without the limit").toBe("ERR_WORKER_OUT_OF_MEMORY");
-  await annotate(`A support-settings action of ${FONT_NAMES} font names is refused within a heap of ${heap} MB.`);
 });

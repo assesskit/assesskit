@@ -191,6 +191,8 @@ export default defineConfig({
         test: {
           name: "scripts",
           include: ["scripts/test/**/*.test.ts"],
+          testTimeout: HANG_LIMIT,
+          hookTimeout: HANG_LIMIT,
         },
       },
       {
