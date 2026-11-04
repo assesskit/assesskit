@@ -5,7 +5,10 @@ pre-commit:
       run: pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
       stage_fixed: true
 
+# A branch's jobs run on GitHub, on its pull request; the hook guards what reaches main.
 pre-push:
+  only:
+    - ref: main
   parallel: true
   commands:
     typecheck:
