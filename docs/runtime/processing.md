@@ -34,7 +34,7 @@ flowchart LR
 | `fitsBaseType(valueType, variableType)`, `VariableType`        | Whether a value of a base type fits a variable of another, with the promotion of an integer, and the type of a variable.                                |
 | `describeType(type)`, `describeCount`, `describeOperand`       | A type, an operand count and an operand signature as text for a message.                                                                                |
 | `listOperands(expression)`                                     | The operand expressions of an expression, in order.                                                                                                     |
-| `insideShape(shape, coords, point)`                            | Whether a point lies in an area of a hotspot or an area mapping, its edge included: the test of `qti-inside`, for a scorer of the points of a response. |
+| `isInsideShape(shape, coords, point)`                          | Whether a point lies in an area of a hotspot or an area mapping, its edge included: the test of `qti-inside`, for a scorer of the points of a response. |
 | `readDeclaredValue`, `readPrimitive`                           | The value that a declaration's `qti-value`s give, and one lexical form of a base type.                                                                  |
 | `isQti2TemplateUri(uri)`, `resolveItemIdentifier(ref, name)`   | Whether a template address is a QTI 2.x one, and the item's name for a variable of an item ref.                                                         |
 | `BUILT_IN_RESPONSES`, `BUILT_IN_OUTCOMES`, `BUILT_IN_CONTEXTS` | The built-in variables with their types; `NUM_ATTEMPTS`, `DURATION`, `COMPLETION_STATUS`, `COMPLETION_STATUSES` and `QTI_CONTEXT` name them.            |
@@ -145,7 +145,7 @@ is the pattern itself when there is no such variable. A NULL variable makes the 
 
 ## Areas
 
-`insideShape(shape, coords, point)` is the test that `qti-inside` and `qti-map-response-point` make, for a host or a scorer that matches the points of a response to areas by its own rules. The coordinates are the numbers of the `coords` attribute, in the units of the image.
+`isInsideShape(shape, coords, point)` is the test that `qti-inside` and `qti-map-response-point` make, for a host or a scorer that matches the points of a response to areas by its own rules. The coordinates are the numbers of the `coords` attribute, in the units of the image.
 
 | Shape     | Coordinates                                     | The area                                         |
 | --------- | ----------------------------------------------- | ------------------------------------------------ |
@@ -158,11 +158,11 @@ is the pattern itself when there is no such variable. A NULL variable makes the 
 The edge is inside. A percentage is a length relative to an image that the function does not know, so a caller converts it first.
 
 ```ts
-import { insideShape } from "@assesskit/runtime/processing";
+import { isInsideShape } from "@assesskit/runtime/processing";
 
-insideShape("rect", [10, 10, 20, 30], [10, 30]); // => true
-insideShape("circle", [10, 10, 5], [14, 14]); // => false
-insideShape("poly", [0, 0, 10, 0, 0, 10], [5, 5]); // => true
+isInsideShape("rect", [10, 10, 20, 30], [10, 30]); // => true
+isInsideShape("circle", [10, 10, 5], [14, 14]); // => false
+isInsideShape("poly", [0, 0, 10, 0, 0, 10], [5, 5]); // => true
 ```
 
 ## Standard templates

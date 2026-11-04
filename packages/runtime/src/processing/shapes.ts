@@ -58,7 +58,7 @@ function insidePolygon(point: Point, coords: readonly number[]): boolean {
  * a circle from its center and radius, an ellipse from its center and horizontal and vertical radii, a polygon from its
  * corners, and `default`, the whole image. The coordinates are the ones that {@link parseCoords} read.
  */
-export function isInsideArea(shape: AreaShape, coords: readonly number[], point: Point): boolean {
+export function isInsideParsedArea(shape: AreaShape, coords: readonly number[], point: Point): boolean {
   const [x, y] = point;
   const [a = 0, b = 0, c = 0, d = 0] = coords;
   switch (shape) {
@@ -98,7 +98,7 @@ const AREA_SHAPES: readonly AreaShape[] = ["circle", "default", "ellipse", "poly
  * the shape, or the point is not an array of two numbers.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function insideShape(shape: AreaShape, coords: readonly number[], point: Point): boolean {
+export function isInsideShape(shape: AreaShape, coords: readonly number[], point: Point): boolean {
   checkChoice(shape, "The shape", AREA_SHAPES);
   checkArray(coords, "The coordinates must be an array of non-negative numbers");
   const bad = coords.find(
@@ -113,7 +113,7 @@ export function insideShape(shape: AreaShape, coords: readonly number[], point: 
   if (point.length !== 2 || !point.every((value) => typeof value === "number" && Number.isFinite(value))) {
     throw new DataError(`The point must be an array of two finite numbers, found ${describe(point)}.`);
   }
-  return isInsideArea(shape, coords, point as Point);
+  return isInsideParsedArea(shape, coords, point as Point);
 }
 
 /**
@@ -128,5 +128,7 @@ export function insideShape(shape: AreaShape, coords: readonly number[], point: 
 export function inside(operand: Value | null, shape: AreaShape, coords: string): Value | null {
   const parsed = parseCoords(shape, coords);
   if (operand === null) return null;
-  return booleanResult(primitivesOf(operand).some((primitive) => isInsideArea(shape, parsed, asPoint(primitive))));
+  return booleanResult(
+    primitivesOf(operand).some((primitive) => isInsideParsedArea(shape, parsed, asPoint(primitive))),
+  );
 }

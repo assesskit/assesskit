@@ -31,7 +31,7 @@ import {
   type ItemSessionFilter,
   type ItemSessionView,
   type ItemVariables,
-  insideShape,
+  isInsideShape,
   isQti2TemplateUri,
   listOperands,
   normalizeValue,
@@ -1799,18 +1799,18 @@ describe("shapes", () => {
   });
 
   it("is the test that qti-inside makes, offered to a scorer of the points of a response, the edge included", () => {
-    expect([insideShape("rect", [10, 10, 20, 30], [10, 30]), insideShape("rect", [10, 10, 20, 30], [21, 15])]).toEqual([
-      true,
-      false,
-    ]);
-    expect(insideShape("rect", [20, 30, 10, 10], [15, 20])).toBe(true);
-    expect([insideShape("circle", [10, 10, 5], [13, 14]), insideShape("circle", [10, 10, 5], [14, 14])]).toEqual([
+    expect([
+      isInsideShape("rect", [10, 10, 20, 30], [10, 30]),
+      isInsideShape("rect", [10, 10, 20, 30], [21, 15]),
+    ]).toEqual([true, false]);
+    expect(isInsideShape("rect", [20, 30, 10, 10], [15, 20])).toBe(true);
+    expect([isInsideShape("circle", [10, 10, 5], [13, 14]), isInsideShape("circle", [10, 10, 5], [14, 14])]).toEqual([
       true,
       false,
     ]);
     expect([
-      insideShape("ellipse", [10, 10, 6, 2], [16, 10]),
-      insideShape("ellipse", [10, 10, 6, 2], [10, 13]),
+      isInsideShape("ellipse", [10, 10, 6, 2], [16, 10]),
+      isInsideShape("ellipse", [10, 10, 6, 2], [10, 13]),
     ]).toEqual([true, false]);
     const triangle = [0, 0, 10, 0, 0, 10];
     expect(
@@ -1820,9 +1820,9 @@ describe("shapes", () => {
         [6, 6],
         [0, 0],
         [10, 0],
-      ].map((point) => insideShape("poly", triangle, point as [number, number])),
+      ].map((point) => isInsideShape("poly", triangle, point as [number, number])),
     ).toEqual([true, true, false, true, true]);
-    expect(insideShape("default", [], [999, 999])).toBe(true);
+    expect(isInsideShape("default", [], [999, 999])).toBe(true);
   });
 
   it("tests a concave polygon by an even-odd ray cast, its corners and edges inside", () => {
@@ -1836,7 +1836,7 @@ describe("shapes", () => {
       [10, 5],
       [5, 8],
       [11, 2],
-    ].map((point) => insideShape("poly", corners, point as [number, number]));
+    ].map((point) => isInsideShape("poly", corners, point as [number, number]));
     expect(verdicts).toEqual([true, true, false, true, true, true, false]);
   });
 
@@ -1870,7 +1870,7 @@ describe("shapes", () => {
         fc.integer({ min: -10, max: 110 }),
         ([shape, coords], x, y) => {
           const operator = inside(shape, coords.join(","), `${x} ${y}`);
-          expect(insideShape(shape, coords, [x, y])).toBe(operator);
+          expect(isInsideShape(shape, coords, [x, y])).toBe(operator);
         },
       ),
       FUZZ,
@@ -1879,7 +1879,7 @@ describe("shapes", () => {
 
   it("refuses a shape, coordinates and a point that plain JavaScript or JSON gives with the wrong type", () => {
     const test = (shape: unknown, coords: unknown, point: unknown): unknown =>
-      insideShape(shape as "rect", coords as number[], point as [number, number]);
+      isInsideShape(shape as "rect", coords as number[], point as [number, number]);
     for (const shape of [json("null"), json("1"), "square", "RECT"]) {
       expect(() => test(shape, [1, 2, 3, 4], [1, 1])).toThrow(DataError);
     }

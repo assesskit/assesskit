@@ -5,7 +5,7 @@ import { primitiveKey } from "../values/internal.js";
 import { readPrimitive } from "./declared-value.js";
 import { asPoint, asString, floatResult, primitivesOf } from "./operands.js";
 import type { DeclaredResponse } from "./scope.js";
-import { isInsideArea, parseCoords } from "./shapes.js";
+import { isInsideParsedArea, parseCoords } from "./shapes.js";
 import { foldCase } from "./strings.js";
 
 /**
@@ -103,7 +103,7 @@ export function mapResponsePoint({ declaration, value }: DeclaredResponse): Valu
   let sum = 0;
   for (const primitive of distinct(value)) {
     const point = asPoint(primitive);
-    const area = areas.findIndex((candidate) => isInsideArea(candidate.shape, candidate.coords, point));
+    const area = areas.findIndex((candidate) => isInsideParsedArea(candidate.shape, candidate.coords, point));
     if (area === -1) sum += areaMapping.defaultValue ?? DEFAULT_MAPPED_VALUE;
     else if (!counted.has(area)) {
       counted.add(area);
