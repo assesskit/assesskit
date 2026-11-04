@@ -1,6 +1,13 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers, OAuth parameters and the OAuth protocol are those of their specifications.
 
-import { checkRecord, describe, nonEmptyStringSchema, raceAbort, type Schema } from "@assesskit/runtime/checks";
+import {
+  checkJsonInput,
+  checkRecord,
+  describe,
+  nonEmptyStringSchema,
+  raceAbort,
+  type Schema,
+} from "@assesskit/runtime/checks";
 import { encodeBase64 } from "@assesskit/runtime/values";
 import * as v from "valibot";
 import { httpsUrlSchema } from "../checks.js";
@@ -129,7 +136,9 @@ function formEncode(value: string): string {
 
 /**
  * Parses the JSON body of an answer, or throws the `ServiceError` that names who sent it. The tokens are counted first,
- * since the memory of a parse follows them; the error of an answer above the limit does not hold its body.
+ * since the memory of a parse follows them; the error of an answer above the limit does not hold its body. A property at any
+ * depth named `__proto__`, `prototype` or `constructor` is a `DataError`, as a malformed answer is: the schemas that read an
+ * answer leave out what they do not name, and would drop it unseen.
  */
 function parseBody(text: string, what: string, status: number, maxTokens: number): unknown {
   if (hasMoreTokensThan(text, maxTokens)) {
@@ -139,11 +148,14 @@ function parseBody(text: string, what: string, status: number, maxTokens: number
       "",
     );
   }
+  let json: unknown;
   try {
-    return JSON.parse(text);
+    json = JSON.parse(text);
   } catch (error) {
     throw new ServiceError(`${what} answered with a body that is not JSON.`, status, text, { cause: error });
   }
+  checkJsonInput(json, `${what} answered with JSON that`);
+  return json;
 }
 
 /**

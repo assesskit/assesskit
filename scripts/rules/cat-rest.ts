@@ -7,10 +7,39 @@ const BODY = "packages/player/src/cat-rest/body.ts";
 const STATUS = "packages/player/src/cat-rest/status.ts";
 const PORT = "packages/player/src/cat-rest/rest-port.ts";
 const CLIENT = "packages/player/src/cat-rest/rest-client.ts";
+const METADATA = "packages/player/src/cat-rest/metadata-record.ts";
 const TEST = "packages/player/test/cat-rest.test.ts";
 
 /** The security rules of the two sides of the CAT REST binding, each with the test that guards it. */
 export const CAT_REST_RULES: readonly Rule[] = [
+  {
+    rule: "A body of a request with a name that reaches the prototype, at any depth, answers 400.",
+    file: BODY,
+    find: 'checkJsonInput(json, "The body of the request");',
+    replace: "",
+    test: TEST,
+  },
+  {
+    rule: "An answer of an engine with a name that reaches the prototype, at any depth, is refused.",
+    file: CLIENT,
+    find: "checkJsonInput(json, `${what} answered with JSON that`);",
+    replace: "",
+    test: TEST,
+  },
+  {
+    rule: "A QTI metadata record of a request is refused as a list, at both of its levels.",
+    file: METADATA,
+    find: "strictRecord(metadataEntries(strictRecord(pciContextEntries))),",
+    replace: "v.strictObject(metadataEntries(v.strictObject(pciContextEntries))),",
+    test: TEST,
+  },
+  {
+    rule: "The context of a portable custom interaction of an answer is refused as a list.",
+    file: METADATA,
+    find: "v.object(metadataEntries(v.pipe(recordSchema, v.object(pciContextEntries)))),",
+    replace: "v.object(metadataEntries(v.object(pciContextEntries))),",
+    test: TEST,
+  },
   {
     rule: "The body of a request is not read before the authorization step has decided.",
     file: HANDLER,

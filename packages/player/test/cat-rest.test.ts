@@ -458,6 +458,42 @@ describe("createRestCatPort", () => {
     );
   });
 
+  it.each(["__proto__", "prototype", "constructor"])(
+    "refuses an answer of the engine with a property named %s at any depth, which its lenient schemas would drop unseen",
+    async (name) => {
+      const problem = `holds a property "${name}", a name that reaches the prototype.`;
+      const answers = [
+        `{"sessionIdentifier":"x","${name}":1}`,
+        `{"sessionIdentifier":"x","nextItems":{"itemIdentifiers":["i"],"${name}":1}}`,
+        `{"sessionIdentifier":"x","added":[{"deep":{"${name}":1}}]}`,
+      ];
+      for (const body of answers) {
+        const port = onePort({
+          fetch: fakeService(() => ({ status: 201, body })).fetch,
+          endpoint: PREFIX,
+          credentials: CREDENTIALS,
+        });
+        const error = await port.createSession(PREFIX, "sec1", {}).catch((caught: unknown) => caught);
+        expect(error, body).toBeInstanceOf(DataError);
+        expect((error as DataError).message).toBe(
+          `The CAT engine at ${PREFIX}/sections/sec1/sessions answered with JSON that ${problem}`,
+        );
+      }
+    },
+  );
+
+  it("still reads an answer that holds such a name only in a string or as a name's part, and other properties it leaves out", async () => {
+    const service = fakeService(() => ({
+      status: 201,
+      body: '{"sessionIdentifier":"constructor","nextItems":{"itemIdentifiers":["__proto__"]},"constructors":1}',
+    }));
+    const port = onePort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
+    expect(await port.createSession(PREFIX, "sec1", {})).toMatchObject({
+      sessionIdentifier: "constructor",
+      nextItems: { itemIdentifiers: ["__proto__"] },
+    });
+  });
+
   it("refuses an answer with more tokens of JSON than maxTokens before it parses it, and keeps no body in the error", async () => {
     const pool = (count: number) => ({
       section: { sectionConfiguration: "e30=" },
@@ -1049,6 +1085,21 @@ describe("createRestCatPort", () => {
     expect(await rejection(answer({ sectionConfiguration: "e30=", qtiMetadata: [] }))).toBe(
       "The answer to Get Section is invalid at section.qtiMetadata: expected an object, found an array.",
     );
+    expect(
+      await rejection(answer({ sectionConfiguration: "e30=", qtiMetadata: { portableCustomInteractionContext: [] } })),
+    ).toBe(
+      "The answer to Get Section is invalid at section.qtiMetadata.portableCustomInteractionContext: expected an object, found an array.",
+    );
+    expect(() => readSectionBody({ sectionConfiguration: "e30=", qtiMetadata: [] })).toThrow(
+      new DataError("The request to Create Section is invalid at qtiMetadata: expected an object, found an array."),
+    );
+    expect(() =>
+      readSectionBody({ sectionConfiguration: "e30=", qtiMetadata: { portableCustomInteractionContext: [] } }),
+    ).toThrow(
+      new DataError(
+        "The request to Create Section is invalid at qtiMetadata.portableCustomInteractionContext: expected an object, found an array.",
+      ),
+    );
     expect(() => readSectionBody({ sectionConfiguration: "e30=", added: true })).toThrow(DataError);
     expect(() => readSectionBody({ sectionConfiguration: "e30=", qtiMetadata: { added: true } })).toThrow(DataError);
     expect(() =>
@@ -1172,6 +1223,26 @@ describe("createCatRestHandler", () => {
     else if (description !== undefined) expect(body.imsx_description).toMatch(description);
     return body;
   }
+
+  it.each(["__proto__", "prototype", "constructor"])(
+    "answers 400 and calls no port for a body with a property named %s at any depth",
+    async (name) => {
+      const { port, calls } = stubPort();
+      const handler = handlerOf(port);
+      for (const body of [
+        `{"sectionConfiguration":"e30=","${name}":1}`,
+        `{"sectionConfiguration":"e30=","qtiMetadata":{"portableCustomInteractionContext":{"${name}":1}}}`,
+      ]) {
+        await expectFailure(
+          await handler(requestOf("POST", "/sections", { body })),
+          400,
+          "invaliddata",
+          `The body of the request holds a property "${name}", a name that reaches the prototype.`,
+        );
+      }
+      expect(calls()).toEqual([]);
+    },
+  );
 
   it("answers 400 and calls no port for a body that is not JSON, empty, not UTF-8, or of another type", async () => {
     const { port, calls } = stubPort();

@@ -1,3 +1,4 @@
+import { checkJsonInput } from "@assesskit/runtime/checks";
 import { DataError, SecurityError } from "@assesskit/runtime/errors";
 import { hasMoreTokensThan } from "./json-tokens.js";
 
@@ -32,7 +33,8 @@ export interface BodyLimits {
  * which bound the memory of the parse.
  * @param signal - The signal of the caller: when it aborts, the stream is cancelled with its reason and nothing more is read.
  * @returns The parsed JSON.
- * @throws `DataError` when the content type is not `application/json`, or the body is empty, not UTF-8 or not JSON.
+ * @throws `DataError` when the content type is not `application/json`, or the body is empty, not UTF-8 or not JSON, or a
+ * property at any depth is named `__proto__`, `prototype` or `constructor`.
  * @throws `SecurityError` when the body has more bytes than `maxBodyBytes` or its JSON more tokens than `maxTokens`, with
  * the name and the value of the limit.
  * @throws `signal.reason` when the signal aborts.
@@ -84,9 +86,12 @@ export async function readJsonBody(request: Request, limits: BodyLimits, signal:
       maxTokens,
     );
   }
+  let json: unknown;
   try {
-    return JSON.parse(text);
+    json = JSON.parse(text);
   } catch (error) {
     throw new DataError(`The body of the request is not JSON${text === "" ? ", it is empty" : ""}.`, { cause: error });
   }
+  checkJsonInput(json, "The body of the request");
+  return json;
 }

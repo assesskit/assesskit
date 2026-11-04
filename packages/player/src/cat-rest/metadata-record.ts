@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of the JSON fields are those of the binding.
 
-import { recordSchema, type Schema } from "@assesskit/runtime/checks";
+import { recordSchema, type Schema, strictRecord } from "@assesskit/runtime/checks";
 import {
   checkQtiMetadata,
   FEEDBACK_TYPES,
@@ -58,14 +58,14 @@ function asRecord({
  * `additionalProperties: false`, so a property that it does not name is refused.
  */
 export const metadataRecordSchema: Schema<QtiMetadata> = v.pipe(
-  v.strictObject(metadataEntries(v.strictObject(pciContextEntries))),
+  strictRecord(metadataEntries(strictRecord(pciContextEntries))),
   v.transform(asRecord),
 );
 
 /** The same record in an answer, in which a property that the schema does not name is left out, as the engine may add one. */
 export const metadataRecordAnswerSchema: Schema<QtiMetadata> = v.pipe(
   recordSchema,
-  v.object(metadataEntries(v.object(pciContextEntries))),
+  v.object(metadataEntries(v.pipe(recordSchema, v.object(pciContextEntries)))),
   v.transform(asRecord),
 );
 
