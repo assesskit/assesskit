@@ -4,7 +4,7 @@
 
 A player for QTI 3.0 assessments in the browser, built on `@assesskit/runtime`. It draws items, stimuli and every
 interaction, hosts portable custom interactions in a sandboxed frame, applies personal needs and preferences, and runs a
-session with navigation, timers, review and feedback, in English and Indonesian: the player carries English, and the Indonesian catalog is the module `@assesskit/player/messages/id`, which a host passes as the catalog for `id` in the option `messages` or to `selectMessages`, so that a host loads only the languages it shows. For exams it has the session host, the asset
+session with navigation, timers, review and feedback, in English and Indonesian: the player carries English, and the Indonesian catalog is the module `@assesskit/player/messages-id`, which a host passes as the catalog for `id` in the option `messages` or to `selectMessages`, so that a host loads only the languages it shows. For exams it has the session host, the asset
 gate that serves package files, scoring for raters with an accessible rating form for a scoring rubric (`mountRatingForm`), and adaptive testing. The
 subpath `@assesskit/player/cat-rest` has both sides of the REST binding of CAT 1.0, `createRestCatPort` for the client of the remote
 CAT engines that the host configured, which it reaches by the reference that a package names, and `createCatRestHandler` for the engine side, over web `Request` and `Response`, whose `authorize` step answers 401, 403 or with the port of the caller, and which refuses a body above `maxBodyBytes` as it arrives and one with more JSON tokens than `maxTokens` before it parses it. It stays on servers, because the client holds an OAuth

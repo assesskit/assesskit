@@ -1059,7 +1059,7 @@ describe("the guide", () => {
   it("shows the results that the example of the README gives", async () => {
     const modules = {
       "@assesskit/player": await import("../src/index.js"),
-      "@assesskit/player/messages/id": await import("../src/messages/id/index.js"),
+      "@assesskit/player/messages-id": await import("../src/messages/id/index.js"),
       "@assesskit/player/protocol": await import("../src/protocol/index.js"),
     };
     expect(await runGuideSamples(readme, modules)).toBe(2);

@@ -18,7 +18,7 @@ const catalogsSchema = mapSchema(
  * The result is the English messages, replaced by the catalog that the host gives for the language, and then by the one for
  * the tag in full, which is more specific. A language without a catalog gets English, so every key has a message. The
  * player ships English only; the catalog of another language is a module of its own, such as
- * `@assesskit/player/messages/id`, which the host imports and passes here, so that a host loads only the languages it shows.
+ * `@assesskit/player/messages-id`, which the host imports and passes here, so that a host loads only the languages it shows.
  *
  * @param language - A BCP 47 language tag, such as `id` or `id-ID`. Case is ignored.
  * @param catalogs - The catalogs of the host by language tag; a catalog may leave messages out, and one for a tag may

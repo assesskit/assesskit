@@ -297,9 +297,8 @@ tests of every engine, and waits for the next change to that part.
   the site is indexed. Each guide has a title that names its subject (the H1 of its file), and the plugin writes the title of
   its page as `<H1> · <package> (<label>)`, a description from its first paragraph and a canonical URL that the sitemap lists;
   `llms.txt`, `robots.txt`, `CNAME`, `404.html` and the Markdown copies are generated, never written by hand. The API pages are
-  named by the import path of their module (`@module @assesskit/runtime/asi`). The API page of an export and the folder of a
-  module differ only by case in one place, `Messages` and `messages/id`, so `pnpm check:site` passes on a case-sensitive file
-  system and reports three violations on the default one of macOS.
+  named by the import path of their module (`@module @assesskit/runtime/asi`). `pnpm check:site` fails when two URLs of the site differ only by case, which a case-insensitive disk and a search engine
+  take as one.
 - `scripts/family.ts` holds the identity of the family: `SITE`, the base of the docs site (`https://assesskit.wakan.dev/`, the
   owner's domain), the family's sentence, each package's description, label and keywords, and the marks of others with their
   holders. A package's `description`, `keywords`, `homepage` and `author` and the first sentence of its README come from its

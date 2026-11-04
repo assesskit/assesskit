@@ -8,7 +8,8 @@ import { sourcePagePath, unfencedLines } from "./identity.ts";
 /**
  * The test of the built docs site (`pnpm check:site`, after `pnpm docs:api`): every page has a title of its own, a description
  * other than TypeDoc's and a canonical URL that the sitemap lists; every README and guide has its Markdown copy; `llms.txt` has
- * the parts of llms.txt; every link to the site from the READMEs, the copies and `llms.txt` reaches a file of it. Every family
+ * the parts of llms.txt; every link to the site from the READMEs, the copies and `llms.txt` reaches a file of it; no two
+ * addresses of the site differ only by case. Every family
  * copies this file unchanged.
  */
 
@@ -82,6 +83,47 @@ export function checkPages(site: Site): Violation[] {
   const heads = pages.flatMap(([file, html]) => headViolations(file, html, titles));
   const canonical = new Set(pages.map(([file]) => `${SITE}${pagePath(file)}`));
   return [...heads, ...sitemapViolations(site.get("sitemap.xml") ?? "", canonical)];
+}
+
+/**
+ * The path of every address of the site and of each folder above it, as the files of the site, its sitemap and its canonical
+ * links name them, so that two spellings of one folder are found on a disk that tells the cases apart as on one that does not.
+ */
+function addressedPaths(site: Site): Set<string> {
+  const urls = [...(site.get("sitemap.xml") ?? "").matchAll(/<loc>([^<]*)<\/loc>/g)].flatMap(([, url]) => url ?? []);
+  const canonical = [...site].flatMap(([, text]) =>
+    [...text.matchAll(/<link rel="canonical" href="([^"]*)"/g)].flatMap(([, href]) => href ?? []),
+  );
+  const paths = [...site.keys(), ...[...urls, ...canonical].map((url) => url.slice(SITE.length))];
+  return new Set(
+    paths.flatMap((path) => {
+      const parts = path.split("/").filter(Boolean);
+      return parts.map((_, index) => parts.slice(0, index + 1).join("/"));
+    }),
+  );
+}
+
+/**
+ * No two addresses of the site, nor two folders on the way to them, differ only by case: a disk that ignores case merges them
+ * and a search engine takes them for one page.
+ */
+export function checkCaseCollisions(site: Site): Violation[] {
+  const spellings = new Map<string, string[]>();
+  for (const path of addressedPaths(site)) {
+    const key = path.toLowerCase();
+    spellings.set(key, [...(spellings.get(key) ?? []), path]);
+  }
+  const reported: string[] = [];
+  return [...spellings]
+    .filter(([, paths]) => paths.length > 1)
+    .sort(([a], [b]) => a.length - b.length)
+    .flatMap(([key, paths]) => {
+      // A folder inside one that is reported already differs only because its parent does.
+      if (reported.some((parent) => key.startsWith(`${parent}/`))) return [];
+      reported.push(key);
+      const urls = paths.map((path) => `${SITE}${path}`).join(" and ");
+      return [violation(paths[0] ?? "", 0, "site-case", `${urls} differ only by case: name one of them otherwise.`)];
+    });
 }
 
 /** Every README and guide of the repository has its page and, beside it, its Markdown copy, which the page links. */
@@ -162,6 +204,7 @@ export function checkSiteFiles(site: Site): Violation[] {
 export function checkSite(site: Site, sources: readonly string[], readmes: ReadonlyMap<string, string>): Violation[] {
   return [
     ...checkPages(site),
+    ...checkCaseCollisions(site),
     ...checkMarkdownCopies(site, sources),
     ...checkLlms(site),
     ...checkSiteLinks(site, readmes),

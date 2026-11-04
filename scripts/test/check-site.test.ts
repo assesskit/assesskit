@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  checkCaseCollisions,
   checkLlms,
   checkMarkdownCopies,
   checkPages,
@@ -61,6 +62,29 @@ describe("the built site", () => {
       fileOf(`${SITE}llms.txt`),
       fileOf("https://example.org/"),
     ]).toStrictEqual(["index.html", `${GUIDE}index.html`, "llms.txt", undefined]);
+  });
+});
+
+describe("case", () => {
+  it("finds two folders that differ only by case, as a disk that ignores case would merge them", () => {
+    const changed = site({
+      [`${GUIDE}messages/id/index.html`]: page(`${GUIDE}messages/id/`, `Id · ${PACKAGE}`),
+      [`${GUIDE}Messages/index.html`]: page(`${GUIDE}Messages/`, `Messages · ${PACKAGE}`),
+    });
+    expect(checkCaseCollisions(changed).map(({ message }) => message.split(" differ")[0])).toStrictEqual([
+      `${SITE}${GUIDE}messages and ${SITE}${GUIDE}Messages`,
+    ]);
+  });
+
+  it("finds two spellings in the sitemap alone, as on a disk that ignores case and has merged the files", () => {
+    const changed = site({
+      "sitemap.xml": sitemap(["", packagePath(PACKAGE), GUIDE, `${GUIDE.toUpperCase()}`, "modules.html"]),
+    });
+    expect(checkCaseCollisions(changed)).toHaveLength(1);
+  });
+
+  it("holds for a site whose addresses differ in more than case", () => {
+    expect(checkCaseCollisions(site())).toStrictEqual([]);
   });
 });
 

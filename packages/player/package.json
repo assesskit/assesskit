@@ -65,7 +65,7 @@
       "types": "./dist/server/index.d.ts",
       "default": "./dist/server/index.js"
     },
-    "./messages/id": {
+    "./messages-id": {
       "types": "./dist/messages/id/index.d.ts",
       "default": "./dist/messages/id/index.js"
     },

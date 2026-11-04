@@ -11,7 +11,7 @@ are in [performance](../runtime/performance.md#entry-points).
 ```mermaid
 xychart-beta
   title "Entry points after gzip, in kilobytes"
-  x-axis ["root", "messages/id", "protocol", "client", "client/local", "player", "mountItem", "scoring", "cat", "cat-rest", "server", "engine (on demand)"]
+  x-axis ["root", "messages-id", "protocol", "client", "client/local", "player", "mountItem", "scoring", "cat", "cat-rest", "server", "engine (on demand)"]
   y-axis "kB" 0 --> 140
   bar [9.1, 6.1, 7.1, 19.6, 8.8, 126.9, 97.0, 10.2, 19.7, 14.5, 50.4, 118.0]
 ```
@@ -19,7 +19,7 @@ xychart-beta
 | File                             | Bytes   | Gzip    | Budget  | What it holds                                                                                                                                                                                                     |
 | -------------------------------- | ------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@assesskit/player`              | 25,963  | 9,066   | 10,000  | The errors, the checks of the player and the interface messages in English                                                                                                                                        |
-| `@assesskit/player/messages/id`  | 16,977  | 6,147   | 8,000   | The interface messages in Indonesian, which a host that shows Indonesian loads beside the player, and nothing else                                                                                                |
+| `@assesskit/player/messages-id`  | 16,977  | 6,147   | 8,000   | The interface messages in Indonesian, which a host that shows Indonesian loads beside the player, and nothing else                                                                                                |
 | `@assesskit/player/protocol`     | 22,149  | 7,083   | 7,500   | The envelopes and their schemas, and the check of a scoring rubric (`asi`, `values`); valibot is 10.5 kB of it                                                                                                    |
 | `@assesskit/player/client`       | 61,539  | 19,628  | 25,000  | The remote session of an exam page, and the decoders of a view and of an action (`delivery/wire` with `interactions`, `pnp`, `values`, `xml`); no engine, and nothing loads on demand                             |
 | `@assesskit/player/client/local` | 27,330  | 8,775   | 11,000  | The local session of practice (`package` for the paths of the package); the engine loads with `import()` at its first call                                                                                        |
@@ -79,7 +79,7 @@ import.
 ## Languages
 
 English is in the root, in `player` and in `mountItem`: every catalog is checked against it, and a language without a catalog
-gets it. The Indonesian catalog is the module `@assesskit/player/messages/id`, which a host passes to the player
+gets it. The Indonesian catalog is the module `@assesskit/player/messages-id`, which a host passes to the player
 ([messages](messages.md)). `size.test.ts` fails when the root, the protocol, the client, the player or the first load of an
 item holds it. A host that shows English loads nothing more; a host that shows Indonesian loads 6.1 kB more after gzip,
 beside the player, and each language after it is a module of the same kind.

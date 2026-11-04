@@ -133,7 +133,7 @@ describe("the guide", () => {
     expect(
       await runGuideSamples(messagesGuide, {
         "@assesskit/player": await import("../src/index.js"),
-        "@assesskit/player/messages/id": await import("../src/messages/id/index.js"),
+        "@assesskit/player/messages-id": await import("../src/messages/id/index.js"),
       }),
     ).toBeGreaterThan(0);
   });

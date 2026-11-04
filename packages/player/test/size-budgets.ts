@@ -463,7 +463,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
       "xmlchars",
     ],
   },
-  "@assesskit/player/messages/id": { gzip: 8_000, holds: [] },
+  "@assesskit/player/messages-id": { gzip: 8_000, holds: [] },
 };
 
 /**

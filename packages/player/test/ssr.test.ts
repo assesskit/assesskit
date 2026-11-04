@@ -7,7 +7,7 @@ const MODULES: Readonly<Record<string, () => Promise<unknown>>> = {
   "./player": () => import("../src/player/index.js"),
   "./client": () => import("../src/client/index.js"),
   "./client/local": () => import("../src/client/local/index.js"),
-  "./messages/id": () => import("../src/messages/id/index.js"),
+  "./messages-id": () => import("../src/messages/id/index.js"),
   "./protocol": () => import("../src/protocol/index.js"),
   "./scoring": () => import("../src/scoring/index.js"),
   "./cat": () => import("../src/cat/index.js"),

@@ -3,12 +3,12 @@
 The interface text is a catalog of plain strings, one per function of the interface, so that the same function has the
 same name everywhere. A message that goes with a count is a label before the number, such as `Words: 1`, so that no noun
 has to agree with the count in a language that the host adds. The player carries English, which every other catalog is
-checked against. The Indonesian catalog is a module of its own, `@assesskit/player/messages/id`, and a host gives the player the
+checked against. The Indonesian catalog is a module of its own, `@assesskit/player/messages-id`, and a host gives the player the
 catalog of each language it shows: a host that shows English loads no other, and a host that adds a language adds one module.
 
 ```mermaid
 flowchart LR
-  en["EN_MESSAGES<br/>every key, in the player"] --> language["Catalog of the host for the language<br/>such as id, from messages/id"]
+  en["EN_MESSAGES<br/>every key, in the player"] --> language["Catalog of the host for the language<br/>such as id, from messages-id"]
   language --> tag["Catalog of the host for the tag in full<br/>such as id-ID"]
   tag --> result["Messages<br/>every key has a message"]
 ```
@@ -19,7 +19,7 @@ Choose the messages for a language, with the Indonesian catalog as the host's, a
 
 ```ts
 import { selectMessages } from "@assesskit/player";
-import { ID_MESSAGES } from "@assesskit/player/messages/id";
+import { ID_MESSAGES } from "@assesskit/player/messages-id";
 
 selectMessages("id-ID").toolRule; // => "Ruler"
 selectMessages("id-ID", { id: ID_MESSAGES }).toolRule; // => "Penggaris"
@@ -448,7 +448,7 @@ The size of what a host loads for its language is in [size](size.md): about 5.7 
 | `ltiStorageFrame`               | Storage for the tool                                                                                                                                                                                                                                                                 | Penyimpanan untuk alat                                                                                                                                                                                                                                                                              |
 
 `Messages` is the type of a catalog, `EN_MESSAGES` is the English one, in the player, and `ID_MESSAGES` is the Indonesian one,
-in `@assesskit/player/messages/id`. A catalog for another language has the same keys.
+in `@assesskit/player/messages-id`. A catalog for another language has the same keys.
 
 ## Adding a message
 
@@ -481,7 +481,7 @@ Each file of `src/messages/` holds one concept.
 | ------------- | ----------------------------------------------------------------------------- |
 | `messages.ts` | The `Messages` type, a property for each message of the interface             |
 | `en.ts`       | The English catalog                                                           |
-| `id/index.ts` | The Indonesian catalog, the module `@assesskit/player/messages/id`            |
+| `id/index.ts` | The Indonesian catalog, the module `@assesskit/player/messages-id`            |
 | `select.ts`   | `selectMessages`                                                              |
 | `check.ts`    | The check of a catalog that a host passes                                     |
 | `internal.ts` | Helpers that other folders and tests share, which the package does not export |
