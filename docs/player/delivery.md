@@ -241,7 +241,7 @@ mounted.destroy();
 ```
 
 `mountItem(host, options)` throws `DataError` when `host` is not an element that can have a shadow root and has none, or has one that an earlier mount of the player left empty, an option
-is not of its type (`chrome`, `hooks.tools` and `hooks.ltiLogin` are not options of it), or the view presents an LTI item. The
+is not of its type (`chrome`, `marking`, `resumeCheckMs`, `landmark`, `headingLevel`, `hooks.tools` and `hooks.ltiLogin` are not options of it, in its type as at run time), or the view presents an LTI item. The
 last also holds for a view that `update` or the client brings later. `destroy()` is the one of `mountDelivery`: a second call
 does nothing, and the session client stays open.
 

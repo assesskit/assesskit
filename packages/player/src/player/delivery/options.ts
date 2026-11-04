@@ -214,8 +214,12 @@ export interface DeliveryOptions extends MountOptions {
   readonly marking?: boolean;
 }
 
-/** What `mountItem` needs: the options of `mountDelivery` without the chrome, the tools and the login of an LTI item. */
-export interface ItemMountOptions extends Omit<DeliveryOptions, "chrome" | "hooks" | "marking"> {
+/**
+ * What `mountItem` needs: the options of `mountDelivery` without what only a delivery uses (the chrome, the marking, the
+ * resume check, the landmark and the heading level), the tools and the login of an LTI item.
+ */
+export interface ItemMountOptions
+  extends Omit<DeliveryOptions, "chrome" | "hooks" | "marking" | "resumeCheckMs" | "landmark" | "headingLevel"> {
   /**
    * Hooks of the host.
    *

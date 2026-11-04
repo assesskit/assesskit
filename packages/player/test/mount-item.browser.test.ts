@@ -8,7 +8,7 @@ import { createRemoteSession, type Transport } from "../src/client/index.js";
 import { createLocalSession } from "../src/client/local/index.js";
 import { ID_MESSAGES } from "../src/messages/id/index.js";
 import type { Messages } from "../src/messages/index.js";
-import { mountItem } from "../src/player/index.js";
+import { type ItemMountOptions, mountItem } from "../src/player/index.js";
 import { deepActiveElement, HOST_SHADOW_RULE } from "../src/player/internal.js";
 import type { SessionClient } from "../src/protocol/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
@@ -460,10 +460,33 @@ describe("the lifecycle of an item in a page", () => {
     expect(() => mount(fresh(), { hooks: [] })).toThrow("The option hooks must be an object");
     expect(() => mount(fresh(), { client: {} })).toThrow("The function age of the option client");
     expect(() => mount(fresh(), { chrome: false })).toThrow("The options has the properties");
+    for (const only of [{ landmark: "main" }, { headingLevel: 1 }, { resumeCheckMs: 0 }, { marking: true }]) {
+      expect(() => mount(fresh(), only)).toThrow("The options has the properties");
+    }
     expect(() => mount(fresh(), { hooks: { tools: {} } })).toThrow("The option hooks has the properties");
     expect(() => mount(fresh(), { hooks: { ltiLogin: () => undefined } })).toThrow(
       "The option hooks has the properties",
     );
+  });
+});
+
+describe("the type of the options", () => {
+  it("holds none of the options that only a delivery uses, which the check refuses", () => {
+    const named = (options: ItemMountOptions): ItemMountOptions => options;
+    const shared = {
+      client: {} as SessionClient,
+      files,
+      staticUrl: "https://s.example/",
+      stylesheet: player,
+      fetch: fetcher,
+    };
+    named(shared);
+    // @ts-expect-error `landmark` is an option of `mountDelivery`.
+    named({ ...shared, landmark: "main" });
+    // @ts-expect-error `headingLevel` is an option of `mountDelivery`.
+    named({ ...shared, headingLevel: 1 });
+    // @ts-expect-error `resumeCheckMs` is an option of `mountDelivery`.
+    named({ ...shared, resumeCheckMs: 0 });
   });
 });
 
