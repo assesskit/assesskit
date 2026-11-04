@@ -6,7 +6,8 @@
       "ignoreDependencies": ["jscpd"]
     },
     "packages/runtime": {
-      "entry": ["src/index.ts", "src/checks.ts", "src/*/index.ts", "src/delivery/wire.ts", "src/cli/bin.ts"]
+      "entry": ["src/index.ts", "src/checks.ts", "src/*/index.ts", "src/delivery/wire.ts", "src/cli/bin.ts"],
+      "ignore": ["src/node/schema-files.d.json.ts"]
     },
     "packages/player": {
       "entry": [

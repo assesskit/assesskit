@@ -4,7 +4,6 @@
     "noEmit": true,
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
     "paths": {
       "@assesskit/runtime": ["../runtime/src/index.ts"],
       "@assesskit/runtime/checks": ["../runtime/src/checks.ts"],

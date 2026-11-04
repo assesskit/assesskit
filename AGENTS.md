@@ -287,9 +287,9 @@ tests of every engine, and waits for the next change to that part.
   gates the ratio; in the runtime it is `compareRow` of `test/budgets.ts`, which also gates the time.
 - A test reads a JSON fixture with `readFixture<T>` of `packages/runtime/test/fixtures.ts` and declares `T` for the fields it
   reads; a type that several files use goes in `fixtures.ts`. It never imports a JSON file: the type checker builds a type
-  for every element, and `pnpm lint` fails on the import in `packages/*/test`, benchmarks included. `resolveJsonModule` is off
-  in `tsconfig.base.json`; the configurations that check `src/node/schema-files.json`, which the runtime imports (the runtime's two,
-  the player's, the root's and the example of migration's), turn it on.
+  for every element, and `pnpm lint` fails on the import in `packages/*/test`, benchmarks included. `resolveJsonModule` is off in
+  `tsconfig.base.json`, so `tsc` refuses the import as well; the one JSON file that `src` imports, `src/node/schema-files.json`, has its type
+  in `schema-files.d.json.ts` (`allowArbitraryExtensions`), and only `tsconfig.build.json` turns the option on, to copy the file to `dist`.
 - Fuzz tests of readers use `FUZZ` of `test/fuzz.ts`: a fixed seed and a bounded number of runs, so that CI runs the inputs a laptop
   does. A reader of documents is tested with `fuzzReader`, which mutates valid documents (`mutations` of `test/arbitraries/xml.ts`)
   and accepts a result, a `ReadError` or a `SecurityError`, nothing else.

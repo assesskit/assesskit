@@ -12,6 +12,7 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "resolveJsonModule": false,
+    "allowArbitraryExtensions": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
