@@ -1,5 +1,6 @@
 import { readAsi } from "@assesskit/runtime/asi";
-import { createEngine, type DeliveryState, type SupportView, stamp } from "@assesskit/runtime/delivery";
+import { createEngine, type DeliveryState, stamp } from "@assesskit/runtime/delivery";
+import type { SupportView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import { describeInteractions } from "@assesskit/runtime/interactions";
 import {

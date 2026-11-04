@@ -1,11 +1,5 @@
-import {
-  type AssessmentTest,
-  type BodyNode,
-  type ModelNode,
-  type ScoringRubric,
-  selectScoreCoverBlocks,
-} from "../asi/index.js";
-import { scoringRubricBlocks, scoringRubricOf, withDescendants } from "../asi/internal.js";
+import type { AssessmentTest, BodyNode, ModelNode, ScoringRubric } from "../asi/index.js";
+import { scoringRubricBlocks, scoringRubricOf, selectScoreCoverBlocks, withDescendants } from "../asi/internal.js";
 import { resolveContent, selectTestRubricBlocks } from "../content/index.js";
 import { DataError } from "../errors.js";
 import type { Value } from "../values/index.js";

@@ -54,7 +54,7 @@ export interface TestPlan {
   readonly parts: readonly PlannedPart[];
 }
 
-/** The limits of {@link planTest}. */
+/** The limits of the plan of a session, which the option `limits` of `createEngine` sets. */
 export interface PlanLimits {
   /**
    * The most sections and items a plan may hold, so that a selection with replacement cannot exhaust memory. Default:
@@ -63,7 +63,7 @@ export interface PlanLimits {
   readonly maxPlanNodes: number;
 }
 
-/** The default limits of {@link planTest}. */
+/** The default limits of the plan of a session. */
 export const DEFAULT_PLAN_LIMITS: PlanLimits = { maxPlanNodes: 10_000 };
 
 /** The options of {@link planTest}. */

@@ -1,5 +1,5 @@
-import { ReadError, SecurityError } from "@assesskit/runtime";
 import { type AssessmentItem, readAsi } from "@assesskit/runtime/asi";
+import { ReadError, SecurityError } from "@assesskit/runtime/errors";
 import { describeInteractions, validateResponse } from "@assesskit/runtime/interactions";
 import { describe, expect, it } from "vitest";
 import { commands } from "vitest/browser";

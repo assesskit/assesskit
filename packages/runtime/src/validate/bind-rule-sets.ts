@@ -1,4 +1,5 @@
-import { ASI_NAMESPACE, type ElementVisit, type ResponseDeclaration } from "../asi/index.js";
+import { ASI_NAMESPACE, type ResponseDeclaration } from "../asi/index.js";
+import type { ElementVisit } from "../asi/internal.js";
 import { QTI_CONTEXT } from "../processing/index.js";
 import type { BaseType } from "../values/index.js";
 import type { XmlElement } from "../xml/index.js";

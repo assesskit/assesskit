@@ -266,9 +266,6 @@ ${entries.join("\n")}
 export function renderCategories(runs: readonly CategoryRun[]): string {
   return `${header(UNICODE_FILES.characters)}
 
-/** The Unicode version of the general categories that \`\\p{...}\` and \`\\d\` use. */
-export const UNICODE_VERSION = ${JSON.stringify(UNICODE_VERSION)};
-
 /**
  * The general category of every code point from 0 to U+10FFFF in order, as runs: a two-letter category and the length
  * of the run in base 36, separated by spaces.

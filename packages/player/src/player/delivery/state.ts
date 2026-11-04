@@ -1,4 +1,5 @@
-import type { CandidateView, ItemKey } from "@assesskit/runtime/delivery";
+import type { ItemKey } from "@assesskit/runtime/delivery";
+import type { CandidateView } from "@assesskit/runtime/delivery/wire";
 
 /** What the mounted player keeps between the views it shows. */
 export interface MountState {

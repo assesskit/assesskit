@@ -1,8 +1,7 @@
 # Response and outcome processing
 
 `processing` runs the template, response and outcome processing of QTI 3.0: a tree interpreter for every expression and rule,
-the variables of an item session, the six standard response processing templates, custom operators, and the signatures of the
-operators for static checks. It imports `values` and `asi` and runs in any JavaScript runtime. The delivery engine decides when
+the variables of an item session, the six standard response processing templates and custom operators. It imports `values` and `asi` and runs in any JavaScript runtime. The delivery engine decides when
 each processing runs; these functions run it.
 
 ```mermaid
@@ -12,33 +11,25 @@ flowchart LR
   v1 --> attempt["Candidate responds"]
   attempt -- "runResponseProcessing" --> v2["Outcomes of the item"]
   v2 -- "runOutcomeProcessing<br/>reads item sessions through TestScope" --> v3["Outcomes of the test"]
-  expr["evaluate"] -. "every expression" .- v1
+  expr["Expression interpreter"] -. "every expression" .- v1
   expr -.- v2
   expr -.- v3
 ```
 
-| Function or constant                                           | Does                                                                                                                                                    |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `createItemVariables(item, options?)`                          | The variables of a new item session, before template processing.                                                                                        |
-| `runTemplateProcessing(item, variables, context)`              | Template processing, with the constraint loop.                                                                                                          |
-| `runResponseProcessing(item, variables, context)`              | Response processing, from the item's rules or its template.                                                                                             |
-| `runOutcomeProcessing(test, outcomes, scope, context)`         | Outcome processing of a test.                                                                                                                           |
-| `evaluate(expression, variables, item, context)`               | The value of an expression in an item.                                                                                                                  |
-| `evaluateTestExpression(expression, test, outcomes, …)`        | The value of an expression of a test: a pre-condition, branch rule or template default.                                                                 |
-| `ItemVariables`, `CreateItemVariablesOptions`                  | The six maps of an item session's variables, and the context values of a new session.                                                                   |
-| `ProcessingContext`, `CustomOperator`, …                       | The random source, custom operators, template resolver and limits that every run takes.                                                                 |
-| `TestScope`, `ItemSessionView`, `ItemSessionFilter`            | What outcome processing reads from the delivery engine: item sessions and the test's variables.                                                         |
-| `STANDARD_TEMPLATES`, `findStandardTemplate(uri)`              | The six standard templates as models, and the normalization of their URIs.                                                                              |
-| `OPERATOR_SIGNATURES`                                          | The operand and result types of the 64 expressions.                                                                                                     |
-| `DEFAULT_PROCESSING_LIMITS`, `ProcessingLimits`                | The limit on the size of containers that expressions build.                                                                                             |
-| `fitsBaseType(valueType, variableType)`, `VariableType`        | Whether a value of a base type fits a variable of another, with the promotion of an integer, and the type of a variable.                                |
-| `describeType(type)`, `describeCount`, `describeOperand`       | A type, an operand count and an operand signature as text for a message.                                                                                |
-| `listOperands(expression)`                                     | The operand expressions of an expression, in order.                                                                                                     |
-| `isInsideShape(shape, coords, point)`                          | Whether a point lies in an area of a hotspot or an area mapping, its edge included: the test of `qti-inside`, for a scorer of the points of a response. |
-| `readDeclaredValue`, `readPrimitive`                           | The value that a declaration's `qti-value`s give, and one lexical form of a base type.                                                                  |
-| `isQti2TemplateUri(uri)`, `resolveItemIdentifier(ref, name)`   | Whether a template address is a QTI 2.x one, and the item's name for a variable of an item ref.                                                         |
-| `BUILT_IN_RESPONSES`, `BUILT_IN_OUTCOMES`, `BUILT_IN_CONTEXTS` | The built-in variables with their types; `NUM_ATTEMPTS`, `DURATION`, `COMPLETION_STATUS`, `COMPLETION_STATUSES` and `QTI_CONTEXT` name them.            |
-| `DEFAULT_RANDOM_MIN`, `DEFAULT_RANDOM_STEP`                    | 0 and 1: the `min` and `step` of the random expressions when absent.                                                                                    |
+| Function or constant                                    | Does                                                                                                                                                    |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createItemVariables(item, options?)`                   | The variables of a new item session, before template processing.                                                                                        |
+| `runTemplateProcessing(item, variables, context)`       | Template processing, with the constraint loop.                                                                                                          |
+| `runResponseProcessing(item, variables, context)`       | Response processing, from the item's rules or its template.                                                                                             |
+| `runOutcomeProcessing(test, outcomes, scope, context)`  | Outcome processing of a test.                                                                                                                           |
+| `ItemVariables`, `CreateItemVariablesOptions`           | The six maps of an item session's variables, and the context values of a new session.                                                                   |
+| `ProcessingContext`, `CustomOperator`, …                | The random source, custom operators, template resolver and limits that every run takes.                                                                 |
+| `TestScope`, `ItemSessionView`, `ItemSessionFilter`     | What outcome processing reads from the delivery engine: item sessions and the test's variables.                                                         |
+| `DEFAULT_PROCESSING_LIMITS`, `ProcessingLimits`         | The limit on the size of containers that expressions build.                                                                                             |
+| `fitsBaseType(valueType, variableType)`, `VariableType` | Whether a value of a base type fits a variable of another, with the promotion of an integer, and the type of a variable.                                |
+| `describeType(type)`                                    | A type as text for a message.                                                                                                                           |
+| `isInsideShape(shape, coords, point)`                   | Whether a point lies in an area of a hotspot or an area mapping, its edge included: the test of `qti-inside`, for a scorer of the points of a response. |
+| `QTI_CONTEXT`                                           | The name of the built-in context variable `QTI_CONTEXT`, which the option `context` of a session sets.                                                  |
 
 ## Quick start
 
@@ -116,7 +107,7 @@ variable, and promotes an integer to a float or duration.
 
 ## Expressions
 
-`evaluate` checks the operands of each operator against `OPERATOR_SIGNATURES`, NULL operands excepted, and raises a
+The interpreter checks the operands of each operator against the signatures of the 64 expressions, NULL operands excepted, and raises a
 `ProcessingError` for an operand of the wrong type. NULL, empty strings and empty containers are `null`.
 
 | Topic                                                   | Rule                                                                                                                                                                                                                                                                                                             |
@@ -167,18 +158,11 @@ isInsideShape("poly", [0, 0, 10, 0, 0, 10], [5, 5]); // => true
 
 ## Standard templates
 
-`STANDARD_TEMPLATES` holds `match_correct`, `map_response`, `map_response_point`, `CC2_match`, `CC2_match_basic` and
-`CC2_map_response` as the models of the published files, keyed by `https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/<name>.xml`.
-`findStandardTemplate` gives that key for `http` or `https`, `purl.imsglobal.org/spec/qti/v3p0/rptemplates/` or
-`www.imsglobal.org/question/qti_v3p0/rptemplates/`, with `.xml` or without; a QTI 2.0, 2.1 or 2.2 URI names the template
-of the same algorithm.
-
-```ts
-import { findStandardTemplate } from "@assesskit/runtime/processing";
-
-findStandardTemplate("http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_response");
-// => "https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/map_response.xml"
-```
+The six standard templates are `match_correct`, `map_response`, `map_response_point`, `CC2_match`, `CC2_match_basic` and
+`CC2_map_response`, held as the models of the published files and keyed by
+`https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/<name>.xml`. `runResponseProcessing` runs the template that an item names
+for `http` or `https`, `purl.imsglobal.org/spec/qti/v3p0/rptemplates/` or `www.imsglobal.org/question/qti_v3p0/rptemplates/`,
+with `.xml` or without; a QTI 2.0, 2.1 or 2.2 URI names the template of the same algorithm.
 
 ## Context
 

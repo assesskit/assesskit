@@ -1,5 +1,5 @@
 import type { Expression, OutcomeRule, ResponseRule, TemplateRule } from "../asi/index.js";
-import { COMPLETION_STATUS, COMPLETION_STATUSES } from "../processing/index.js";
+import { COMPLETION_STATUS, COMPLETION_STATUSES } from "../processing/internal.js";
 import type { ExpressionChecker } from "./expressions.js";
 import type { Findings } from "./findings.js";
 import type { RuleScope, VariableKind } from "./scope.js";

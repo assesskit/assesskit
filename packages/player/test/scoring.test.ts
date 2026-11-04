@@ -1,11 +1,6 @@
 import { readScoringRubrics } from "@assesskit/runtime/asi";
-import {
-  type DeliveryState,
-  type PendingWork,
-  type ScorerView,
-  type ScoringRequest,
-  writeView,
-} from "@assesskit/runtime/delivery";
+import type { DeliveryState, PendingWork, ScorerView, ScoringRequest } from "@assesskit/runtime/delivery";
+import { writeView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import type { AssessmentResult, ResultVariable } from "@assesskit/runtime/results";
 import { buildContainer, buildRecord, buildSingle, readWireValue, type Value } from "@assesskit/runtime/values";

@@ -14,15 +14,17 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type InputReport, runConformance } from "../../../scripts/conformance.js";
 import { requireCorpus } from "../../../scripts/corpus.js";
 import { requireSchemas } from "../../../scripts/schemas.js";
+import * as asi from "../src/asi/index.js";
 import * as cli from "../src/cli/internal.js";
-import * as runtime from "../src/index.js";
-import { PNP_NAMESPACE } from "../src/index.js";
+import * as delivery from "../src/delivery/index.js";
 import * as node from "../src/node/index.js";
+import * as packages from "../src/package/index.js";
+import { PNP_NAMESPACE } from "../src/pnp/index.js";
 
 const ROOT = resolve(import.meta.dirname, "../../..");
 const SCHEMAS = requireSchemas(ROOT);
 const PACKAGING = join(requireCorpus(ROOT), "qti-examples/qtiv3-examples/packaging");
-const MODULES = { cli, node, runtime };
+const MODULES = { asi, cli, delivery, node, packages };
 
 describe("a run over packages", () => {
   let directory = "";

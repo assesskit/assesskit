@@ -3,43 +3,36 @@ import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
-import { HAZARD_TERMS, isShown } from "../src/content/internal.js";
 import {
   ASI_NAMESPACE,
   type AssessmentItem,
   type AssessmentTest,
   type BodyNode,
-  type Braille,
-  buildContainer,
-  buildRecord,
-  buildSingle,
   type Catalog,
-  type ContentVariables,
-  DataError,
-  DRD_HAZARDS,
-  deriveHazardExposure,
-  formatPrintedVariable,
   listDescendantNodes,
   type ModelNode,
-  type PersonalNeedsProfile,
-  PNP_HAZARDS,
-  PNP_NAMESPACE,
   type PrintedVariable,
-  ReadError,
   readAsi,
-  readPnp,
+} from "../src/asi/index.js";
+import {
+  type ContentVariables,
+  deriveHazardExposure,
+  formatPrintedVariable,
   resolveContent,
-  type SingleValue,
   selectCard,
   selectModalFeedback,
   selectRubricBlocks,
   selectTestFeedback,
   selectTestRubricBlocks,
-  type Value,
   VIEWS,
   type View,
   validateCatalog,
-} from "../src/index.js";
+} from "../src/content/index.js";
+import { HAZARD_TERMS, isShown } from "../src/content/internal.js";
+import { DataError, ReadError } from "../src/errors.js";
+import { DRD_HAZARDS } from "../src/metadata/index.js";
+import { type Braille, type PersonalNeedsProfile, PNP_HAZARDS, PNP_NAMESPACE, readPnp } from "../src/pnp/index.js";
+import { buildContainer, buildRecord, buildSingle, type SingleValue, type Value } from "../src/values/index.js";
 import { asProfile } from "./arbitraries/pnp.js";
 import { type PrintfFixture, readFixture } from "./fixtures.js";
 

@@ -2,7 +2,7 @@
 
 import { AccessError } from "@assesskit/player";
 import type { ViewEnvelope } from "@assesskit/player/protocol";
-import { readView } from "@assesskit/runtime/delivery";
+import { readView } from "@assesskit/runtime/delivery/wire";
 import { buildSingle } from "@assesskit/runtime/values";
 import { prepareToolFrame } from "@interopkit/tool-integration/platform";
 import { afterEach, describe, expect, it, vi } from "vitest";

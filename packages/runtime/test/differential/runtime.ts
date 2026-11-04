@@ -1,29 +1,23 @@
 import { type AssessmentItem, type ResponseDeclaration, readAsi } from "../../src/asi/index.js";
+import type { ItemAction, ItemSession } from "../../src/delivery/index.js";
 import {
   applyItemAction,
-  type ItemAction,
-  type ItemSession,
   type ItemSessionContext,
   type ItemStep,
   presentItem,
   resolveStandaloneSessionControl,
   startItemSession,
-} from "../../src/delivery/index.js";
-import { AssesskitError, createRandom } from "../../src/index.js";
+} from "../../src/delivery/internal.js";
+import { AssesskitError } from "../../src/errors.js";
+import { createRandom } from "../../src/index.js";
 import {
   createItemVariables,
   type ItemVariables,
   runResponseProcessing,
   runTemplateProcessing,
 } from "../../src/processing/index.js";
-import {
-  type BaseType,
-  buildContainer,
-  buildSingle,
-  type Primitive,
-  parsePrimitive,
-  type Value,
-} from "../../src/values/index.js";
+import { type BaseType, buildContainer, buildSingle, type Primitive, type Value } from "../../src/values/index.js";
+import { parsePrimitive } from "../../src/values/internal.js";
 import { longsightRandom } from "./longsight.js";
 import type { Implementation, ItemCase, Observed, Play, Scalar, SessionCase, Turn, TurnObservation } from "./model.js";
 

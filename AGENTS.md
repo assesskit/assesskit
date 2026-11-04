@@ -36,7 +36,7 @@ Use these words with these meanings in code, comments and docs.
 
 | Path                                                             | Holds                                                                                                                                                                                                                                                                                       |
 | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/runtime/src/<module>/`                                 | One folder per module: `index.ts`, `internal.ts` where other modules or the tests need more, a file per concept                                                                                                                                                                             |
+| `packages/runtime/src/<module>/`                                 | One folder per module: `index.ts`, the one entry that exports the module's names, `internal.ts` for what other modules or the tests need and a host does not (the item session, the plan and the times of delivery are a host's through `createEngine`), a file per concept                 |
 | `packages/runtime/src/{errors,checks,checks-internal,random}.ts` | The errors, the checks of one value, the checks that only the runtime uses, the random number generator; the subpaths `errors` and `checks` serve the player                                                                                                                                |
 | `packages/runtime/test/`                                         | `<module>.test.ts` for each source folder; `fixtures/` (oracle output, stored states); `differential/` (the harness against Longsight `qti3-core` and Amp-up `qti3-item-player`)                                                                                                            |
 | `packages/player/src/`                                           | `errors.ts`, `checks.ts`, `messages/`, `protocol/`, `player/`, `client/`, `server/`, `scoring/`, `cat/`, `cat-rest/`                                                                                                                                                                        |
@@ -148,7 +148,7 @@ that the player needs and the runtime lacks is a change in the runtime, with its
 - Dependencies are pinned to exact versions, development ones too; a runtime dependency has its row in
   [SECURITY.md](SECURITY.md#runtime-dependencies).
 - The player gets `AssesskitError` and `DataError` from `@assesskit/runtime/errors` and its checks from
-  `@assesskit/runtime/checks`, never from the root of the runtime, which loads every module. Its browser folders take the wire
+  `@assesskit/runtime/checks`, never from the root of the runtime, which holds only the random number generator. Its browser folders take the wire
   forms of views and actions from `@assesskit/runtime/delivery/wire` and only types from `@assesskit/runtime/delivery`, whose
   index reaches the engine: esbuild splits code by file, so a page that imports the index and also loads the engine with
   `import()` loads the whole engine first.
@@ -175,7 +175,7 @@ that the player needs and the runtime lacks is a change in the runtime, with its
   becomes `maxAttempts`.
 - Functions are named by the verbs of STANDARDS section 4: `validate<X>` returns `Issue`s, `check<X>` throws `DataError`, `read<X>`
   and `write<X>` convert a form that QTI or another standard defines, `build<X>` assembles plain data and `create<X>` returns an
-  object with behavior. A quantity that QTI names keeps its name (`timeLimits`, `rubricScoreRange`).
+  object with behavior. A quantity that QTI names keeps its name (`rubricScoreRange`, `allowLateSubmission`).
 - Options are `<Name>Options`, named for the function (`ReadNumericRecordOptions`); limits are `<Name>Limits`, with
   `DEFAULT_<NAME>_LIMITS` for the defaults. An optional parameter goes in the options, and only a required one is positional.
 - Labels are string unions in kebab-case (`"very-good"`).

@@ -1,4 +1,5 @@
-import { type CandidateView, createEngine } from "@assesskit/runtime/delivery";
+import { createEngine } from "@assesskit/runtime/delivery";
+import type { CandidateView } from "@assesskit/runtime/delivery/wire";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES } from "../src/index.js";

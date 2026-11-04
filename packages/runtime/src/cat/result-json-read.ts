@@ -15,29 +15,20 @@ import {
 } from "../checks.js";
 import { checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
-import {
-  type AssessmentResult,
-  type ItemResult,
-  OUTCOME_VIEWS,
-  type OutcomeVariable,
-  type ResponseVariable,
-  type ResultContext,
-  type ResultVariable,
-  type ResultVariableType,
-  SESSION_STATUSES,
-  type TemplateVariable,
-  type TestResult,
+import type {
+  AssessmentResult,
+  ItemResult,
+  OutcomeVariable,
+  ResponseVariable,
+  ResultContext,
+  ResultVariable,
+  ResultVariableType,
+  TemplateVariable,
+  TestResult,
 } from "../results/index.js";
-import {
-  buildContainer,
-  buildRecord,
-  buildSingle,
-  isBaseType,
-  parsePrimitive,
-  type SingleValue,
-  type Value,
-} from "../values/index.js";
-import { baseTypeSchema, cardinalitySchema } from "../values/internal.js";
+import { OUTCOME_VIEWS, SESSION_STATUSES } from "../results/internal.js";
+import { buildContainer, buildRecord, buildSingle, type SingleValue, type Value } from "../values/index.js";
+import { baseTypeSchema, cardinalitySchema, isBaseType, parsePrimitive } from "../values/internal.js";
 
 // The field names of the public binding differ from the runtime's model in `sourceID`, `itemResult` and the three lists
 // of variables of a result.

@@ -10,7 +10,7 @@ import {
   type Schema,
   strictRecord,
 } from "@assesskit/runtime/checks";
-import type { SupportView } from "@assesskit/runtime/delivery";
+import type { SupportView } from "@assesskit/runtime/delivery/wire";
 import {
   type ColorTheme,
   isColorTheme,

@@ -1,4 +1,4 @@
-import type { CandidateAction, CandidateView } from "@assesskit/runtime/delivery";
+import type { CandidateAction, CandidateView } from "@assesskit/runtime/delivery/wire";
 import type { Messages } from "../../messages/index.js";
 import type { SessionClient } from "../../protocol/index.js";
 import { renderActionRow } from "./action-row.js";

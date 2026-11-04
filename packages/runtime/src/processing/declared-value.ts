@@ -7,10 +7,10 @@ import {
   buildRecord,
   buildSingle,
   type Primitive,
-  parsePrimitive,
   type SingleValue,
   type Value,
 } from "../values/index.js";
+import { parsePrimitive } from "../values/internal.js";
 import type { VariableType } from "./assign.js";
 
 /**

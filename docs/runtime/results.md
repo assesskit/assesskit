@@ -20,14 +20,14 @@ flowchart LR
   items --> variables
 ```
 
-| Export                                                                                                                  | Purpose                                                                                                                                                   |
-| ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `readResults(input)`                                                                                                    | Reads text, bytes or a parsed element into an `AssessmentResult`.                                                                                         |
-| `writeResults(result)`                                                                                                  | Writes an `AssessmentResult` as a document that the RR schema accepts.                                                                                    |
-| `RESULTS_NAMESPACE`                                                                                                     | The namespace of the RR schema.                                                                                                                           |
-| `AssessmentResult`, `ResultContext`, `TestResult`, `ItemResult`, `SessionIdentifier`, `SupportUse`                      | The model.                                                                                                                                                |
-| `ResultVariable`, `ResponseVariable`, `OutcomeVariable`, `TemplateVariable`, `ContextVariable`, `ResultCorrectResponse` | The variables.                                                                                                                                            |
-| `SessionStatus`, `AnsweredStatus`, `ScoreStatus`, `SupportAssignment`, `OutcomeView`, `OutcomeScorer`                   | The vocabularies, with the lists `SESSION_STATUSES`, `ANSWERED_STATUSES`, `SCORE_STATUSES`, `SUPPORT_ASSIGNMENTS`, `OUTCOME_VIEWS` and `OUTCOME_SCORERS`. |
+| Export                                                                                                                  | Purpose                                                                |
+| ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `readResults(input)`                                                                                                    | Reads text, bytes or a parsed element into an `AssessmentResult`.      |
+| `writeResults(result)`                                                                                                  | Writes an `AssessmentResult` as a document that the RR schema accepts. |
+| `RESULTS_NAMESPACE`                                                                                                     | The namespace of the RR schema.                                        |
+| `AssessmentResult`, `ResultContext`, `TestResult`, `ItemResult`, `SessionIdentifier`, `SupportUse`                      | The model.                                                             |
+| `ResultVariable`, `ResponseVariable`, `OutcomeVariable`, `TemplateVariable`, `ContextVariable`, `ResultCorrectResponse` | The variables.                                                         |
+| `SessionStatus`, `AnsweredStatus`, `ScoreStatus`, `SupportAssignment`, `OutcomeView`, `OutcomeScorer`                   | The vocabularies.                                                      |
 
 ## Quick start
 
@@ -92,14 +92,14 @@ writeResults({ context: { sessionIdentifiers: [] }, itemResults: [] });
 
 ## Vocabularies
 
-| Type                | List                  | Terms                                                                                          |
-| ------------------- | --------------------- | ---------------------------------------------------------------------------------------------- |
-| `SessionStatus`     | `SESSION_STATUSES`    | `initial`, `pendingSubmission`, `pendingResponseProcessing`, `pendingExternalScoring`, `final` |
-| `AnsweredStatus`    | `ANSWERED_STATUSES`   | `answered`, `attempted`, `presented`, `notpresented`                                           |
-| `ScoreStatus`       | `SCORE_STATUSES`      | `notscored`, `scored`                                                                          |
-| `SupportAssignment` | `SUPPORT_ASSIGNMENTS` | `assigned`, `inherit`, `prohibited`, `universal`                                               |
-| `OutcomeView`       | `OUTCOME_VIEWS`       | `author`, `candidate`, `proctor`, `scorer`, `testConstructor`, `tutor`                         |
-| `OutcomeScorer`     | `OUTCOME_SCORERS`     | `externalMachine`, `human`                                                                     |
+| Type                | Terms                                                                                          |
+| ------------------- | ---------------------------------------------------------------------------------------------- |
+| `SessionStatus`     | `initial`, `pendingSubmission`, `pendingResponseProcessing`, `pendingExternalScoring`, `final` |
+| `AnsweredStatus`    | `answered`, `attempted`, `presented`, `notpresented`                                           |
+| `ScoreStatus`       | `notscored`, `scored`                                                                          |
+| `SupportAssignment` | `assigned`, `inherit`, `prohibited`, `universal`                                               |
+| `OutcomeView`       | `author`, `candidate`, `proctor`, `scorer`, `testConstructor`, `tutor`                         |
+| `OutcomeScorer`     | `externalMachine`, `human`                                                                     |
 
 ## Errors
 

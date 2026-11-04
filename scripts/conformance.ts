@@ -74,12 +74,16 @@ export interface InputReport extends ConformanceInput {
 
 /** The modules of the runtime that a run uses: the build, or the sources in a test. */
 export interface RuntimeModules {
+  /** The writer of the QTI documents. */
+  readonly asi: typeof import("../packages/runtime/src/asi/index.ts");
   /** The checks of `assesskit validate`, which take schemas that a run compiles once. */
   readonly cli: typeof import("../packages/runtime/src/cli/internal.ts");
+  /** The delivery engine, which starts the session of each test. */
+  readonly delivery: typeof import("../packages/runtime/src/delivery/index.ts");
   /** The files of Node.js. */
   readonly node: typeof import("../packages/runtime/src/node/index.ts");
-  /** The root of the package. */
-  readonly runtime: typeof import("../packages/runtime/src/index.ts");
+  /** The resolvers, the resource paths and the writer of a package. */
+  readonly packages: typeof import("../packages/runtime/src/package/index.ts");
 }
 
 /** The options of {@link runConformance}. */
@@ -224,13 +228,13 @@ async function validateInput(
 }
 
 /** Starts a session of a test of a package, and gives the refusal of the engine, if any. */
-function startTest({ runtime }: RuntimeModules, pkg: QtiPackage, href: string): TestStart {
+function startTest({ delivery, packages }: RuntimeModules, pkg: QtiPackage, href: string): TestStart {
   try {
     const document = pkg.document(href);
     if (document.kind !== "test") return { href, refusal: `${href} is not a test.` };
-    const resolvers = runtime.createPackageResolvers(pkg);
+    const resolvers = packages.createPackageResolvers(pkg);
     const definition = { kind: "test", test: document.test, base: href, resolvers } as const;
-    const started = runtime.createEngine(definition).start({ seed: 1, at: 0 });
+    const started = delivery.createEngine(definition).start({ seed: 1, at: 0 });
     return started.ok ? { href } : { href, refusal: started.refusal.message };
   } catch (error) {
     return { href, refusal: messageOf(error) };
@@ -241,18 +245,18 @@ function startTest({ runtime }: RuntimeModules, pkg: QtiPackage, href: string): 
  * Writes a package as this runtime exports it: each QTI document goes through the model, so that the validator of 1EdTech judges
  * what the writer makes and not what the package held.
  */
-function exportPackage({ runtime }: RuntimeModules, pkg: QtiPackage, target: string): void {
+function exportPackage({ asi, packages }: RuntimeModules, pkg: QtiPackage, target: string): void {
   const files = new Map<string, Uint8Array>();
   for (const path of pkg.paths.filter((each) => each !== MANIFEST)) {
     const bytes = pkg.file(path);
     if (bytes !== undefined) files.set(path, bytes);
   }
   for (const resource of pkg.manifest.resources) {
-    const path = runtime.resolveResourcePath(pkg.manifest, resource);
+    const path = packages.resolveResourcePath(pkg.manifest, resource);
     if (path === undefined || !ASI_RESOURCES.includes(resource.type)) continue;
-    files.set(path, new TextEncoder().encode(runtime.writeAsi(pkg.document(path))));
+    files.set(path, new TextEncoder().encode(asi.writeAsi(pkg.document(path))));
   }
-  writeFileSync(target, runtime.writePackage(pkg.manifest, files));
+  writeFileSync(target, packages.writePackage(pkg.manifest, files));
 }
 
 /** Starts the tests of a package and exports it, for an input that is valid. */
@@ -317,9 +321,11 @@ export async function runConformance(
 async function builtModules(root: string): Promise<RuntimeModules> {
   const load = <T>(path: string): Promise<T> => import(pathToFileURL(join(root, "packages/runtime/dist", path)).href);
   return {
+    asi: await load<RuntimeModules["asi"]>("asi/index.js"),
     cli: await load<RuntimeModules["cli"]>("cli/internal.js"),
+    delivery: await load<RuntimeModules["delivery"]>("delivery/index.js"),
     node: await load<RuntimeModules["node"]>("node/index.js"),
-    runtime: await load<RuntimeModules["runtime"]>("index.js"),
+    packages: await load<RuntimeModules["packages"]>("package/index.js"),
   };
 }
 

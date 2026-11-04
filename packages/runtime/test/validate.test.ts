@@ -6,39 +6,38 @@ import {
   ASI_NAMESPACE,
   type AsiDocument,
   type AssessmentItem,
-  type AssessmentResult,
   type AssessmentSection,
   type AssessmentTest,
-  BASE_TYPES,
-  type BaseType,
-  createItemVariables,
-  createRandom,
-  DataError,
-  type ElementVisit,
   type Expression,
-  evaluate,
-  type Issue,
+  readAsi,
+} from "../src/asi/index.js";
+import type { ElementVisit } from "../src/asi/internal.js";
+import { DataError, type Issue, ProcessingError } from "../src/errors.js";
+import { createRandom } from "../src/index.js";
+import {
   type Manifest,
-  OPERATOR_SIGNATURES,
   openPackage,
-  type PersonalNeedsProfile,
-  ProcessingError,
-  parseXml,
   type QtiPackage,
   type ResolvedItem,
   type Resolvers,
-  readAsi,
-  readPnp,
   resolveReference,
+  writeManifest,
+} from "../src/package/index.js";
+import { type PersonalNeedsProfile, readPnp } from "../src/pnp/index.js";
+import { createItemVariables } from "../src/processing/index.js";
+import { evaluate, OPERATOR_SIGNATURES } from "../src/processing/internal.js";
+import type { AssessmentResult } from "../src/results/index.js";
+import {
   validateAsi,
   validatePackage,
   validatePnp,
   validatePnpNamespace,
   validateResults,
   validateTest,
-  writeManifest,
-} from "../src/index.js";
+} from "../src/validate/index.js";
 import { type BindContext, BindRuleSets, checkDocumentElement, Findings } from "../src/validate/internal.js";
+import { BASE_TYPES, type BaseType } from "../src/values/index.js";
+import { parseXml } from "../src/xml/index.js";
 import { createReadError } from "../src/xml/internal.js";
 import { FUZZ } from "./fuzz.js";
 import { criterionMarkup, rubricMarkup } from "./scoring-rubrics.js";

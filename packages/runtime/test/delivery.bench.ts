@@ -1,17 +1,17 @@
 import { expect, test } from "vitest";
+import type { AssessmentItem } from "../src/asi/index.js";
 import {
   type Action,
-  type AssessmentItem,
-  buildSingle,
-  createRandom,
   type DeliveryState,
   deserializeState,
   type Engine,
   type ItemKey,
   readTestInputs,
-  runOutcomeProcessing,
   serializeState,
-} from "../src/index.js";
+} from "../src/delivery/index.js";
+import { createRandom } from "../src/index.js";
+import { runOutcomeProcessing } from "../src/processing/index.js";
+import { buildSingle } from "../src/values/index.js";
 import { BENCH_OPTIONS, BUDGETS, compareRow, expectWithin, RESCORING_BUDGET } from "./budgets.js";
 import {
   act,

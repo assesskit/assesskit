@@ -3,14 +3,13 @@ import { describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import {
   createItemVariables,
-  DURATION,
   type ItemSessionFilter,
   type ItemSessionView,
   type ItemVariables,
   QTI_CONTEXT,
   type TestScope,
 } from "../processing/index.js";
-import { fitValue } from "../processing/internal.js";
+import { DURATION, fitValue } from "../processing/internal.js";
 import { buildSingle, type Value } from "../values/index.js";
 import { MILLISECONDS_PER_SECOND } from "./attempt.js";
 import { type Course, type CourseItem, candidateOf, itemContextValues } from "./course.js";

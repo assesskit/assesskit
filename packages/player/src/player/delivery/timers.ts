@@ -1,4 +1,4 @@
-import type { TimerView } from "@assesskit/runtime/delivery";
+import type { TimerView } from "@assesskit/runtime/delivery/wire";
 import type { Messages } from "../../messages/index.js";
 import { clockText, html, replaceAll } from "../internal.js";
 import type { Announcer } from "./announcer.js";

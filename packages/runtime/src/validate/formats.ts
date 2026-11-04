@@ -1,4 +1,4 @@
-import type { AttributeDef, ElementVisit, StringFormat } from "../asi/index.js";
+import type { AttributeDef, ElementVisit, StringFormat } from "../asi/internal.js";
 import { isIdentifier } from "../values/index.js";
 import type { Findings } from "./findings.js";
 import { elementPath } from "./model-access.js";

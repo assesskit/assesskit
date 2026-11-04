@@ -3,17 +3,16 @@ import { join, resolve } from "node:path";
 import fc from "fast-check";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { requireSchemas } from "../../../scripts/schemas.js";
+import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
 import {
   type PersonalNeedsProfile,
   PNP_NAMESPACE,
-  parseXml,
   readPnp,
   SUPPORT_NAMES,
   type SupportSetting,
   writePnp,
-  type XmlElement,
-} from "../src/index.js";
-import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
+} from "../src/pnp/index.js";
+import { parseXml, type XmlElement } from "../src/xml/index.js";
 import { asProfile, personalNeedsProfile, pnpRecords, settingFor } from "./arbitraries/pnp.js";
 import { declaredNames, unusedNames, usedNames } from "./schema-declarations.js";
 

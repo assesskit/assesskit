@@ -1,4 +1,4 @@
-import type { CandidateView } from "@assesskit/runtime/delivery";
+import type { CandidateView } from "@assesskit/runtime/delivery/wire";
 import type { Body } from "./body.js";
 import type { ContentAttachments } from "./content-attachments.js";
 import type { ItemSettings } from "./settings.js";

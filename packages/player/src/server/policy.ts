@@ -1,5 +1,6 @@
 import { checkArray, checkChoice, describe } from "@assesskit/runtime/checks";
-import type { CandidateAction, DeliveryState } from "@assesskit/runtime/delivery";
+import type { DeliveryState } from "@assesskit/runtime/delivery";
+import type { CandidateAction } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 
 /** The type of an action of the candidate. */

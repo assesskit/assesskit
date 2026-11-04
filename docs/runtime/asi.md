@@ -22,29 +22,27 @@ flowchart LR
   test --> parts["parts, sections,<br/>item references"]
 ```
 
-| Export                                                                                                              | Purpose                                                                                                                                                              |
-| ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `readAsi(input, options?)`                                                                                          | Reads text, bytes or a parsed tree into an `AsiDocument`.                                                                                                            |
-| `writeAsi(document)`                                                                                                | Writes an `AsiDocument` as XML in UTF-8.                                                                                                                             |
-| `AsiDocument`, `ReadAsiOptions`                                                                                     | The seven document kinds, and the options of the reader.                                                                                                             |
-| `ASI_NAMESPACE`                                                                                                     | The namespace of every element of an assessment document.                                                                                                            |
-| `AssessmentItem`, `AssessmentTest`, …                                                                               | The model of each element of documents, declarations, processing and structure, such as `ResponseCondition`.                                                         |
-| `ChoiceInteraction`, `SimpleChoice`, `Card`, …                                                                      | The model of each element of content: interactions, choices, feedback, catalogs and companion materials, such as `PrintedVariable`.                                  |
-| `Expression`, `NumericExpression`                                                                                   | The 64 expressions, and the 44 that yield numbers.                                                                                                                   |
-| `ResponseRule`, `OutcomeRule`, `TemplateRule`                                                                       | The rules of the three kinds of processing.                                                                                                                          |
-| `Interaction`                                                                                                       | The 22 interactions.                                                                                                                                                 |
-| `HtmlElement`                                                                                                       | The 76 HTML elements; narrow it by `kind`, such as `"p"`.                                                                                                            |
-| `BodyNode`, `TextNode`                                                                                              | A node of flow content: an element, text, or XML for MathML, SSML and `xi:include`.                                                                                  |
-| `RubricBlock`, `TestRubricBlock`                                                                                    | A rubric block wherever it occurs, and the one of a test, test part or section.                                                                                      |
-| `ElementModel`                                                                                                      | The model of any element of the table.                                                                                                                               |
-| `readScoreCovers(test)`, `buildScoreCoversBlock(…)`                                                                 | The covers of externally scored outcomes: read them from a test, build the rubric block that names them.                                                             |
-| `selectScoreCoverBlocks(test)`, `SCORE_COVERS_CLASS`                                                                | The covers blocks as written, with what they lack; the class token that marks them.                                                                                  |
-| `ScoreCover`, `ScoreCoverBlock`, `ScoreCoverEntry`                                                                  | One covered response, a block as written, and one list entry of it.                                                                                                  |
-| `readScoringRubrics(document)`, `buildScoringRubricBlock(…)`                                                        | The scoring rubrics of an item or a test: read them, build the rubric block that holds one.                                                                          |
-| `rubricScore(rubric, ratings)`, `checkScoringRubric(value)`                                                         | The score that ratings give under a rubric; the check of a rubric that arrived as JSON.                                                                              |
-| `ScoringRubric`, `RubricCriterion`, `RubricLevel`, `RubricKind`, `RUBRIC_KINDS`, `RubricRating`, `RubricScoreRange` | The rubric, its criteria and levels, its four kinds with the list they come from, and a rating of a criterion.                                                       |
-| `SCORING_RUBRIC_CLASS`, `ScoringRubricBlock`, `RubricContent`, `RubricNotes`, `RubricBlockOptions`                  | The class token that marks a rubric block; the block that fits an item body and a test; the content that both accept; the notes and the options of the two builders. |
-| `walkDocument(document, visit)`, `ElementVisit`                                                                     | Visits each element of a document with its name, model, attribute definitions and parent.                                                                            |
+| Export                                                                                                              | Purpose                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `readAsi(input, options?)`                                                                                          | Reads text, bytes or a parsed tree into an `AsiDocument`.                                                                           |
+| `writeAsi(document)`                                                                                                | Writes an `AsiDocument` as XML in UTF-8.                                                                                            |
+| `AsiDocument`, `ReadAsiOptions`                                                                                     | The seven document kinds, and the options of the reader.                                                                            |
+| `ASI_NAMESPACE`                                                                                                     | The namespace of every element of an assessment document.                                                                           |
+| `AssessmentItem`, `AssessmentTest`, …                                                                               | The model of each element of documents, declarations, processing and structure, such as `ResponseCondition`.                        |
+| `ChoiceInteraction`, `SimpleChoice`, `Card`, …                                                                      | The model of each element of content: interactions, choices, feedback, catalogs and companion materials, such as `PrintedVariable`. |
+| `Expression`, `NumericExpression`                                                                                   | The 64 expressions, and the 44 that yield numbers.                                                                                  |
+| `ResponseRule`, `OutcomeRule`, `TemplateRule`                                                                       | The rules of the three kinds of processing.                                                                                         |
+| `Interaction`                                                                                                       | The 22 interactions.                                                                                                                |
+| `HtmlElement`                                                                                                       | The 76 HTML elements; narrow it by `kind`, such as `"p"`.                                                                           |
+| `BodyNode`, `TextNode`                                                                                              | A node of flow content: an element, text, or XML for MathML, SSML and `xi:include`.                                                 |
+| `RubricBlock`, `TestRubricBlock`                                                                                    | A rubric block wherever it occurs, and the one of a test, test part or section.                                                     |
+| `ElementModel`                                                                                                      | The model of any element of the table.                                                                                              |
+| `readScoreCovers(test)`, `buildScoreCoversBlock(…)`                                                                 | The covers of externally scored outcomes: read them from a test, build the rubric block that names them.                            |
+| `ScoreCover`                                                                                                        | One covered response.                                                                                                               |
+| `readScoringRubrics(document)`, `buildScoringRubricBlock(…)`                                                        | The scoring rubrics of an item or a test: read them, build the rubric block that holds one.                                         |
+| `rubricScore(rubric, ratings)`, `checkScoringRubric(value)`                                                         | The score that ratings give under a rubric; the check of a rubric that arrived as JSON.                                             |
+| `ScoringRubric`, `RubricCriterion`, `RubricLevel`, `RubricKind`, `RUBRIC_KINDS`, `RubricRating`, `RubricScoreRange` | The rubric, its criteria and levels, its four kinds with the list they come from, and a rating of a criterion.                      |
+| `ScoringRubricBlock`, `RubricContent`, `RubricNotes`, `RubricBlockOptions`                                          | The block that fits an item body and a test; the content that both accept; the notes and the options of the two builders.           |
 
 ## Quick start
 
@@ -271,17 +269,8 @@ below find nodes without knowing which place of which element holds them.
 | `listChildNodes(node)`      | The nodes directly below a node, in every place the model keeps them: `children`, a prompt, choices, a content body, and so on. |
 | `listDescendantNodes(node)` | The nodes at any depth in document order, without the node itself.                                                              |
 | `isModelNode(value)`        | Whether a value is an object with a string `kind`; the check is shallow.                                                        |
-| `isBodyNode(value)`         | The same check, as a guard for a `BodyNode`.                                                                                    |
 
-`walkDocument(document, visit)` walks a whole document the way `writeAsi` does, without writing, and calls `visit` for
-each element with an `ElementVisit` before its children. It gives what the `kind` of a model does not: `name`, the element
-as a document writes it (`qti-label` and the HTML `label` share the kind `label`), `model`, the `attributes` with their
-`AttributeDef`, `attributeWildcard`, `foreign` (the MathML, SSML, `xi:include` and wildcard elements the model keeps as
-XML) and the `parent` visit. It checks the shape of every model (an array where the schema has many, a `kind` the
-property accepts) and throws `DataError` for one that is wrong, so a check that reads the model by its properties can
-rely on it. The `validate` module reads documents this way.
-
-MathML, SSML and `xi:include` are leaves: the model keeps them as XML, and their children are not walked. Narrow a node by
+MathML, SSML and `xi:include` are leaves: the model keeps them as XML, and the functions above do not walk their children. Narrow a node by
 its `kind` with a guard of your own, such as `(node): node is HotText => node.kind === "hottext"`.
 
 ### Extensions and includes
@@ -334,7 +323,7 @@ Two conventions of the runtime are rubric blocks for scorers that a class token 
 
 | Convention     | Functions                                                                                                | Reads and builds                                                                                             |
 | -------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Covers         | `readScoreCovers`, `selectScoreCoverBlocks`, `buildScoreCoversBlock`                                     | The responses that an externally scored outcome of a test rates, in a block of the test                      |
+| Covers         | `readScoreCovers`, `buildScoreCoversBlock`                                                               | The responses that an externally scored outcome of a test rates, in a block of the test                      |
 | Scoring rubric | `readScoringRubrics`, `buildScoringRubricBlock`, `checkScoringRubric`, `rubricScore`, `rubricScoreRange` | The criteria, levels and weights of an outcome, in a block of an item or of a test, and the score of ratings |
 
 ## The element table
@@ -380,7 +369,6 @@ required `use` of a rubric block, and one has an attribute `qti-interaction-modu
 | The document has a DOCTYPE, or is above a limit of the XML reader                                     | `SecurityError`, `limit` names the limit                 | Do not read it. For a document you trust, raise the limit with the option `limits`.                     |
 | An argument is not of its type: a document that is neither text, bytes nor an element, or bad options | `DataError` that says what is wrong and what is expected | Pass the type that the message names.                                                                   |
 | `writeAsi` is given a model that is not the model of its element                                      | `DataError` that names the property                      | Build the model with the types of this module, and fix the property that the message names.             |
-| `walkDocument` is given a model whose shape is wrong                                                  | `DataError`                                              | As for `writeAsi`.                                                                                      |
 
 ## Not included
 

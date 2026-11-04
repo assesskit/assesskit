@@ -84,8 +84,8 @@ export interface ItemSessionContext extends ProcessingContext {
   /** The item, as `readAsi` reads it, with its includes resolved. */
   readonly item: AssessmentItem;
   /**
-   * The item session control in force: {@link resolveSessionControl} of the item reference in a test, or
-   * {@link resolveStandaloneSessionControl} for an item delivered alone.
+   * The item session control in force: that of the item reference in a test after inheritance, or the standard control
+   * for an item delivered alone.
    */
   readonly control: EffectiveSessionControl;
   /**
@@ -147,7 +147,7 @@ function checkMap(value: unknown, label: string): void {
  */
 export function checkSession(session: ItemSession): void {
   const input: unknown = session;
-  checkRecord(input, "The item session must be an object from startItemSession");
+  checkRecord(input, "The item session must be an object from a delivery state");
   checkKey(session.key);
   checkChoice(session.status, "The status of the item session", ITEM_SESSION_STATUSES);
   checkBoolean(session.attempting, "The attempting of the item session");

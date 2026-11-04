@@ -24,7 +24,7 @@ describe("README", () => {
     await import("./readme-example.js");
 
     const source = readFileSync(new URL("./readme-example.ts", import.meta.url), "utf8").replace(
-      /from "\.\.\/src\/([a-z]+)\/index\.js"/g,
+      /from "\.\.\/src\/([a-z]+(?:\/wire)?)(?:\/index)?\.js"/g,
       'from "@assesskit/runtime/$1"',
     );
     expect(blockAfter("## Quick start", "ts")).toBe(source);

@@ -2,7 +2,7 @@ import type { OutcomeDeclaration, ResponseDeclaration } from "../asi/index.js";
 import { checkArray, describe, parseWith } from "../checks.js";
 import { DataError, SecurityError } from "../errors.js";
 import { DEFAULT_KEY_LIMITS, type ExpressionKey, type NumberKey, type ScoredResponse } from "../keys/index.js";
-import { BUILT_IN_CONTEXTS, BUILT_IN_OUTCOMES, BUILT_IN_RESPONSES } from "../processing/index.js";
+import { BUILT_IN_CONTEXTS, BUILT_IN_OUTCOMES, BUILT_IN_RESPONSES } from "../processing/internal.js";
 import type { CompileScoringOptions, InteractionAttributes, ItemScoring } from "./item-scoring.js";
 import {
   and,

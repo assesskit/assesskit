@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
-import { compileScoring, DEFAULT_KEY_LIMITS, type ScoredResponse } from "../src/index.js";
+import { DEFAULT_KEY_LIMITS, type ScoredResponse } from "../src/keys/index.js";
+import { compileScoring } from "../src/scoring/index.js";
 import { BENCH_OPTIONS, BUDGETS, expectWithin } from "./budgets.js";
 
 // compileScoring writes an item's scoring once, when the item is authored; no library compiles keys into QTI, so the budgets

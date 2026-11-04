@@ -6,19 +6,11 @@
  */
 export * from "./body.js";
 export type { RubricBlockOptions, RubricContent, RubricNotes } from "./convention-markup.js";
-export {
-  buildScoreCoversBlock,
-  readScoreCovers,
-  SCORE_COVERS_CLASS,
-  type ScoreCover,
-  type ScoreCoverBlock,
-  type ScoreCoverEntry,
-  selectScoreCoverBlocks,
-} from "./covers.js";
-export { type AsiDocument, type ReadAsiOptions, readAsi, walkDocument, writeAsi } from "./document.js";
+export { buildScoreCoversBlock, readScoreCovers, type ScoreCover } from "./covers.js";
+export { type AsiDocument, type ReadAsiOptions, readAsi, writeAsi } from "./document.js";
 export * from "./model.js";
 export { ASI_NAMESPACE } from "./namespace.js";
-export { isBodyNode, isModelNode, listChildNodes, listDescendantNodes, type ModelNode } from "./nodes.js";
+export { isModelNode, listChildNodes, listDescendantNodes, type ModelNode } from "./nodes.js";
 export { type RubricRating, type RubricScoreRange, rubricScore, rubricScoreRange } from "./rubric-ratings.js";
 export {
   checkScoringRubric,
@@ -26,10 +18,7 @@ export {
   type RubricCriterion,
   type RubricKind,
   type RubricLevel,
-  SCORING_RUBRIC_CLASS,
   type ScoringRubric,
 } from "./scoring-rubric.js";
 export { buildScoringRubricBlock, readScoringRubrics, type ScoringRubricBlock } from "./scoring-rubric-block.js";
 export { type AreaShape, fitsCoordinateCount } from "./shapes.js";
-export type { AttributeDef, AttributeType, StringFormat } from "./table.js";
-export type { ElementVisit } from "./walk.js";

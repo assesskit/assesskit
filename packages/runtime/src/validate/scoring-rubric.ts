@@ -1,11 +1,5 @@
-import {
-  type AssessmentItem,
-  type AssessmentTest,
-  rubricScoreRange,
-  SCORING_RUBRIC_CLASS,
-  type ScoringRubric,
-} from "../asi/index.js";
-import { scoringRubricBlocks, scoringRubricOf } from "../asi/internal.js";
+import { type AssessmentItem, type AssessmentTest, rubricScoreRange, type ScoringRubric } from "../asi/index.js";
+import { SCORING_RUBRIC_CLASS, scoringRubricBlocks, scoringRubricOf } from "../asi/internal.js";
 import type { Findings } from "./findings.js";
 
 const ITEM_ELEMENT = "qti-assessment-item/qti-item-body/qti-rubric-block";

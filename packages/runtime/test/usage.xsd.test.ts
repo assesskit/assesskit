@@ -4,6 +4,7 @@ import fc from "fast-check";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
 import { requireSchemas } from "../../../scripts/schemas.js";
+import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
 import {
   DISTRACTOR_STATISTICS,
   ITEM_STATISTICS,
@@ -12,8 +13,7 @@ import {
   USAGE_NAMESPACE,
   type UsageData,
   writeUsageData,
-} from "../src/index.js";
-import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
+} from "../src/usage/index.js";
 import { usageData } from "./arbitraries/usage.js";
 import { declaredNames, unusedNames, usedNames } from "./schema-declarations.js";
 

@@ -1,6 +1,7 @@
 import { checkChoice } from "../checks.js";
 import { DataError } from "../errors.js";
-import { BASE_TYPES, CARDINALITIES, isXsdDateTime, parseIdentifierList, parsePrimitive } from "../values/index.js";
+import { BASE_TYPES, isXsdDateTime } from "../values/index.js";
+import { CARDINALITIES, parseIdentifierList, parsePrimitive } from "../values/internal.js";
 import type { XmlElement } from "../xml/index.js";
 import { ElementReader, type ReaderRules } from "../xml/internal.js";
 import type {

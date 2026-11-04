@@ -1,31 +1,23 @@
+import { ASI_NAMESPACE, type AssessmentItem, type AssessmentTest, readAsi } from "../src/asi/index.js";
+import type { CatPort, CreateSessionRequest, SubmitResultsRequest } from "../src/cat/index.js";
 import {
   type Action,
-  ASI_NAMESPACE,
-  type AssessmentItem,
-  type AssessmentTest,
-  buildSingle,
-  type CatPort,
   type CatRequest,
   type CatSectionRef,
-  type CreateSessionRequest,
   createEngine,
   type DeliveryEvent,
   type DeliveryState,
   type Engine,
   type EngineOptions,
   type ItemKey,
-  type PersonalNeedsProfile,
-  PNP_NAMESPACE,
   type Refusal,
-  type ResolvedItem,
-  type Resolvers,
-  readAsi,
-  readPnp,
   resolveStructure,
   type StartOptions,
-  type SubmitResultsRequest,
   type TestStructure,
-} from "../src/index.js";
+} from "../src/delivery/index.js";
+import type { ResolvedItem, Resolvers } from "../src/package/index.js";
+import { type PersonalNeedsProfile, PNP_NAMESPACE, readPnp } from "../src/pnp/index.js";
+import { buildSingle } from "../src/values/index.js";
 
 /** Throws an error with a message; a test calls it where a result of the wrong kind would end the test. */
 export function fail(message: string): never {
@@ -282,7 +274,7 @@ export function stage(
   state: DeliveryState,
   at: number,
   nextItems: { itemIdentifiers: string[]; stageLength?: number } | null,
-  extra: { sessionState?: string; assessmentResult?: import("../src/index.js").AssessmentResult } = {},
+  extra: { sessionState?: string; assessmentResult?: import("../src/results/index.js").AssessmentResult } = {},
 ): Action {
   const request = waiting(engine, state);
   return {

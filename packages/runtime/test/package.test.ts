@@ -5,34 +5,28 @@ import fc from "fast-check";
 import { unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
+import { DataError, ReadError, SecurityError } from "../src/errors.js";
+import { CP_NAMESPACE, DRD_NAMESPACE, LOM_NAMESPACE, QTI_METADATA_NAMESPACE } from "../src/metadata/index.js";
 import {
-  CP_NAMESPACE,
   CPX_NAMESPACE,
   createPackageResolvers,
-  DataError,
   DEFAULT_ZIP_LIMITS,
-  DRD_NAMESPACE,
-  LOM_NAMESPACE,
   listDependencies,
   MANIFEST_SCHEMAS,
   type Manifest,
   openPackage,
   type PackageFiles,
-  parseXml,
-  QTI_METADATA_NAMESPACE,
   type QtiPackage,
   RESOURCE_TYPES,
-  ReadError,
   type Resource,
   readLtiLink,
   readManifest,
   readPackage,
   resolveLaunchUrl,
   resolveResourcePath,
-  SecurityError,
   writeManifest,
   writePackage,
-} from "../src/index.js";
+} from "../src/package/index.js";
 import {
   type ByteSource,
   checkSynchronous,
@@ -40,6 +34,7 @@ import {
   memorySource,
   openZip,
 } from "../src/package/internal.js";
+import { parseXml } from "../src/xml/index.js";
 import { hostileArchives, manifests, smallZipLimits } from "./arbitraries/package.js";
 import { mutateBytes, mutateText, mutations } from "./arbitraries/xml.js";
 import { expectOutcome, FUZZ, fuzzReader } from "./fuzz.js";

@@ -1,33 +1,23 @@
 import { createCatRestHandler } from "@assesskit/player/cat-rest";
+import { createRandom } from "@assesskit/runtime";
+import { readAsi } from "@assesskit/runtime/asi";
 import {
   type Action,
-  buildContainer,
-  buildOperatorCall,
-  buildSingle,
-  compareMathSteps,
-  compileScoring,
-  compileXsdRegex,
-  countLength,
   createEngine,
-  createItemVariables,
-  createPackageResolvers,
-  createRandom,
-  createScoringOperators,
   type DeliveryState,
   deserializeState,
-  parseXml,
-  readAsi,
-  readManifest,
-  readPackage,
-  readView,
-  runResponseProcessing,
-  SecurityError,
   serializeState,
-  validatePackage,
-  writePackage,
-  writeResults,
-  writeView,
-} from "@assesskit/runtime";
+} from "@assesskit/runtime/delivery";
+import { readView, writeView } from "@assesskit/runtime/delivery/wire";
+import { SecurityError } from "@assesskit/runtime/errors";
+import { buildOperatorCall, compareMathSteps, countLength, createScoringOperators } from "@assesskit/runtime/operators";
+import { createPackageResolvers, readManifest, readPackage, writePackage } from "@assesskit/runtime/package";
+import { createItemVariables, runResponseProcessing } from "@assesskit/runtime/processing";
+import { writeResults } from "@assesskit/runtime/results";
+import { compileScoring } from "@assesskit/runtime/scoring";
+import { validatePackage } from "@assesskit/runtime/validate";
+import { buildContainer, buildSingle, compileXsdRegex } from "@assesskit/runtime/values";
+import { parseXml } from "@assesskit/runtime/xml";
 
 /** What every runtime must give: plain data, the same on each. */
 export interface Results {

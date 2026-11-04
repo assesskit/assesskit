@@ -19,8 +19,8 @@ import {
   LOM_NAMESPACE,
   type QtiMetadata,
   SCORING_MODES,
-  type XmlElement,
-} from "../../src/index.js";
+} from "../../src/metadata/index.js";
+import type { XmlElement } from "../../src/xml/index.js";
 import { XMLNS_NAMESPACE } from "../../src/xml/internal.js";
 
 /** Printable ASCII text without a line end or tab, which `xs:normalizedString` would change. */

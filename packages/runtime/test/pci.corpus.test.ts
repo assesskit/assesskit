@@ -1,14 +1,14 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import type { PortableCustomInteraction } from "../src/asi/index.js";
 import {
   derivePciProperties,
-  type PortableCustomInteraction,
   readModuleResolution,
   resolveModuleConfigurationPaths,
   resolvePciModules,
   validatePortableInteraction,
-} from "../src/index.js";
+} from "../src/pci/index.js";
 import { EXAMPLES, exampleItems } from "./corpus-items.js";
 
 const PACKAGING = join(EXAMPLES, "packaging");

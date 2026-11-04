@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { requireSchemas } from "../../../scripts/schemas.js";
-import { ASI_NAMESPACE, readAsi, writeAsi } from "../src/index.js";
+import { ASI_NAMESPACE, readAsi, writeAsi } from "../src/asi/index.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
 
 let schemas: SchemaSet;

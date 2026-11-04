@@ -1,4 +1,4 @@
-import type { CandidateView } from "@assesskit/runtime/delivery";
+import type { CandidateView } from "@assesskit/runtime/delivery/wire";
 import type { Messages } from "../../messages/index.js";
 import type { SessionClient } from "../../protocol/index.js";
 import { html } from "../internal.js";

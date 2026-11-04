@@ -12,7 +12,7 @@ import {
   describe,
   isRecord,
 } from "@assesskit/runtime/checks";
-import type { CandidateView } from "@assesskit/runtime/delivery";
+import type { CandidateView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import type { FileValue } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";

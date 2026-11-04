@@ -2,50 +2,43 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
+import { type AssessmentItem, type AssessmentTest, readAsi } from "../src/asi/index.js";
+import { selectModalFeedback } from "../src/content/index.js";
 import {
   type Action,
-  type AssessmentItem,
-  type AssessmentTest,
-  applyItemAction,
-  buildContainer,
-  buildSingle,
-  type CandidateAction,
   createEngine,
-  createItemVariables,
-  createPackageResolvers,
-  createRandom,
   type DeliveryState,
-  deriveItemFeedback,
-  deriveSessionStatus,
   deserializeState,
   type Engine,
-  findNextItem,
   type ItemAction,
   type ItemKey,
   type ItemSession,
+  resolveStructure,
+  serializeState,
+  type TestStructure,
+} from "../src/delivery/index.js";
+import {
+  applyItemAction,
+  deriveItemFeedback,
+  deriveSessionStatus,
+  findNextItem,
   type ItemSessionContext,
-  type ItemSessionView,
   type ItemStep,
   listPlanItems,
   planTest,
   presentItem,
-  readAsi,
-  readCandidateAction,
-  readView,
   resolveSessionControl,
   resolveStandaloneSessionControl,
-  resolveStructure,
-  selectModalFeedback,
-  serializeState,
   startItemSession,
-  type TestScope,
-  type TestStructure,
   timeLimits,
-  type Value,
-  validateAsi,
-  writeView,
-} from "../src/index.js";
+} from "../src/delivery/internal.js";
+import { type CandidateAction, readCandidateAction, readView, writeView } from "../src/delivery/wire.js";
+import { createRandom } from "../src/index.js";
 import { readPackageFile } from "../src/node/index.js";
+import { createPackageResolvers } from "../src/package/index.js";
+import { createItemVariables, type ItemSessionView, type TestScope } from "../src/processing/index.js";
+import { validateAsi } from "../src/validate/index.js";
+import { buildContainer, buildSingle, type Value } from "../src/values/index.js";
 import { exampleItems } from "./corpus-items.js";
 import { readFixture, type StateFixture } from "./fixtures.js";
 

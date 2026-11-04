@@ -1,5 +1,5 @@
 import fc from "fast-check";
-import type { ChoiceDescriptor, InteractionDescriptor, InteractionKind } from "../../src/index.js";
+import type { ChoiceDescriptor, InteractionDescriptor, InteractionKind } from "../../src/interactions/index.js";
 
 /** A choice descriptor with the identifier, which is fixed or free. */
 const choiceOf = (identifier: string, fixed: boolean): ChoiceDescriptor => ({ identifier, fixed, showHide: "show" });

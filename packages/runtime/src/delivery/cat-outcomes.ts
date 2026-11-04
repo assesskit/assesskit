@@ -1,6 +1,6 @@
 import type { OutcomeDeclaration } from "../asi/index.js";
-import { COMPLETION_STATUS, DURATION, NUM_ATTEMPTS, QTI_CONTEXT } from "../processing/index.js";
-import { fitValue } from "../processing/internal.js";
+import { QTI_CONTEXT } from "../processing/index.js";
+import { COMPLETION_STATUS, DURATION, fitValue, NUM_ATTEMPTS } from "../processing/internal.js";
 import type { OutcomeVariable } from "../results/index.js";
 import type { Value } from "../values/index.js";
 import type { CatSession } from "./cat-session.js";

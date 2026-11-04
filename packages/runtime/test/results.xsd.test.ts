@@ -4,17 +4,15 @@ import fc from "fast-check";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
 import { requireSchemas } from "../../../scripts/schemas.js";
+import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
 import {
   type AssessmentResult,
-  buildContainer,
-  buildRecord,
-  buildSingle,
   type ItemResult,
   RESULTS_NAMESPACE,
   readResults,
   writeResults,
-} from "../src/index.js";
-import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
+} from "../src/results/index.js";
+import { buildContainer, buildRecord, buildSingle } from "../src/values/index.js";
 import { assessmentResult } from "./arbitraries/results.js";
 import { declaredNames, unusedNames, usedNames } from "./schema-declarations.js";
 

@@ -3,17 +3,9 @@ import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
-import {
-  createItemVariables,
-  createRandom,
-  DataError,
-  ProcessingError,
-  readAsi,
-  runResponseProcessing,
-  SecurityError,
-  validateAsi,
-  writeAsi,
-} from "../src/index.js";
+import { readAsi, writeAsi } from "../src/asi/index.js";
+import { DataError, ProcessingError, SecurityError } from "../src/errors.js";
+import { createRandom } from "../src/index.js";
 import { DEFAULT_KEY_LIMITS, type Key } from "../src/keys/index.js";
 import {
   buildOperatorCall,
@@ -38,6 +30,8 @@ import {
   writeCanonicalJson,
 } from "../src/operators/internal.js";
 import type { CustomOperatorExpression } from "../src/processing/index.js";
+import { createItemVariables, runResponseProcessing } from "../src/processing/index.js";
+import { validateAsi } from "../src/validate/index.js";
 import { buildSingle, type Value } from "../src/values/index.js";
 import { lineOf, pointsOf, shapeOf, textOf } from "./arbitraries/operators.js";
 import { readFixture } from "./fixtures.js";

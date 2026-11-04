@@ -1,4 +1,4 @@
-import type { ElementVisit } from "../asi/index.js";
+import type { ElementVisit } from "../asi/internal.js";
 import type { Findings } from "./findings.js";
 import type { DeclaredVariable } from "./item-scope.js";
 import { elementPath, textOf } from "./model-access.js";

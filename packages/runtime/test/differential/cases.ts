@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ReadError, readAsi } from "../../src/index.js";
+import { readAsi } from "../../src/asi/index.js";
+import { ReadError } from "../../src/errors.js";
 import { describeInteractions, type InteractionDescriptor } from "../../src/interactions/index.js";
 import { correctResponses, longsightRandom } from "./longsight.js";
 import type { ItemCase, Observed, SessionCase, Turn } from "./model.js";

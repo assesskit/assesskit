@@ -1,6 +1,6 @@
 import type { Caller } from "@assesskit/player/protocol";
 import type { SessionHost } from "@assesskit/player/server";
-import { readView } from "@assesskit/runtime/delivery";
+import { readView } from "@assesskit/runtime/delivery/wire";
 import type { HttpRequest } from "@interopkit/core/http";
 import { type AttemptStatus, type ControlAction, LtiError } from "@interopkit/tool-integration";
 import {

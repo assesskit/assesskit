@@ -75,8 +75,9 @@ These principles hold for every module; Biome enforces the ones marked lint, and
 
 ## Subpaths
 
-Each module is a folder of `src/` with an `index.ts` and a subpath of `exports`. The root `.` re-exports every module
-except `node` and `cli`, so the root stays portable. `bin` maps `assesskit` to the CLI.
+Each module is a folder of `src/` with an `index.ts` and a subpath of `exports`, and each name is exported by the subpath of
+its module only. The root `.` holds what no module owns, the seeded random generator, so that it stays small and portable.
+`bin` maps `assesskit` to the CLI.
 
 ## Errors and issues
 

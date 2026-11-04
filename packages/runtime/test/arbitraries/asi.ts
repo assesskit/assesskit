@@ -1,12 +1,6 @@
 import fc from "fast-check";
-import type {
-  AsiDocument,
-  AttributeType,
-  RubricCriterion,
-  RubricKind,
-  RubricLevel,
-  ScoringRubric,
-} from "../../src/asi/index.js";
+import type { AsiDocument, RubricCriterion, RubricKind, RubricLevel, ScoringRubric } from "../../src/asi/index.js";
+import type { AttributeType } from "../../src/asi/internal.js";
 import { foreignName, kindOf, type SlotDef, type SlotInfo, type TypeInfo, typeNamed } from "../../src/asi/internal.js";
 import { isRecord } from "../../src/checks.js";
 import {

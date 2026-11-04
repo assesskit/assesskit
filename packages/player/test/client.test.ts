@@ -1,4 +1,5 @@
-import type { CandidateAction, CandidateView, DeliveryEvent, HostAction } from "@assesskit/runtime/delivery";
+import type { DeliveryEvent, HostAction } from "@assesskit/runtime/delivery";
+import type { CandidateAction, CandidateView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import { buildSingle } from "@assesskit/runtime/values";
 import fc from "fast-check";

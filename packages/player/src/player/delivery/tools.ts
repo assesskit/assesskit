@@ -1,4 +1,4 @@
-import type { CandidateView } from "@assesskit/runtime/delivery";
+import type { CandidateView } from "@assesskit/runtime/delivery/wire";
 import type { SupportName } from "@assesskit/runtime/pnp";
 import type { Messages } from "../../messages/index.js";
 import { mountTools, type ToolSlots } from "../tools/index.js";

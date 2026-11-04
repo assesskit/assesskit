@@ -1,5 +1,5 @@
 import { ASI_NAMESPACE, readAsi } from "@assesskit/runtime/asi";
-import type { CandidateView } from "@assesskit/runtime/delivery";
+import type { CandidateView } from "@assesskit/runtime/delivery/wire";
 import { readPnp } from "@assesskit/runtime/pnp";
 import { buildSingle } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";

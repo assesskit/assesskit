@@ -57,7 +57,7 @@ export interface OpenPackageOptions {
   /**
    * XML limits for the manifest and every document, replacing the defaults field by field.
    *
-   * @defaultValue `{}`, which keeps {@link DEFAULT_XML_LIMITS}
+   * @defaultValue `{}`, which keeps `DEFAULT_XML_LIMITS` of `xml`
    */
   readonly xmlLimits?: Partial<XmlLimits>;
 }

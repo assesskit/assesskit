@@ -2,17 +2,15 @@ import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
+import { DataError } from "../src/errors.js";
 import {
   type AssessmentResult,
-  buildContainer,
-  buildRecord,
-  buildSingle,
-  DataError,
   type ItemResult,
   RESULTS_NAMESPACE,
   readResults,
   writeResults,
-} from "../src/index.js";
+} from "../src/results/index.js";
+import { buildContainer, buildRecord, buildSingle } from "../src/values/index.js";
 import { XSI_NAMESPACE } from "../src/xml/internal.js";
 import { assessmentResult } from "./arbitraries/results.js";
 import { withoutPositions } from "./arbitraries/xml.js";

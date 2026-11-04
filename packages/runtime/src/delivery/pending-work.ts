@@ -6,18 +6,6 @@ import type { DeliveryState } from "./delivery-state.js";
 import { catReport } from "./results-assembly.js";
 import type { ScoringRequest } from "./scoring.js";
 
-/** What every CAT request names: the adaptive section of the test and where its CAT engine is. */
-export interface CatRequestBase {
-  /** The identifier of the request; the `cat-response` action that answers it names it. */
-  readonly id: string;
-  /** The identifier of the adaptive section in the test. */
-  readonly section: string;
-  /** The URL prefix of the CAT engine. */
-  readonly prefix: string;
-  /** The identifier that Create Section returned for the section. */
-  readonly sectionIdentifier: string;
-}
-
 /**
  * A request that the engine makes of a CAT engine and waits on: Create Session when the candidate enters an adaptive
  * section; Submit Results with the results of the items to report, per the reporting policy of the section, and the
@@ -26,14 +14,23 @@ export interface CatRequestBase {
  * @remarks
  * The host makes the request through its `CatPort` with `sendCatRequest`, or `drainCat` does, and answers with a `cat-response` action.
  */
-export type CatRequest =
-  | (CatRequestBase & {
+export type CatRequest = {
+  /** The identifier of the request; the `cat-response` action that answers it names it. */
+  readonly id: string;
+  /** The identifier of the adaptive section in the test. */
+  readonly section: string;
+  /** The URL prefix of the CAT engine. */
+  readonly prefix: string;
+  /** The identifier that Create Session returned for the section. */
+  readonly sectionIdentifier: string;
+} & (
+  | {
       /** Create Session. */
       readonly kind: "create-session";
       /** The body of the request: the candidate's PNP as `writePnp` writes it, in base64, when the session has one. */
       readonly body: CreateSessionRequest;
-    })
-  | (CatRequestBase & {
+    }
+  | {
       /** Submit Results. */
       readonly kind: "submit-results";
       /** The identifier of the session. */
@@ -42,13 +39,14 @@ export type CatRequest =
       readonly assessmentResult: AssessmentResult;
       /** The state the engine handed over with its last answer; absent when it sent none. */
       readonly sessionState?: string;
-    })
-  | (CatRequestBase & {
+    }
+  | {
       /** End Session. */
       readonly kind: "end-session";
       /** The identifier of the session. */
       readonly sessionIdentifier: string;
-    });
+    }
+);
 
 /** What the engine waits on the host for: scoring requests with no value yet, and CAT requests. */
 export interface PendingWork {
@@ -63,7 +61,7 @@ function catRequestOf(course: Course, state: DeliveryState, session: CatSession)
   const { request } = session;
   const where = course.catSections.get(session.section);
   if (request === undefined || where === undefined) return undefined;
-  const base: CatRequestBase = {
+  const base = {
     id: catRequestId(session),
     section: session.section,
     prefix: where.prefix,

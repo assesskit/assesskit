@@ -1,4 +1,5 @@
-import type { Action, CandidateAction, DeliveryState, Engine, HostAction, Step } from "@assesskit/runtime/delivery";
+import type { Action, DeliveryState, Engine, HostAction, Step } from "@assesskit/runtime/delivery";
+import type { CandidateAction } from "@assesskit/runtime/delivery/wire";
 
 /** What {@link stepAfterIdle} needs of the runtime, which the caller passes because the shared folders never load the engine. */
 export interface IdleRuntime {

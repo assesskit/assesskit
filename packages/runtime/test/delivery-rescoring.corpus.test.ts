@@ -2,30 +2,24 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
+import { type AssessmentItem, type AssessmentTest, readAsi } from "../src/asi/index.js";
 import {
   type Action,
-  type AssessmentItem,
-  type AssessmentTest,
   type ContentNode,
   createEngine,
-  createPackageResolvers,
-  createRandom,
-  DataError,
   type DeliveryState,
   type Engine,
-  type ItemVariables,
-  ReadError,
-  type Resolvers,
-  readAsi,
   readItemVariables,
   readTestInputs,
   resolveStructure,
-  runOutcomeProcessing,
-  runResponseProcessing,
   type TestStructure,
-  type Value,
-} from "../src/index.js";
+} from "../src/delivery/index.js";
+import { DataError, ReadError } from "../src/errors.js";
+import { createRandom } from "../src/index.js";
 import { readPackageFile } from "../src/node/index.js";
+import { createPackageResolvers, type Resolvers } from "../src/package/index.js";
+import { type ItemVariables, runOutcomeProcessing, runResponseProcessing } from "../src/processing/index.js";
+import type { Value } from "../src/values/index.js";
 
 const examples = join(requireCorpus(resolve(import.meta.dirname, "../../..")), "qti-examples/qtiv3-examples");
 

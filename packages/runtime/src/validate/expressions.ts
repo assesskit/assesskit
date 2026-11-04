@@ -1,8 +1,8 @@
 import type { Expression } from "../asi/index.js";
 import { describe } from "../checks.js";
 import { DataError } from "../errors.js";
+import type { CustomOperator } from "../processing/index.js";
 import {
-  type CustomOperator,
   DEFAULT_RANDOM_MIN,
   DEFAULT_RANDOM_STEP,
   describeCount,
@@ -10,7 +10,7 @@ import {
   listOperands,
   OPERATOR_SIGNATURES,
   type OperatorSignature,
-} from "../processing/index.js";
+} from "../processing/internal.js";
 import { type BaseType, compileXsdRegex } from "../values/index.js";
 import type { Findings } from "./findings.js";
 import type { ExpressionScope, Lookup } from "./scope.js";

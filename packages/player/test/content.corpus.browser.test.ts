@@ -1,5 +1,5 @@
-import { ReadError, SecurityError } from "@assesskit/runtime";
 import { type AssessmentItem, type BodyNode, readAsi } from "@assesskit/runtime/asi";
+import { ReadError, SecurityError } from "@assesskit/runtime/errors";
 import { resolveReference } from "@assesskit/runtime/package";
 import { parseXml, type XmlElement } from "@assesskit/runtime/xml";
 import { describe, expect, it } from "vitest";

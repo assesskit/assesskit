@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
+import { DataError } from "../src/errors.js";
 import {
-  DataError,
   DISTRACTOR_STATISTICS,
   ITEM_STATISTICS,
   type ItemStatistic,
@@ -11,7 +11,7 @@ import {
   USAGE_NAMESPACE,
   type UsageData,
   writeUsageData,
-} from "../src/index.js";
+} from "../src/usage/index.js";
 import { XSI_NAMESPACE } from "../src/xml/internal.js";
 import { usageData } from "./arbitraries/usage.js";
 import { fuzzReader } from "./fuzz.js";

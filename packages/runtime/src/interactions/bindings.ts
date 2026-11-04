@@ -1,4 +1,5 @@
-import { BASE_TYPES, type BaseType, CARDINALITIES, type Cardinality } from "../values/index.js";
+import { BASE_TYPES, type BaseType, type Cardinality } from "../values/index.js";
+import { CARDINALITIES } from "../values/internal.js";
 import type { Binding } from "./descriptor.js";
 
 /**

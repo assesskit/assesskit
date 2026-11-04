@@ -1,4 +1,5 @@
-import { type AsiDocument, walkDocument } from "../asi/index.js";
+import type { AsiDocument } from "../asi/index.js";
+import { walkDocument } from "../asi/internal.js";
 import { BindRuleSets } from "./bind-rule-sets.js";
 import { checkDocumentElement } from "./document-checks.js";
 import type { Findings } from "./findings.js";

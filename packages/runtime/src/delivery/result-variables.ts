@@ -2,15 +2,8 @@ import type { AssessmentItem } from "../asi/index.js";
 import { setCorrectResponses } from "../asi/internal.js";
 import { checkArray, checkRecord, describe } from "../checks.js";
 import { DataError } from "../errors.js";
-import {
-  BUILT_IN_OUTCOMES,
-  BUILT_IN_RESPONSES,
-  createItemVariables,
-  describeType,
-  type ItemVariables,
-  type VariableType,
-} from "../processing/index.js";
-import { checkItem, fitValue } from "../processing/internal.js";
+import { createItemVariables, describeType, type ItemVariables, type VariableType } from "../processing/index.js";
+import { BUILT_IN_OUTCOMES, BUILT_IN_RESPONSES, checkItem, fitValue } from "../processing/internal.js";
 import type { ItemResult, ResultVariable } from "../results/index.js";
 import type { Value } from "../values/index.js";
 import { isAdaptive, resetOutcomes } from "./attempt.js";

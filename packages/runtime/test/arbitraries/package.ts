@@ -1,5 +1,11 @@
 import fc from "fast-check";
-import { MANIFEST_SCHEMAS, type Manifest, RESOURCE_TYPES, type Resource, type ZipLimits } from "../../src/index.js";
+import {
+  MANIFEST_SCHEMAS,
+  type Manifest,
+  RESOURCE_TYPES,
+  type Resource,
+  type ZipLimits,
+} from "../../src/package/index.js";
 import { buildZip, type RawEntry, type RawOptions } from "../zip-builder.js";
 import { accessForAllResource, curriculumStandardsSet, lom, qtiMetadata, uri } from "./metadata.js";
 import { defined, optional } from "./values.js";

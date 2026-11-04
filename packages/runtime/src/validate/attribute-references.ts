@@ -1,4 +1,4 @@
-import type { AttributeDef, AttributeType, ElementVisit } from "../asi/index.js";
+import type { AttributeDef, AttributeType, ElementVisit } from "../asi/internal.js";
 import type { Findings } from "./findings.js";
 import { elementPath, isWithin } from "./model-access.js";
 import type { StaticType } from "./static-type.js";

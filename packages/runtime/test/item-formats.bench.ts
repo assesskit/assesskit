@@ -1,5 +1,11 @@
 import { expect, test } from "vitest";
-import { DEFAULT_ITEM_FORMAT_LIMITS, readGift, readMoodleXml, writeGift, writeMoodleXml } from "../src/index.js";
+import {
+  DEFAULT_ITEM_FORMAT_LIMITS,
+  readGift,
+  readMoodleXml,
+  writeGift,
+  writeMoodleXml,
+} from "../src/item-formats/index.js";
 import { BENCH_OPTIONS, BUDGETS, expectWithin } from "./budgets.js";
 import { buildWrittenItems, GIFT_EDGES, WRITE_OPTIONS, XML_EDGES, XML_WRITE_OPTIONS } from "./item-formats-cases.js";
 

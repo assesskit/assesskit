@@ -1,5 +1,5 @@
 import type { AssessmentItem, Expression, TemplateRule } from "../asi/index.js";
-import { listOperands } from "../processing/index.js";
+import { listOperands } from "../processing/internal.js";
 import type { Findings } from "./findings.js";
 
 /** Adds the identifiers of the variables an expression reads to a set. */

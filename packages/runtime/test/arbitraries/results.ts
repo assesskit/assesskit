@@ -1,8 +1,6 @@
 import fc from "fast-check";
 import type {
   AssessmentResult,
-  BaseType,
-  Cardinality,
   ContextVariable,
   ItemResult,
   OutcomeVariable,
@@ -12,9 +10,9 @@ import type {
   SupportUse,
   TemplateVariable,
   TestResult,
-  Value,
-  XmlElement,
-} from "../../src/index.js";
+} from "../../src/results/index.js";
+import type { BaseType, Cardinality, Value } from "../../src/values/index.js";
+import type { XmlElement } from "../../src/xml/index.js";
 import {
   baseType,
   defined,

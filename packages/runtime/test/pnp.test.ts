@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
+import { DataError } from "../src/errors.js";
 import {
-  DataError,
   isColorTheme,
   isSupportName,
   type PersonalNeedsProfile,
@@ -11,14 +11,14 @@ import {
   PNP_COLOR_THEMES,
   PNP_NAMESPACE,
   type PnpRecord,
-  parseXml,
   readPnp,
   resolveSupports,
   SUPPORT_NAMES,
   type SupportSetting,
   writePnp,
-} from "../src/index.js";
+} from "../src/pnp/index.js";
 import { deriveExtensionName, isSetSupportName } from "../src/pnp/internal.js";
+import { parseXml } from "../src/xml/index.js";
 import { XSI_NAMESPACE } from "../src/xml/internal.js";
 import { asProfile, personalNeedsProfile, pnpRecords } from "./arbitraries/pnp.js";
 import { withoutPositions } from "./arbitraries/xml.js";

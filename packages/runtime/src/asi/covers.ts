@@ -30,7 +30,7 @@ export interface ScoreCover {
 }
 
 /** A list entry of a covers block as written: an attribute that the entry lacks is absent. */
-export interface ScoreCoverEntry {
+interface ScoreCoverEntry {
   /** The `data-item-ref` attribute: the identifier of the `qti-assessment-item-ref` of the item. */
   readonly itemRef?: string;
   /** The `data-response-identifier` attribute: the identifier of the response variable of the item. */

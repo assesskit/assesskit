@@ -1,5 +1,6 @@
 import type { AssessmentItem, AssessmentItemRef, AssessmentTest, OutcomeDeclaration } from "../asi/index.js";
-import { BUILT_IN_CONTEXTS, DURATION, QTI_CONTEXT, resolveItemIdentifier } from "../processing/index.js";
+import { QTI_CONTEXT } from "../processing/index.js";
+import { BUILT_IN_CONTEXTS, DURATION, resolveItemIdentifier } from "../processing/internal.js";
 import { type DeclaredVariable, itemVariables } from "./item-scope.js";
 import type { Lookup, Problem, Processing, ResponseLookup, RuleScope, Target } from "./scope.js";
 import { type StaticType, typeOfVariable, UNKNOWN } from "./static-type.js";

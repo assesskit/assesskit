@@ -1,5 +1,6 @@
 import { DataError } from "../errors.js";
-import { BASE_TYPES, isXsdDate, parsePrimitive } from "../values/index.js";
+import { BASE_TYPES } from "../values/index.js";
+import { isXsdDate, parsePrimitive } from "../values/internal.js";
 import type { XmlElement } from "../xml/index.js";
 import { ElementReader, type ReaderRules } from "../xml/internal.js";
 import type {

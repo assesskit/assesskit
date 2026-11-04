@@ -3,7 +3,8 @@ import { join, resolve } from "node:path";
 import { XmlDocument } from "libxml2-wasm";
 import { describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
-import { parseXml, ReadError, SecurityError, serializeXml, type XmlElement, type XmlNode } from "../src/index.js";
+import { ReadError, SecurityError } from "../src/errors.js";
+import { parseXml, serializeXml, type XmlElement, type XmlNode } from "../src/xml/index.js";
 
 const examples = join(requireCorpus(resolve(import.meta.dirname, "../../..")), "qti-examples/qtiv3-examples");
 const paths = readdirSync(examples, { recursive: true, encoding: "utf8" })

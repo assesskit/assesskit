@@ -1,7 +1,6 @@
 import type { AssessmentItem } from "../asi/index.js";
 import { AssesskitError } from "../errors.js";
-import { evaluateTestExpression } from "../processing/index.js";
-import { assign } from "../processing/internal.js";
+import { assign, evaluateTestExpression } from "../processing/internal.js";
 import type { Value } from "../values/index.js";
 import { type CourseItem, itemContextValues } from "./course.js";
 import { findDelivered } from "./delivery-state.js";

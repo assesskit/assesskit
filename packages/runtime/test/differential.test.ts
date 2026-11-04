@@ -6,15 +6,9 @@ import {
 } from "@longsightgroup/qti3-core";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import {
-  buildContainer,
-  buildSingle,
-  describeInteractions,
-  readAsi,
-  readNumericRecord,
-  type Value,
-  validateResponse,
-} from "../src/index.js";
+import { readAsi } from "../src/asi/index.js";
+import { describeInteractions, readNumericRecord, validateResponse } from "../src/interactions/index.js";
+import { buildContainer, buildSingle, type Value } from "../src/values/index.js";
 import { ACCEPTED_DIFFERENCES } from "./differential/accepted.js";
 import { ampUp, UNSUPPORTED } from "./differential/amp-up.js";
 import { compare, compareSessions, sameValue } from "./differential/compare.js";

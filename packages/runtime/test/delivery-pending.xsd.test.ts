@@ -1,8 +1,9 @@
 import { resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { requireSchemas } from "../../../scripts/schemas.js";
-import { type AssessmentResult, buildSingle, writeResults } from "../src/index.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
+import { type AssessmentResult, writeResults } from "../src/results/index.js";
+import { buildSingle } from "../src/values/index.js";
 import {
   ADAPTIVE,
   act,

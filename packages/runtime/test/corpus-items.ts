@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { requireCorpus } from "../../../scripts/corpus.js";
-import { type AssessmentItem, ReadError, readAsi } from "../src/index.js";
+import { type AssessmentItem, readAsi } from "../src/asi/index.js";
+import { ReadError } from "../src/errors.js";
 
 /** The directory of the 1EdTech examples of QTI 3. */
 export const EXAMPLES = join(requireCorpus(resolve(import.meta.dirname, "../../..")), "qti-examples/qtiv3-examples");

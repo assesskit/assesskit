@@ -2,31 +2,29 @@ import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
+import { ASI_NAMESPACE, type AssessmentItem, readAsi } from "../src/asi/index.js";
+import { DataError, ReadError } from "../src/errors.js";
+import { createRandom, type Random } from "../src/index.js";
 import {
-  ASI_NAMESPACE,
-  type AssessmentItem,
-  type BaseType,
   type Binding,
-  buildContainer,
-  buildSingle,
-  createRandom,
-  DataError,
   describeInteractions,
   type InteractionDescriptor,
   type InteractionKind,
-  type Primitive,
-  type Random,
-  ReadError,
-  type RecordValue,
   type ResponseViolation,
-  readAsi,
   readNumericRecord,
-  type SingleValue,
-  type Value,
   validateBindings,
   validateResponse,
-} from "../src/index.js";
+} from "../src/interactions/index.js";
 import { deriveAnsweredStatus, drawOrders, presentChoices, startingResponse } from "../src/interactions/internal.js";
+import {
+  type BaseType,
+  buildContainer,
+  buildSingle,
+  type Primitive,
+  type RecordValue,
+  type SingleValue,
+  type Value,
+} from "../src/values/index.js";
 import { shufflingDescriptor } from "./arbitraries/interactions.js";
 import { interactionKinds } from "./asi-elements.js";
 

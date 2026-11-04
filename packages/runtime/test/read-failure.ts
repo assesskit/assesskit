@@ -1,4 +1,4 @@
-import { type Issue, ReadError } from "../src/index.js";
+import { type Issue, ReadError } from "../src/errors.js";
 
 /** Returns the `ReadError` that a function throws, so that a test can look at its issue. */
 function readFailure(run: () => unknown): ReadError {

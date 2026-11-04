@@ -24,6 +24,7 @@ async function modules(): Promise<Record<string, object>> {
     "@assesskit/player/player.css?inline": { default: PLAYER_CSS },
     "@assesskit/runtime/asi": await import("@assesskit/runtime/asi"),
     "@assesskit/runtime/delivery": await import("@assesskit/runtime/delivery"),
+    "@assesskit/runtime/delivery/wire": await import("@assesskit/runtime/delivery/wire"),
     "@assesskit/runtime/interactions": await import("@assesskit/runtime/interactions"),
     "@assesskit/runtime/pci": await import("@assesskit/runtime/pci"),
     "@assesskit/runtime/values": await import("@assesskit/runtime/values"),

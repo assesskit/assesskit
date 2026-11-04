@@ -1,19 +1,8 @@
-import {
-  ASI_NAMESPACE,
-  type AssessmentItem,
-  applyItemAction,
-  buildSingle,
-  createEngine,
-  createRandom,
-  type ItemKey,
-  type ItemSession,
-  type ItemSessionContext,
-  presentItem,
-  readAsi,
-  startItemSession,
-  type Value,
-  validateAsi,
-} from "@assesskit/runtime";
+import { createRandom } from "@assesskit/runtime";
+import { ASI_NAMESPACE, type AssessmentItem, readAsi } from "@assesskit/runtime/asi";
+import { createEngine, type ItemKey, type ItemSession } from "@assesskit/runtime/delivery";
+import { validateAsi } from "@assesskit/runtime/validate";
+import { buildSingle, type Value } from "@assesskit/runtime/values";
 import {
   createItemSession,
   parseQtiTest,
@@ -25,6 +14,7 @@ import {
   validateAssessmentItem,
 } from "@longsightgroup/qti3-core";
 import { expect, test } from "vitest";
+import { applyItemAction, type ItemSessionContext, presentItem, startItemSession } from "../src/delivery/internal.js";
 import { compareRow, LONGSIGHT_BUDGETS } from "./budgets.js";
 import { EXAMPLES } from "./corpus-items.js";
 import { corpusCases } from "./differential/cases.js";
@@ -53,6 +43,8 @@ import {
 // examples for items, and a fixed test of choice items for a submission with outcome processing. Longsight's tests
 // have a fixed order, individual submission and the sum of the scores, so the test is that, and the runtime's own
 // benchmark of selection, ordering and many rules stands alone in delivery.bench.ts.
+// The item session steps are those of the sources, which no entry of the package exports: the engine runs them. The reader, the
+// validator and the engine of the test are the build.
 
 /** An example item that both implementations read and score, with the responses the oracle takes as correct. */
 interface Subject extends ItemCase {

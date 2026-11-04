@@ -1,5 +1,6 @@
 import { checkFunction, checkRecord, checkString } from "../checks.js";
-import { type JsonValue, type Value, type ValueDeclaration, writeJsonValue } from "../values/index.js";
+import type { JsonValue, Value, ValueDeclaration } from "../values/index.js";
+import { writeJsonValue } from "../values/internal.js";
 import { convertFiles } from "./convert-files.js";
 import type { PciFileLoader } from "./file-callbacks.js";
 
@@ -17,7 +18,7 @@ function inlineFile(file: unknown, files: PciFileLoader): unknown {
  * Writes the value of a variable as the JSON that a portable custom interaction reads.
  *
  * @remarks
- * It is `writeJsonValue` with each file as `{ "data", "mime", "name" }`, its bytes read through the host. A duration is
+ * It is the JSON form of a `JsonValue` with each file as `{ "data", "mime", "name" }`, its bytes read through the host. A duration is
  * `PT<seconds>S` and a float that JSON cannot carry is a string. NULL is `{ "base": null }`, `{ "list": null }` or
  * `{ "record": null }`, by the cardinality of the declaration.
  *

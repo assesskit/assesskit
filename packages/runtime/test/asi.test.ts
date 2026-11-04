@@ -3,21 +3,6 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
-  DOCUMENT_ELEMENTS,
-  ELEMENT_TYPES,
-  EXPRESSION,
-  formatAttributeValue,
-  kindOf,
-  parseAttributeValue,
-  readElement,
-  scoringRubricBlocks,
-  scoringRubricOf,
-  type TypeDef,
-  typeNamed,
-  withDescendants,
-  writeElement,
-} from "../src/asi/internal.js";
-import {
   type AreaShape,
   ASI_NAMESPACE,
   type AsiDocument,
@@ -28,11 +13,8 @@ import {
   buildScoreCoversBlock,
   buildScoringRubricBlock,
   checkScoringRubric,
-  DataError,
-  type ElementVisit,
   type Expression,
   fitsCoordinateCount,
-  isBodyNode,
   isModelNode,
   listChildNodes,
   listDescendantNodes,
@@ -40,8 +22,6 @@ import {
   type OutcomeDeclaration,
   type OutcomeProcessing,
   type OutcomeRule,
-  parseXml,
-  ReadError,
   type ResponseProcessing,
   type ResponseRule,
   RUBRIC_KINDS,
@@ -52,18 +32,34 @@ import {
   readScoringRubrics,
   rubricScore,
   rubricScoreRange,
-  SCORE_COVERS_CLASS,
-  SCORING_RUBRIC_CLASS,
   type ScoreCover,
   type ScoringRubric,
-  selectScoreCoverBlocks,
-  serializeXml,
   type TemplateRule,
-  walkDocument,
   writeAsi,
-  XINCLUDE_NAMESPACE,
-  type XmlElement,
-} from "../src/index.js";
+} from "../src/asi/index.js";
+import {
+  DOCUMENT_ELEMENTS,
+  ELEMENT_TYPES,
+  type ElementVisit,
+  EXPRESSION,
+  formatAttributeValue,
+  isBodyNode,
+  kindOf,
+  parseAttributeValue,
+  readElement,
+  SCORE_COVERS_CLASS,
+  SCORING_RUBRIC_CLASS,
+  scoringRubricBlocks,
+  scoringRubricOf,
+  selectScoreCoverBlocks,
+  type TypeDef,
+  typeNamed,
+  walkDocument,
+  withDescendants,
+  writeElement,
+} from "../src/asi/internal.js";
+import { DataError, ReadError } from "../src/errors.js";
+import { parseXml, serializeXml, XINCLUDE_NAMESPACE, type XmlElement } from "../src/xml/index.js";
 import { DOCUMENT_ARBITRARIES, modelArbitrary, SCORING_RUBRICS } from "./arbitraries/asi.js";
 import { PLACES, VOCABULARIES, vocabularyOf } from "./asi-vocabularies.js";
 import { fuzzReader } from "./fuzz.js";

@@ -1,8 +1,8 @@
 import { checkArray, checkRecord, describe } from "../checks.js";
 import { checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
-import { formatPrimitive, parsePrimitive } from "../values/index.js";
-import { xmlTokens } from "../values/internal.js";
+import { formatPrimitive } from "../values/index.js";
+import { parsePrimitive, xmlTokens } from "../values/internal.js";
 import type { XmlAttribute } from "../xml/index.js";
 import type { RubricBlock } from "./body.js";
 import {

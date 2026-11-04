@@ -1,32 +1,32 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { ASI_NAMESPACE, type AssessmentItem, readAsi } from "../src/asi/index.js";
 import {
   type Action,
-  ASI_NAMESPACE,
-  type AssessmentItem,
-  type AssessmentResult,
-  buildSingle,
-  createItemVariables,
-  createRandom,
-  DataError,
   type DeliveryState,
   type Engine,
-  type ItemResult,
-  type ItemVariables,
-  type OutcomeVariable,
-  ProcessingError,
-  type ResponseVariable,
-  readAsi,
   readItemVariables,
-  readResults,
   readTestInputs,
+  type TestStructure,
+} from "../src/delivery/index.js";
+import { DataError, ProcessingError } from "../src/errors.js";
+import { createRandom } from "../src/index.js";
+import {
+  createItemVariables,
+  type ItemVariables,
   runOutcomeProcessing,
   runResponseProcessing,
-  type TestStructure,
-  type Value,
-  validateResults,
+} from "../src/processing/index.js";
+import {
+  type AssessmentResult,
+  type ItemResult,
+  type OutcomeVariable,
+  type ResponseVariable,
+  readResults,
   writeResults,
-} from "../src/index.js";
+} from "../src/results/index.js";
+import { validateResults } from "../src/validate/index.js";
+import { buildSingle, type Value } from "../src/values/index.js";
 import { fuzzJson } from "./fuzz.js";
 import {
   ADAPTIVE,

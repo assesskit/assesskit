@@ -1,4 +1,4 @@
-import type { RubricKind, ScoringRubric } from "../src/index.js";
+import type { RubricKind, ScoringRubric } from "../src/asi/index.js";
 
 /** The example of the convention, as it is written in the guide: one analytic rubric of an essay. */
 export const ESSAY_MARKUP = `<qti-rubric-block view="scorer" use="scoring" class="external-scoring-rubric" xml:lang="en"

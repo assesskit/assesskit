@@ -7,7 +7,7 @@ import type {
   StatisticValue,
   TargetObject,
   UsageData,
-} from "../../src/index.js";
+} from "../../src/usage/index.js";
 import {
   baseType,
   defined,

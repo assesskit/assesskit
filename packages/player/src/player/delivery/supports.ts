@@ -1,4 +1,4 @@
-import type { CandidateView } from "@assesskit/runtime/delivery";
+import type { CandidateView } from "@assesskit/runtime/delivery/wire";
 import type { Messages } from "../../messages/index.js";
 import type { ContentRoot } from "../roots/index.js";
 import type { Lexicon, SpeechHook } from "../speech/index.js";

@@ -6,37 +6,29 @@ import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
+import { type AdaptiveSelection, ASI_NAMESPACE, type AssessmentSection, readAsi } from "../src/asi/index.js";
 import {
-  type AdaptiveSelection,
-  ASI_NAMESPACE,
-  type AssessmentResult,
-  type AssessmentSection,
   buildCatMetadata,
-  buildContainer,
-  buildRecord,
   buildSectionData,
-  buildSingle,
   type CatPort,
   type CreateSectionResponse,
   type CreateSessionRequest,
   type CreateSessionResponse,
-  DataError,
   DEFAULT_RESULTS_JSON_LIMITS,
   type GetSectionResponse,
   isSessionEnd,
-  type QtiMetadata,
-  readAsi,
   readItemStage,
-  readResults,
   readResultsJson,
   type SectionData,
-  SecurityError,
   type SubmitResultsRequest,
   type SubmitResultsResponse,
   validatePool,
-  writeResults,
   writeResultsJson,
-} from "../src/index.js";
+} from "../src/cat/index.js";
+import { DataError, SecurityError } from "../src/errors.js";
+import type { QtiMetadata } from "../src/metadata/index.js";
+import { type AssessmentResult, readResults, writeResults } from "../src/results/index.js";
+import { buildContainer, buildRecord, buildSingle } from "../src/values/index.js";
 import { qtiMetadata } from "./arbitraries/metadata.js";
 import { fuzzJson } from "./fuzz.js";
 

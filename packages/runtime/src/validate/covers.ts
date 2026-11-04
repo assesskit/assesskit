@@ -1,4 +1,5 @@
-import { type AssessmentTest, SCORE_COVERS_CLASS, type ScoreCoverBlock, selectScoreCoverBlocks } from "../asi/index.js";
+import type { AssessmentTest } from "../asi/index.js";
+import { SCORE_COVERS_CLASS, type ScoreCoverBlock, selectScoreCoverBlocks } from "../asi/internal.js";
 import type { Findings } from "./findings.js";
 import type { ItemRefInfo } from "./test-scope.js";
 

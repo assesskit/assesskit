@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
-import { createRandom, DataError, type Random, restoreRandom } from "../src/index.js";
+import { DataError } from "../src/errors.js";
+import { createRandom, type Random, restoreRandom } from "../src/index.js";
 import { drawIndex, drawUniform, shuffle } from "../src/random.js";
 
 const draws = (random: Random, count: number): number[] => Array.from({ length: count }, () => random.uniform());

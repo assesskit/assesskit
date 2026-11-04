@@ -2,26 +2,19 @@ import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
-import {
-  ASI_NAMESPACE,
-  type AssessmentItem,
-  createItemVariables,
-  createRandom,
-  DataError,
-  readAsi,
-  runResponseProcessing,
-  SecurityError,
-  validateAsi,
-  writeAsi,
-} from "../src/index.js";
+import { ASI_NAMESPACE, type AssessmentItem, readAsi, writeAsi } from "../src/asi/index.js";
+import { DataError, SecurityError } from "../src/errors.js";
+import { createRandom } from "../src/index.js";
 import { DEFAULT_KEY_LIMITS, type Key, type ScoredResponse } from "../src/keys/index.js";
 import { createScoringOperators, OPERATOR_DEFINITIONS } from "../src/operators/index.js";
+import { createItemVariables, runResponseProcessing } from "../src/processing/index.js";
 import {
   type CompileScoringOptions,
   compileScoring,
   type InteractionAttributes,
   type ItemScoring,
 } from "../src/scoring/index.js";
+import { validateAsi } from "../src/validate/index.js";
 import { buildContainer, buildSingle, type Value } from "../src/values/index.js";
 import { scoredResponsesOf } from "./arbitraries/scoring.js";
 import { readFixture } from "./fixtures.js";

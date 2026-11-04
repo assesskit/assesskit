@@ -34,7 +34,7 @@ import {
   strictRecord,
   transformWith,
 } from "../src/checks.js";
-import { DataError } from "../src/index.js";
+import { DataError } from "../src/errors.js";
 
 describe("describe", () => {
   it("quotes strings and names arrays, functions and objects", () => {

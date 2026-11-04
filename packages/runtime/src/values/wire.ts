@@ -22,7 +22,7 @@ export interface WireValue {
   readonly cardinality: Cardinality;
   /** The base type. A record has none. */
   readonly baseType?: BaseType;
-  /** The JSON of the value as {@link writeJsonValue} writes it, or `null` for NULL. */
+  /** The JSON of the value, in the binding of the best practices guide, or `null` for NULL. */
   readonly value: JsonValue | null;
 }
 
@@ -52,7 +52,7 @@ function ownDeclaration(value: unknown): ValueDeclaration {
  * Writes a value, or NULL, as a {@link WireValue}.
  *
  * @remarks
- * Durations are `PT<seconds>S` and files are references, as in {@link writeJsonValue}. A value names its own cardinality and
+ * Durations are `PT<seconds>S` and files are references, as in the JSON of a `JsonValue`. A value names its own cardinality and
  * base type, so it needs no declaration; a NULL needs one.
  *
  * @param value - The value, or `null` for NULL.

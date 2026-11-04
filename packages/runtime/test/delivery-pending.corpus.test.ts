@@ -1,19 +1,14 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  type AssessmentItem,
-  buildSingle,
-  type CandidateAction,
-  createEngine,
-  createItemVariables,
-  createPackageResolvers,
-  type DeliveryState,
-  type Engine,
-  readResults,
-  validateAsi,
-  writeResults,
-} from "../src/index.js";
+import type { AssessmentItem } from "../src/asi/index.js";
+import { createEngine, type DeliveryState, type Engine } from "../src/delivery/index.js";
+import type { CandidateAction } from "../src/delivery/wire.js";
 import { readPackageFile } from "../src/node/index.js";
+import { createPackageResolvers } from "../src/package/index.js";
+import { createItemVariables } from "../src/processing/index.js";
+import { readResults, writeResults } from "../src/results/index.js";
+import { validateAsi } from "../src/validate/index.js";
+import { buildSingle } from "../src/values/index.js";
 import { EXAMPLES, exampleItems } from "./corpus-items.js";
 
 const packages = join(EXAMPLES, "packaging");

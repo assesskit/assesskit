@@ -1,4 +1,4 @@
-import type { SupportView } from "@assesskit/runtime/delivery";
+import type { SupportView } from "@assesskit/runtime/delivery/wire";
 import type { ColorTheme, FontFace, GenericFontFace, SupportName, TextAppearance, Zoom } from "@assesskit/runtime/pnp";
 import type { Presentation } from "../presentation/index.js";
 import { activeSupport, checkSupportViews, colorThemeOf } from "./check.js";

@@ -197,7 +197,7 @@ export class ElementReader {
    * Returns the value of an attribute that is in no namespace, converted, or `undefined` when the element has none.
    *
    * @param name - The local name of the attribute.
-   * @param parse - Converts the text of the attribute, for instance with `parsePrimitive`. A `DataError` that it throws
+   * @param parse - Converts the text of the attribute. A `DataError` that it throws
    * becomes a `ReadError` that names the attribute.
    * @returns The converted value.
    * @throws `ReadError` when `parse` fails.

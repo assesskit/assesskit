@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
+import type { AssessmentItem } from "../src/asi/index.js";
+import { ProcessingError } from "../src/errors.js";
+import { createRandom } from "../src/index.js";
 import {
-  type AssessmentItem,
-  createItemVariables,
-  createRandom,
   describeInteractions,
   type InteractionDescriptor,
-  ProcessingError,
-  type Value,
   validateBindings,
   validateResponse,
-} from "../src/index.js";
+} from "../src/interactions/index.js";
 import { drawOrders } from "../src/interactions/internal.js";
+import { createItemVariables } from "../src/processing/index.js";
+import type { Value } from "../src/values/index.js";
 import { exampleItems } from "./corpus-items.js";
 
 const items = exampleItems();

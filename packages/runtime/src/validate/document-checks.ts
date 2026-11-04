@@ -1,4 +1,4 @@
-import { type ElementVisit, SCORE_COVERS_CLASS, SCORING_RUBRIC_CLASS } from "../asi/index.js";
+import { type ElementVisit, SCORE_COVERS_CLASS, SCORING_RUBRIC_CLASS } from "../asi/internal.js";
 import { XINCLUDE_NAMESPACE } from "../xml/index.js";
 import { checkPatternText } from "./expressions.js";
 import type { Findings } from "./findings.js";

@@ -6,21 +6,16 @@
  * @module @assesskit/runtime/values
  */
 
-export { BASE_TYPES, type BaseType, isBaseType } from "./base-type.js";
-export { decodeBase64, decodeBase64Url, encodeBase64, encodeBase64Url } from "./base64.js";
-export { CARDINALITIES, type Cardinality, isCardinality } from "./cardinality.js";
+export { BASE_TYPES, type BaseType } from "./base-type.js";
+export { decodeBase64, decodeBase64Url, encodeBase64 } from "./base64.js";
+export type { Cardinality } from "./cardinality.js";
 export type { ValueDeclaration } from "./declaration.js";
-export { parseDuration } from "./duration.js";
 export { isIdentifier } from "./identifier.js";
-export { readJsonValue } from "./json-read.js";
 export type { JsonValue } from "./json-value.js";
-export { writeJsonValue } from "./json-write.js";
-export { formatPrimitive, parsePrimitive } from "./lexical.js";
-export { formatIdentifierList, formatIntegerList, parseIdentifierList, parseIntegerList } from "./lists.js";
+export { formatPrimitive } from "./lexical.js";
 export { matchValues } from "./match.js";
 export type { FileValue, Pair, Point, Primitive } from "./primitive.js";
 export { type PromotionTarget, promote } from "./promote.js";
-export { UNICODE_VERSION } from "./unicode-categories.js";
 export {
   buildContainer,
   buildRecord,
@@ -32,7 +27,7 @@ export {
   type Value,
 } from "./value.js";
 export { readWireValue, type WireValue, type WriteWireValueOptions, writeWireValue } from "./wire.js";
-export { isXsdDate, isXsdDateTime } from "./xsd-date-time.js";
+export { isXsdDateTime } from "./xsd-date-time.js";
 export {
   type CompileXsdRegexOptions,
   compileXsdRegex,

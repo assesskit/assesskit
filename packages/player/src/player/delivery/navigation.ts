@@ -1,4 +1,5 @@
-import type { CandidateView, ItemKey, NavigationEntry } from "@assesskit/runtime/delivery";
+import type { ItemKey } from "@assesskit/runtime/delivery";
+import type { CandidateView, NavigationEntry } from "@assesskit/runtime/delivery/wire";
 import type { Messages } from "../../messages/index.js";
 import { appendAll, html } from "../internal.js";
 

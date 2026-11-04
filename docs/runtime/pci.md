@@ -59,7 +59,7 @@ decodePciValue(
 `encodePciValue` and `decodePciValue` read and write the plain binding of the best practices guide: `{ "base": ... }` for a
 single value, `{ "list": ... }` for `multiple` and `ordered`, `{ "record": ... }` for a record, and `null` inside each for NULL. A
 PCI receives its template variables, its context variables and its response in this form, and gives its response back in it.
-The binding is `writeJsonValue` and `readJsonValue` of `values`, with these forms:
+The binding has these forms:
 
 | Case                       | Form                                                                                                            |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------- |

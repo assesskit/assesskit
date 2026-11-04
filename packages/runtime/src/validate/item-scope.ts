@@ -1,11 +1,6 @@
 import type { AssessmentItem, OutcomeDeclaration, ResponseDeclaration } from "../asi/index.js";
-import {
-  BUILT_IN_CONTEXTS,
-  BUILT_IN_OUTCOMES,
-  BUILT_IN_RESPONSES,
-  DURATION,
-  type VariableType,
-} from "../processing/index.js";
+import type { VariableType } from "../processing/index.js";
+import { BUILT_IN_CONTEXTS, BUILT_IN_OUTCOMES, BUILT_IN_RESPONSES, DURATION } from "../processing/internal.js";
 import type { Lookup, Problem, Processing, ResponseLookup, RuleScope, Target, VariableKind } from "./scope.js";
 import { type StaticType, typeOfVariable } from "./static-type.js";
 

@@ -1,6 +1,6 @@
 import { ASI_NAMESPACE } from "@assesskit/runtime/asi";
-import type { CandidateAction } from "@assesskit/runtime/delivery";
 import { createEngine } from "@assesskit/runtime/delivery";
+import type { CandidateAction } from "@assesskit/runtime/delivery/wire";
 import { AssesskitError, DataError } from "@assesskit/runtime/errors";
 import { readPnp } from "@assesskit/runtime/pnp";
 import { buildSingle, type FileValue } from "@assesskit/runtime/values";

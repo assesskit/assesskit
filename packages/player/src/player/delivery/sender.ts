@@ -1,4 +1,5 @@
-import type { CandidateAction, ItemKey } from "@assesskit/runtime/delivery";
+import type { ItemKey } from "@assesskit/runtime/delivery";
+import type { CandidateAction } from "@assesskit/runtime/delivery/wire";
 import { DataError, SecurityError } from "@assesskit/runtime/errors";
 import type { SupportName, SupportSetting } from "@assesskit/runtime/pnp";
 import type { Value } from "@assesskit/runtime/values";

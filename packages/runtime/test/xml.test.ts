@@ -3,25 +3,22 @@ import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
+import { DataError, type Issue, ReadError, SecurityError } from "../src/errors.js";
 import {
   buildElement,
   collectText,
-  DataError,
   DEFAULT_XML_LIMITS,
   findAttribute,
-  type Issue,
   listChildElements,
   parseXml,
-  ReadError,
   resolveIncludes,
-  SecurityError,
   serializeXml,
   XINCLUDE_NAMESPACE,
   XML_NAMESPACE,
   type XmlAttribute,
   type XmlElement,
   type XmlNode,
-} from "../src/index.js";
+} from "../src/xml/index.js";
 import {
   createReadError,
   createTermConverter,

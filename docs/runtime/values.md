@@ -9,10 +9,10 @@ flowchart LR
   model["Typed model<br/>SingleValue, ContainerValue, RecordValue<br/>or null for NULL"]
   pci["PCI JSON<br/>binding of the best practices guide"]
   wire["Wire value<br/>state, views and actions"]
-  xml -- "parsePrimitive" --> model
+  xml -- "read by asi, results and usage" --> model
   model -- "formatPrimitive" --> xml
-  model -- "writeJsonValue" --> pci
-  pci -- "readJsonValue" --> model
+  model -- "pci: encodePciValue" --> pci
+  pci -- "pci: decodePciValue" --> model
   model -- "writeWireValue" --> wire
   wire -- "readWireValue" --> model
   model -- "matchValues, promote" --> model
@@ -58,14 +58,14 @@ of a value, is `null`: no `Value` is empty. Build values with `buildSingle`, `bu
 arguments, copy them, and return `null` for what is NULL: the empty string, a container with no values and a record with no
 fields.
 
-| Function                           | Does                                                                                                               |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `buildSingle(baseType, value)`     | Builds a single value, or `null` for the empty string                                                              |
-| `buildContainer(cardinality, ...)` | Builds a `multiple` or `ordered` value of one base type, or `null` for no values                                   |
-| `buildRecord(fields)`              | Builds a record from pairs of an identifier and a single value, or `null` for no fields                            |
-| `normalizeValue(value)`            | Checks untrusted data deeply and returns a copy, for values that a host or a client passes in                      |
-| `isBaseType`, `isCardinality`      | Tell whether a string is a term of `BaseTypeEnum` or `CardinalityEnum`; `BASE_TYPES` and `CARDINALITIES` list them |
-| `isIdentifier(text)`               | Tells whether text is an identifier: an `NCName`, compared case-sensitively                                        |
+| Function                           | Does                                                                                          |
+| ---------------------------------- | --------------------------------------------------------------------------------------------- |
+| `buildSingle(baseType, value)`     | Builds a single value, or `null` for the empty string                                         |
+| `buildContainer(cardinality, ...)` | Builds a `multiple` or `ordered` value of one base type, or `null` for no values              |
+| `buildRecord(fields)`              | Builds a record from pairs of an identifier and a single value, or `null` for no fields       |
+| `normalizeValue(value)`            | Checks untrusted data deeply and returns a copy, for values that a host or a client passes in |
+| `BASE_TYPES`                       | Lists the terms of `BaseTypeEnum`                                                             |
+| `isIdentifier(text)`               | Tells whether text is an identifier: an `NCName`, compared case-sensitively                   |
 
 A container holds no empty string, because that is NULL. A record is a `Map`, so a field named `__proto__` is data.
 
@@ -73,67 +73,59 @@ A container holds no empty string, because that is NULL. A record is a `Map`, so
 
 ### XML text
 
-`parsePrimitive(text, baseType)` reads the text of a value as a document writes it, and `formatPrimitive(value, baseType)`
-writes it. Whitespace around the text is dropped and runs of whitespace count as one space, except for a `string`, which
+`formatPrimitive(value, baseType)` writes the text of a value as a document writes it, and the readers of the documents read
+it back. Whitespace around the text is dropped and runs of whitespace count as one space, except for a `string`, which
 stays as it is. The table of base types above gives the forms.
 
 ```ts
-import { formatPrimitive, parsePrimitive } from "@assesskit/runtime/values";
+import { formatPrimitive } from "@assesskit/runtime/values";
 
-parsePrimitive("118 184", "point"); // => [118, 184]
-parsePrimitive(" 12 ", "integer"); // => 12
 formatPrimitive([118, 184], "point"); // => "118 184"
+formatPrimitive(12, "integer"); // => "12"
 ```
 
-`parsePrimitive` returns the JavaScript type of the base type when you give it as a literal: a `number` for `"integer"`,
-`"float"` and `"duration"`, a `boolean` for `"boolean"`, and so on. A `file` read from text has the content type
-`application/octet-stream`, and a `file` written to text loses its content type and name, because the text is the reference.
+A value read from text has the JavaScript type of its base type: a `number` for `"integer"`, `"float"` and `"duration"`, a
+`boolean` for `"boolean"`, and so on. A `file` read from text has the content type `application/octet-stream`, and a `file`
+written to text loses its content type and name, because the text is the reference.
 
 ### Dates, durations and lists in documents
 
-Documents also write dates, durations and lists in forms that are not base types.
+Documents also write dates, durations and lists in forms that are not base types. The readers of `asi`, `results` and `usage`
+check them; `isXsdDateTime(text)` tells whether a text is a date and time.
 
-| Function                                                  | Form                                                                                                                                                                                              |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `isXsdDateTime(text)`                                     | `YYYY-MM-DDThh:mm:ss` with an optional fraction and time zone, a four-digit year from `0001`, a real day of that month, and `24:00:00` for the end of a day: the `datestamp` of results reporting |
-| `isXsdDate(text)`                                         | `YYYY-MM-DD` with a four-digit year from `0001`, a real day of that month and no time zone: the `lastUpdated` of usage data                                                                       |
-| `parseDuration(text)`                                     | An ISO 8601 duration in seconds. Weeks, days, hours, minutes and seconds only; years and months are a `DataError`                                                                                 |
-| `parseIdentifierList(text)`, `formatIdentifierList(list)` | An `IdentifierList`: identifiers separated by whitespace; an empty text is an empty list                                                                                                          |
-| `parseIntegerList(text)`, `formatIntegerList(list)`       | An `IntegerList`: `xs:int` integers, from -2147483648 to 2147483647, separated by whitespace                                                                                                      |
+| Form              | Rule                                                                                                                                                                                            |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `xs:dateTime`     | `YYYY-MM-DDThh:mm:ss` with an optional fraction and time zone, a four-digit year from `0001`, a real day of that month, and `24:00:00` for the end of a day: the `datestamp` of results reports |
+| `xs:date`         | `YYYY-MM-DD` with a four-digit year from `0001`, a real day of that month and no time zone: the `lastUpdated` of usage data                                                                     |
+| ISO 8601 duration | In seconds. Weeks, days, hours, minutes and seconds only; years and months are a `DataError`                                                                                                    |
+| `IdentifierList`  | Identifiers separated by whitespace; an empty text is an empty list                                                                                                                             |
 
 ```ts
-import { isXsdDate, isXsdDateTime, parseDuration } from "@assesskit/runtime/values";
+import { isXsdDateTime } from "@assesskit/runtime/values";
 
 isXsdDateTime("2020-08-25T18:19:20"); // => true
 isXsdDateTime("2020-08-25"); // => false
-isXsdDate("2004-07-04"); // => true
-isXsdDate("2004-7-4"); // => false
-parseDuration("PT2M0.049722S"); // => 120.049722
 ```
 
 ### JSON
 
-Portable custom interactions read and write values in the JSON binding of the best practices guide, and the runtime keeps
+Portable custom interactions read and write values in the JSON binding of the best practices guide, `{ "base": ... }`,
+`{ "list": ... }` or `{ "record": ... }`, through `encodePciValue` and `decodePciValue` of [`pci`](pci.md). The runtime keeps
 state, views and actions in a second form that adds the types. Both need the cardinality and base type of the variable to
 write a NULL: they come from its declaration, a `ValueDeclaration` `{ cardinality, baseType }` with no base type for a
 record.
 
-| Functions                         | Form                                                                                                                     |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `writeJsonValue`, `readJsonValue` | The binding of the guide: `{ "base": ... }`, `{ "list": ... }`, `{ "record": ... }`. Reading needs the declaration       |
-| `writeWireValue`, `readWireValue` | A `WireValue` `{ cardinality, baseType?, value }`, where `value` is that JSON, or `null` for NULL. Reading needs nothing |
+| Functions                         | Form                                                                                                                                 |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `writeWireValue`, `readWireValue` | A `WireValue` `{ cardinality, baseType?, value }`, where `value` is the JSON of the guide, or `null` for NULL. Reading needs nothing |
 
 A wire value decodes without a declaration and loses nothing through `JSON.stringify` and `JSON.parse`: it keeps `multiple`
 apart from `ordered`, gives a NULL its type, and keeps `NaN`, infinities and `-0`. A record has no `baseType`. A value names its
 own type, so `writeWireValue` needs the option `declaration` only for a NULL; given for a value, the value must have its type.
 
 ```ts
-import { readJsonValue, buildSingle, writeJsonValue, writeWireValue } from "@assesskit/runtime/values";
+import { buildSingle, writeWireValue } from "@assesskit/runtime/values";
 
-writeJsonValue(buildSingle("duration", 90.5), { cardinality: "single", baseType: "duration" });
-// => { base: { duration: "PT90.5S" } }
-readJsonValue({ base: { duration: "PT90.5S" } }, { cardinality: "single", baseType: "duration" });
-// => { cardinality: "single", baseType: "duration", value: 90.5 }
 writeWireValue(buildSingle("integer", 5));
 // => { cardinality: "single", baseType: "integer", value: { base: { integer: 5 } } }
 writeWireValue(null, { declaration: { cardinality: "ordered", baseType: "point" } });
@@ -180,17 +172,15 @@ promote(buildSingle("integer", 3), "float"); // => { cardinality: "single", base
 ## Base64
 
 `encodeBase64` and `decodeBase64` convert bytes to and from base 64 with padding, the encoding of the files of CAT 1.0.
-`encodeBase64Url` and `decodeBase64Url` use the URL and filename safe alphabet without padding, the form of the parts of a JWT.
-The decoders return `undefined`, not an error, for a text that is not an encoding of bytes. Only the canonical encoding
+`decodeBase64Url` reads the URL and filename safe alphabet without padding, the form of the parts of a JWT. The decoders return `undefined`, not an error, for a text that is not an encoding of bytes. Only the canonical encoding
 decodes: a character outside the alphabet, wrong padding, a lone last digit, or bits after the last byte that are not zero
 refuse the text, so that one byte string has one spelling.
 
 ```ts
-import { decodeBase64, decodeBase64Url, encodeBase64, encodeBase64Url } from "@assesskit/runtime/values";
+import { decodeBase64, decodeBase64Url, encodeBase64 } from "@assesskit/runtime/values";
 
 const bytes = new TextEncoder().encode("fo");
 encodeBase64(bytes); // => "Zm8="
-encodeBase64Url(bytes); // => "Zm8"
 decodeBase64("Zm8="); // => Uint8Array.of(102, 111)
 decodeBase64("Zm9="); // => undefined
 decodeBase64Url("Zm8"); // => Uint8Array.of(102, 111)
@@ -221,7 +211,7 @@ pattern.matches("123-ABCd"); // => false
 | Categories              | `\p{L}` and the other six major classes, their 29 subcategories such as `\p{Lu}`, and `\P{...}`; there is no `Cs`; `\d` is `\p{Nd}`, `\w` is every character but `\p{P}`, `\p{Z}` and `\p{C}` |
 | Blocks                  | `\p{IsBasicLatin}` and the other blocks of Unicode 3.1 under the names of XML Schema (`IsGreek`, not `IsGreekandCoptic`); an unknown block is a `DataError`                                   |
 
-Categories are those of Unicode 17.0.0 (`UNICODE_VERSION`), held in tables of the package, so a pattern matches the same text
+Categories are those of Unicode 17.0.0, held in tables of the package, so a pattern matches the same text
 in every runtime whatever Unicode version the runtime has. The major class `\p{C}` also holds lone surrogates, which a
 JavaScript string can contain. A surrogate pair is one character.
 
@@ -266,7 +256,7 @@ the model, but `writeWireValue` without a declaration: a NULL has no type of its
 | A pattern outside the dialect, or above a limit                                               | `DataError` that names the problem and its position in characters               |
 | A limit that is not a positive integer                                                        | `DataError` whose message begins `The limit maxStates`, or `The limit maxDepth` |
 | A text that is not base64                                                                     | `undefined` from the decoders                                                   |
-| A text that is not a date or a date and time                                                  | `false` from `isXsdDate` and `isXsdDateTime`                                    |
+| A text that is not a date or a date and time                                                  | `false` from `isXsdDateTime`                                                    |
 
 ## Not included
 

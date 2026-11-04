@@ -39,7 +39,7 @@ export interface CompileXsdRegexOptions {
  *
  * @remarks
  * A pattern matches the whole text, and `^` and `$` are ordinary characters. The language has `\i`, `\c`, `\d`, `\w`, the
- * general categories of Unicode {@link UNICODE_VERSION}, the blocks of Unicode 3.1 and class subtraction. The pattern
+ * general categories of Unicode 17.0.0, the blocks of Unicode 3.1 and class subtraction. The pattern
  * becomes a Thompson automaton over code points, which {@link XsdPattern.matches} runs in time linear in the text, so
  * that no pattern can make a text expensive.
  *

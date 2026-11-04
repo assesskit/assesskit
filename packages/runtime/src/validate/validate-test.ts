@@ -1,4 +1,5 @@
-import { type AssessmentTest, walkDocument } from "../asi/index.js";
+import type { AssessmentTest } from "../asi/index.js";
+import { walkDocument } from "../asi/internal.js";
 import { checkFunction, checkRecord, checkString, describe } from "../checks.js";
 import { DataError, type Issue } from "../errors.js";
 import type { Resolvers } from "../package/index.js";

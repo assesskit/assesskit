@@ -7,8 +7,8 @@ import type {
   SetSupportName,
   SupportSetting,
   TestingTime,
-} from "../../src/index.js";
-import { SUPPORT_NAMES } from "../../src/index.js";
+} from "../../src/pnp/index.js";
+import { SUPPORT_NAMES } from "../../src/pnp/index.js";
 import { defined, nonEmptyText, optional, text } from "./values.js";
 import { extensionElement } from "./xml.js";
 

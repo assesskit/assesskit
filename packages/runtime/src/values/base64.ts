@@ -39,11 +39,8 @@ function alphabet(digits: string, padded: boolean): Alphabet {
 const BASE64 = alphabet(BASE64_DIGITS, true);
 const BASE64URL = alphabet(BASE64URL_DIGITS, false);
 
-function encode(bytes: Uint8Array, { digits, padded }: Alphabet): string {
-  const length = padded
-    ? Math.ceil(bytes.length / GROUP_BYTES) * GROUP_DIGITS
-    : Math.ceil((bytes.length * BYTE_BITS) / DIGIT_BITS);
-  const codes = new Uint8Array(length);
+function encode(bytes: Uint8Array): string {
+  const codes = new Uint8Array(Math.ceil(bytes.length / GROUP_BYTES) * GROUP_DIGITS);
   let written = 0;
   let buffer = 0;
   let bits = 0;
@@ -52,11 +49,11 @@ function encode(bytes: Uint8Array, { digits, padded }: Alphabet): string {
     bits += BYTE_BITS;
     while (bits >= DIGIT_BITS) {
       bits -= DIGIT_BITS;
-      codes[written++] = digits.charCodeAt((buffer >> bits) & DIGIT_MASK);
+      codes[written++] = BASE64_DIGITS.charCodeAt((buffer >> bits) & DIGIT_MASK);
     }
     buffer &= (1 << bits) - 1;
   }
-  if (bits > 0) codes[written++] = digits.charCodeAt((buffer << (DIGIT_BITS - bits)) & DIGIT_MASK);
+  if (bits > 0) codes[written++] = BASE64_DIGITS.charCodeAt((buffer << (DIGIT_BITS - bits)) & DIGIT_MASK);
   codes.fill(PADDING_CODE, written);
   let text = "";
   for (let start = 0; start < codes.length; start += CHUNK_SIZE) {
@@ -107,7 +104,7 @@ function decode(text: string, { values, padded }: Alphabet): Uint8Array<ArrayBuf
  */
 export function encodeBase64(bytes: Uint8Array): string {
   checkBytes(bytes, "The bytes to encode");
-  return encode(bytes, BASE64);
+  return encode(bytes);
 }
 
 /**
@@ -128,20 +125,6 @@ export function encodeBase64(bytes: Uint8Array): string {
 export function decodeBase64(text: string): Uint8Array<ArrayBuffer> | undefined {
   checkString(text, "The text to decode");
   return decode(text, BASE64);
-}
-
-/**
- * Writes bytes in base 64 with the URL and filename safe alphabet, without padding, as the parts of a JWT are.
- *
- * @param bytes - The bytes.
- * @returns The text.
- * @throws `DataError` when `bytes` is not a `Uint8Array`.
- * @see {@link https://www.rfc-editor.org/rfc/rfc4648#section-5 | RFC 4648, base 64 with a URL and filename safe alphabet}
- * @see {@link https://www.rfc-editor.org/rfc/rfc7515#section-2 | RFC 7515, JSON Web Signature terminology}
- */
-export function encodeBase64Url(bytes: Uint8Array): string {
-  checkBytes(bytes, "The bytes to encode");
-  return encode(bytes, BASE64URL);
 }
 
 /**

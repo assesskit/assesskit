@@ -1,5 +1,5 @@
-import type { CandidateView } from "@assesskit/runtime/delivery";
 import { resolveStructure, type TestStructure } from "@assesskit/runtime/delivery";
+import type { CandidateView } from "@assesskit/runtime/delivery/wire";
 import {
   createPackageResolvers,
   type QtiPackage,

@@ -2,20 +2,12 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
-import {
-  type AssessmentItem,
-  createItemVariables,
-  createRandom,
-  findStandardTemplate,
-  ProcessingError,
-  ReadError,
-  type ResponseProcessing,
-  readAsi,
-  runResponseProcessing,
-  runTemplateProcessing,
-  STANDARD_TEMPLATES,
-  type Value,
-} from "../src/index.js";
+import { type AssessmentItem, type ResponseProcessing, readAsi } from "../src/asi/index.js";
+import { ProcessingError, ReadError } from "../src/errors.js";
+import { createRandom } from "../src/index.js";
+import { createItemVariables, runResponseProcessing, runTemplateProcessing } from "../src/processing/index.js";
+import { findStandardTemplate, STANDARD_TEMPLATES } from "../src/processing/internal.js";
+import type { Value } from "../src/values/index.js";
 
 const examples = join(requireCorpus(resolve(import.meta.dirname, "../../..")), "qti-examples/qtiv3-examples");
 const TEMPLATE_BASE = "https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/";

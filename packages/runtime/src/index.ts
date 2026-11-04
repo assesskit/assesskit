@@ -1,37 +1,8 @@
 /**
- * Every public module of the runtime, the errors it throws, the issues it reports, the options of a call that waits and its
- * seeded random number generator.
+ * The seeded random number generator that the modules of the runtime share. Each module of the runtime has its own
+ * subpath, such as `@assesskit/runtime/delivery`; the root holds only what no module owns.
  *
  * @module @assesskit/runtime
  */
 
-export * from "./asi/index.js";
-export * from "./cat/index.js";
-export type { CallOptions } from "./checks.js";
-export * from "./content/index.js";
-export * from "./delivery/index.js";
-export {
-  AssesskitError,
-  DataError,
-  type Issue,
-  type IssueLocation,
-  ProcessingError,
-  ReadError,
-  SecurityError,
-} from "./errors.js";
-export * from "./interactions/index.js";
-export * from "./item-formats/index.js";
-export * from "./keys/index.js";
-export * from "./metadata/index.js";
-export * from "./operators/index.js";
-export * from "./package/index.js";
-export * from "./pci/index.js";
-export * from "./pnp/index.js";
-export * from "./processing/index.js";
 export { createRandom, type Random, type RandomState, restoreRandom, type SeededRandom } from "./random.js";
-export * from "./results/index.js";
-export * from "./scoring/index.js";
-export * from "./usage/index.js";
-export * from "./validate/index.js";
-export * from "./values/index.js";
-export * from "./xml/index.js";

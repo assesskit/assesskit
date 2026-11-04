@@ -6,15 +6,8 @@ import type {
   ValueElement,
 } from "../asi/index.js";
 import { ProcessingError } from "../errors.js";
-import {
-  COMPLETION_STATUS,
-  DURATION,
-  NUM_ATTEMPTS,
-  QTI_CONTEXT,
-  readDeclaredValue,
-  readPrimitive,
-  type VariableType,
-} from "../processing/index.js";
+import { QTI_CONTEXT, type VariableType } from "../processing/index.js";
+import { COMPLETION_STATUS, DURATION, NUM_ATTEMPTS, readDeclaredValue, readPrimitive } from "../processing/internal.js";
 import type { BaseType } from "../values/index.js";
 import type { Findings } from "./findings.js";
 import { checkStandardOutcome } from "./standard-outcomes.js";

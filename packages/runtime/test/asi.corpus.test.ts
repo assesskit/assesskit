@@ -2,18 +2,10 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
+import { ASI_NAMESPACE, type AsiDocument, readAsi, writeAsi } from "../src/asi/index.js";
 import { isRecord } from "../src/checks.js";
-import {
-  ASI_NAMESPACE,
-  type AsiDocument,
-  parseXml,
-  ReadError,
-  readAsi,
-  SecurityError,
-  writeAsi,
-  XINCLUDE_NAMESPACE,
-  type XmlElement,
-} from "../src/index.js";
+import { ReadError, SecurityError } from "../src/errors.js";
+import { parseXml, XINCLUDE_NAMESPACE, type XmlElement } from "../src/xml/index.js";
 import { interactionKinds } from "./asi-elements.js";
 
 const examples = join(requireCorpus(resolve(import.meta.dirname, "../../..")), "qti-examples/qtiv3-examples");

@@ -1,5 +1,6 @@
 import type { CallOptions } from "@assesskit/runtime/checks";
-import type { CandidateAction, CandidateView, Refusal } from "@assesskit/runtime/delivery";
+import type { Refusal } from "@assesskit/runtime/delivery";
+import type { CandidateAction, CandidateView } from "@assesskit/runtime/delivery/wire";
 import type { ViewDocuments } from "./documents.js";
 
 /** What a session client answers to an action: the view after it, and the engine's refusal when it did not apply. */

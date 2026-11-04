@@ -1,6 +1,7 @@
 import * as v from "valibot";
 import { checkFunction, checkRecord, checkString, parseWith } from "../checks.js";
-import { readJsonValue, type Value, type ValueDeclaration } from "../values/index.js";
+import type { Value, ValueDeclaration } from "../values/index.js";
+import { readJsonValue } from "../values/internal.js";
 import { convertFiles } from "./convert-files.js";
 import type { PciFileStore } from "./file-callbacks.js";
 import { isPciJson } from "./pci-json.js";
@@ -19,8 +20,8 @@ function storedFile(file: unknown, files: PciFileStore): unknown {
  * Reads the JSON that a portable custom interaction gives for a variable.
  *
  * @remarks
- * It is `readJsonValue` with each file `{ "data", "mime", "name" }` stored through the host and replaced by its
- * reference. NULL, an empty list, an empty record and the empty string are NULL, a NULL field of a record is left out,
+ * It is the reading of the JSON form of a `JsonValue` with each file `{ "data", "mime", "name" }` stored through the host
+ * and replaced by its reference. NULL, an empty list, an empty record and the empty string are NULL, a NULL field of a record is left out,
  * and `intOrIdentifier` is read as an integer for a number and an identifier for a string. A duration with years or
  * months is refused.
  *

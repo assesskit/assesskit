@@ -98,7 +98,7 @@ export interface SessionSupport {
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
  */
 export interface CandidateNeeds {
-  /** The extra testing time, from `additionalTestingTime`; absent when the profile gives none. */
+  /** The extra testing time, from the `additional-testing-time` support of the profile; absent when the profile gives none. */
   readonly testingTime?: TestingTime;
   /** The hazards the candidate avoids, in the terms of the PNP. */
   readonly avoidedHazards: readonly PnpHazard[];

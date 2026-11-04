@@ -1,16 +1,18 @@
 import type { CallOptions } from "@assesskit/runtime/checks";
 import {
-  type CandidateAction,
-  type CandidateView,
   createEngine,
   type DeliveryEventType,
   deserializeState,
   type HostAction,
-  readView,
   stamp,
+} from "@assesskit/runtime/delivery";
+import {
+  type CandidateAction,
+  type CandidateView,
+  readView,
   writeCandidateAction,
   writeView,
-} from "@assesskit/runtime/delivery";
+} from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import { type PersonalNeedsProfile, PNP_NAMESPACE, readPnp } from "@assesskit/runtime/pnp";
 import { buildSingle } from "@assesskit/runtime/values";

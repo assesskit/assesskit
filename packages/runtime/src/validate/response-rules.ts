@@ -1,5 +1,5 @@
 import type { ResponseProcessing, ResponseRule } from "../asi/index.js";
-import { findStandardTemplate, isQti2TemplateUri, STANDARD_TEMPLATES } from "../processing/index.js";
+import { findStandardTemplate, isQti2TemplateUri, STANDARD_TEMPLATES } from "../processing/internal.js";
 import type { Findings } from "./findings.js";
 
 /** The response processing of an item as it runs: its own rules, or the rules of the template it names. */

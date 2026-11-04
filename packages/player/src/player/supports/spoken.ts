@@ -6,7 +6,7 @@ import {
   checkRecord,
   describe,
 } from "@assesskit/runtime/checks";
-import type { SupportView } from "@assesskit/runtime/delivery";
+import type { SupportView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import type { ReadingType, TypingEcho } from "@assesskit/runtime/pnp";
 import type { Messages } from "../../messages/index.js";

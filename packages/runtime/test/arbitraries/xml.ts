@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { isRecord } from "../../src/checks.js";
-import type { XmlElement, XmlNode } from "../../src/index.js";
+import type { XmlElement, XmlNode } from "../../src/xml/index.js";
 import { XMLNS_NAMESPACE } from "../../src/xml/internal.js";
 import { identifier, nonEmptyText } from "./values.js";
 

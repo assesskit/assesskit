@@ -1,5 +1,6 @@
 import type { Interaction, PortableCustomInteraction } from "@assesskit/runtime/asi";
-import type { CandidateItem, ItemKey, PciView } from "@assesskit/runtime/delivery";
+import type { ItemKey } from "@assesskit/runtime/delivery";
+import type { CandidateItem, PciView } from "@assesskit/runtime/delivery/wire";
 import { DataError, SecurityError } from "@assesskit/runtime/errors";
 import {
   type PciModuleConfiguration,

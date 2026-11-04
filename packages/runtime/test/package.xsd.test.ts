@@ -4,8 +4,9 @@ import fc from "fast-check";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
 import { requireSchemas } from "../../../scripts/schemas.js";
-import { CP_NAMESPACE, CPX_NAMESPACE, readManifest, readPackage, writeManifest, writePackage } from "../src/index.js";
+import { CP_NAMESPACE } from "../src/metadata/index.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
+import { CPX_NAMESPACE, readManifest, readPackage, writeManifest, writePackage } from "../src/package/index.js";
 import { manifests } from "./arbitraries/package.js";
 import { declaredNames, unusedNames, usedNames } from "./schema-declarations.js";
 

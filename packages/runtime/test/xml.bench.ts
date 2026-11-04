@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseXml } from "@assesskit/runtime";
+import { parseXml } from "@assesskit/runtime/xml";
 import { ParseOption, XmlDocument } from "libxml2-wasm";
 import { expect, test } from "vitest";
 import { compareRow, LIBXML2_BUDGET } from "./budgets.js";

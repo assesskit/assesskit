@@ -46,7 +46,7 @@ The markup is valid ASI: the tests validate the block that `buildScoreCoversBloc
 | Part                       | Rule                                                                                                                     |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | Place                      | A child `qti-rubric-block` of `qti-assessment-test`. Blocks of test parts and sections are not covers.                   |
-| Marker                     | The class token `external-score-covers` (`SCORE_COVERS_CLASS`).                                                          |
+| Marker                     | The class token `external-score-covers`.                                                                                 |
 | `view`                     | A list that contains `scorer` and not `candidate`; `validate` checks it. `buildScoreCoversBlock` writes `use="scoring"`. |
 | `data-outcome-identifier`  | The outcome the block rates.                                                                                             |
 | Content                    | Optional notes, then a `ul` that is a child of the content body. The `li` elements are the covers.                       |
@@ -63,7 +63,6 @@ Nothing is copied into the model, and a read followed by a write keeps the block
 | Function                                           | Does                                                                                                                                                                                   |
 | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `readScoreCovers(test)`                            | The covers by outcome identifier, in document order. A test without blocks gives an empty map; an entry without both attributes is left out.                                           |
-| `selectScoreCoverBlocks(test)`                     | The blocks that carry the class token, as they are written, with a missing attribute absent, so that `validate` can report them.                                                       |
 | `buildScoreCoversBlock(outcome, covers, options?)` | Builds the block: the attributes, the option `notes` (nodes of the content of a rubric block), then the list. Identifiers are checked, labels are written with white space normalized. |
 
 ```ts
@@ -183,7 +182,7 @@ classDiagram
 | Part                        | Rule                                                                                                                                                                                      |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Place                       | In an item: a `qti-rubric-block` among the content of `qti-item-body`. In a test: a child `qti-rubric-block` of `qti-assessment-test`. Blocks of test parts and sections are not rubrics. |
-| Marker                      | The class token `external-scoring-rubric` (`SCORING_RUBRIC_CLASS`). A block cannot also carry the token of the covers.                                                                    |
+| Marker                      | The class token `external-scoring-rubric`. A block cannot also carry the token of the covers.                                                                                             |
 | `view`                      | A list that contains `scorer` and not `candidate`. `buildScoringRubricBlock` writes `view="scorer"` and `use="scoring"`, which the schema requires of an item's block.                    |
 | `data-outcome-identifier`   | The outcome the rubric rates, the attribute that covers use. Required.                                                                                                                    |
 | `data-rubric-kind`          | `analytic`, `holistic`, `checklist` or `single-point`. Default `analytic`.                                                                                                                |

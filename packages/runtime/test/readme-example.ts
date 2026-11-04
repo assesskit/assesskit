@@ -1,4 +1,5 @@
-import { type Action, createEngine, type DeliveryState, writeView } from "../src/delivery/index.js";
+import { type Action, createEngine, type DeliveryState } from "../src/delivery/index.js";
+import { writeView } from "../src/delivery/wire.js";
 import { createPackageResolvers, readManifest, readPackage, writePackage } from "../src/package/index.js";
 import { writeResults } from "../src/results/index.js";
 import { buildSingle } from "../src/values/index.js";

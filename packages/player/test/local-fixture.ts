@@ -1,5 +1,6 @@
 import type { CallOptions } from "@assesskit/runtime/checks";
-import type { CandidateAction, CandidateView, DeliveryEvent } from "@assesskit/runtime/delivery";
+import type { DeliveryEvent } from "@assesskit/runtime/delivery";
+import type { CandidateAction, CandidateView } from "@assesskit/runtime/delivery/wire";
 import { buildSingle } from "@assesskit/runtime/values";
 import type { createLocalSession, LocalStore } from "../src/client/local/index.js";
 import { examDefinition, fakeClock } from "./exam-fixture.js";

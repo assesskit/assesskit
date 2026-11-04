@@ -1,4 +1,5 @@
-import { type AssessmentItem, type AssessmentStimulus, type AssessmentTest, walkDocument } from "../asi/index.js";
+import type { AssessmentItem, AssessmentStimulus, AssessmentTest } from "../asi/index.js";
+import { walkDocument } from "../asi/internal.js";
 import { type DeliverableItem, type ResolvedItem, type Resolvers, resolveReference } from "../package/index.js";
 import { checkSynchronous } from "../package/internal.js";
 import { AttributeReferences } from "./attribute-references.js";

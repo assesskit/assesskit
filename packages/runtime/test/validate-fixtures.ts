@@ -1,11 +1,6 @@
-import {
-  ASI_NAMESPACE,
-  type AsiDocument,
-  type AssessmentItem,
-  type Issue,
-  readAsi,
-  validateAsi,
-} from "../src/index.js";
+import { ASI_NAMESPACE, type AsiDocument, type AssessmentItem, readAsi } from "../src/asi/index.js";
+import type { Issue } from "../src/errors.js";
+import { validateAsi } from "../src/validate/index.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 export function json<T = never>(text: string): T {

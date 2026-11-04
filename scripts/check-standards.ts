@@ -360,13 +360,15 @@ function moduleOf(file: string, files: Files): string | undefined {
   return undefined;
 }
 
+/** The files through which another module reaches a module: its index, its internal file and the `wire.ts` of `delivery`, a second subpath. */
+const MODULE_ENTRIES: readonly string[] = ["index.ts", "internal.ts", "wire.ts"];
+
 /** The module that a relative import of a file reaches when it goes past the entries of that module, if any. */
 function deepTarget(file: string, specifier: string, files: Files): string | undefined {
   const target = posix.normalize(posix.join(dirname(file), specifier.replace(/\.js$/, ".ts")));
   const targetModule = moduleOf(target, files);
   if (targetModule === undefined || targetModule === moduleOf(file, files)) return undefined;
-  const isEntry =
-    ["index.ts", "internal.ts"].includes(posix.basename(target)) && posix.dirname(target) === targetModule;
+  const isEntry = MODULE_ENTRIES.includes(posix.basename(target)) && posix.dirname(target) === targetModule;
   return isEntry ? undefined : targetModule;
 }
 
@@ -382,7 +384,7 @@ export function checkEntries(files: Files): Violation[] {
           file,
           line,
           rule: "entry",
-          message: `${specifier} reaches into ${reached}; import its index.js or internal.js.`,
+          message: `${specifier} reaches into ${reached}; import its index.js, internal.js or wire.js.`,
         });
     }
   }

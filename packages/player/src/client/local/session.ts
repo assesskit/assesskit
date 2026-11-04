@@ -15,8 +15,6 @@ import {
   recordSchema,
 } from "@assesskit/runtime/checks";
 import type {
-  CandidateAction,
-  CandidateView,
   DeliveryDefinition,
   DeliveryEvent,
   DeliveryState,
@@ -26,6 +24,7 @@ import type {
   Step,
   TestStructure,
 } from "@assesskit/runtime/delivery";
+import type { CandidateAction, CandidateView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import { resolveReference } from "@assesskit/runtime/package";
 import * as v from "valibot";
@@ -233,15 +232,21 @@ interface Applied {
   readonly view: CandidateView;
 }
 
+/** The engine of the runtime, with the writer of its actions from the wire module. */
+type EngineModule = typeof import("@assesskit/runtime/delivery") &
+  Pick<typeof import("@assesskit/runtime/delivery/wire"), "writeCandidateAction">;
+
 /** The engine of the runtime once it has loaded, so that the sessions of a page load it once. */
-let engineModule: Promise<typeof import("@assesskit/runtime/delivery")> | undefined;
+let engineModule: Promise<EngineModule> | undefined;
 
 /** Loads the engine once; a load that fails is tried again by the next session. */
-function loadEngine(): Promise<typeof import("@assesskit/runtime/delivery")> {
-  engineModule ??= import("@assesskit/runtime/delivery").catch((error: unknown) => {
-    engineModule = undefined;
-    throw error;
-  });
+function loadEngine(): Promise<EngineModule> {
+  engineModule ??= Promise.all([import("@assesskit/runtime/delivery"), import("@assesskit/runtime/delivery/wire")])
+    .then(([delivery, wire]) => ({ ...delivery, writeCandidateAction: wire.writeCandidateAction }))
+    .catch((error: unknown) => {
+      engineModule = undefined;
+      throw error;
+    });
   return engineModule;
 }
 

@@ -1,4 +1,5 @@
-import { type AsiDocument, walkDocument } from "../asi/index.js";
+import type { AsiDocument } from "../asi/index.js";
+import { walkDocument } from "../asi/internal.js";
 import type { Issue } from "../errors.js";
 import { checkElements } from "./generic-checks.js";
 import { checkItem } from "./item.js";

@@ -17,20 +17,22 @@ import {
   recordSchema,
 } from "@assesskit/runtime/checks";
 import {
-  type CandidateAction,
-  type CandidateView,
   type DeliveryEvent,
   type DeliveryState,
   deserializeState,
   type Engine,
   type HostAction,
-  readCandidateAction,
   sendCatRequest,
   serializeState,
   stamp,
+} from "@assesskit/runtime/delivery";
+import {
+  type CandidateAction,
+  type CandidateView,
+  readCandidateAction,
   writeCandidateAction,
   writeView,
-} from "@assesskit/runtime/delivery";
+} from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import type { QtiPackage } from "@assesskit/runtime/package";
 import * as v from "valibot";

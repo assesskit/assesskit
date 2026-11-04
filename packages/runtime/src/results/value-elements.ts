@@ -9,11 +9,10 @@ import {
   formatPrimitive,
   normalizeValue,
   type Primitive,
-  parseDuration,
-  parsePrimitive,
   type SingleValue,
   type Value,
 } from "../values/index.js";
+import { parseDuration, parsePrimitive } from "../values/internal.js";
 import { buildElement, type XmlElement } from "../xml/index.js";
 import type { ElementReader } from "../xml/internal.js";
 import { RESULTS_NAMESPACE } from "./namespace.js";

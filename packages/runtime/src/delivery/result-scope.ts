@@ -3,14 +3,13 @@ import { checkArray, checkFunction, checkRecord, describe } from "../checks.js";
 import { checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import {
-  DURATION,
   type ItemSessionFilter,
   type ItemSessionView,
   type ItemVariables,
   QTI_CONTEXT,
-  readDeclaredValue,
   type TestScope,
 } from "../processing/index.js";
+import { DURATION, readDeclaredValue } from "../processing/internal.js";
 import type { AssessmentResult, ItemResult, TestResult } from "../results/index.js";
 import { buildSingle, type Value } from "../values/index.js";
 import { attemptsOf } from "./attempt.js";

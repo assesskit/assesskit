@@ -1,5 +1,5 @@
 import type { BodyNode, ModalFeedback, TestFeedback } from "@assesskit/runtime/asi";
-import type { CandidateView } from "@assesskit/runtime/delivery";
+import type { CandidateView } from "@assesskit/runtime/delivery/wire";
 import type { ViewDocuments } from "../../protocol/index.js";
 import type { RootContent } from "../roots/index.js";
 

@@ -1,12 +1,11 @@
 import {
   type BodyNode,
   type Catalog,
-  isBodyNode,
   isModelNode,
   type ModelNode,
   type PortableCustomInteraction,
 } from "../asi/index.js";
-import { withDescendants } from "../asi/internal.js";
+import { isBodyNode, withDescendants } from "../asi/internal.js";
 
 const isCatalog = (node: ModelNode): node is Catalog => node.kind === "catalog";
 const isPortable = (node: ModelNode): node is PortableCustomInteraction => node.kind === "portable-custom-interaction";

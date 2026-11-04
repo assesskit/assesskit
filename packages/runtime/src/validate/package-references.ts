@@ -4,8 +4,8 @@ import {
   listDescendantNodes,
   type ModelNode,
   type PortableCustomInteraction,
-  walkDocument,
 } from "../asi/index.js";
+import { walkDocument } from "../asi/internal.js";
 import { isRecord } from "../checks.js";
 import { DataError, SecurityError } from "../errors.js";
 import {

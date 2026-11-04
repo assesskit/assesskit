@@ -1,11 +1,5 @@
-import type {
-  AssessmentItem,
-  ElementVisit,
-  OutcomeDeclaration,
-  OutcomeRule,
-  ResponseRule,
-  TemplateRule,
-} from "../asi/index.js";
+import type { AssessmentItem, OutcomeDeclaration, OutcomeRule, ResponseRule, TemplateRule } from "../asi/index.js";
+import type { ElementVisit } from "../asi/internal.js";
 import { assignedIdentifiers } from "./constant-values.js";
 import { type Controller, controllerOf } from "./content-references.js";
 import type { Findings } from "./findings.js";

@@ -140,7 +140,7 @@ attributes of the interaction and the base type of its response.
 
 ## Static types of processing
 
-A bottom-up inference gives every expression a cardinality and base type from `OPERATOR_SIGNATURES` and the
+A bottom-up inference gives every expression a cardinality and base type from the signatures of the operators and the
 declarations. A type that is not known statically (a custom operator, a record field, a variable without a base type)
 is unknown, and an unknown type passes every check, so a finding is a defect and never a guess.
 

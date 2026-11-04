@@ -3,21 +3,21 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
+import { ReadError } from "../src/errors.js";
+import { readPackageFile } from "../src/node/index.js";
 import {
   createPackageResolvers,
   listDependencies,
   type Manifest,
-  parseXml,
   type QtiPackage,
-  ReadError,
   readLtiLink,
   readManifest,
   readPackage,
   resolveResourcePath,
   writeManifest,
   writePackage,
-} from "../src/index.js";
-import { readPackageFile } from "../src/node/index.js";
+} from "../src/package/index.js";
+import { parseXml } from "../src/xml/index.js";
 
 const examples = join(requireCorpus(resolve(import.meta.dirname, "../../..")), "qti-examples/qtiv3-examples");
 const all = readdirSync(examples, { recursive: true, encoding: "utf8" }).sort();

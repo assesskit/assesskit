@@ -1,6 +1,7 @@
 import type { CatSessionPort } from "@assesskit/runtime/cat";
 import type { CallOptions } from "@assesskit/runtime/checks";
-import type { ActionLimits, Engine, StartOptions } from "@assesskit/runtime/delivery";
+import type { Engine, StartOptions } from "@assesskit/runtime/delivery";
+import type { ActionLimits } from "@assesskit/runtime/delivery/wire";
 import type { QtiPackage } from "@assesskit/runtime/package";
 import type { Caller, Clock, HostSession, HostStep, OfficialResult, ViewEnvelope } from "../protocol/index.js";
 import type { ForwardOptions } from "./forward.js";

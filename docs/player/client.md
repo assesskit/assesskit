@@ -37,7 +37,8 @@ Create a remote session over a transport, send an action and read the view that 
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
-import { createEngine, writeView } from "@assesskit/runtime/delivery";
+import { createEngine } from "@assesskit/runtime/delivery";
+import { writeView } from "@assesskit/runtime/delivery/wire";
 import { createRemoteSession } from "@assesskit/player/client";
 
 // A page gets the first envelope from the route of `SessionHost.view` and sends the others to the route of `SessionHost.handle`.

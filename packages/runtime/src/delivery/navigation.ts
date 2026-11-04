@@ -1,7 +1,8 @@
 import type { Expression } from "../asi/index.js";
 import { checkArray, checkFunction, checkRecord, describe } from "../checks.js";
 import { DataError, ProcessingError } from "../errors.js";
-import { evaluateTestExpression, type ProcessingContext, type TestScope } from "../processing/index.js";
+import type { ProcessingContext, TestScope } from "../processing/index.js";
+import { evaluateTestExpression } from "../processing/internal.js";
 import type { Value } from "../values/index.js";
 import {
   checkKey,
@@ -421,8 +422,8 @@ function checkArguments(structure: TestStructure, plan: TestPlan): void {
   for (const lookup of [structure.part, structure.section, structure.itemRef]) {
     checkFunction(lookup, "The structure must be an object from resolveStructure");
   }
-  checkRecord(plan, "The plan must be an object from planTest");
-  checkArray(plan.parts, "The plan must be an object from planTest, with an array parts");
+  checkRecord(plan, "The plan must be an object from a delivery state");
+  checkArray(plan.parts, "The plan must be an object from a delivery state, with an array parts");
 }
 
 /**
@@ -447,7 +448,7 @@ function checkArguments(structure: TestStructure, plan: TestPlan): void {
  *   run.
  *
  * @param structure - The test, from {@link resolveStructure}.
- * @param plan - The plan of the session, from {@link planTest}.
+ * @param plan - The plan of the session, from a delivery state.
  * @param from - The item the candidate leaves. Without it, the start of the test, which gives its first item.
  * @param rules - What the expressions read.
  * @returns The next item instance; `undefined` when the test has no further item.
@@ -549,7 +550,7 @@ export function startDestination(structure: TestStructure, plan: TestPlan, rules
  * a linear part moves forward only.
  *
  * @param structure - The test, from {@link resolveStructure}.
- * @param plan - The plan of the session, from {@link planTest}.
+ * @param plan - The plan of the session, from a delivery state.
  * @param from - The item the candidate leaves.
  * @returns The previous item instance; `undefined` for the first item of the part and for any item of a linear part.
  * @throws `DataError` when an argument has the wrong type, the plan does not match the structure, or `from` is not in

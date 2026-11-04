@@ -1,4 +1,5 @@
-import type { CandidateAction, CandidateItem, CandidateView, ItemKey } from "@assesskit/runtime/delivery";
+import type { ItemKey } from "@assesskit/runtime/delivery";
+import type { CandidateAction, CandidateItem, CandidateView } from "@assesskit/runtime/delivery/wire";
 import {
   createInteractionRenderers,
   END_ATTEMPT_EVENT,

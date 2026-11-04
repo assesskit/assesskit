@@ -5,7 +5,11 @@
     "allowImportingTsExtensions": true,
     "types": ["node"],
     "paths": {
-      "@assesskit/runtime": ["./src/index.ts"]
+      "@assesskit/runtime": ["./src/index.ts"],
+      "@assesskit/runtime/checks": ["./src/checks.ts"],
+      "@assesskit/runtime/errors": ["./src/errors.ts"],
+      "@assesskit/runtime/delivery/wire": ["./src/delivery/wire.ts"],
+      "@assesskit/runtime/*": ["./src/*/index.ts"]
     }
   },
   "include": ["src", "test"]

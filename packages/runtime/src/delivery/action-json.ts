@@ -154,7 +154,7 @@ function checkPciStates(action: CandidateAction, limit: number): void {
  * property of the type and no other, the values as wire values, and the limits.
  *
  * @remarks
- * The action has no time: the server stamps it with {@link stamp}, and an action of the host (`time`, `supply-scores`,
+ * The action has no time: the server stamps it with `stamp` of `delivery`, and an action of the host (`time`, `supply-scores`,
  * `cat-response`) or a property `at` is refused.
  *
  * @param json - The parsed JSON.

@@ -1,5 +1,5 @@
 import { checkNonEmptyString, checkProperties, checkRecord, describe } from "@assesskit/runtime/checks";
-import type { VariantView } from "@assesskit/runtime/delivery";
+import type { VariantView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";

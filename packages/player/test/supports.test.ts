@@ -1,5 +1,6 @@
 import { readAsi } from "@assesskit/runtime/asi";
-import { createEngine, readView, type SupportView, stamp, writeView } from "@assesskit/runtime/delivery";
+import { createEngine, stamp } from "@assesskit/runtime/delivery";
+import { readView, type SupportView, writeView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import {
   type ColorTheme,

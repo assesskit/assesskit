@@ -23,14 +23,14 @@ import type { DrdHazard } from "../metadata/index.js";
 import type { DeliverableItem, LtiLink, ResolvedItem, Resolvers } from "../package/index.js";
 import { resolveReference } from "../package/index.js";
 import { checkSynchronous } from "../package/internal.js";
+import type { CustomOperator, ProcessingLimits, VariableType } from "../processing/index.js";
 import {
   BUILT_IN_CONTEXTS,
-  type CustomOperator,
-  type ProcessingLimits,
+  checkItem,
+  checkProcessingOptions,
+  initialOutcome,
   readDeclaredValue,
-  type VariableType,
-} from "../processing/index.js";
-import { checkItem, checkProcessingOptions, initialOutcome } from "../processing/internal.js";
+} from "../processing/internal.js";
 import { validateAsi, validateTest } from "../validate/index.js";
 import type { Value } from "../values/index.js";
 import type { CatSectionRef } from "./cat-session.js";
@@ -92,7 +92,7 @@ export type DeliveryDefinition =
        */
       readonly resolvers?: Pick<Resolvers, "stimuli">;
       /**
-       * The item session control of the item, as `resolveStandaloneSessionControl` applies it.
+       * The item session control of the item: the defaults of item session control, except that `show-feedback` and `allow-review` are true, with the attributes of this control in their place.
        *
        * @defaultValue none
        */

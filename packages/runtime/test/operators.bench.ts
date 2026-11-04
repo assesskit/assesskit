@@ -1,6 +1,11 @@
 // cspell:ignore answr
 import { expect, test } from "vitest";
-import { buildOperatorCall, compareMathSteps, createScoringOperators, OPERATOR_DEFINITIONS } from "../src/index.js";
+import {
+  buildOperatorCall,
+  compareMathSteps,
+  createScoringOperators,
+  OPERATOR_DEFINITIONS,
+} from "../src/operators/index.js";
 import type { Value } from "../src/values/index.js";
 import { BENCH_OPTIONS, BUDGETS, expectWithin } from "./budgets.js";
 

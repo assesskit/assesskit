@@ -1,4 +1,5 @@
-import { type AssessmentItem, walkDocument } from "../asi/index.js";
+import type { AssessmentItem } from "../asi/index.js";
+import { walkDocument } from "../asi/internal.js";
 import { describeInteractions, validateBindings } from "../interactions/index.js";
 import { QTI_CONTEXT } from "../processing/index.js";
 import { AttributeReferences } from "./attribute-references.js";

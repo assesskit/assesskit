@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { requireSchemas } from "../../../scripts/schemas.js";
-import { type AssessmentItem, writeAsi } from "../src/index.js";
+import { type AssessmentItem, writeAsi } from "../src/asi/index.js";
 import type { ScoredResponse } from "../src/keys/index.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
 import { type CompileScoringOptions, compileScoring } from "../src/scoring/index.js";

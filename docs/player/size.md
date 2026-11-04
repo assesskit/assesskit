@@ -70,7 +70,7 @@ No first load holds the runtime's processing, and each bundler puts the engine i
 demand. A page with both sessions loads most with esbuild, which splits by file: a file that the first load reaches through
 any import goes in a chunk of the first load with all of its code that any chunk uses, so what the wire forms share with the
 engine (the values, the interactions, the personal needs and preferences) comes whole; Rollup and Rolldown split by statement.
-A client that takes the wire forms from `@assesskit/runtime/delivery` instead loads the whole engine first, because the index
+A client that imports a value from `@assesskit/runtime/delivery`, which no longer exports the wire forms, loads the whole engine first, because the index
 of `delivery` reaches every file of the engine and the `import()` of the local session keeps them in the bundle. Measured with
 both sessions in `@assesskit/player/client` and that import, an exam page loads 119,998 bytes with esbuild, and a page with
 both sessions 122,361 with esbuild, 119,022 with Rolldown and 125,931 with Bun. The lint of the browser folders refuses that

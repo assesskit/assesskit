@@ -16,21 +16,19 @@ import {
   FEEDBACK_TYPES,
   INTERACTION_TYPES,
   LOM_NAMESPACE,
-  parseXml,
   QTI_METADATA_NAMESPACE,
   readAccessForAllResource,
   readCurriculumStandardsSet,
   readQtiMetadata,
   readResourceMetadata,
   SCORING_MODES,
-  serializeXml,
   writeAccessForAllResource,
   writeCurriculumStandardsSet,
   writeQtiMetadata,
   writeResourceMetadata,
-  type XmlElement,
-} from "../src/index.js";
+} from "../src/metadata/index.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
+import { parseXml, serializeXml, type XmlElement } from "../src/xml/index.js";
 import { accessForAllResource, curriculumStandardsSet, lom, qtiMetadata } from "./arbitraries/metadata.js";
 import { declaredNames, unusedNames, usedNames } from "./schema-declarations.js";
 

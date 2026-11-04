@@ -1,7 +1,7 @@
 import { checkArray, checkChoice, checkOptional, checkRecord, checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
-import { BASE_TYPES, CARDINALITIES, formatIdentifierList, formatPrimitive, isXsdDateTime } from "../values/index.js";
-import { optionalText } from "../values/internal.js";
+import { BASE_TYPES, formatPrimitive, isXsdDateTime } from "../values/index.js";
+import { CARDINALITIES, formatIdentifierList, optionalText } from "../values/internal.js";
 import { type ElementAttributes, serializeXml, type XmlElement } from "../xml/index.js";
 import { elementBuilder } from "../xml/internal.js";
 import type {

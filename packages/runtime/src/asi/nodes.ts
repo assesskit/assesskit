@@ -3,7 +3,7 @@ import type { BodyNode } from "./body.js";
 
 /**
  * A node of the content model, whatever its element: the field that every element model, text node and XML element has
- * is the `kind` that names it. Narrow a node by its `kind`, or with a guard such as `isBodyNode`.
+ * is the `kind` that names it. Narrow a node by its `kind`, or with a guard such as `isModelNode`.
  */
 export interface ModelNode {
   /** The name of the element without `qti-`, `"text"` for text, or `"element"` for MathML, SSML and `xi:include`. */

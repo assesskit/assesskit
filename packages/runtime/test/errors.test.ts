@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AssesskitError, DataError, type Issue, ProcessingError, ReadError, SecurityError } from "../src/index.js";
+import { AssesskitError, DataError, type Issue, ProcessingError, ReadError, SecurityError } from "../src/errors.js";
 
 const issue: Issue = {
   severity: "error",

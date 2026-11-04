@@ -5,7 +5,7 @@ import {
   type CandidateAction,
   type CandidateView,
   DEFAULT_ACTION_LIMITS,
-} from "@assesskit/runtime/delivery";
+} from "@assesskit/runtime/delivery/wire";
 import { DataError, SecurityError } from "@assesskit/runtime/errors";
 import { buildSingle } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";

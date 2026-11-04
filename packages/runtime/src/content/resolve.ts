@@ -11,7 +11,6 @@ import {
   type HotText,
   type HtmlElement,
   type InlineChoice,
-  isBodyNode,
   isModelNode,
   type ModelNode,
   type PrintedVariable,
@@ -22,6 +21,7 @@ import {
   type TemplateInline,
   type TextNode,
 } from "../asi/index.js";
+import { isBodyNode } from "../asi/internal.js";
 import { checkArray, checkChoice, checkRecord, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import type { Value } from "../values/index.js";

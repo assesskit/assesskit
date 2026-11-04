@@ -4,7 +4,7 @@ import type {
   CompanionMaterialsInfo,
   DigitalMaterial,
 } from "@assesskit/runtime/asi";
-import type { SupportView } from "@assesskit/runtime/delivery";
+import type { SupportView } from "@assesskit/runtime/delivery/wire";
 import type { SupportName } from "@assesskit/runtime/pnp";
 import { TOOL_EXTENSIONS } from "../supports/internal.js";
 

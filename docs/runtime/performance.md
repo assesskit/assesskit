@@ -19,18 +19,18 @@ xychart-beta
   line [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ```
 
-| Row              | The runtime                                                                                          | The reference                                                                         | Runtime  | Reference | Ratio | Budget (time, ratio) |
-| ---------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | -------- | --------- | ----- | -------------------- |
-| parse            | `readAsi` on the 215 example items that both read                                                    | Longsight: `parseQtiXml` on the same items                                            | 13.63 ms | 20.05 ms  | 0.68  | 500 ms, 1.5          |
-| validate         | `validateAsi` of each                                                                                | Longsight: `validateAssessmentItem` of each                                           | 5.06 ms  | 1.85 ms   | 2.73  | 60 ms, 4.5           |
-| start            | `startItemSession` and `presentItem` for each: variables, template processing, first attempt         | Longsight: `createItemSession` for each                                               | 0.374 ms | 0.351 ms  | 1.07  | 7 ms, 2              |
-| start + template | the same for the 8 items with template processing, 20 times each                                     | Longsight: the same                                                                   | 1.833 ms | 1.685 ms  | 1.09  | 40 ms, 2             |
-| submit           | `set-responses` and `submit` of the correct responses in presented sessions                          | Longsight: `respond` for each response, then `score`                                  | 0.615 ms | 0.605 ms  | 1.02  | 20 ms, 2             |
-| item end to end  | `readAsi`, start, present, set the responses and submit                                              | Longsight: `parseQtiXml`, `createItemSession`, `respond`, `score`                     | 16.18 ms | 19.84 ms  | 0.82  | 400 ms, 1.5          |
-| package          | `readPackage` of 200 generated items, then each item through `createPackageResolvers`                | Longsight: `parseQtiPackage`, with the inflation of fflate that the runtime uses      | 75.2 ms  | 141.4 ms  | 0.53  | 800 ms, 1            |
-| start a test     | `start` of a test of 10 sections of 10 choice items, 100 times                                       | Longsight: `startQtiTest` and `createItemSession` of its first item, 100 times        | 0.206 ms | 0.412 ms  | 0.50  | 3 ms, 1              |
-| submit in a test | `apply` of `submit` for the 51st of 100 items, 100 times: response processing, the sum of the scores | Longsight: `score` of the item, then `submitQtiTestAnswer` with the 50 earlier scores | 1.10 ms  | 0.680 ms  | 1.62  | 20 ms, 3             |
-| XML (libxml2)    | `parseXml` of the bytes of the 325 XML files of the examples that both read                          | libxml2-wasm: `XmlDocument.fromBuffer` with the options of `validateXmlFiles`         | 14.94 ms | 9.53 ms   | 1.57  | 200 ms, 2.5          |
+| Row              | The runtime                                                                                                                   | The reference                                                                         | Runtime  | Reference | Ratio | Budget (time, ratio) |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | -------- | --------- | ----- | -------------------- |
+| parse            | `readAsi` on the 215 example items that both read                                                                             | Longsight: `parseQtiXml` on the same items                                            | 13.63 ms | 20.05 ms  | 0.68  | 500 ms, 1.5          |
+| validate         | `validateAsi` of each                                                                                                         | Longsight: `validateAssessmentItem` of each                                           | 5.06 ms  | 1.85 ms   | 2.73  | 60 ms, 4.5           |
+| start            | `startItemSession` and `presentItem`, the steps that the engine runs, for each: variables, template processing, first attempt | Longsight: `createItemSession` for each                                               | 0.374 ms | 0.351 ms  | 1.07  | 7 ms, 2              |
+| start + template | the same for the 8 items with template processing, 20 times each                                                              | Longsight: the same                                                                   | 1.833 ms | 1.685 ms  | 1.09  | 40 ms, 2             |
+| submit           | `set-responses` and `submit` of the correct responses in presented sessions                                                   | Longsight: `respond` for each response, then `score`                                  | 0.615 ms | 0.605 ms  | 1.02  | 20 ms, 2             |
+| item end to end  | `readAsi`, start, present, set the responses and submit                                                                       | Longsight: `parseQtiXml`, `createItemSession`, `respond`, `score`                     | 16.18 ms | 19.84 ms  | 0.82  | 400 ms, 1.5          |
+| package          | `readPackage` of 200 generated items, then each item through `createPackageResolvers`                                         | Longsight: `parseQtiPackage`, with the inflation of fflate that the runtime uses      | 75.2 ms  | 141.4 ms  | 0.53  | 800 ms, 1            |
+| start a test     | `start` of a test of 10 sections of 10 choice items, 100 times                                                                | Longsight: `startQtiTest` and `createItemSession` of its first item, 100 times        | 0.206 ms | 0.412 ms  | 0.50  | 3 ms, 1              |
+| submit in a test | `apply` of `submit` for the 51st of 100 items, 100 times: response processing, the sum of the scores                          | Longsight: `score` of the item, then `submitQtiTestAnswer` with the 50 earlier scores | 1.10 ms  | 0.680 ms  | 1.62  | 20 ms, 3             |
+| XML (libxml2)    | `parseXml` of the bytes of the 325 XML files of the examples that both read                                                   | libxml2-wasm: `XmlDocument.fromBuffer` with the options of `validateXmlFiles`         | 14.94 ms | 9.53 ms   | 1.57  | 200 ms, 2.5          |
 
 The times are those of a laptop with an Apple M5 and Node.js 26.8, where both sides of a row run in one process. The inputs
 are the 1EdTech examples that both implementations read and score (`pnpm corpus`), with the correct responses the oracle
@@ -159,14 +159,14 @@ shows in the change that makes it. The player's entry points are in [size](../pl
 ```mermaid
 xychart-beta
   title "Subpaths after gzip, in kilobytes"
-  x-axis ["keys", "errors", "checks", "content", "pci", "cat", "xml", "values", "interactions", "delivery/wire", "metadata", "usage", "results", "pnp", "processing", "scoring", "operators", "asi", "package", "validate", "delivery", "item-formats", "root"]
-  y-axis "kB" 0 --> 260
-  bar [0.1, 0.2, 4.0, 8.2, 8.7, 9.3, 16.9, 18.4, 17.2, 17.8, 18.8, 19.2, 22.0, 22.1, 26.6, 31.5, 34.5, 39.3, 51.2, 72.9, 118.0, 122.4, 259.2]
+  x-axis ["keys", "errors", "root", "checks", "content", "pci", "cat", "xml", "values", "interactions", "delivery/wire", "metadata", "usage", "results", "pnp", "processing", "scoring", "operators", "asi", "package", "validate", "delivery", "item-formats"]
+  y-axis "kB" 0 --> 130
+  bar [0.1, 0.2, 2.2, 4.0, 8.2, 8.7, 9.3, 16.9, 18.4, 17.2, 17.8, 18.8, 19.2, 22.0, 22.1, 26.6, 31.5, 34.5, 39.3, 51.2, 72.9, 118.0, 122.4]
 ```
 
 | Subpath         | Bytes     | Gzip    | Budget  | Holds besides its own code, `errors`, `checks` and valibot                                                                                                               |
 | --------------- | --------- | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `.`             | 972,428   | 259,151 | 323,500 | Every module but `node` and `cli`; entities, fflate, parse5, saxes, xmlchars                                                                                             |
+| `.`             | 5,981     | 2,235   | 3,000   | Nothing                                                                                                                                                                  |
 | `asi`           | 235,113   | 39,319  | 49,000  | `values`, `xml`; saxes, xmlchars                                                                                                                                         |
 | `cat`           | 28,642    | 9,252   | 12,000  | `metadata`, `results`, `values`                                                                                                                                          |
 | `checks`        | 13,522    | 4,006   | 5,500   | Nothing                                                                                                                                                                  |
@@ -198,8 +198,8 @@ grapheme table of Unicode 17.0.0 and the schemas of the keys. `scoring` holds of
 the operators that score; `keys` is the frozen limits of a key, its types leaving no code. `errors` holds nothing else, and `checks` holds only `errors` and valibot. A module that reads XML holds the parser (`xml`,
 saxes and xmlchars). A module that walks the model of a document (`asi`, `package`, `validate`, `delivery`) holds the element
 table of `asi`, which is most of its 234 kB; `content`, `interactions` and `processing` hold a few hundred bytes of `asi`, its
-guards and constants. `delivery/wire` is the wire forms of `delivery` alone (`writeView`, `readView`, `writeCandidateAction`,
-`readCandidateAction`), which `delivery` re-exports: no file of the engine is reachable from it, so a client that imports it
+guards and constants. `delivery/wire` is the wire forms of the candidate side (`writeView`, `readView`, `writeCandidateAction`,
+`readCandidateAction`), which `delivery` does not export: no file of the engine is reachable from it, so a client that imports it
 and also loads the engine with `import()` keeps the engine out of its first load
 ([size](../player/size.md#the-first-load-of-a-client)). The engine of `delivery` holds the static gate of the content
 (`validate`) and processing, and builds

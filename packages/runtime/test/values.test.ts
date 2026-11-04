@@ -5,45 +5,44 @@ import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
-import { DataError } from "../src/index.js";
+import { DataError } from "../src/errors.js";
 import {
   BASE_TYPES,
   type BaseType,
   buildContainer,
   buildRecord,
   buildSingle,
-  CARDINALITIES,
   type Cardinality,
   compileXsdRegex,
   DEFAULT_XSD_REGEX_LIMITS,
   decodeBase64,
   decodeBase64Url,
   encodeBase64,
-  encodeBase64Url,
-  formatIdentifierList,
-  formatIntegerList,
   formatPrimitive,
-  isBaseType,
-  isCardinality,
   isIdentifier,
-  isXsdDate,
   isXsdDateTime,
   matchValues,
   normalizeValue,
   type Primitive,
-  parseDuration,
-  parseIdentifierList,
-  parseIntegerList,
-  parsePrimitive,
   promote,
-  readJsonValue,
   readWireValue,
   type Value,
   type ValueDeclaration,
-  writeJsonValue,
   writeWireValue,
   type XsdPattern,
 } from "../src/values/index.js";
+import {
+  CARDINALITIES,
+  formatIdentifierList,
+  isBaseType,
+  isCardinality,
+  isXsdDate,
+  parseDuration,
+  parseIdentifierList,
+  parsePrimitive,
+  readJsonValue,
+  writeJsonValue,
+} from "../src/values/internal.js";
 import { mutateText, mutationsOf } from "./arbitraries/xml.js";
 import { FUZZ, fuzzJson } from "./fuzz.js";
 
@@ -608,32 +607,9 @@ describe("identifier and integer lists", () => {
     expect(() => formatIdentifierList(json('["a", 1]'))).toThrow(DataError);
   });
 
-  it("reads xs:int integers separated by white space", () => {
-    expect(parseIntegerList("1 -2 +3")).toEqual([1, -2, 3]);
-    expect(parseIntegerList("")).toEqual([]);
-    expect(parseIntegerList("2147483647 -2147483648")).toEqual([2147483647, -2147483648]);
-  });
-
-  it("rejects an item that is not an integer from -2147483648 to 2147483647", () => {
-    expect(() => parseIntegerList("2147483648")).toThrow(DataError);
-    expect(() => parseIntegerList("-2147483649")).toThrow(DataError);
-    expect(() => parseIntegerList("1 1.5")).toThrow(DataError);
-    expect(() => parseIntegerList("1, 2")).toThrow(DataError);
-  });
-
-  it("writes integers separated by one space", () => {
-    expect(formatIntegerList([1, -2, 0])).toBe("1 -2 0");
-    expect(formatIntegerList([])).toBe("");
-    expect(() => formatIntegerList([2 ** 31])).toThrow(DataError);
-    expect(() => formatIntegerList([1.5])).toThrow(DataError);
-    expect(() => formatIntegerList(json('["1"]'))).toThrow(DataError);
-  });
-
   it("rejects arguments of other types", () => {
     expect(() => parseIdentifierList(json("null"))).toThrow(DataError);
-    expect(() => parseIntegerList(json("[1]"))).toThrow(DataError);
     expect(() => formatIdentifierList(json('"a"'))).toThrow("The identifiers must be an array");
-    expect(() => formatIntegerList(json("{}"))).toThrow("The integers must be an array");
   });
 });
 
@@ -1329,9 +1305,8 @@ describe("base64 and base64url", () => {
   ];
   const bytesOf = (text: string): Uint8Array => new TextEncoder().encode(text);
 
-  it.each(Vectors)("encodes %j as the test vectors of RFC 4648 do", (text, base64, base64url) => {
+  it.each(Vectors)("encodes %j as the test vectors of RFC 4648 do", (text, base64) => {
     expect(encodeBase64(bytesOf(text))).toBe(base64);
-    expect(encodeBase64Url(bytesOf(text))).toBe(base64url);
   });
 
   it.each(Vectors)("decodes the test vectors of RFC 4648 to %j", (text, base64, base64url) => {
@@ -1339,10 +1314,9 @@ describe("base64 and base64url", () => {
     expect(decodeBase64Url(base64url)).toEqual(bytesOf(text));
   });
 
-  it("writes the digits 62 and 63 as + and / in base64 and as - and _ in base64url", () => {
+  it("takes the digits 62 and 63 as + and / in base64 and as - and _ in base64url", () => {
     const bytes = Uint8Array.from([0xfb, 0xff, 0xbf]);
     expect(encodeBase64(bytes)).toBe("+/+/");
-    expect(encodeBase64Url(bytes)).toBe("-_-_");
     expect(decodeBase64("+/+/")).toEqual(bytes);
     expect(decodeBase64Url("-_-_")).toEqual(bytes);
   });
@@ -1384,7 +1358,6 @@ describe("base64 and base64url", () => {
     expect(() => encodeBase64(json("[1]"))).toThrow(
       new DataError("The bytes to encode must be a Uint8Array, found an array."),
     );
-    expect(() => encodeBase64Url(json("null"))).toThrow(DataError);
     expect(() => decodeBase64(json("5"))).toThrow(new DataError("The text to decode must be a string, found 5."));
     expect(() => decodeBase64Url(json("null"))).toThrow(DataError);
   });
@@ -1902,9 +1875,8 @@ describe("properties", () => {
         fc.property(fc.uint8Array({ maxLength: 64 }), (bytes) => {
           const expected = Buffer.from(bytes);
           expect(encodeBase64(bytes)).toBe(expected.toString("base64"));
-          expect(encodeBase64Url(bytes)).toBe(expected.toString("base64url"));
           expect(decodeBase64(encodeBase64(bytes))).toEqual(bytes);
-          expect(decodeBase64Url(encodeBase64Url(bytes))).toEqual(bytes);
+          expect(decodeBase64Url(expected.toString("base64url"))).toEqual(bytes);
         }),
         FUZZ,
       );
@@ -1940,7 +1912,7 @@ describe("properties", () => {
           const bytes = decodeBase64(text);
           expect(bytes === undefined || encodeBase64(bytes) === text).toBe(true);
           const urlBytes = decodeBase64Url(text);
-          expect(urlBytes === undefined || encodeBase64Url(urlBytes) === text).toBe(true);
+          expect(urlBytes === undefined || Buffer.from(urlBytes).toString("base64url") === text).toBe(true);
         }),
         FUZZ,
       );
@@ -2129,14 +2101,6 @@ describe("properties", () => {
       fc.assert(
         fc.property(fc.array(identifier, { maxLength: 8 }), (items) => {
           expect(parseIdentifierList(formatIdentifierList(items))).toEqual(items);
-        }),
-      );
-    });
-
-    it("reads back the integer list that it writes", () => {
-      fc.assert(
-        fc.property(fc.array(fc.integer({ min: -(2 ** 31), max: 2 ** 31 - 1 }), { maxLength: 8 }), (items) => {
-          expect(parseIntegerList(formatIntegerList(items))).toEqual(items);
         }),
       );
     });

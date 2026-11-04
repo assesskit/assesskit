@@ -18,15 +18,7 @@ import { createServer } from "node:net";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import {
-  DataError,
-  type Manifest,
-  ReadError,
-  readPackage,
-  SecurityError,
-  writeManifest,
-  writePackage,
-} from "../src/index.js";
+import { DataError, ReadError, SecurityError } from "../src/errors.js";
 import {
   defaultSchemaDirectory,
   loadSchemaSet,
@@ -36,6 +28,7 @@ import {
   validateXmlFiles,
 } from "../src/node/index.js";
 import { PRIMARY_SCHEMAS, pinnedSchemaDirectory, selectSchema, userCacheDirectory } from "../src/node/internal.js";
+import { type Manifest, readPackage, writeManifest, writePackage } from "../src/package/index.js";
 import { parseXml } from "../src/xml/index.js";
 
 // Reads of the ZIP file are counted, to show that they are ranges; every other function is the real one.

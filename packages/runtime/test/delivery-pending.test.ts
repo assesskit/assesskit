@@ -1,33 +1,26 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { readScoringRubrics, type ScoringRubric } from "../src/asi/index.js";
+import type { CatSessionPort, CreateSessionResponse } from "../src/cat/index.js";
 import {
   type Action,
-  type AssessmentResult,
-  buildSingle,
-  type CatSessionPort,
-  type CreateSessionResponse,
   createEngine,
-  createRandom,
-  DataError,
   type DeliveryState,
-  describeInteractions,
   deserializeState,
   drainCat,
   type Engine,
-  isXsdDateTime,
-  readResults,
-  readScoringRubrics,
-  readView,
-  type ScoringRubric,
   sendCatRequest,
   serializeState,
   stamp,
-  type Value,
-  writePnp,
-  writeResults,
-  writeView,
-} from "../src/index.js";
+} from "../src/delivery/index.js";
+import { readView, writeView } from "../src/delivery/wire.js";
+import { DataError } from "../src/errors.js";
+import { createRandom } from "../src/index.js";
+import { describeInteractions } from "../src/interactions/index.js";
 import { drawOrders } from "../src/interactions/internal.js";
+import { writePnp } from "../src/pnp/index.js";
+import { type AssessmentResult, readResults, writeResults } from "../src/results/index.js";
+import { buildSingle, isXsdDateTime, type Value } from "../src/values/index.js";
 import {
   ADAPTIVE,
   act,

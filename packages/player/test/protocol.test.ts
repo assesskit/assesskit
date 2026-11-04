@@ -2,8 +2,6 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { checkCallOptions, isRecord } from "@assesskit/runtime/checks";
 import {
-  type CandidateAction,
-  type CandidateView,
   type CatRequest,
   createEngine,
   type DeliveryEvent,
@@ -11,8 +9,8 @@ import {
   type HostAction,
   type RefusalReason,
   stamp,
-  writeCandidateAction,
 } from "@assesskit/runtime/delivery";
+import { type CandidateAction, type CandidateView, writeCandidateAction } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import type { AssessmentResult } from "@assesskit/runtime/results";
 import { buildSingle } from "@assesskit/runtime/values";

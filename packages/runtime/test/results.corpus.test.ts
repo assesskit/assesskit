@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
-import { parseXml, readResults, writeResults } from "../src/index.js";
+import { readResults, writeResults } from "../src/results/index.js";
+import { parseXml } from "../src/xml/index.js";
 import { canonical } from "./arbitraries/xml.js";
 import { issueOf } from "./read-failure.js";
 

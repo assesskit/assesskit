@@ -1,11 +1,6 @@
 import fc from "fast-check";
-import {
-  BASE_TYPES,
-  type BaseType,
-  type Cardinality,
-  OPERATOR_SIGNATURES,
-  type OperandSignature,
-} from "../../src/index.js";
+import { OPERATOR_SIGNATURES, type OperandSignature } from "../../src/processing/internal.js";
+import { BASE_TYPES, type BaseType, type Cardinality } from "../../src/values/index.js";
 
 /**
  * The text of a base value of a base type: forms it accepts, its limits (the edges of the safe integers, the infinities)

@@ -366,7 +366,7 @@ Processing (`ProcessingLimits`; option `limits` of the processing context and of
 | ------------------ | ------- | ------ | --------------- | -------------------------------------------------------------- |
 | `maxContainerSize` | 10,000  | values | 9               | The values of a container that a processing expression builds. |
 
-Test plans (`PlanLimits`; option `limits` of `planTest` and of `createEngine`, which takes both kinds of limits):
+Test plans (`PlanLimits`; option `limits` of `createEngine`, which takes both kinds of limits):
 
 | Limit          | Default | Unit  | Largest example | Applies to                                                                                         |
 | -------------- | ------- | ----- | --------------- | -------------------------------------------------------------------------------------------------- |
@@ -460,7 +460,7 @@ and no reader peaks above 224.
 | `file` of a package     | A file of 64 MiB deflated at the ratio the limit allows                                 |               16 |
 | `readPackageFile`       | A ZIP file of 2 GiB with 100,000 entries, and a file of 64 MiB deflated, read from it   |               32 |
 | `readPackageFile`       | A ZIP file whose central directory has 512 bytes for each of 100,000 entries            |               80 |
-| `planTest`              | A selection with replacement of 9,999 items                                             |               16 |
+| planning of a test      | A selection with replacement of 9,999 items                                             |               16 |
 | `readResultsJson`       | One variable of a million values, the most that `maxResultSize` holds                   |              136 |
 | `readCandidateAction`   | The most response entries, or the most integers of one response, that fit               |       144 to 152 |
 | `readCandidateAction`   | A settings list of a million names, refused                                             |               24 |

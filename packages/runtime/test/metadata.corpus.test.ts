@@ -2,17 +2,10 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
-import {
-  deriveQtiMetadata,
-  parseXml,
-  ReadError,
-  readLomGeneral,
-  readManifest,
-  readPackage,
-  readResourceMetadata,
-  resolveResourcePath,
-  type XmlElement,
-} from "../src/index.js";
+import { ReadError } from "../src/errors.js";
+import { deriveQtiMetadata, readLomGeneral, readResourceMetadata } from "../src/metadata/index.js";
+import { readManifest, readPackage, resolveResourcePath } from "../src/package/index.js";
+import { parseXml, type XmlElement } from "../src/xml/index.js";
 
 const examples = join(requireCorpus(resolve(import.meta.dirname, "../../..")), "qti-examples/qtiv3-examples");
 const packaging = join(examples, "packaging");

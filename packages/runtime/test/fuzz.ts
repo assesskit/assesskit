@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { expect } from "vitest";
-import { DataError, ReadError, SecurityError } from "../src/index.js";
+import { DataError, ReadError, SecurityError } from "../src/errors.js";
 import { mutateBytes, mutateText, mutations } from "./arbitraries/xml.js";
 
 /**

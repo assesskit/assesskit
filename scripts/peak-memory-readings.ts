@@ -3,43 +3,32 @@ import { closeSync, openSync, rmSync, writeSync } from "node:fs";
 import { join } from "node:path";
 import { createDeflateRaw, deflateRawSync, crc32 as nodeCrc32 } from "node:zlib";
 import { createCatRestHandler } from "../packages/player/src/cat-rest/index.ts";
+import { readAsi } from "../packages/runtime/src/asi/index.ts";
+import { DEFAULT_RESULTS_JSON_LIMITS, readResultsJson } from "../packages/runtime/src/cat/index.ts";
+import { resolveStructure } from "../packages/runtime/src/delivery/index.ts";
+import { planTest } from "../packages/runtime/src/delivery/internal.ts";
+import { readCandidateAction } from "../packages/runtime/src/delivery/wire.ts";
+import { AssesskitError, SecurityError } from "../packages/runtime/src/errors.ts";
+import { createRandom } from "../packages/runtime/src/index.ts";
+import { DEFAULT_ITEM_FORMAT_LIMITS, readGift, readMoodleXml } from "../packages/runtime/src/item-formats/index.ts";
+import { DEFAULT_KEY_LIMITS, type ScoredResponse } from "../packages/runtime/src/keys/index.ts";
+import { readPackageFile } from "../packages/runtime/src/node/package-file.ts";
 import {
-  AssesskitError,
   buildOperatorCall,
   compareMathSteps,
-  compileScoring,
-  compileXsdRegex,
-  createRandom,
   createScoringOperators,
-  DEFAULT_ITEM_FORMAT_LIMITS,
-  DEFAULT_KEY_LIMITS,
   DEFAULT_OPERATOR_LIMITS,
-  DEFAULT_RESULTS_JSON_LIMITS,
-  DEFAULT_XML_LIMITS,
-  DEFAULT_ZIP_LIMITS,
   OPERATOR_DEFINITIONS,
-  parseXml,
-  planTest,
-  RESULTS_NAMESPACE,
-  readAsi,
-  readCandidateAction,
-  readGift,
-  readManifest,
-  readModuleResolution,
-  readMoodleXml,
-  readPackage,
-  readResults,
-  readResultsJson,
-  readUsageData,
-  resolveStructure,
-  type ScoredResponse,
-  SecurityError,
-  USAGE_NAMESPACE,
-  type Value,
-  validateAsi,
-} from "../packages/runtime/src/index.ts";
-import { readPackageFile } from "../packages/runtime/src/node/package-file.ts";
+} from "../packages/runtime/src/operators/index.ts";
+import { DEFAULT_ZIP_LIMITS, readManifest, readPackage } from "../packages/runtime/src/package/index.ts";
 import { DIRECTORY_BYTES_PER_ENTRY } from "../packages/runtime/src/package/internal.ts";
+import { readModuleResolution } from "../packages/runtime/src/pci/index.ts";
+import { RESULTS_NAMESPACE, readResults } from "../packages/runtime/src/results/index.ts";
+import { compileScoring } from "../packages/runtime/src/scoring/index.ts";
+import { readUsageData, USAGE_NAMESPACE } from "../packages/runtime/src/usage/index.ts";
+import { validateAsi } from "../packages/runtime/src/validate/index.ts";
+import { compileXsdRegex, type Value } from "../packages/runtime/src/values/index.ts";
+import { DEFAULT_XML_LIMITS, parseXml } from "../packages/runtime/src/xml/index.ts";
 
 /** The bytes of one MiB. */
 const MIB = 1024 * 1024;

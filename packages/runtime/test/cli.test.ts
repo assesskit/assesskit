@@ -22,7 +22,7 @@ import {
   USAGE,
   UsageError,
 } from "../src/cli/internal.js";
-import { DataError, type Issue } from "../src/index.js";
+import { DataError, type Issue } from "../src/errors.js";
 import { defaultSchemaDirectory, SCHEMA_FILES, type SchemaFile } from "../src/node/index.js";
 import { FUZZ } from "./fuzz.js";
 

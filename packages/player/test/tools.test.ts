@@ -1,4 +1,4 @@
-import type { SupportView } from "@assesskit/runtime/delivery";
+import type { SupportView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import type { CalculatorType, SupportName, SupportState } from "@assesskit/runtime/pnp";
 import fc from "fast-check";

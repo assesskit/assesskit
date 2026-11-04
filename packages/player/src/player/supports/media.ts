@@ -1,4 +1,4 @@
-import type { SupportView } from "@assesskit/runtime/delivery";
+import type { SupportView } from "@assesskit/runtime/delivery/wire";
 import type { SupportName } from "@assesskit/runtime/pnp";
 import { html } from "../internal.js";
 import { CAPTION_KINDS, DESCRIPTION_KINDS } from "../media/index.js";

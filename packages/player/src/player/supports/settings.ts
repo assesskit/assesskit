@@ -1,4 +1,4 @@
-import type { SupportView } from "@assesskit/runtime/delivery";
+import type { SupportView } from "@assesskit/runtime/delivery/wire";
 import type {
   Braille,
   BrailleDeliveryMode,

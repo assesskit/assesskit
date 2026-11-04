@@ -1,18 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { type AssessmentItem, type BodyNode, listDescendantNodes, type ModelNode } from "../src/asi/index.js";
+import { resolveContent } from "../src/content/index.js";
 import { isShown } from "../src/content/internal.js";
-import {
-  type AssessmentItem,
-  type BodyNode,
-  buildContainer,
-  createItemVariables,
-  createRandom,
-  type ItemVariables,
-  listDescendantNodes,
-  type ModelNode,
-  ProcessingError,
-  resolveContent,
-  runTemplateProcessing,
-} from "../src/index.js";
+import { ProcessingError } from "../src/errors.js";
+import { createRandom } from "../src/index.js";
+import { createItemVariables, type ItemVariables, runTemplateProcessing } from "../src/processing/index.js";
+import { buildContainer } from "../src/values/index.js";
 import { exampleItems } from "./corpus-items.js";
 
 const items = exampleItems();

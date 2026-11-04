@@ -267,6 +267,7 @@ describe("module entries", () => {
     "packages/a/src/one/index.ts": "",
     "packages/a/src/one/internal.ts": "",
     "packages/a/src/one/read.ts": "",
+    "packages/a/src/one/wire.ts": "",
     "packages/a/src/one/write.ts": 'import { read } from "./read.js";\n',
     "packages/a/src/one/nested/index.ts": "",
     "packages/a/src/one/nested/deep.ts": 'import { read } from "../read.js";\n',
@@ -275,6 +276,7 @@ describe("module entries", () => {
       'import { checks } from "../checks.js";',
       'import { one } from "../one/index.js";',
       'import { shared } from "../one/internal.js";',
+      'import { wire } from "../one/wire.js";',
       'import { read } from "../one/read.js";',
       'import { nested } from "../one/nested/deep.js";',
     ].join("\n"),
@@ -288,13 +290,13 @@ describe("module entries", () => {
   it("reports an import that reaches a file of another module", () => {
     expect(checkEntries(files).map(({ file, line }) => [file, line])).toStrictEqual([
       ["packages/a/src/one/nested/deep.ts", 1],
-      ["packages/a/src/two/use.ts", 4],
       ["packages/a/src/two/use.ts", 5],
+      ["packages/a/src/two/use.ts", 6],
       ["packages/a/test/one.test.ts", 2],
     ]);
   });
 
-  it("accepts the entries of a module, its own files and the files of the package root", () => {
+  it("accepts the entries of a module, its wire forms, its own files and the files of the package root", () => {
     const accepted = [...files].filter(([file]) => file === "packages/a/src/one/write.ts");
     expect(checkEntries(new Map(accepted))).toStrictEqual([]);
   });

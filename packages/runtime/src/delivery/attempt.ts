@@ -3,14 +3,8 @@ import { withDescendants } from "../asi/internal.js";
 import { AssesskitError } from "../errors.js";
 import { describeInteractions } from "../interactions/index.js";
 import { startingResponse } from "../interactions/internal.js";
-import {
-  COMPLETION_STATUS,
-  DURATION,
-  type ItemVariables,
-  NUM_ATTEMPTS,
-  runResponseProcessing,
-} from "../processing/index.js";
-import { initialOutcome, NOT_ATTEMPTED } from "../processing/internal.js";
+import { type ItemVariables, runResponseProcessing } from "../processing/index.js";
+import { COMPLETION_STATUS, DURATION, initialOutcome, NOT_ATTEMPTED, NUM_ATTEMPTS } from "../processing/internal.js";
 import { buildSingle, type Value } from "../values/index.js";
 import { valuesToJson } from "./entries-json.js";
 import type { DeliveryEvent } from "./events.js";

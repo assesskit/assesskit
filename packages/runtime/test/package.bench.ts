@@ -1,18 +1,17 @@
 // The row against Longsight times the build, as Longsight loads from node_modules; the other benchmarks time the sources.
-import * as built from "@assesskit/runtime";
+import * as built from "@assesskit/runtime/package";
 import { parseQtiPackage } from "@longsightgroup/qti3-core";
 import fc from "fast-check";
 import { inflateSync } from "fflate";
 import { expect, test } from "vitest";
+import { type AsiDocument, writeAsi } from "../src/asi/index.js";
 import {
-  type AsiDocument,
   createPackageResolvers,
   type Manifest,
   type Resource,
   readPackage,
-  writeAsi,
   writePackage,
-} from "../src/index.js";
+} from "../src/package/index.js";
 import { modelArbitrary } from "./arbitraries/asi.js";
 import { lom, qtiMetadata } from "./arbitraries/metadata.js";
 import { BENCH_OPTIONS, BUDGETS, compareRow, expectWithin, LONGSIGHT_BUDGETS } from "./budgets.js";

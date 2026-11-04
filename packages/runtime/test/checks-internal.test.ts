@@ -8,7 +8,7 @@ import {
   checkSeed,
   nonNegativeSchema,
 } from "../src/checks-internal.js";
-import { DataError } from "../src/index.js";
+import { DataError } from "../src/errors.js";
 
 describe("checkOptions", () => {
   it("accepts an object and rejects null", () => {

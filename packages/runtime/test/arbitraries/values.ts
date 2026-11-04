@@ -8,7 +8,7 @@ import {
   type Primitive,
   type SingleValue,
   type Value,
-} from "../../src/index.js";
+} from "../../src/values/index.js";
 
 const NAME_START = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
 const NAME_REST = `${NAME_START}0123456789.-`;

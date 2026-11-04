@@ -1,4 +1,4 @@
-import type { ElementVisit } from "../asi/index.js";
+import type { ElementVisit } from "../asi/internal.js";
 import { isRecord } from "../checks.js";
 import type { XmlAttribute } from "../xml/index.js";
 

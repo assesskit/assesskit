@@ -1,7 +1,7 @@
 import { checkArray, checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
-import { formatPrimitive, isIdentifier, parsePrimitive } from "../values/index.js";
-import { xmlTokens } from "../values/internal.js";
+import { formatPrimitive, isIdentifier } from "../values/index.js";
+import { parsePrimitive, xmlTokens } from "../values/internal.js";
 import type { AttributeType } from "./table.js";
 
 /** The prefix of a term that extends a vocabulary. */

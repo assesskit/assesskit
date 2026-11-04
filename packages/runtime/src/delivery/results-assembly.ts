@@ -2,7 +2,7 @@ import type { AssessmentItem, OutcomeDeclaration } from "../asi/index.js";
 import { setCorrectResponses } from "../asi/internal.js";
 import { deriveAnsweredStatus } from "../interactions/internal.js";
 import type { SupportName } from "../pnp/index.js";
-import { COMPLETION_STATUS, DURATION, NUM_ATTEMPTS } from "../processing/index.js";
+import { COMPLETION_STATUS, DURATION, NUM_ATTEMPTS } from "../processing/internal.js";
 import type {
   AssessmentResult,
   ContextVariable,

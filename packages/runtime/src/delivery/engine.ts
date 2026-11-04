@@ -354,8 +354,9 @@ function start(course: Course, options: StartOptions): Step {
  * It first runs the static checks over everything a session can reach, as `validateTest` or `validateAsi` runs them
  * with the custom operators and the resolver of templates given, and refuses content with an error, so that no session
  * fails on it; then it resolves the section references and every item reference with its variants. An item delivered
- * alone is a test of one nonlinear test part with individual submission, whose item session control is
- * `resolveStandaloneSessionControl` of the control given.
+ * alone is a test of one nonlinear test part with individual submission, whose item session control is the
+ * standard control of an item alone, in which `show-feedback` and `allow-review` are true, with the attributes of the
+ * control given in their place.
  *
  * @param definition - What to deliver; see {@link DeliveryDefinition}.
  * @param options - See {@link EngineOptions}.

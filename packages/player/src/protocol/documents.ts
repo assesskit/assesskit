@@ -1,5 +1,5 @@
 import type { Schema } from "@assesskit/runtime/checks";
-import type { CandidateView } from "@assesskit/runtime/delivery";
+import type { CandidateView } from "@assesskit/runtime/delivery/wire";
 import * as v from "valibot";
 
 /**

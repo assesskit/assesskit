@@ -1,5 +1,5 @@
 import { listDescendantNodes, type ModelNode, type PortableCustomInteraction } from "@assesskit/runtime/asi";
-import type { CandidateView } from "@assesskit/runtime/delivery";
+import type { CandidateView } from "@assesskit/runtime/delivery/wire";
 import { DataError, SecurityError } from "@assesskit/runtime/errors";
 import { type QtiPackage, resolveResourcePath } from "@assesskit/runtime/package";
 import {

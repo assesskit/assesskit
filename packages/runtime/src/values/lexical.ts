@@ -121,18 +121,6 @@ export function parsePrimitive(text: string, baseType: BaseType): Primitive {
 }
 
 /**
- * Reads an integer in the lexical form of `xs:integer`, with whitespace around it dropped.
- *
- * @param text - The text of the integer.
- * @returns The integer.
- * @throws `DataError` when `text` is not a string, is not an integer or is outside the safe integers.
- */
-export function parseInteger(text: string): number {
-  checkString(text, "The text");
-  return readInteger(xmlTokens(text).join(" "), "integer");
-}
-
-/**
  * Writes a number in the lexical form of `xs:double`.
  *
  * @param value - The number.
@@ -147,7 +135,7 @@ export function formatDouble(value: number): string {
 }
 
 /**
- * Writes a value of a base type in its lexical form, so that {@link parsePrimitive} reads it back.
+ * Writes a value of a base type in its lexical form, so that reading the text gives the value back.
  *
  * @remarks
  * A `file` is written as its reference alone, so its content type and name are not part of the text.

@@ -1,4 +1,4 @@
-import type { SupportView } from "@assesskit/runtime/delivery";
+import type { SupportView } from "@assesskit/runtime/delivery/wire";
 import type { SupportName, SupportSetting, SupportState } from "@assesskit/runtime/pnp";
 
 /** What a test says of a support: the state and whether it is on, with the settings of the profile when it has some. */

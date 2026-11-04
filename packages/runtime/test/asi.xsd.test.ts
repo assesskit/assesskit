@@ -11,13 +11,12 @@ import {
   type AssessmentTest,
   buildScoreCoversBlock,
   buildScoringRubricBlock,
-  ReadError,
   readAsi,
-  SecurityError,
   writeAsi,
-  type XmlElement,
-} from "../src/index.js";
+} from "../src/asi/index.js";
+import { ReadError, SecurityError } from "../src/errors.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
+import type { XmlElement } from "../src/xml/index.js";
 import { DOCUMENT_ARBITRARIES } from "./arbitraries/asi.js";
 import { tableNames } from "./asi-elements.js";
 import { PLACES, vocabularyOf } from "./asi-vocabularies.js";

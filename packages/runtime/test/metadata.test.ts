@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
+import { readAsi } from "../src/asi/index.js";
+import { DataError, ReadError } from "../src/errors.js";
 import {
   ACCESS_MODES,
   type AccessForAllResource,
@@ -14,7 +16,6 @@ import {
   CP_NAMESPACE,
   CSM_NAMESPACE,
   checkQtiMetadata,
-  DataError,
   DISPLAY_TRANSFORMABILITY,
   DRD_HAZARDS,
   DRD_NAMESPACE,
@@ -22,25 +23,20 @@ import {
   FEEDBACK_TYPES,
   INTERACTION_TYPES,
   LOM_NAMESPACE,
-  parseXml,
   QTI_METADATA_NAMESPACE,
   type QtiMetadata,
-  ReadError,
   readAccessForAllResource,
-  readAsi,
   readCurriculumStandardsSet,
   readLomGeneral,
   readQtiMetadata,
   readResourceMetadata,
   SCORING_MODES,
-  serializeXml,
   writeAccessForAllResource,
   writeCurriculumStandardsSet,
   writeQtiMetadata,
   writeResourceMetadata,
-  type XmlElement,
-  type XmlNode,
-} from "../src/index.js";
+} from "../src/metadata/index.js";
+import { parseXml, serializeXml, type XmlElement, type XmlNode } from "../src/xml/index.js";
 import { accessForAllResource, curriculumStandardsSet, lom, qtiMetadata } from "./arbitraries/metadata.js";
 
 const QMD = `xmlns="${QTI_METADATA_NAMESPACE}"`;

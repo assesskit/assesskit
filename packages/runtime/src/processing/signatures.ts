@@ -1,5 +1,6 @@
 import type { Expression } from "../asi/index.js";
-import { BASE_TYPES, type BaseType, CARDINALITIES, type Cardinality } from "../values/index.js";
+import { BASE_TYPES, type BaseType, type Cardinality } from "../values/index.js";
+import { CARDINALITIES } from "../values/internal.js";
 
 /** What one operand of an operator takes. */
 export interface OperandSignature {
@@ -30,7 +31,7 @@ export interface OperandSignature {
  * | `name`      | integer for the `name`s `signum`, `floor` and `ceil`, float for the others                                  |
  * | `unknown`   | known only from the value                                                                                   |
  */
-export interface ResultSignature {
+interface ResultSignature {
   /** The cardinality of the result. */
   readonly cardinality: Cardinality | "operand" | "declared" | "unknown";
   /** The base type of the result. */

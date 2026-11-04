@@ -1,18 +1,12 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  type AssessmentTest,
-  type Issue,
-  type Resolvers,
-  readAsi,
-  readResults,
-  validateAsi,
-  validatePackage,
-  validateResults,
-  validateTest,
-} from "../src/index.js";
+import { type AssessmentTest, readAsi } from "../src/asi/index.js";
+import type { Issue } from "../src/errors.js";
 import { readPackageFile } from "../src/node/index.js";
+import type { Resolvers } from "../src/package/index.js";
+import { readResults } from "../src/results/index.js";
+import { validateAsi, validatePackage, validateResults, validateTest } from "../src/validate/index.js";
 import { EXAMPLES, exampleItems } from "./corpus-items.js";
 
 /** Counts the issues by severity and rule: `error assesskit/validate/duplicate-id 2`, sorted. */

@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { requireSchemas } from "../../../scripts/schemas.js";
-import { DataError } from "../src/index.js";
+import { DataError } from "../src/errors.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles, type XmlFile } from "../src/node/index.js";
 import { PRIMARY_SCHEMAS } from "../src/node/internal.js";
 import { parseXml } from "../src/xml/index.js";

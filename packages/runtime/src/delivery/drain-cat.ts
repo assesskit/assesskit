@@ -32,7 +32,7 @@ function checkMethod(port: CatSessionPort, method: (typeof SESSION_METHODS)[numb
 }
 
 /** Reads the option `signal` of a call that waits for the CAT engine. */
-function readSignal(options: SendCatRequestOptions): AbortSignal | undefined {
+function readSignal(options: CallOptions): AbortSignal | undefined {
   checkOptions(options);
   const { signal } = options;
   checkOptional(signal, (value) => checkAbortSignal(value, "The option signal"));
@@ -64,18 +64,6 @@ async function call(port: CatSessionPort, request: CatRequest, options: CallOpti
   }
 }
 
-/** The options of {@link sendCatRequest}. */
-export interface SendCatRequestOptions extends CallOptions {
-  /**
-   * Ends the wait of the caller: the call rejects with the reason of the signal, before the request when the signal has
-   * aborted already, else as soon as it aborts. The port gets the signal with the request, so that it can stop the
-   * request; one that it does not stop goes on to the timeout of the port, and its answer is lost.
-   *
-   * @defaultValue none
-   */
-  readonly signal?: AbortSignal;
-}
-
 /**
  * Makes one CAT request through a port and returns the answer as a `cat-response` action takes it: the engine's reply to
  * Create Session or Submit Results, or `{ ended: true }` for End Session, which the CAT specification answers with no
@@ -88,7 +76,9 @@ export interface SendCatRequestOptions extends CallOptions {
  *
  * @param port - The host's access to the CAT engine; only the method that the request needs is called.
  * @param request - A request from `Engine.pending`.
- * @param options - See {@link SendCatRequestOptions}.
+ * @param options - The `signal` ends the wait of the caller: the call rejects with its reason, before the request when the
+ * signal has aborted already, else as soon as it aborts. The port gets the signal with the request, so that it can stop
+ * the request; one that it does not stop goes on to the timeout of the port, and its answer is lost.
  * @returns The answer, for the `response` of a `cat-response` action.
  * @throws `DataError` when the request is not a CAT request, an option has the wrong type or the port lacks the method that
  * it needs; the error of the port when it rejects.
@@ -97,7 +87,7 @@ export interface SendCatRequestOptions extends CallOptions {
 export async function sendCatRequest(
   port: CatSessionPort,
   request: CatRequest,
-  options: SendCatRequestOptions = {},
+  options: CallOptions = {},
 ): Promise<CatResponse> {
   checkRecord(port, "The port must be an object with the methods of CatSessionPort");
   checkRecord(request, "The request must be a CAT request from Engine.pending");
@@ -105,18 +95,6 @@ export async function sendCatRequest(
   const signal = readSignal(options);
   signal?.throwIfAborted();
   return raceAbort(call(port, request, { signal }), { signal });
-}
-
-/** The options of {@link drainCat}. */
-export interface DrainCatOptions extends CallOptions {
-  /**
-   * Ends the wait of the caller, before the next request or while one waits for its answer, as in
-   * {@link SendCatRequestOptions}. The call then rejects with the reason of the signal, and the answers applied so far are
-   * lost with the state that was not returned.
-   *
-   * @defaultValue none
-   */
-  readonly signal?: AbortSignal;
 }
 
 /**
@@ -136,7 +114,9 @@ export interface DrainCatOptions extends CallOptions {
  * @param state - The state with requests waiting.
  * @param port - The host's access to the CAT engine; only `createSession`, `submitResults` and `endSession` are called.
  * @param now - The host's clock, in epoch milliseconds.
- * @param options - See {@link DrainCatOptions}.
+ * @param options - The `signal` ends the wait of the caller, before the next request or while one waits for its answer, as
+ * in {@link sendCatRequest}. The call then rejects with the reason of the signal, and the answers applied so far are
+ * lost with the state that was not returned.
  * @returns The state after every answer.
  * @throws `DataError` when an argument has the wrong type, or the engine refuses an answer of the port.
  * @throws `signal.reason` when the signal aborts before a request or while one waits for its answer.
@@ -146,7 +126,7 @@ export async function drainCat(
   state: DeliveryState,
   port: CatSessionPort,
   now: () => number,
-  options: DrainCatOptions = {},
+  options: CallOptions = {},
 ): Promise<DeliveryState> {
   checkRecord(engine, "The engine must be an object from createEngine");
   checkState(state);

@@ -3,14 +3,9 @@ import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
+import { ASI_NAMESPACE, type PortableCustomInteraction, readAsi } from "../src/asi/index.js";
+import { DataError } from "../src/errors.js";
 import {
-  ASI_NAMESPACE,
-  type BaseType,
-  buildContainer,
-  buildRecord,
-  buildSingle,
-  type Cardinality,
-  DataError,
   DEFAULT_WAIT_SECONDS,
   decodePciValue,
   derivePciProperties,
@@ -20,16 +15,21 @@ import {
   type PciFileLoader,
   type PciFileStore,
   type PciModuleConfiguration,
-  type PortableCustomInteraction,
-  readAsi,
   readModuleResolution,
   resolveModuleConfigurationPaths,
   resolvePciModules,
+  validatePortableInteraction,
+} from "../src/pci/index.js";
+import {
+  type BaseType,
+  buildContainer,
+  buildRecord,
+  buildSingle,
+  type Cardinality,
   type SingleValue,
   type Value,
   type ValueDeclaration,
-  validatePortableInteraction,
-} from "../src/index.js";
+} from "../src/values/index.js";
 import { baseType, recordValue, valueArbitrary } from "./arbitraries/values.js";
 import { fuzzJson } from "./fuzz.js";
 

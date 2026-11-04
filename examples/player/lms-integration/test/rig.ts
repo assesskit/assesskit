@@ -6,7 +6,8 @@ import {
   type ToolScoreIntake,
   type ToolScoreStore,
 } from "@assesskit/player/server";
-import { type CandidateAction, type ItemKey, writeCandidateAction } from "@assesskit/runtime/delivery";
+import type { ItemKey } from "@assesskit/runtime/delivery";
+import { type CandidateAction, writeCandidateAction } from "@assesskit/runtime/delivery/wire";
 import { type LtiLink, readLtiLink } from "@assesskit/runtime/package";
 import { buildSingle } from "@assesskit/runtime/values";
 import { createCryptoKeySigner, type Fetch } from "@interopkit/core";
