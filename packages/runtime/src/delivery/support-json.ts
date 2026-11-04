@@ -1,5 +1,14 @@
 import * as v from "valibot";
-import { describe, isRecord, parseWith, plainSchema, recordSchema, type Schema, transformWith } from "../checks.js";
+import {
+  describe,
+  isRecord,
+  parseWith,
+  plainSchema,
+  recordSchema,
+  type Schema,
+  strictRecord,
+  transformWith,
+} from "../checks.js";
 import { DataError } from "../errors.js";
 import {
   type Braille,
@@ -62,7 +71,7 @@ type Properties<TSetting> = { readonly [TName in keyof Required<TSetting>]: v.Ge
 const parameter = v.optional(v.unknown());
 
 /** A zoom of magnification, with nothing but its amount. */
-const zoom = v.optional(v.strictObject({ zoomAmount: parameter }));
+const zoom = v.optional(strictRecord({ zoomAmount: parameter }));
 
 const braille = {
   name: v.literal("braille"),
@@ -102,7 +111,7 @@ const textAppearance = {
   fontColor: parameter,
   fontSize: parameter,
   fontFace: v.optional(
-    v.strictObject({ fontNames: parameter, genericFontFace: parameter } satisfies Properties<FontFace>),
+    strictRecord({ fontNames: parameter, genericFontFace: parameter } satisfies Properties<FontFace>),
   ),
   lineSpacing: parameter,
   lineHeight: parameter,

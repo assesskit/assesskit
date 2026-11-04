@@ -17,8 +17,8 @@ export interface ItemKey {
   readonly instance: number;
 }
 
-/** The schema of an item instance in JSON; it reads the two properties and no other. */
-export const itemKeySchema: Schema<ItemKey> = v.object({ ref: v.string(), instance: positiveIntegerSchema });
+/** The schema of an item instance in JSON: the two properties and no other, which no state or action holds. */
+export const itemKeySchema: Schema<ItemKey> = v.strictObject({ ref: v.string(), instance: positiveIntegerSchema });
 
 /**
  * Checks an item instance.

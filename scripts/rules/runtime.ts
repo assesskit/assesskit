@@ -336,6 +336,27 @@ export const RUNTIME_RULES: readonly Rule[] = [
     test: "packages/runtime/test/values.test.ts",
   },
   {
+    rule: "An item instance of an action has its two properties and no other.",
+    file: "packages/runtime/src/delivery/item-key.ts",
+    find: "v.strictObject({ ref: v.string(), instance: positiveIntegerSchema })",
+    replace: "v.object({ ref: v.string(), instance: positiveIntegerSchema })",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "A zoom of magnification is refused as a list, which an object of optional properties would read as empty.",
+    file: SUPPORT_JSON,
+    find: "const zoom = v.optional(strictRecord({ zoomAmount: parameter }));",
+    replace: "const zoom = v.optional(v.strictObject({ zoomAmount: parameter }));",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "A font face of text appearance is refused as a list, which an object of optional properties would read as empty.",
+    file: SUPPORT_JSON,
+    find: "strictRecord({ fontNames: parameter, genericFontFace: parameter } satisfies Properties<FontFace>)",
+    replace: "v.strictObject({ fontNames: parameter, genericFontFace: parameter })",
+    test: DELIVERY_TEST,
+  },
+  {
     rule: "Settings of a support that a host passes, with a name that reaches the prototype, are refused.",
     file: SUPPORT_JSON,
     find: '  recordSchema,\n  v.variant(\n    "name",',

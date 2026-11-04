@@ -4933,6 +4933,22 @@ describe("candidate actions", () => {
       "The action is invalid at responses: expected an array, found an object.",
     );
     refuses(
+      '{"type":"submit","item":{"ref":"a","instance":1,"foo":2}}',
+      'The action is invalid at item: unexpected property "foo".',
+    );
+    refuses(
+      '{"type":"move","to":{"ref":"a","instance":1,"foo":2}}',
+      'The action is invalid at to: The place of move must be "next", "previous" or an item instance.',
+    );
+    refuses(
+      '{"type":"support-settings","settings":{"name":"magnification","replaceAccessModes":[],"allContent":[]}}',
+      "The action is invalid at settings.allContent: expected an object, found an array.",
+    );
+    refuses(
+      '{"type":"support-settings","settings":{"name":"text-appearance","replaceAccessModes":[],"fontFace":[]}}',
+      "The action is invalid at settings.fontFace: expected an object, found an array.",
+    );
+    refuses(
       '{"type":"set-responses","item":{"ref":"a","instance":1},"responses":[["R",null],["R",null]]}',
       'The action is invalid at responses: the identifier "R" occurs twice.',
     );
