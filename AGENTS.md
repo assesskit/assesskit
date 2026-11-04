@@ -214,6 +214,10 @@ that the player needs and the runtime lacks is a change in the runtime, with its
   and lets a call spread an array literal or a choice between two, whose length the code sets. Nodes go into an element with
   `appendAll` or `replaceAll` of `player/dom.ts`, which append in steps and are the one place the rule leaves out.
 - Every semantic rule names its specification with `@see` in the TSDoc of the code that applies it, and not in an issue.
+- A status or message the player writes after an action keeps its room whether or not it has text: the style gives it a
+  `min-height` and never `display: none` when empty, so that what follows does not move under a pointer and a button that
+  moves between press and release does not lose its click. A new live region gets a browser test that holds the position of the
+  element after it across the write (STANDARDS section 10).
 
 ## The state format
 

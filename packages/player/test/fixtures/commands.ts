@@ -34,6 +34,8 @@ declare module "vitest/browser" {
     axeInFrame: (title: string, tags: readonly string[]) => Promise<readonly FrameViolation[]>;
     ariaSnapshot: () => Promise<string>;
     clickInFrame: (title: string, selector: string) => Promise<void>;
+    pressPointer: (selector: string) => Promise<void>;
+    releasePointer: () => Promise<void>;
     frameTheme: (title: string) => Promise<FrameTheme>;
     watchConsole: () => Promise<void>;
     consoleErrors: () => Promise<readonly string[]>;
@@ -72,6 +74,20 @@ const axeInFrame: BrowserCommand<[title: string, tags: readonly string[]], reado
 /** Clicks an element inside the frame of an interaction with the pointer, as a candidate does. */
 const clickInFrame: BrowserCommand<[title: string, selector: string], void> = async (context, title, selector) => {
   await (await frameTitled(context, title)).locator(selector).click();
+};
+
+/**
+ * Moves the pointer over an element of the test page and presses its button, and holds it until `releasePointer`: a press
+ * that lasts, as a person's does, so that a test can change the page between the press and the release.
+ */
+const pressPointer: BrowserCommand<[selector: string], void> = async (context, selector) => {
+  await (await context.frame()).locator(selector).hover();
+  await context.page.mouse.down();
+};
+
+/** Lets go of the button that `pressPointer` holds. */
+const releasePointer: BrowserCommand<[], void> = async (context) => {
+  await context.page.mouse.up();
 };
 
 /** Reads the presentation that applies in the frame of an interaction, which the test page cannot read: its origin is opaque. */
@@ -134,6 +150,8 @@ export const COMMANDS = {
   axeInFrame,
   ariaSnapshot,
   clickInFrame,
+  pressPointer,
+  releasePointer,
   frameTheme,
   watchConsole,
   consoleErrors,

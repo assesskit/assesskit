@@ -20,6 +20,7 @@ import { computed, PLAYER_CSS } from "./css-fixture.js";
 import { examDefinition, examFiles, examHost, lexiconFiles, packageOf, pciFiles } from "./exam-fixture.js";
 import { NO_RECORDING } from "./files-fixture.js";
 import { picture, settle } from "./graphic-fixture.js";
+import { boxOf, clicksDuring } from "./layout-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
 import { calculatorXml, protractorXml, ruleXml } from "./tools-fixture.js";
 import { waitFor } from "./wait.js";
@@ -174,6 +175,15 @@ const contentOf = (ui: ShadowRoot): ShadowRoot =>
 const statusOf = (ui: ShadowRoot): string => ui.querySelector(".ak-status")?.textContent ?? "";
 const timerStatusOf = (ui: ShadowRoot): string => ui.querySelector(".ak-timer-status")?.textContent ?? "";
 const dialogOf = (ui: ShadowRoot): HTMLDialogElement | null => ui.querySelector("dialog.ak-confirm");
+
+/** A button of the host's page, after the player, such as the Submit of a host that draws its own chrome. */
+function hostButton(s: Shell, label: string): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.textContent = label;
+  s.page.after(button);
+  hosts.push(button);
+  return button;
+}
 
 /** Waits until the content of the first item is on screen. */
 const shown = (s: Shell): Promise<void> =>
@@ -539,6 +549,28 @@ describe("mountDelivery", () => {
     await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
   });
 
+  it("keeps the room of the timer status, so that the item and the actions do not move when a warning is announced", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "setInterval", "clearTimeout", "clearInterval"] });
+    const s = await shell({ files: examFiles({ limits: '<qti-time-limits max-time="600"/>' }) });
+    await vi.advanceTimersByTimeAsync(0);
+    await real(150);
+    const tick = async (seconds: number): Promise<void> => {
+      s.clock.advance(seconds * SECOND);
+      await vi.advanceTimersByTimeAsync(seconds * SECOND);
+      await real(50);
+    };
+    await tick(1);
+    expect(timerStatusOf(s.ui)).toBe("");
+    const submit = buttonNamed(s.ui, "Submit answer");
+    const before = boxOf(submit);
+    await tick(300);
+    expect(timerStatusOf(s.ui)).toBe("Time left: 4 minutes 59 seconds");
+    expect(boxOf(submit)).toEqual(before);
+    await tick(239);
+    expect(timerStatusOf(s.ui)).toBe("Time left: 1 minute");
+    expect(boxOf(submit)).toEqual(before);
+  });
+
   it("tells the candidate who reloads inside the last minutes how much time is left", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "setInterval", "clearTimeout", "clearInterval"] });
     const s = await shell({ files: examFiles({ limits: '<qti-time-limits max-time="200"/>' }) });
@@ -713,6 +745,36 @@ describe("mountDelivery", () => {
       expect(region?.getAttribute("role"), selector).toBe("status");
       expect(region?.getAttribute("aria-atomic"), selector).toBe("true");
     }
+  });
+
+  it("keeps the room of the status line, so that what follows the player does not move when a message is written", async () => {
+    const s = await shell({ files: examFiles({ control: '<qti-item-session-control allow-comment="true"/>' }) });
+    await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    const next = hostButton(s, "Next");
+    const region = s.ui.querySelector(".ak-status") as HTMLElement;
+    expect(region.textContent).toBe("");
+    expect(region.getBoundingClientRect().height).toBeGreaterThan(0);
+    // A test without timers has no timer status to keep room for.
+    expect(s.ui.querySelector(".ak-timer-status")?.getBoundingClientRect().height).toBe(0);
+    const before = boxOf(next);
+    choices(s.ui)[1]?.click();
+    await waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."));
+    expect(boxOf(next)).toEqual(before);
+    (s.ui.querySelector("textarea") as HTMLTextAreaElement).value = "Fine.";
+    buttonNamed(s.ui, "Save comment").click();
+    await waitFor(() => expect(statusOf(s.ui)).toBe("Comment saved."));
+    expect(boxOf(next)).toEqual(before);
+  });
+
+  it("delivers the click of a host's button that the answers saved while it was pressed would have moved", async () => {
+    const s = await shell();
+    await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    const next = hostButton(s, "Next");
+    const clicks = await clicksDuring(next, async () => {
+      choices(s.ui)[1]?.click();
+      await waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."));
+    });
+    expect(clicks).toBe(1);
   });
 
   it("says that the answers could not be sent, and that they were rejected", async () => {

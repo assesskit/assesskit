@@ -11,6 +11,10 @@ export const FOCUS_RING = "outline: 3px solid CanvasText; outline-offset: 2px; b
  * Like the tools it uses the system colors, so that it follows the color scheme and the forced colors of the browser, and
  * sizes in `rem`, so that it follows the text size. Nothing relies on color alone.
  *
+ * The status regions keep the room of a line whether or not they hold text. A region that took room only with its text would
+ * move whatever follows it when a message is written, and a button that moves between the press and the release of a
+ * pointer gets no click.
+ *
  * @see {@link https://www.w3.org/TR/WCAG22/#use-of-color | WCAG 2.2, use of color}
  */
 const BASE_CSS = `
@@ -21,7 +25,6 @@ const BASE_CSS = `
 .ak-content-host { display: block; }
 .ak-player :focus-visible, .ak-item :focus-visible { ${FOCUS_RING} }
 .ak-status, .ak-timer-status { min-height: 1.5rem; margin: 0; padding: 0.25rem 0; font-weight: 700; }
-.ak-status:empty, .ak-timer-status:empty { display: none; }
 .ak-item { gap: 0.5rem; }
 `;
 

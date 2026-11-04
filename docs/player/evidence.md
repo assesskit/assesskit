@@ -100,6 +100,11 @@ the examples, and `pnpm test:corpus` runs them in the three engines. The global 
 under `/c/<token>/<example>/`, as the asset gate would, and the `pci-fixture.ts` helpers mount an interaction as the
 player does.
 
+The tests of the status lines (`mount-item.browser.test.ts` and `delivery.browser.test.ts`) hold the position of a button after the
+player across the write of "Answers saved." and of a refusal, and of the actions across a timer warning. They also press a
+button with the pointer, write the message while the press lasts, and release: the button must get its click (`layout-fixture.ts`,
+with the commands `pressPointer` and `releasePointer`).
+
 MathJax is a global of the page and a failure to load it is final, so a test that needs a page without MathJax, or with a
 failure, has a file of its own (`math-failure` and `math-wrong-script`). A test file runs in a page of its own.
 

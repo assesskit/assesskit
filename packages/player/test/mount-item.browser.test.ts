@@ -14,6 +14,7 @@ import type { SessionClient } from "../src/protocol/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
 import { examHost, fakeClock, pciFiles } from "./exam-fixture.js";
 import { NO_RECORDING } from "./files-fixture.js";
+import { boxOf, clicksDuring } from "./layout-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
 import { waitFor } from "./wait.js";
 
@@ -196,6 +197,27 @@ describe("mountItem", () => {
     expect(regions[0]?.getAttribute("aria-live")).toBe("polite");
   });
 
+  it("keeps the room of the status line, so that what follows the item does not move when the answers are saved", async () => {
+    const s = await embed("l1");
+    const check = pageButton("Check the answer");
+    await shown(s);
+    const before = boxOf(check);
+    choices(s.ui)[1]?.click();
+    await waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."));
+    expect(boxOf(check)).toEqual(before);
+  });
+
+  it("delivers the click of a button that the answers saved while it was pressed would have moved", async () => {
+    const s = await embed("l1");
+    const check = pageButton("Check the answer");
+    await shown(s);
+    const clicks = await clicksDuring(check, async () => {
+      choices(s.ui)[1]?.click();
+      await waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."));
+    });
+    expect(clicks).toBe(1);
+  });
+
   it("says in words why the engine refused, in the status region", async () => {
     const s = await embed("l1", {
       wrap: (client) =>
@@ -204,9 +226,12 @@ describe("mountItem", () => {
           refusal: { reason: "time-over", message: "The time is over." },
         })),
     });
+    const check = pageButton("Check the answer");
     await shown(s);
+    const before = boxOf(check);
     choices(s.ui)[0]?.click();
     await waitFor(() => expect(statusOf(s.ui)).toBe("The time for this question is over."));
+    expect(boxOf(check)).toEqual(before);
   });
 
   it("writes the interface in the language of the candidate", async () => {

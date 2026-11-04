@@ -30,7 +30,8 @@ const TICK_MS = 1000;
  * content is a content root, which takes the supports that are on; portable custom interactions run in their frames. The
  * player decides nothing of QTI: it sends the actions that the engine lists and shows what the engine answers.
  *
- * - **Status messages** go to `role="status"` regions and never move the focus.
+ * - **Status messages** go to `role="status"` regions that keep their room whether or not they hold text, and never move the
+ *   focus.
  * - **Focus** moves to the heading of the item when the item changes, and when the control that had it is gone.
  * - **Confirmations** are modal dialogs that start on the answer that goes back.
  * - **Submits** wait for the interactions to hand over what the candidate gave, such as a drawing that is still being

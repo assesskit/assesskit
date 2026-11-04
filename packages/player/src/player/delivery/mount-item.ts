@@ -33,7 +33,8 @@ function checkNoLtiItem(view: CandidateView): void {
  * comment box or tools: the host sends the actions of the session client and shows what the engine refused. It does not load
  * the code of the chrome, so that a page with many items costs the content only (see the size guide).
  *
- * - **Status messages** go to one `role="status"` region and never move the focus.
+ * - **Status messages** go to one `role="status"` region that keeps its room whether or not it holds text, and never moves the
+ *   focus.
  * - **Focus** moves only into a modal dialog of feedback, as a modal must, and back to where it was when the candidate closes
  *   it. Nothing else takes it from the page.
  * - **A closed item** stays drawn until `destroy`.

@@ -270,6 +270,11 @@ says why, in the language of the interface, in a polite live region with `role="
 | The host rejected the action (`DataError`, 403)  | The test could not accept this action.                                   |
 | The action is above the limits (`SecurityError`) | The test could not accept this action; the error goes to `hooks.onError` |
 
+The region keeps the room of one line whether or not it has text, so that a message moves nothing: the player writes "Answers saved."
+about 50 ms after an answer, and a button that moves between the press and the release of a pointer gets no click. `mountDelivery`
+keeps the same room for the region of the timer warnings from the first view that shows a timer; a test with no timer has none.
+A message longer than a line, in a narrow page, takes the lines it needs.
+
 ## Focus
 
 | When                                                    | Where the focus goes                                                                            |

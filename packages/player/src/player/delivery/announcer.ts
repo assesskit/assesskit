@@ -25,7 +25,8 @@ export interface Announcer {
  * Creates a polite live region with `role="status"`.
  *
  * @remarks
- * Its text is visible, so that the candidate who does not use a screen reader reads it too.
+ * Its text is visible, so that the candidate who does not use a screen reader reads it too. The style of the class keeps the room
+ * of a line for the region whether or not it holds text, so that writing a message moves nothing.
  *
  * @param className - The class of the region.
  * @returns The announcer.
