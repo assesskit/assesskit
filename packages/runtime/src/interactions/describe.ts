@@ -386,7 +386,7 @@ const DESCRIPTORS = new WeakMap<AssessmentItem, readonly InteractionDescriptor[]
  *
  * @remarks
  * The descriptors hold the item as authored, with every choice, hidden or not, so that shuffling can draw over all of
- * them; {@link presentChoices} drops the hidden ones.
+ * them; the delivery engine drops the hidden ones before it presents the choices.
  *
  * Attributes that a document omits have the defaults of the schema, and a maximum of 0, which means no restriction, is
  * left out of the constraints.

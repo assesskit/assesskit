@@ -321,8 +321,8 @@ function violationsOf(descriptor: InteractionDescriptor, value: Value | null): R
  * `pattern-mask`; the bounds and step of a slider; and the types an upload accepts.
  *
  * @remarks
- * `describeInteractions` gives the descriptor, and {@link presentChoices} one without the hidden choices, which is the
- * descriptor to check against.
+ * `describeInteractions` gives the descriptor with every choice; the descriptor to check against is one without the
+ * hidden choices, which the delivery engine makes.
  *
  * A text interaction bound to a number is checked for the number of entries but not for its `pattern-mask`, because the
  * text is not in the value (it is in the variable of `string-identifier`).
