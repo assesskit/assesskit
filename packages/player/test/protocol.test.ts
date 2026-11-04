@@ -20,29 +20,23 @@ import protocolGuide from "../../../docs/player/protocol.md?raw";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import readme from "../README.md?raw";
 import { createLocalSession } from "../src/client/local/index.js";
+import { type HostStep, LTI_STORAGE_FRAME, LTI_TOOL_FRAME, REFUSAL_REASONS } from "../src/protocol/index.js";
 import {
+  type CatAnswerer,
   checkActionEnvelope,
   checkAllowList,
   checkCaller,
-  checkLtiFrame,
-  checkRefusal,
-  checkSubmission,
-  checkViewEnvelope,
-  type HostStep,
-  isOfficialResult,
-  LTI_STORAGE_FRAME,
-  LTI_TOOL_FRAME,
-  REFUSAL_REASONS,
-  resolveViewDocuments,
-} from "../src/protocol/index.js";
-import {
-  type CatAnswerer,
   checkHostAction,
   checkHostApplyOptions,
+  checkLtiFrame,
+  checkSubmission,
+  checkViewEnvelope,
   checkViewRequest,
   createCatLoops,
+  isOfficialResult,
   isViewRequest,
   markOfficial,
+  resolveViewDocuments,
   stepAfterIdle,
 } from "../src/protocol/internal.js";
 import { CANDIDATE_ACTION_TYPES } from "../src/server/index.js";
@@ -297,7 +291,10 @@ describe("REFUSAL_REASONS", () => {
       "wrong-submission-mode": true,
     };
     expect([...REFUSAL_REASONS].sort()).toEqual(Object.keys(every).sort());
-    for (const reason of REFUSAL_REASONS) expect(() => checkRefusal({ reason, message: "m" })).not.toThrow();
+    for (const reason of REFUSAL_REASONS) {
+      const envelope = json(`{"seq":2,"view":{},"assets":{},"refusal":{"reason":"${reason}","message":"m"}}`);
+      expect(() => checkViewEnvelope(envelope), reason).not.toThrow();
+    }
   });
 
   it("are the reasons that the table of refusal reasons in the delivery guide of the runtime lists", () => {
@@ -1206,7 +1203,6 @@ describe("properties", () => {
     };
     const refusal = { reason: "time-over", message: "The time is over." };
     fuzzJson((value) => checkViewEnvelope(value), [envelope, { ...envelope, documents, refusal }]);
-    fuzzJson((value) => checkRefusal(value), [refusal]);
     fuzzJson((value) => checkSubmission(value), [SUBMISSION]);
   });
 });

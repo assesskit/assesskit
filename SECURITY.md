@@ -322,7 +322,7 @@ another party, and its frame has `allow-same-origin`, so that the tool keeps its
 - The player checks the first URLs of the frames only; where a tool then navigates its frame, its login included, only the
   `frame-src` of the page limits. Serve the platform's LTI endpoints from an origin other than the page's, as the storage page
   is, and add to `frame-src` their origin and the tools', not the page's own.
-- `checkLtiFrame` checks what the hook answers: absolute `http` or `https` URLs and an allow list of letters, digits, spaces and
+- The player checks what the hook answers: absolute `http` or `https` URLs and an allow list of letters, digits, spaces and
   `; * : / . ' -`. A `javascript:` or `data:` URL is never a frame URL.
 - The hook takes a `signal` that aborts when the candidate leaves the item, and the player drops an answer that comes late.
 - The ports `forward.log` and `createToolScoreIntake` receive data that the host's adapter already checked. The intake supplies

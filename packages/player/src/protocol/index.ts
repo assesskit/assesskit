@@ -5,29 +5,22 @@
  *
  * @module @assesskit/player/protocol
  */
-export { type ActionEnvelope, checkActionEnvelope } from "./action-envelope.js";
-export { type Caller, checkCaller } from "./caller.js";
+export type { ActionEnvelope } from "./action-envelope.js";
+export type { Caller } from "./caller.js";
 export type { Clock } from "./clock.js";
-export { type DocumentSource, type ItemDocuments, resolveViewDocuments, type ViewDocuments } from "./documents.js";
+export type { ViewDocuments } from "./documents.js";
 export type { CatFailure, HostApplyOptions, HostSession, HostStep } from "./host-session.js";
-export {
-  checkAllowList,
-  checkLtiFrame,
-  LTI_STORAGE_FRAME,
-  LTI_TOOL_FRAME,
-  type LtiFrame,
-} from "./lti-frame.js";
-export { isOfficialResult, type OfficialResult } from "./official.js";
-export { checkRefusal, REFUSAL_REASONS } from "./refusal.js";
+export { LTI_STORAGE_FRAME, LTI_TOOL_FRAME, type LtiFrame } from "./lti-frame.js";
+export type { OfficialResult } from "./official.js";
+export { REFUSAL_REASONS } from "./refusal.js";
 export type { DispatchResult, SessionClient } from "./session-client.js";
-export {
-  checkSubmission,
-  type Submission,
-  type SubmissionItem,
-  type SubmissionPart,
-  type SubmissionSupplied,
-  type SubmissionValue,
-  type SubmissionVariable,
+export type {
+  Submission,
+  SubmissionItem,
+  SubmissionPart,
+  SubmissionSupplied,
+  SubmissionValue,
+  SubmissionVariable,
 } from "./submission.js";
-export { checkViewEnvelope, type ViewEnvelope } from "./view-envelope.js";
+export type { ViewEnvelope } from "./view-envelope.js";
 export type { ViewRequest } from "./view-request.js";

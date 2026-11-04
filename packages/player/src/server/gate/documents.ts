@@ -7,12 +7,8 @@ import {
   resolveReference,
   resolveResourcePath,
 } from "@assesskit/runtime/package";
-import {
-  type DocumentSource,
-  type ItemDocuments,
-  resolveViewDocuments,
-  type ViewDocuments,
-} from "../../protocol/index.js";
+import type { ViewDocuments } from "../../protocol/index.js";
+import { type DocumentSource, type ItemDocuments, resolveViewDocuments } from "../../protocol/internal.js";
 import { dependenciesOf } from "./dependencies.js";
 
 /** A test of a package with its structure resolved, which every session of the test shares. */

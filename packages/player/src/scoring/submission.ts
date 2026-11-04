@@ -2,14 +2,14 @@ import { checkArray, checkRecord, describe } from "@assesskit/runtime/checks";
 import type { ScorerItem, ScorerView, ScoringCover, ScoringRequest } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { type Value, writeWireValue } from "@assesskit/runtime/values";
-import {
-  checkSubmission,
-  type Submission,
-  type SubmissionItem,
-  type SubmissionPart,
-  type SubmissionSupplied,
-  type SubmissionVariable,
+import type {
+  Submission,
+  SubmissionItem,
+  SubmissionPart,
+  SubmissionSupplied,
+  SubmissionVariable,
 } from "../protocol/index.js";
+import { checkSubmission } from "../protocol/internal.js";
 
 /**
  * Returns the entries of a map of variables, in the map's order. A value names its own cardinality and base type, so the

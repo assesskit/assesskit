@@ -28,15 +28,7 @@ import type { CandidateAction, CandidateView } from "@assesskit/runtime/delivery
 import { DataError } from "@assesskit/runtime/errors";
 import { resolveReference } from "@assesskit/runtime/package";
 import * as v from "valibot";
-import {
-  type Clock,
-  type DocumentSource,
-  type HostSession,
-  type HostStep,
-  resolveViewDocuments,
-  type SessionClient,
-  type ViewDocuments,
-} from "../../protocol/index.js";
+import type { Clock, HostSession, HostStep, SessionClient, ViewDocuments } from "../../protocol/index.js";
 import {
   type CatAnswerer,
   type CatLoopFailure,
@@ -44,8 +36,10 @@ import {
   checkHostApplyOptions,
   clockSchema,
   createCatLoops,
+  type DocumentSource,
   MAX_TIMER_DELAY_MS,
   readClock,
+  resolveViewDocuments,
   stepAfterIdle,
 } from "../../protocol/internal.js";
 import { BROWSER_CLOCK, notifyListeners } from "../internal.js";

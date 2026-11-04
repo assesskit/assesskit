@@ -20,16 +20,15 @@ sequenceDiagram
   E-->>H: scores-applied, or scores-replaced for a second score
 ```
 
-| Step                                  | Where                                | Function                                          |
-| ------------------------------------- | ------------------------------------ | ------------------------------------------------- |
-| Turn a request into a JSON submission | shared, `@assesskit/player/scoring`  | `buildSubmission`                                 |
-| Check a submission that arrived       | shared, `@assesskit/player/protocol` | `checkSubmission`                                 |
-| Show a submission to a rater          | browser, `@assesskit/player/player`  | `mountSubmission`                                 |
-| Show a rating form                    | browser, `@assesskit/player/player`  | `mountRatingForm` ([rating](rating.md))           |
-| Turn ratings into a score             | shared, `@assesskit/runtime/asi`     | `rubricScore`, which the form calls               |
-| Turn the rater's score into an action | shared, `@assesskit/player/scoring`  | `buildSupplyScores`                               |
-| Give the action to the engine         | server or device, the host session   | `session(id).apply(action)`, `host.apply(action)` |
-| Read the score of a session           | shared, `@assesskit/player/scoring`  | `buildSessionScore`                               |
+| Step                                  | Where                               | Function                                          |
+| ------------------------------------- | ----------------------------------- | ------------------------------------------------- |
+| Turn a request into a JSON submission | shared, `@assesskit/player/scoring` | `buildSubmission`                                 |
+| Show a submission to a rater          | browser, `@assesskit/player/player` | `mountSubmission`                                 |
+| Show a rating form                    | browser, `@assesskit/player/player` | `mountRatingForm` ([rating](rating.md))           |
+| Turn ratings into a score             | shared, `@assesskit/runtime/asi`    | `rubricScore`, which the form calls               |
+| Turn the rater's score into an action | shared, `@assesskit/player/scoring` | `buildSupplyScores`                               |
+| Give the action to the engine         | server or device, the host session  | `session(id).apply(action)`, `host.apply(action)` |
+| Read the score of a session           | shared, `@assesskit/player/scoring` | `buildSessionScore`                               |
 
 On a device the page learns of a request from `host.subscribeSteps` on `scoring-requested`, and checks `host.pending()` once after
 `createLocalSession` ([client](client.md#the-host-side)); a server's rater endpoint calls `session(id).pending()` and
@@ -142,7 +141,7 @@ rates one outcome. It is JSON text as it is: `JSON.parse(JSON.stringify(submissi
 - A variable is `{ identifier, value }` in a list, so that an identifier such as `__proto__` stays data.
 - The content is the runtime's typed nodes, as JSON.
 
-`checkSubmission(value)` of `@assesskit/player/protocol` checks a submission that arrived as JSON: every property of its
+`buildSubmission` and `mountSubmission` check a submission: every property of its
 form and no other, the type of every field, the content as nodes as a view carries them, the scoring rubric as the runtime's `checkScoringRubric`
 does, and that each part names an item the submission has once. It reads no value; `readWireValue` does when the value is
 shown.
@@ -257,7 +256,6 @@ Raters have their own tools. The display adds no controls: the [rating form](rat
 | `buildSubmission(view)`              | `view` is not a scorer view, a part of it has the wrong type, or what it holds is not a submission                                                                                                                                             |
 | `buildSupplyScores(request, ...)`    | `request` is not a scoring request, `scorer` is not `human` or `externalMachine`, or the score does not fit the declaration, such as a single string for a single float outcome: `The outcome SCORE is a single float, found a single string.` |
 | `buildSessionScore(result, pending)` | `result` is not the report of a session host, has no test result and not exactly one item result, `SCORE` or `MAXSCORE` is not a finite number, or `MAXSCORE` is not above 0                                                                   |
-| `checkSubmission(value)`             | `value` is not a submission: see [protocol](protocol.md#errors)                                                                                                                                                                                |
 | `mountSubmission`, `update`          | an option or the submission is not valid, or the host has a shadow root                                                                                                                                                                        |
 
 ## Not included

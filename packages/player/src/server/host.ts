@@ -37,21 +37,16 @@ import { DataError, ServiceError } from "@assesskit/runtime/errors";
 import type { QtiPackage } from "@assesskit/runtime/package";
 import * as v from "valibot";
 import { AccessError } from "../errors.js";
-import {
-  type ActionEnvelope,
-  type Caller,
-  checkActionEnvelope,
-  checkCaller,
-  checkViewEnvelope,
-  type HostStep,
-  type ViewEnvelope,
-} from "../protocol/index.js";
+import type { ActionEnvelope, Caller, HostStep, ViewEnvelope } from "../protocol/index.js";
 import {
   type CatAnswerer,
   type CatLoopFailure,
+  checkActionEnvelope,
+  checkCaller,
   checkClock,
   checkHostAction,
   checkHostApplyOptions,
+  checkViewEnvelope,
   checkViewRequest,
   createCatLoops,
   isViewRequest,

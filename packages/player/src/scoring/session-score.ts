@@ -2,7 +2,8 @@ import { describe } from "@assesskit/runtime/checks";
 import type { PendingWork } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { AssessmentResult, ResultVariable } from "@assesskit/runtime/results";
-import { isOfficialResult, type OfficialResult } from "../protocol/index.js";
+import type { OfficialResult } from "../protocol/index.js";
+import { isOfficialResult } from "../protocol/internal.js";
 
 /** How far the scoring of a session is. */
 export type ScoringProgress = "complete" | "awaiting-service" | "awaiting-person";

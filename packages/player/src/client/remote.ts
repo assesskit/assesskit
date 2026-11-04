@@ -19,17 +19,16 @@ import { DataError, SecurityError } from "@assesskit/runtime/errors";
 import type { Value } from "@assesskit/runtime/values";
 import * as v from "valibot";
 import { AccessError } from "../errors.js";
-import {
-  type ActionEnvelope,
-  type Clock,
-  checkViewEnvelope,
-  type DispatchResult,
-  type SessionClient,
-  type ViewDocuments,
-  type ViewEnvelope,
-  type ViewRequest,
+import type {
+  ActionEnvelope,
+  Clock,
+  DispatchResult,
+  SessionClient,
+  ViewDocuments,
+  ViewEnvelope,
+  ViewRequest,
 } from "../protocol/index.js";
-import { clockSchema, MAX_TIMER_DELAY_MS } from "../protocol/internal.js";
+import { checkViewEnvelope, clockSchema, MAX_TIMER_DELAY_MS } from "../protocol/internal.js";
 import { assetResolver } from "./assets.js";
 import { BROWSER_CLOCK } from "./clock.js";
 import { notifyListeners } from "./notify.js";

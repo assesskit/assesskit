@@ -22,7 +22,8 @@ import assetGateGuide from "../../../docs/player/asset-gate.md?raw";
 import serverGuide from "../../../docs/player/server.md?raw";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { AccessError } from "../src/index.js";
-import { type HostApplyOptions, isOfficialResult, type ViewEnvelope } from "../src/protocol/index.js";
+import type { HostApplyOptions, ViewEnvelope } from "../src/protocol/index.js";
+import { isOfficialResult } from "../src/protocol/internal.js";
 import {
   type AssetGate,
   CANDIDATE_ACTION_TYPES,

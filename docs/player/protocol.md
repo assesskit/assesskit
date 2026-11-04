@@ -12,43 +12,41 @@ sequenceDiagram
   participant E as Engine<br/>(runtime)
   C->>H: ActionEnvelope {seq, action}
   Note over H: The session and the principal come from the<br/>host's authentication, never from the envelope
-  H->>H: checkActionEnvelope, repeated or stale seq, client-action policy
+  H->>H: check the envelope, repeated or stale seq, client-action policy
   H->>E: apply(state, stamped action)
   E-->>H: step, or refusal with the state unchanged
   H-->>C: ViewEnvelope {seq, view, assets, documents?, refusal?}
 ```
 
 The runtime writes and reads the JSON inside an envelope: `writeCandidateAction` and `readCandidateAction` for actions, `writeView`
-and `readView` for views. The checks of this module look at the envelope only. The one form that the player defines is the
+and `readView` for views. The session host and the clients check every envelope they receive, and the checks look at the envelope only. The one form that the player defines is the
 submission, because the server writes it and the browser shows it.
 
-| Export                                                    | Purpose                                                                                                |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `Caller`, `checkCaller`                                   | The identity that authentication gives to a request.                                                   |
-| `ActionEnvelope`, `checkActionEnvelope`                   | What a client sends: a sequence number and one action.                                                 |
-| `ViewEnvelope`, `checkViewEnvelope`                       | What a host answers: the view, the asset prefixes and, when they apply, the documents and the refusal. |
-| `REFUSAL_REASONS`, `checkRefusal`                         | The refusal reasons of the engine, and a check of a refusal that arrived as JSON.                      |
-| `ViewDocuments`, `DocumentSource`, `resolveViewDocuments` | Where the content of a view comes from, so that references in it resolve.                              |
-| `LtiFrame`, `checkLtiFrame`, `checkAllowList`             | What the player needs to show a tool, and the checks of it.                                            |
-| `LTI_TOOL_FRAME`, `LTI_STORAGE_FRAME`                     | The names of the two frames of an LTI item.                                                            |
-| `SessionClient`, `DispatchResult`                         | The one interface the player mounts against.                                                           |
-| `HostSession`, `HostStep`, `HostApplyOptions`             | The host side of a session, which a session host and a local session both offer.                       |
-| `Clock`                                                   | The source of the time that a client, a session host and a test pass in.                               |
-| `OfficialResult`, `isOfficialResult`                      | A results report that the session host branded.                                                        |
-| `Submission` and its parts, `checkSubmission`             | What a rater needs to rate an externally scored outcome.                                               |
+| Export                                        | Purpose                                                                                                |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `Caller`                                      | The identity that authentication gives to a request.                                                   |
+| `ActionEnvelope`                              | What a client sends: a sequence number and one action.                                                 |
+| `ViewEnvelope`                                | What a host answers: the view, the asset prefixes and, when they apply, the documents and the refusal. |
+| `REFUSAL_REASONS`                             | The refusal reasons of the engine.                                                                     |
+| `ViewDocuments`                               | Where the content of a view comes from, so that references in it resolve.                              |
+| `LtiFrame`                                    | What the player needs to show a tool.                                                                  |
+| `LTI_TOOL_FRAME`, `LTI_STORAGE_FRAME`         | The names of the two frames of an LTI item.                                                            |
+| `SessionClient`, `DispatchResult`             | The one interface the player mounts against.                                                           |
+| `HostSession`, `HostStep`, `HostApplyOptions` | The host side of a session, which a session host and a local session both offer.                       |
+| `Clock`                                       | The source of the time that a client, a session host and a test pass in.                               |
+| `OfficialResult`                              | A results report that the session host branded.                                                        |
+| `Submission` and its parts                    | What a rater needs to rate an externally scored outcome.                                               |
 
 ## Quick start
 
-Check the envelope of an action and the caller of a session, and tell a branded result:
+Tell the two frames of an LTI item and the reasons of a refusal:
 
 ```ts
-import { checkActionEnvelope, checkCaller, isOfficialResult } from "@assesskit/player/protocol";
+import { LTI_STORAGE_FRAME, LTI_TOOL_FRAME, REFUSAL_REASONS } from "@assesskit/player/protocol";
 
-const envelope = JSON.parse('{"seq":3,"action":{"type":"move"}}');
-checkActionEnvelope(envelope);
-envelope.seq; // => 3
-checkCaller({ session: "s1", principal: "candidate-7", role: "candidate" });
-isOfficialResult({}); // => false
+LTI_TOOL_FRAME; // => "lti-tool"
+LTI_STORAGE_FRAME; // => "lti-storage"
+REFUSAL_REASONS.includes("time-over"); // => true
 ```
 
 ## Caller
@@ -60,7 +58,7 @@ isOfficialResult({}); // => false
 | `session`   | `string` | The identifier of the session the request is about                                          |
 | `principal` | `string` | The identifier of the authenticated principal; a session belongs to the one that started it |
 
-`checkCaller` ignores other properties, because a host may pass a richer object.
+The session host ignores other properties of a caller, because a host may pass a richer object.
 
 ## Envelopes
 
@@ -96,12 +94,12 @@ host does, with `documents`.
 | `stimuli`  | The paths of the documents of its stimuli, in the order of the view.                                                                                           |
 | `lexicons` | The paths of the pronunciation lexicons (PLS) that the item depends on, which reading aloud uses ([speech](speech.md#lexicons)).                               |
 
-A path is a path in the package. Without `documents`, every reference resolves against the root. `resolveViewDocuments(view, source)`
-builds them from the `DocumentSource` that a host or a local session has of its test.
+A path is a path in the package. Without `documents`, every reference resolves against the root. The session host and the local
+session build them from the documents of their test.
 
 ## The frame of an LTI item
 
-`LtiFrame` is what the host's route answers the player's `ltiLogin` hook with. The host builds it with its LTI platform library ([LTI items](lti-items.md)); the player only checks it.
+`LtiFrame` is what the host's route answers the player's `ltiLogin` hook with. The host builds it with its LTI platform library ([LTI items](lti-items.md)); the player checks it.
 
 | Property     | Meaning                                                                                                     |
 | ------------ | ----------------------------------------------------------------------------------------------------------- |
@@ -109,7 +107,7 @@ builds them from the `DocumentSource` that a host or a local session has of its 
 | `storageUrl` | The platform's storage page, an absolute `http` or `https` URL                                              |
 | `allow`      | The `allow` list of the tool's frame. Default: none, so that the tool may use no feature needing permission |
 
-An allow list holds letters, digits, spaces and the characters `; * : / . ' -` (`checkAllowList`). A `javascript:` or `data:`
+An allow list holds letters, digits, spaces and the characters `; * : / . ' -`. A `javascript:` or `data:`
 URL is never a frame URL. `LTI_TOOL_FRAME` (`lti-tool`) and `LTI_STORAGE_FRAME` (`lti-storage`) are the names of the two frames,
 by which the storage page and the tool look each other up.
 
@@ -173,7 +171,7 @@ after the test ended while their request exists.
 | Refusal                 | Returned as `HostStep.refusal`; nothing is saved or forwarded                                              | Returned as `HostStep.refusal`; nothing is saved and no step listener runs, while the view listeners run as for any answer |
 | `scoredBy`              | Passed to the log with the step of a `supply-scores` action                                                | Ignored: a local session forwards nothing                                                                                  |
 | `pending`, `scorerView` | Load the session, then ask the engine                                                                      | Queued behind earlier calls, so they see the state those calls left                                                        |
-| `results`               | Branded                                                                                                    | Never branded: `isOfficialResult` is `false`, so `buildSessionScore` refuses it                                            |
+| `results`               | Branded                                                                                                    | Never branded, so `buildSessionScore` refuses it                                                                           |
 | After `close()`         | A session host has no `close`                                                                              | `apply` and `subscribeSteps` throw `DataError`; the reads still work                                                       |
 | Step feed               | `forward.log(step)` for every step with events, in every process, the start included                       | `subscribeSteps(listener)` for the steps with events that are saved after the call                                         |
 | Scorer view             | Holds the correct responses: call it only from a rater's endpoint, never from a candidate's                | Holds the correct responses by design, because the device holds them already                                               |
@@ -201,7 +199,7 @@ Where a host wires each concern:
 ## Branded results
 
 `SessionHost.session(id).results()` returns a report of type `OfficialResult`. The host records the object it returns in a private `WeakSet`,
-and `isOfficialResult` tells whether a value is one: a copy of the report, a report parsed from JSON and the report of a practice
+and a score is built only from a value in it: a copy of the report, a report parsed from JSON and the report of a practice
 session are not. The marking function is not exported; only `server` may reach it, through the `internal.ts` of the
 module (lint). A service that reports a score takes only an `OfficialResult` and refuses any other object.
 
@@ -214,18 +212,17 @@ runtime's `ScoringRubric`, which `mountRatingForm` ([rating](rating.md)) turns i
 
 ## Errors
 
-Every check throws `DataError` with a sentence that names the path of the first problem.
+Every refusal is a `DataError` with a sentence that names the path of the first problem. The session host, the remote client, the
+local session, `mountSubmission` and the LTI slot run the checks on what they receive; none is exported.
 
-| A check refuses                            | When                                                                                                                                                                                                                                                                     |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `checkCaller`                              | `value` is not an object with a non-empty `session` and `principal`                                                                                                                                                                                                      |
-| `checkActionEnvelope`, `checkViewEnvelope` | `value` is not an object, has a property outside the table, or has a `seq` that is not a non-negative safe integer                                                                                                                                                       |
-| `checkActionEnvelope`                      | `action` is missing                                                                                                                                                                                                                                                      |
-| `checkViewEnvelope`                        | `view` is missing, `assets` is not an object of strings by directories, `documents` or `refusal` is malformed                                                                                                                                                            |
-| `checkRefusal`                             | `value` is not an object with a `reason` of `REFUSAL_REASONS` and a string `message`                                                                                                                                                                                     |
-| `checkLtiFrame`                            | `value` is not an object of `url`, `storageUrl` and `allow` only, or a URL is not absolute `http` or `https`                                                                                                                                                             |
-| `checkAllowList`                           | the value is empty or has a character outside an allow list                                                                                                                                                                                                              |
-| `checkSubmission`                          | a property outside the form, a field of another type, a time outside the years 1 to 9999, content that is not a list of nodes with a string `kind`, a scoring rubric that `checkScoringRubric` refuses, a part that names an item the submission lacks, or an item twice |
+| What is refused              | When                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A `Caller`                   | `value` is not an object with a non-empty `session` and `principal`                                                                                                                                                                                                      |
+| An action or a view envelope | `value` is not an object, has a property outside the table, or has a `seq` that is not a non-negative safe integer                                                                                                                                                       |
+| An action envelope           | `action` is missing                                                                                                                                                                                                                                                      |
+| A view envelope              | `view` is missing, `assets` is not an object of strings by directories, `documents` or `refusal` is malformed (a refusal is an object with a `reason` of `REFUSAL_REASONS` and a string `message`)                                                                                      |
+| An `LtiFrame`                | `value` is not an object of `url`, `storageUrl` and `allow` only, a URL is not absolute `http` or `https`, or `allow` is empty or has a character outside an allow list                                                                                                  |
+| A `Submission`               | a property outside the form, a field of another type, a time outside the years 1 to 9999, content that is not a list of nodes with a string `kind`, a scoring rubric that `checkScoringRubric` refuses, a part that names an item the submission lacks, or an item twice |
 
 ## Not included
 

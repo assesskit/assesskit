@@ -1,6 +1,7 @@
 import { describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
-import { checkLtiFrame, LTI_STORAGE_FRAME, LTI_TOOL_FRAME, type LtiFrame } from "../../protocol/index.js";
+import { LTI_STORAGE_FRAME, LTI_TOOL_FRAME, type LtiFrame } from "../../protocol/index.js";
+import { checkLtiFrame } from "../../protocol/internal.js";
 import { answerCapabilities } from "./capabilities.js";
 
 /**

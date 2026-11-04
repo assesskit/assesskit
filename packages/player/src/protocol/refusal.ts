@@ -1,4 +1,4 @@
-import { parseWith, type Schema } from "@assesskit/runtime/checks";
+import type { Schema } from "@assesskit/runtime/checks";
 import type { Refusal, RefusalReason } from "@assesskit/runtime/delivery";
 import * as v from "valibot";
 
@@ -39,14 +39,3 @@ export const refusalSchema: Schema<Refusal> = v.strictObject({
   reason: v.picklist(REFUSAL_REASONS),
   message: v.string(),
 });
-
-/**
- * Checks a refusal that arrived as JSON, as the engine's `Refusal` writes it.
- *
- * @param value - The parsed JSON.
- * @throws `DataError` when it is not an object with the properties `reason` and `message` only, `reason` one of
- * {@link REFUSAL_REASONS} and `message` a string.
- */
-export function checkRefusal(value: unknown): asserts value is Refusal {
-  parseWith(refusalSchema, value, "A refusal");
-}
