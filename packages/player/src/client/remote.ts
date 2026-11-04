@@ -116,8 +116,8 @@ const isRejection = (error: unknown): boolean =>
  *   it waited for the answer is one of these.
  * - **Signals.** A call with an aborted `signal` sends nothing. While a request is in flight the signal goes to the
  *   transport. The abort of a call that holds `set-responses` ends its wait, and the responses are still sent.
- * - **Autosave.** `set-responses` actions are held and sent together {@link AUTOSAVE_MS} after the last one, and before any
- *   other action, when the page is hidden, and {@link FLUSH_BEFORE_DEADLINE_MS} before the nearest timer reaches 0. At 0 the
+ * - **Autosave.** `set-responses` actions are held and sent together 1,000 ms after the last one, and before any
+ *   other action, when the page is hidden, and 10,000 ms before the nearest timer reaches 0. At 0 the
  *   client sends them once more, or an empty `set-responses` if it holds none, to learn from the host whether the time-out
  *   happened.
  * - **Refresh.** {@link SessionClient.refresh} sends the held responses, then a view request, which the host answers as

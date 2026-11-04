@@ -44,13 +44,13 @@ export interface AssetGateOptions {
   /**
    * The seconds a token for a prefix is valid.
    *
-   * @defaultValue {@link DEFAULT_TTL_SECONDS}, `3600`
+   * @defaultValue `3600`
    */
   readonly ttlSeconds?: number;
   /**
    * The seconds a token for a file is valid.
    *
-   * @defaultValue {@link DEFAULT_UPLOAD_TTL_SECONDS}, `300`
+   * @defaultValue `300`
    */
   readonly uploadTtlSeconds?: number;
 }

@@ -27,7 +27,6 @@ export {
   LENGTH_UNITS,
   type ProtractorSpec,
   type RuleSpec,
-  SLOT_TOOLS,
   TOOL_SUPPORT_NAMES,
   type ToolSupportName,
 } from "./model.js";

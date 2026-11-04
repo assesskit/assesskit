@@ -133,7 +133,7 @@ export interface SessionHost {
    * Handles a request of the client: checks the caller, answers a repeated sequence number with the stored answer,
    * refuses a stale one, applies the client-action policy, stamps and applies the action, saves, and answers with the
    * view. A refusal of the engine is in the envelope. When another request saved first, it is handled again, up to
-   * {@link MAX_SAVE_RETRIES} times.
+   * 3 times.
    *
    * @remarks
    * A `ViewRequest` of `@assesskit/player/protocol` (`{ "type": "view" }`) applies nothing and saves nothing: it is answered as {@link SessionHost.view}

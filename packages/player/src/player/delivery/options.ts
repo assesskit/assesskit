@@ -25,7 +25,7 @@ import type { LtiLogin } from "../lti-frame/index.js";
 import type { StylesheetFetch } from "../roots/index.js";
 import type { SpeechHook } from "../speech/index.js";
 import type { ToolSlots } from "../tools/index.js";
-import { SLOT_TOOLS } from "../tools/internal.js";
+import { SLOT_TOOLS } from "../tools/index.js";
 
 /** The host's storage of files, which interactions and the review of an upload use: file values are references to it. */
 export interface MountFiles {

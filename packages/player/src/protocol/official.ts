@@ -4,7 +4,7 @@ declare const official: unique symbol;
 
 /**
  * The results report of an official session: the one that `SessionHost.results` returned. The brand exists in the type
- * only; {@link isOfficialResult} proves it at run time, so a copy of a report or the report of a practice session is not
+ * only; a check at run time proves it, so a copy of a report or the report of a practice session is not
  * official.
  */
 export type OfficialResult = AssessmentResult & {
