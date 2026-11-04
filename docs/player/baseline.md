@@ -67,7 +67,10 @@ Playwright ships the browsers of its release, and no release has all three at th
 Each release is pinned exactly in a package of its own under `compat/engines/` and runs in the container image of the
 same version, `mcr.microsoft.com/playwright:v1.31.2-jammy` and `v1.36.2-jammy`, because old browser builds need the
 system libraries of their time. `pnpm compat:engines` runs the smoke cases of `compat/smoke.ts` in both images, with
-Docker; pass a pair name (`chromium-webkit` or `firefox`) to run one. The CI job `engines` runs it too.
+Docker; pass a pair name (`chromium-webkit` or `firefox`) to run one. Each container takes 2 CPUs and is named
+`<name>-<pair>`, where the name is `CONTAINER_NAME` when it is set, so that a run on a shared machine names its own
+(`CONTAINER_NAME=my-unit pnpm compat:engines`), and else `assesskit-engines-` and 8 random hexadecimal digits; the container
+is removed when it ends. The CI job `engines` runs it too.
 
 The player and the protocol import the runtime by package name, which a browser cannot resolve, so before the containers start
 `pnpm compat:engines` bundles `dist/player/index.js` and `dist/protocol/index.js` with their dependencies into
