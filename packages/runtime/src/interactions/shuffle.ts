@@ -1,4 +1,4 @@
-import { checkArray, checkFunction, checkRecord, checkString } from "../checks.js";
+import { checkArray, checkString } from "../checks.js";
 import { DataError } from "../errors.js";
 import { type Random, shuffle } from "../random.js";
 import { checkDescriptor } from "./check-descriptor.js";
@@ -36,21 +36,12 @@ function shuffledSets(descriptor: InteractionDescriptor): number {
  * fixed choices hold; {@link presentChoices} drops them. Without `shuffle` the order is the order of the document, and
  * no number is drawn.
  *
- * @param descriptor - The descriptor of the interaction, with every choice.
+ * @param descriptor - A descriptor that `describeInteractions` returned, with every choice.
  * @param random - The source of the draws. Equal draws give equal orders.
  * @returns The identifiers of each set in the order of presentation; none for an interaction without choices.
- * @throws `DataError` when an argument has the wrong type, or the source returns anything but a number in [0, 1).
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
-export function shuffleChoices(descriptor: InteractionDescriptor, random: Random): readonly (readonly string[])[] {
-  checkDescriptor(descriptor);
-  checkRecord(random, "The random source must be an object with a function uniform");
-  checkFunction(random.uniform, "The random source must be an object with a function uniform");
-  return drawOrders(descriptor, random);
-}
-
-/** Draws the orders of a descriptor that `describeInteractions` returned, with a source that was checked. */
 export function drawOrders(descriptor: InteractionDescriptor, random: Random): readonly (readonly string[])[] {
   const permuted = descriptor.shuffle ? shuffledSets(descriptor) : 0;
   return setsOf(descriptor).map((set, place) =>
@@ -81,11 +72,11 @@ function reorder(set: readonly ChoiceDescriptor[], order: unknown, place: number
  * order does not name dropped, such as those that template variables hide.
  *
  * @remarks
- * Taking the orders from {@link shuffleChoices} and removing the hidden identifiers is how an interaction is presented
+ * Taking the orders from {@link drawOrders} and removing the hidden identifiers is how an interaction is presented
  * the first time, and the stored orders give the same descriptor again when a session resumes.
  *
  * @param descriptor - The descriptor of the interaction, with every choice.
- * @param orders - One list of identifiers for each set of choices, as {@link shuffleChoices} returns them; each names a
+ * @param orders - One list of identifiers for each set of choices, as {@link drawOrders} returns them; each names a
  * choice of its set at most once.
  * @returns The descriptor with its choices, and its `matchSets`, in the order given.
  * @throws `DataError` when an argument has the wrong type, `orders` does not have one list for each set, or a list

@@ -21,13 +21,13 @@ import {
   type ScoringRubric,
   sendCatRequest,
   serializeState,
-  shuffleChoices,
   stamp,
   type Value,
   writePnp,
   writeResults,
   writeView,
 } from "../src/index.js";
+import { drawOrders } from "../src/interactions/internal.js";
 import {
   ADAPTIVE,
   act,
@@ -1832,7 +1832,7 @@ describe("results", () => {
     const sequence = variablesOf(first).get("RESPONSE");
     const item = choice("q1");
     // The first item draws its order first from the generator of seed 1.
-    const [expected] = shuffleChoices(
+    const [expected] = drawOrders(
       describeInteractions(item)[0] ?? fail("The item has an interaction."),
       createRandom(1),
     );

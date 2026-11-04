@@ -11,13 +11,10 @@ import {
   buildSingle,
   createRandom,
   DataError,
-  deriveAnsweredStatus,
-  deriveInitialResponse,
   describeInteractions,
   type InteractionDescriptor,
   type InteractionKind,
   type Primitive,
-  presentChoices,
   type Random,
   ReadError,
   type RecordValue,
@@ -25,11 +22,11 @@ import {
   readAsi,
   readNumericRecord,
   type SingleValue,
-  shuffleChoices,
   type Value,
   validateBindings,
   validateResponse,
 } from "../src/index.js";
+import { deriveAnsweredStatus, drawOrders, presentChoices, startingResponse } from "../src/interactions/internal.js";
 import { shufflingDescriptor } from "./arbitraries/interactions.js";
 import { interactionKinds } from "./asi-elements.js";
 
@@ -911,7 +908,7 @@ describe("the initial response", () => {
       `<qti-choice-interaction response-identifier="R" max-choices="2">${choice("A")}</qti-choice-interaction>`,
       declare("multiple", "identifier"),
     );
-    expect(deriveInitialResponse(descriptor, defaultValue)).toBeNull();
+    expect(startingResponse(descriptor, defaultValue)).toBeNull();
   });
 
   it("gives a hot text interaction its default value", () => {
@@ -919,8 +916,8 @@ describe("the initial response", () => {
       '<qti-hottext-interaction response-identifier="R" max-choices="2"><p><qti-hottext identifier="A">a</qti-hottext></p></qti-hottext-interaction>',
       declare("multiple", "identifier"),
     );
-    expect(deriveInitialResponse(descriptor, defaultValue)).toEqual(defaultValue);
-    expect(deriveInitialResponse(descriptor, null)).toBeNull();
+    expect(startingResponse(descriptor, defaultValue)).toEqual(defaultValue);
+    expect(startingResponse(descriptor, null)).toBeNull();
   });
 
   it("gives an order interaction its default value, which overrides the initial order of the choices", () => {
@@ -929,7 +926,7 @@ describe("the initial response", () => {
       declare("ordered", "identifier"),
     );
     const order = identifiers("ordered", ["B", "A"]);
-    expect(deriveInitialResponse(descriptor, order)).toEqual(order);
+    expect(startingResponse(descriptor, order)).toEqual(order);
   });
 
   it("ignores the default value of an end attempt interaction", () => {
@@ -937,14 +934,14 @@ describe("the initial response", () => {
       '<p><qti-end-attempt-interaction response-identifier="R" title="Hint"/></p>',
       declare("single", "boolean"),
     );
-    expect(deriveInitialResponse(descriptor, buildSingle("boolean", true))).toBeNull();
+    expect(startingResponse(descriptor, buildSingle("boolean", true))).toBeNull();
   });
 
   it("rejects a default value that is not a value", () => {
     const descriptor = descriptorOf(
       '<qti-slider-interaction response-identifier="R" lower-bound="0" upper-bound="1"/>',
     );
-    expect(() => deriveInitialResponse(descriptor, json("1"))).toThrow(DataError);
+    expect(() => startingResponse(descriptor, json("1"))).toThrow(DataError);
   });
 });
 
@@ -968,17 +965,17 @@ describe("shuffling choices", () => {
 
   it("permutes by Fisher–Yates from the last index with floor(uniform × (i + 1)): C A B D for the draws 0.9, 0.5, 0", () => {
     const random = drawing(0.9, 0.5, 0);
-    expect(shuffleChoices(four(true), random)).toEqual([["C", "A", "B", "D"]]);
+    expect(drawOrders(four(true), random)).toEqual([["C", "A", "B", "D"]]);
     expect(random.left()).toBe(0);
   });
 
   it("keeps a fixed choice in its position and permutes the rest", () => {
-    expect(shuffleChoices(four(true, "B"), drawing(0.9, 0))).toEqual([["C", "B", "A", "D"]]);
+    expect(drawOrders(four(true, "B"), drawing(0.9, 0))).toEqual([["C", "B", "A", "D"]]);
   });
 
   it("keeps the order of the document and draws nothing without shuffle", () => {
     const random = counting(1);
-    expect(shuffleChoices(four(false), random)).toEqual([["A", "B", "C", "D"]]);
+    expect(drawOrders(four(false), random)).toEqual([["A", "B", "C", "D"]]);
     expect(random.draws).toBe(0);
   });
 
@@ -988,7 +985,7 @@ describe("shuffling choices", () => {
       declare("multiple", "directedPair"),
     );
     // First set: i = 2 swaps with floor(0.9 × 3) = 2, i = 1 with floor(0 × 2) = 0: B A C. Second set: i = 1 with floor(0.1 × 2) = 0: Y X.
-    expect(shuffleChoices(descriptor, drawing(0.9, 0, 0.1))).toEqual([
+    expect(drawOrders(descriptor, drawing(0.9, 0, 0.1))).toEqual([
       ["B", "A", "C"],
       ["Y", "X"],
     ]);
@@ -999,7 +996,7 @@ describe("shuffling choices", () => {
       '<qti-gap-match-interaction response-identifier="R" shuffle="true"><qti-gap-text identifier="W1" match-max="1">a</qti-gap-text><qti-gap-text identifier="W2" match-max="1">b</qti-gap-text><p><qti-gap identifier="G1"/><qti-gap identifier="G2"/></p></qti-gap-match-interaction>',
       declare("multiple", "directedPair"),
     );
-    expect(shuffleChoices(descriptor, drawing(0))).toEqual([
+    expect(drawOrders(descriptor, drawing(0))).toEqual([
       ["W2", "W1"],
       ["G1", "G2"],
     ]);
@@ -1009,9 +1006,9 @@ describe("shuffling choices", () => {
     const hotspots = descriptorOf(
       `<qti-hotspot-interaction response-identifier="R">${IMAGE}${hotspot("S1")}${hotspot("S2")}</qti-hotspot-interaction>`,
     );
-    expect(shuffleChoices(hotspots, counting(1))).toEqual([["S1", "S2"]]);
+    expect(drawOrders(hotspots, counting(1))).toEqual([["S1", "S2"]]);
     expect(
-      shuffleChoices(
+      drawOrders(
         descriptorOf('<qti-slider-interaction response-identifier="R" lower-bound="0" upper-bound="1"/>'),
         counting(1),
       ),
@@ -1022,21 +1019,12 @@ describe("shuffling choices", () => {
     const descriptor = descriptorOf(
       `<qti-choice-interaction response-identifier="R" shuffle="true">${choice("A", ' template-identifier="T" show-hide="show"')}${choice("B", ' fixed="true"')}${choice("C")}${choice("D", ' template-identifier="T"')}</qti-choice-interaction>`,
     );
-    const [order = []] = shuffleChoices(descriptor, drawing(0.99, 0.0));
+    const [order = []] = drawOrders(descriptor, drawing(0.99, 0.0));
     // B is fixed in the second place of all four choices, hidden or not.
     expect(order).toEqual(["C", "B", "A", "D"]);
     const hidden = new Set(["A"]);
     const presented = presentChoices(descriptor, [order.filter((identifier) => !hidden.has(identifier))]);
     expect(presented.choices.map(({ identifier }) => identifier)).toEqual(["C", "B", "D"]);
-  });
-
-  it("rejects a descriptor or a random source of the wrong type", () => {
-    expect(() => shuffleChoices(json("null"), createRandom(1))).toThrow(DataError);
-    expect(() => shuffleChoices(four(true), json("null"))).toThrow(
-      "The random source must be an object with a function uniform, found null.",
-    );
-    expect(() => shuffleChoices(four(true), json('{"uniform": 1}'))).toThrow(DataError);
-    expect(() => shuffleChoices(four(true), { uniform: () => 1 })).toThrow(DataError);
   });
 });
 
@@ -1253,7 +1241,7 @@ describe("properties", () => {
   it("gives each set as a permutation of its choices, with the fixed choices where they were, and equal draws give equal orders", () => {
     fc.assert(
       fc.property(shufflingDescriptor, fc.integer(), (descriptor, seed) => {
-        const orders = shuffleChoices(descriptor, createRandom(seed));
+        const orders = drawOrders(descriptor, createRandom(seed));
         const sets = descriptor.matchSets ?? (descriptor.choices.length === 0 ? [] : [descriptor.choices]);
         expect(orders).toHaveLength(sets.length);
         sets.forEach((set, place) => {
@@ -1263,7 +1251,7 @@ describe("properties", () => {
             if (member.fixed || !descriptor.shuffle) expect(order[index]).toBe(member.identifier);
           });
         });
-        expect(shuffleChoices(descriptor, createRandom(seed))).toEqual(orders);
+        expect(drawOrders(descriptor, createRandom(seed))).toEqual(orders);
       }),
     );
   });
@@ -1272,7 +1260,7 @@ describe("properties", () => {
     fc.assert(
       fc.property(shufflingDescriptor, fc.integer(), (descriptor, seed) => {
         const random = counting(seed);
-        shuffleChoices(descriptor, random);
+        drawOrders(descriptor, random);
         const sets = descriptor.matchSets ?? [descriptor.choices];
         const shuffled = !descriptor.shuffle ? 0 : descriptor.kind === "match-interaction" ? sets.length : 1;
         const expected = sets
@@ -1286,7 +1274,7 @@ describe("properties", () => {
   it("removing the hidden choices from the order leaves the others in the order of the full shuffle", () => {
     fc.assert(
       fc.property(shufflingDescriptor, fc.integer(), fc.infiniteStream(fc.boolean()), (descriptor, seed, hiding) => {
-        const orders = shuffleChoices(descriptor, createRandom(seed));
+        const orders = drawOrders(descriptor, createRandom(seed));
         const hiddenIdentifiers = new Set(
           descriptor.choices.filter(() => hiding.next().value === true).map(({ identifier }) => identifier),
         );

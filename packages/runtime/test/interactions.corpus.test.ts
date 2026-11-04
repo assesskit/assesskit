@@ -6,11 +6,11 @@ import {
   describeInteractions,
   type InteractionDescriptor,
   ProcessingError,
-  shuffleChoices,
   type Value,
   validateBindings,
   validateResponse,
 } from "../src/index.js";
+import { drawOrders } from "../src/interactions/internal.js";
 import { exampleItems } from "./corpus-items.js";
 
 const items = exampleItems();
@@ -89,7 +89,7 @@ describe("the interactions of the 1EdTech examples", () => {
     let shuffling = 0;
     for (const { path, item } of items) {
       for (const descriptor of describeInteractions(item)) {
-        const orders = shuffleChoices(descriptor, createRandom(7));
+        const orders = drawOrders(descriptor, createRandom(7));
         const sets: readonly (readonly InteractionDescriptor["choices"][number][])[] =
           descriptor.matchSets ?? (descriptor.choices.length === 0 ? [] : [descriptor.choices]);
         sets.forEach((set, place) => {

@@ -1,5 +1,4 @@
 import { normalizeValue, type Value } from "../values/index.js";
-import { checkDescriptor } from "./check-descriptor.js";
 import type { InteractionDescriptor } from "./descriptor.js";
 
 /**
@@ -11,18 +10,11 @@ import type { InteractionDescriptor } from "./descriptor.js";
  * the initial order of its choices, so an engine shuffles the choices of an order only when the default is NULL; a hot
  * text interaction starts from its default.
  *
- * @param descriptor - The descriptor of the interaction.
+ * @param descriptor - A descriptor that `describeInteractions` returned.
  * @param defaultValue - The default value of the response variable, or `null` for none.
  * @returns The value to start with, or `null` for NULL.
- * @throws `DataError` when `descriptor` is not a descriptor.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function deriveInitialResponse(descriptor: InteractionDescriptor, defaultValue: Value | null): Value | null {
-  checkDescriptor(descriptor);
-  return startingResponse(descriptor, defaultValue);
-}
-
-/** Returns the response an interaction starts with, for a descriptor that `describeInteractions` returned. */
 export function startingResponse(descriptor: InteractionDescriptor, defaultValue: Value | null): Value | null {
   const ignored = descriptor.kind === "choice-interaction" || descriptor.kind === "end-attempt-interaction";
   return ignored || defaultValue === null ? null : normalizeValue(defaultValue);

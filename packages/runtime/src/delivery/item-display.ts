@@ -1,7 +1,8 @@
 import { type AssessmentItem, type Interaction, isModelNode, type ModelNode } from "../asi/index.js";
 import { withDescendants } from "../asi/internal.js";
 import { isShown, resolveContent } from "../content/index.js";
-import { describeInteractions, type InteractionDescriptor, presentChoices } from "../interactions/index.js";
+import { describeInteractions, type InteractionDescriptor } from "../interactions/index.js";
+import { presentChoices } from "../interactions/internal.js";
 import { checkItem } from "../processing/internal.js";
 import type { Value } from "../values/index.js";
 import { isAdaptive, resetOutcomes } from "./attempt.js";

@@ -1,54 +1,40 @@
 # Interaction descriptors
 
 `interactions` describes the interactions of an item for the delivery engine and the player, checks that their response variables
-suit them, decides whether a response is valid, draws the order of the choices, and reads the numbers that a candidate types. It
-imports `values` and `asi` and runs in any JavaScript runtime. It does not render an interaction: the content of the choices stays
-in the body of the item.
+suit them, decides whether a response is valid, and reads the numbers that a candidate types. It imports `values` and `asi` and
+runs in any JavaScript runtime. It does not render an interaction: the content of the choices stays in the body of the item. The
+rest of what `delivery` does with a descriptor, the starting response, the order of the choices and the status of an item, is in
+[What delivery applies](#what-delivery-applies).
 
 ```mermaid
 flowchart LR
   item["Item"]
   descriptors["InteractionDescriptor<br/>one for each interaction"]
-  order["Orders of the choices"]
-  presented["Descriptor as presented"]
   response["Candidate's response"]
   check["ResponseCheck<br/>status and reasons"]
   item -- "describeInteractions" --> descriptors
   item -- "validateBindings" --> issues["Issues"]
-  descriptors -- "shuffleChoices" --> order
-  order -- "presentChoices" --> presented
-  presented --> check
+  descriptors --> check
   response -- "validateResponse" --> check
-  check -- "deriveAnsweredStatus" --> status["Status of the item"]
 ```
 
-| Function                                       | Does                                                                                                |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `describeInteractions(item)`                   | Returns the `InteractionDescriptor` of each interaction of the item, in document order              |
-| `validateBindings(item)`                       | Returns `Issue`s for response variables that the interactions do not accept                         |
-| `validateResponse(descriptor, response)`       | Returns the `ResponseStatus` of a response and the `ResponseViolation`s it has                      |
-| `deriveAnsweredStatus(descriptors, responses)` | Returns the status of an item from the responses to all its interactions                            |
-| `deriveInitialResponse(descriptor, default)`   | Returns the response an interaction starts with, given the default value of its variable            |
-| `shuffleChoices(descriptor, random)`           | Returns the initial order of the choices, one list of identifiers for each set of choices           |
-| `presentChoices(descriptor, orders)`           | Returns the descriptor with the choices in the given orders, and without those the orders leave out |
-| `readNumericRecord(text, options?)`            | Returns the record that a text interaction bound to a record gives for the text a candidate typed   |
+| Function                                 | Does                                                                                              |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `describeInteractions(item)`             | Returns the `InteractionDescriptor` of each interaction of the item, in document order            |
+| `validateBindings(item)`                 | Returns `Issue`s for response variables that the interactions do not accept                       |
+| `validateResponse(descriptor, response)` | Returns the `ResponseStatus` of a response and the `ResponseViolation`s it has                    |
+| `readNumericRecord(text, options?)`      | Returns the record that a text interaction bound to a record gives for the text a candidate typed |
 
 The types are `InteractionKind` (the 22 kinds of interaction, such as `"choice-interaction"`), `Binding`, `ChoiceDescriptor`,
 `InteractionConstraints`, `InteractionDescriptor`, `ResponseCheck`, `ResponseStatus` and `ResponseViolation`.
 
 ## Quick start
 
-Describe the interactions of an item, draw the order of the choices, and judge responses:
+Describe the interactions of an item and judge responses:
 
 ```ts
-import { createRandom } from "@assesskit/runtime";
 import { readAsi } from "@assesskit/runtime/asi";
-import {
-  validateResponse,
-  describeInteractions,
-  presentChoices,
-  shuffleChoices,
-} from "@assesskit/runtime/interactions";
+import { describeInteractions, validateResponse } from "@assesskit/runtime/interactions";
 import { buildContainer } from "@assesskit/runtime/values";
 
 const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
@@ -66,12 +52,8 @@ const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/x
 const [descriptor] = describeInteractions(item);
 descriptor.constraints; // => { minChoices: 1, maxChoices: 2 }
 descriptor.bindings; // => [{ cardinality: "multiple", baseTypes: ["identifier"] }]
-const orders = shuffleChoices(descriptor, createRandom(42));
-orders; // => [["Metz", "Lyon", "Paris", "Nice"]]
-presentChoices(descriptor, [orders[0].filter((identifier) => identifier !== "Nice")]).choices.map(
-  ({ identifier }) => identifier,
-);
-// => ["Metz", "Lyon", "Paris"]
+descriptor.choices.map(({ identifier, fixed }) => [identifier, fixed]);
+// => [["Paris", false], ["Lyon", true], ["Nice", false], ["Metz", false]]
 validateResponse(descriptor, buildContainer("multiple", "identifier", ["Paris", "Nice", "Metz"]));
 // => { status: "attempted", reasons: ["max-choices"] }
 validateResponse(descriptor, buildContainer("multiple", "identifier", ["Paris"])); // => { status: "answered", reasons: [] }
@@ -147,8 +129,8 @@ gap takes one choice.
 
 ## Validity
 
-`validateResponse` applies the rules of validity to the descriptor of the interaction as it is presented: give it the descriptor that
-`presentChoices` returns, so that hidden choices are not demanded.
+`validateResponse` applies the rules of validity to the descriptor of the interaction as it is presented: `delivery` gives it the
+descriptor without the choices that a template variable hides, so that hidden choices are not demanded.
 
 | Reason             | The response ...                                                                      |
 | ------------------ | ------------------------------------------------------------------------------------- |
@@ -185,18 +167,19 @@ gap takes one choice.
 | `attempted` | The response breaks a rule; for an item, a response exists and an interaction's response is invalid                  |
 | `answered`  | The response breaks no rule; for an item, it has a response and every interaction is valid                           |
 
-`deriveAnsweredStatus` gives the item's status. A blank optional interaction is valid, and the end attempt interaction does not count.
-`notpresented`, for an item that was never shown, is the engine's to report.
+## What delivery applies
 
-`deriveInitialResponse` gives the response an interaction starts with: the default value, except for a choice interaction, which starts
-with nothing selected, and an end attempt interaction, which ignores its default. The default of an order interaction overrides
-the initial order of its choices, so shuffle the choices of an order only when its default is NULL.
+`delivery` also applies QTI's rules to the descriptors, with the helpers that `interactions` shares in `internal.ts` and does not
+export; their tests are in `interactions.test.ts`.
 
-## Shuffling
-
-`shuffleChoices` returns one list of identifiers for each set of choices: the one set of most interactions, the two sets of a match
-interaction, and the gap choices and the gaps or hotspots of a gap match and a graphic gap match interaction. Only the choices are
-shuffled in the last two, and each set of a match interaction on its own.
+- **The status of an item** (`deriveAnsweredStatus`): a blank optional interaction is valid, and the end attempt interaction does
+  not count. `notpresented`, for an item that was never shown, is the engine's to report.
+- **The starting response** (`startingResponse`): the default value, except for a choice interaction, which starts with nothing
+  selected, and an end attempt interaction, which ignores its default. The default of an order interaction overrides the initial
+  order of its choices, so the choices of an order are shuffled only when its default is NULL.
+- **The order of the choices** (`drawOrders`): one list of identifiers for each set of choices: the one set of most interactions,
+  the two sets of a match interaction, and the gap choices and the gaps or hotspots of a gap match and a graphic gap match
+  interaction. Only the choices are shuffled in the last two, and each set of a match interaction on its own.
 
 | Rule              | Statement                                                                                                                          |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
@@ -244,8 +227,6 @@ readNumericRecord(""); // => null
 | Situation                                                             | Result                                                 |
 | --------------------------------------------------------------------- | ------------------------------------------------------ |
 | An argument of the wrong type, such as a descriptor that is no object | `DataError` that names the argument and what was found |
-| A random source that returns anything but a number in [0, 1)          | `DataError`                                            |
-| Orders that do not name the choices of the sets                       | `DataError`                                            |
 | A `base` that is not an integer from 2 to 36                          | `DataError`                                            |
 | A response that breaks a rule of validity                             | `ResponseCheck` with the reasons; no error             |
 | A response variable that the interactions do not accept               | `Issue`s from `validateBindings`                       |
