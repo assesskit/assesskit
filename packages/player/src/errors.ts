@@ -10,9 +10,10 @@ export class AccessError extends AssesskitError {
   /**
    * @param message - Says what the caller did and what is expected.
    * @param reason - A kebab-case code that names the broken rule.
+   * @param options - The `cause`: the error that this one reports.
    */
-  constructor(message: string, reason: string) {
-    super(message);
+  constructor(message: string, reason: string, options?: ErrorOptions) {
+    super(message, options);
     this.reason = reason;
   }
 }
@@ -38,9 +39,10 @@ export class ServiceError extends AssesskitError {
    * @param message - Says which call failed.
    * @param status - The HTTP status of the failed call.
    * @param body - The body of the response.
+   * @param options - The `cause`: the error that this one reports.
    */
-  constructor(message: string, status: number, body: string) {
-    super(message);
+  constructor(message: string, status: number, body: string, options?: ErrorOptions) {
+    super(message, options);
     this.status = status;
     this.body = body;
   }

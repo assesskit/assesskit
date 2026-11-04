@@ -1,5 +1,5 @@
 import { describe, isRecord } from "../checks.js";
-import { DataError } from "../errors.js";
+import { AssesskitError, DataError } from "../errors.js";
 import { XINCLUDE_NAMESPACE, XML_NAMESPACE, type XmlAttribute, type XmlElement, type XmlNode } from "../xml/index.js";
 import { formatAttributeValue } from "./attribute-value.js";
 import { isAttribute, isElement } from "./guards.js";
@@ -20,8 +20,8 @@ function toAttribute(definition: AttributeDef, value: string): XmlAttribute {
 class Writer {
   private readonly trail: string[] = [];
 
-  private fail(message: string): DataError {
-    return new DataError(this.trail.length === 0 ? message : `${message} It is in ${this.trail.join("/")}.`);
+  private fail(message: string, options?: ErrorOptions): DataError {
+    return new DataError(this.trail.length === 0 ? message : `${message} It is in ${this.trail.join("/")}.`, options);
   }
 
   private array(value: unknown, message: string): readonly unknown[] {
@@ -58,7 +58,9 @@ class Writer {
         attributes.push(toAttribute(definition, formatAttributeValue(definition.type, value)));
       } catch (error) {
         if (!(error instanceof DataError)) throw error;
-        throw this.fail(`The property ${definition.property} of ${name} is invalid: ${error.message}`);
+        throw this.fail(`The property ${definition.property} of ${name} is invalid: ${error.message}`, {
+          cause: error,
+        });
       }
     }
     if (info.def.attributeWildcard !== undefined) {
@@ -83,14 +85,14 @@ class Writer {
   }
 
   private writeText(info: TypeInfo, name: string, model: Properties): XmlNode[] {
-    if (info.def.content.kind !== "text") throw new Error("The content of the type is not text.");
+    if (info.def.content.kind !== "text") throw new AssesskitError(`The content of the type ${info.name} is not text.`);
     if (model.value === undefined) throw this.fail(`The property value of ${name} is required.`);
     try {
       const text = formatAttributeValue(info.def.content.value, model.value);
       return text === "" ? [] : [{ kind: "text", value: text }];
     } catch (error) {
       if (!(error instanceof DataError)) throw error;
-      throw this.fail(`The property value of ${name} is invalid: ${error.message}`);
+      throw this.fail(`The property value of ${name} is invalid: ${error.message}`, { cause: error });
     }
   }
 

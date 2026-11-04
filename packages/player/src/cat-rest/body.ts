@@ -66,8 +66,8 @@ export async function readJsonBody(request: Request, limits: BodyLimits, signal:
   let text: string;
   try {
     text = new TextDecoder("utf-8", { fatal: true }).decode(join(chunks, length));
-  } catch {
-    throw new DataError("The body of the request is not valid UTF-8.");
+  } catch (error) {
+    throw new DataError("The body of the request is not valid UTF-8.", { cause: error });
   }
   if (hasMoreTokensThan(text, maxTokens)) {
     throw new DataError(
@@ -76,7 +76,7 @@ export async function readJsonBody(request: Request, limits: BodyLimits, signal:
   }
   try {
     return JSON.parse(text);
-  } catch {
-    throw new DataError(`The body of the request is not JSON${text === "" ? ", it is empty" : ""}.`);
+  } catch (error) {
+    throw new DataError(`The body of the request is not JSON${text === "" ? ", it is empty" : ""}.`, { cause: error });
   }
 }

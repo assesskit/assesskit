@@ -50,6 +50,7 @@ function notWellFormed(error: Error, parser: Position, path: string | undefined)
       line: parser.line,
       column: Math.max(1, parser.column),
     },
+    cause: error,
   });
 }
 

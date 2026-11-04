@@ -41,7 +41,7 @@ export async function readPackageFile(path: string, options: ReadPackageOptions 
   try {
     stat = statSync(path);
   } catch (error) {
-    throw new DataError(`The package ${path} cannot be read: ${reasonOf(error)}`);
+    throw new DataError(`The package ${path} cannot be read: ${reasonOf(error)}`, { cause: error });
   }
   const packageOptions = xmlLimits === undefined ? {} : { xmlLimits };
   if (stat.isDirectory()) return openPackage(await openDirectory(path, resolved), packageOptions);
@@ -74,6 +74,6 @@ export async function writePackageFile(
   try {
     await writeFile(path, bytes);
   } catch (error) {
-    throw new DataError(`The package ${path} cannot be written: ${reasonOf(error)}`);
+    throw new DataError(`The package ${path} cannot be written: ${reasonOf(error)}`, { cause: error });
   }
 }

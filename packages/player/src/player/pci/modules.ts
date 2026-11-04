@@ -38,9 +38,10 @@ function absolute(url: string): string {
   const base = typeof document === "undefined" ? undefined : document.baseURI;
   try {
     return new URL(url, base).href;
-  } catch {
+  } catch (error) {
     throw new DataError(
       `The option assets gave the URL ${JSON.stringify(url)}, which is relative, and there is no page whose address could resolve it.`,
+      { cause: error },
     );
   }
 }

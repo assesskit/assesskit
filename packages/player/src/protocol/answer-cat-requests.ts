@@ -1,5 +1,6 @@
 import type { CatResponse } from "@assesskit/runtime/cat";
 import type { CatRequest } from "@assesskit/runtime/delivery";
+import { DataError } from "@assesskit/runtime/errors";
 import { ServiceError } from "../errors.js";
 import type { CatFailure, HostStep } from "./host-session.js";
 
@@ -31,7 +32,7 @@ function failureOf(request: CatRequest | undefined, error: unknown): CatLoopFail
       : `The CAT engine did not answer the request ${request.id}`;
   return {
     failure: { request: request?.id ?? "", message },
-    error: error instanceof ServiceError ? error : new ServiceError(`${subject}: ${message}`, 0, ""),
+    error: error instanceof ServiceError ? error : new ServiceError(`${subject}: ${message}`, 0, "", { cause: error }),
   };
 }
 
@@ -71,7 +72,7 @@ async function answerCatRequests(
       }
       const step = await answerer.answer(request, await answerer.ask(request));
       if (step.refusal !== undefined && step.refusal.code !== "unknown-request") {
-        throw new Error(`The answer was refused: ${step.refusal.message}`);
+        throw new DataError(`The answer was refused: ${step.refusal.message}`);
       }
     }
   } catch (error) {

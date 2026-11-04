@@ -197,13 +197,18 @@ function create(command: PciStart, dom: HTMLElement): void {
         status: isRequestedStatus(status) ? status : "interacting",
       }),
   };
+  let created: unknown;
   try {
-    const created = context.getInstance(key, dom, configuration, command.state ?? undefined);
-    if (typeof created !== "object" || created === null) throw new TypeError("An interaction is an object.");
-    instance = created;
+    created = context.getInstance(key, dom, configuration, command.state ?? undefined);
   } catch {
-    fail("instance");
+    created = undefined;
   }
+  // A module that throws, or returns no object, made no interaction.
+  if (typeof created !== "object" || created === null) {
+    fail("instance");
+    return;
+  }
+  instance = created;
 }
 
 function load(command: PciStart, dom: HTMLElement, styled: Promise<void>): void {

@@ -177,7 +177,7 @@ export async function loadStylesheet(policy: StylesheetPolicy, fetcher: Styleshe
   try {
     response = await fetcher(policy.url, { credentials: "omit", referrerPolicy: "no-referrer" });
   } catch (cause) {
-    throw new AssesskitError(`The stylesheet ${policy.url} could not be fetched: ${String(cause)}`);
+    throw new AssesskitError(`The stylesheet ${policy.url} could not be fetched: ${String(cause)}`, { cause });
   }
   if (!response.ok)
     throw new AssesskitError(`The stylesheet ${policy.url} could not be fetched: HTTP ${response.status}.`);

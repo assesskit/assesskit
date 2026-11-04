@@ -36,7 +36,9 @@ async function statOf(path: string): Promise<Stats> {
   try {
     return await stat(path);
   } catch (error) {
-    throw new DataError(`The path ${path} cannot be read: ${error instanceof Error ? error.message : String(error)}`);
+    throw new DataError(`The path ${path} cannot be read: ${error instanceof Error ? error.message : String(error)}`, {
+      cause: error,
+    });
   }
 }
 

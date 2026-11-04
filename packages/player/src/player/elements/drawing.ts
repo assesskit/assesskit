@@ -1,4 +1,5 @@
 import type { DrawingInteraction } from "@assesskit/runtime/asi";
+import { AssesskitError } from "@assesskit/runtime/errors";
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Point } from "@assesskit/runtime/values";
 import { buildSingle } from "@assesskit/runtime/values";
@@ -426,7 +427,7 @@ export class DrawingInteractionElement extends InteractionElement {
     }
     const composite = await this.#composite(canvas);
     const blob = await new Promise<Blob | null>((resolve) => composite.toBlob(resolve, this.#type));
-    if (blob === null) throw new Error("The canvas gave no picture.");
+    if (blob === null) throw new AssesskitError(`The canvas gave no picture of the type ${this.#type}.`);
     const file = await files.upload(blob, blob.type, `drawing.${blob.type.split("/")[1] ?? "png"}`);
     this.#known = file.reference;
     this.respond(buildSingle("file", file));

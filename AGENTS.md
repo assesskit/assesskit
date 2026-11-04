@@ -156,6 +156,10 @@ that the player needs and the runtime lacks is a change in the runtime, with its
 - No valibot grapheme action (`graphemes`, `minGraphemes`, `maxGraphemes`): they use `Intl.Segmenter`, which the browser baseline bans.
 - Options and optional fields are destructured with their defaults, so that a value set to `null` is checked and rejected, never
   taken as absent.
+- An error that reports another holds it as `cause`: every error class takes `ErrorOptions` last, `biome/error-cause.grit`
+  holds `packages/*/src` to it for an error built in a `catch`, and a helper that builds an error for a caught one, such as
+  `createReadError`, takes the cause in its options. A broken invariant of the code itself is an `AssesskitError`, never a
+  plain `Error`.
 - Validation returns `Issue`s with a stable `code` and a message and does not throw. A refusal of the engine has a `code` and a
   message too, listed in the [delivery guide](docs/runtime/delivery.md).
 - Identifier-keyed data lives in `Map`s, never in plain objects, so that an identifier such as `__proto__` stays data.

@@ -1,5 +1,5 @@
 import { isRecord } from "../checks.js";
-import { DataError } from "../errors.js";
+import { AssesskitError, DataError } from "../errors.js";
 import { xmlTokens } from "../values/internal.js";
 import {
   XINCLUDE_NAMESPACE,
@@ -48,7 +48,9 @@ function readText<T>(read: () => T, describeText: string, element: XmlElement, c
     return read();
   } catch (error) {
     if (!(error instanceof DataError)) throw error;
-    throw asiError(context, element, "assesskit/asi/invalid-value", `${describeText} is invalid: ${error.message}`);
+    throw asiError(context, element, "assesskit/asi/invalid-value", `${describeText} is invalid: ${error.message}`, {
+      cause: error,
+    });
   }
 }
 
@@ -97,7 +99,7 @@ function readAttributes(info: TypeInfo, element: XmlElement, model: Model, conte
 }
 
 function readTextContent(info: TypeInfo, element: XmlElement, model: Model, context: ReadContext): void {
-  if (info.def.content.kind !== "text") throw new Error(`The content of ${info.name} is not text.`);
+  if (info.def.content.kind !== "text") throw new AssesskitError(`The content of ${info.name} is not text.`);
   const { value: type } = info.def.content;
   const text = element.children
     .map((child) => {

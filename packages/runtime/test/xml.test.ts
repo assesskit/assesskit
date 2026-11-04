@@ -513,7 +513,9 @@ describe("XInclude", () => {
 
   it("rejects an include whose resource cannot be read and that has no fallback", () => {
     const root = element("a", [include("missing.xml")]);
-    const issue = issueOf(thrown(() => resolveIncludes(root, "a.xml", resolver({}))));
+    const error = thrown(() => resolveIncludes(root, "a.xml", resolver({})));
+    expect(error).toMatchObject({ cause: { message: "missing.xml is not in the package." } });
+    const issue = issueOf(error);
     expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-resource" });
     expect(issue.message).toBe(
       'The document "missing.xml" of an xi:include cannot be read and the include has no xi:fallback: missing.xml is not in the package.',
@@ -596,7 +598,7 @@ describe("XInclude", () => {
     const root = element("a", [include("f1.xml")]);
     expect(resolveIncludes(root, "a.xml", chain, { limits: { maxIncludeDepth: 8 } }).name).toBe("a");
     const error = thrown(() => resolveIncludes(root, "a.xml", chain, { limits: { maxIncludeDepth: 7 } }));
-    expect(error).toMatchObject({ limit: "maxIncludeDepth", value: 7 });
+    expect(error).toMatchObject({ limit: "maxIncludeDepth", maximum: 7 });
   });
 
   it("counts the nodes of the result against maxNodes, so that includes cannot multiply a document", () => {
@@ -612,7 +614,7 @@ describe("XInclude", () => {
     );
     const error = thrown(() => resolveIncludes(root, "a.xml", resolve, { limits: { maxNodes: 500 } }));
     expect(error).toBeInstanceOf(SecurityError);
-    expect(error).toMatchObject({ limit: "maxNodes", value: 500 });
+    expect(error).toMatchObject({ limit: "maxNodes", maximum: 500 });
   });
 
   it("counts the depth of the result against maxDepth", () => {
@@ -621,7 +623,7 @@ describe("XInclude", () => {
     expect(resolveIncludes(root, "a.xml", resolve, { limits: { maxDepth: 4 } }).name).toBe("a");
     expect(thrown(() => resolveIncludes(root, "a.xml", resolve, { limits: { maxDepth: 3 } }))).toMatchObject({
       limit: "maxDepth",
-      value: 3,
+      maximum: 3,
     });
   });
 
@@ -865,6 +867,11 @@ describe("parsing", () => {
       });
       expect(issue.message).toMatch(message);
     });
+
+    it("carries the error of the decoder as the cause of bytes that are not in their encoding", () => {
+      const bytes = new Uint8Array([0x3c, 0x61, 0x3e, 0xff, 0x3c, 0x2f, 0x61, 0x3e]);
+      expect(thrown(() => parseXml(bytes))).toMatchObject({ cause: expect.any(TypeError) });
+    });
   });
 
   describe("limits", () => {
@@ -875,7 +882,7 @@ describe("parsing", () => {
       for (const input of [xml, new TextEncoder().encode(xml)]) {
         const error = thrown(() => parseXml(input, { limits: { maxBytes: 8 } }));
         expect(error).toBeInstanceOf(SecurityError);
-        expect(error).toMatchObject({ limit: "maxBytes", value: 8 });
+        expect(error).toMatchObject({ limit: "maxBytes", maximum: 8 });
       }
     });
 
@@ -883,7 +890,7 @@ describe("parsing", () => {
       expect(parseXml("<a><b><c/></b></a>", { limits: { maxDepth: 3 } }).name).toBe("a");
       expect(thrown(() => parseXml("<a><b><c/></b></a>", { limits: { maxDepth: 2 } }))).toMatchObject({
         limit: "maxDepth",
-        value: 2,
+        maximum: 2,
       });
     });
 
@@ -891,14 +898,14 @@ describe("parsing", () => {
       expect(parseXml('<a xmlns="urn:a" x="1"/>', { limits: { maxAttributes: 2 } }).attributes).toHaveLength(2);
       expect(thrown(() => parseXml('<a xmlns="urn:a" x="1"/>', { limits: { maxAttributes: 1 } }))).toMatchObject({
         limit: "maxAttributes",
-        value: 1,
+        maximum: 1,
       });
     });
 
     it("allows maxNodes elements, text, CDATA sections, comments and processing instructions", () => {
       const xml = "<a><b/>t<![CDATA[c]]><!--c--><?p d?></a>";
       expect(parseXml(xml, { limits: { maxNodes: 6 } }).children).toHaveLength(5);
-      expect(thrown(() => parseXml(xml, { limits: { maxNodes: 5 } }))).toMatchObject({ limit: "maxNodes", value: 5 });
+      expect(thrown(() => parseXml(xml, { limits: { maxNodes: 5 } }))).toMatchObject({ limit: "maxNodes", maximum: 5 });
     });
 
     it("replaces only the limits it is given", () => {
@@ -919,7 +926,7 @@ describe("parsing", () => {
       ["a DOCTYPE without a subset", "<!DOCTYPE html><a/>"],
     ])("rejects a DOCTYPE with %s before it declares or expands anything", (_name, xml) => {
       const error = thrownAs(SecurityError, () => parseXml(xml, { path: "evil.xml" }));
-      expect(error).toMatchObject({ limit: "doctype", value: 0 });
+      expect(error).toMatchObject({ limit: "doctype", maximum: 0 });
       expect(error.message).toBe(
         'The document "evil.xml" has a DOCTYPE declaration, which the runtime rejects so that no entity is declared or read.',
       );
@@ -951,12 +958,14 @@ describe("parsing", () => {
     });
 
     it("reads no entity but the predefined ones: an entity that no DOCTYPE declares is an error", () => {
-      expect(issueOf(thrown(() => parseXml("<a>&xxe;</a>")))).toMatchObject({ code: "assesskit/xml/not-well-formed" });
+      const error = thrown(() => parseXml("<a>&xxe;</a>"));
+      expect(issueOf(error)).toMatchObject({ code: "assesskit/xml/not-well-formed" });
+      expect(error).toMatchObject({ cause: expect.any(Error) });
     });
 
     it("rejects input over the default size without reading it", () => {
       const error = thrown(() => parseXml(new Uint8Array(DEFAULT_XML_LIMITS.maxBytes + 1)));
-      expect(error).toMatchObject({ limit: "maxBytes", value: DEFAULT_XML_LIMITS.maxBytes });
+      expect(error).toMatchObject({ limit: "maxBytes", maximum: DEFAULT_XML_LIMITS.maxBytes });
       expect(thrown(() => parseXml(`<a>${"x".repeat(DEFAULT_XML_LIMITS.maxBytes)}</a>`))).toMatchObject({
         limit: "maxBytes",
       });
@@ -965,13 +974,13 @@ describe("parsing", () => {
     it("rejects deep nesting at the default depth before it reads the rest", () => {
       const error = thrown(() => parseXml("<a>".repeat(100_000)));
       expect(error).toBeInstanceOf(SecurityError);
-      expect(error).toMatchObject({ limit: "maxDepth", value: 256 });
+      expect(error).toMatchObject({ limit: "maxDepth", maximum: 256 });
       expect(parseXml(`${"<a>".repeat(256)}${"</a>".repeat(256)}`).name).toBe("a");
     });
 
     it("rejects more attributes than the default allows on one element", () => {
       const attributes = Array.from({ length: 257 }, (_, index) => ` a${index}="1"`).join("");
-      expect(thrown(() => parseXml(`<a${attributes}/>`))).toMatchObject({ limit: "maxAttributes", value: 256 });
+      expect(thrown(() => parseXml(`<a${attributes}/>`))).toMatchObject({ limit: "maxAttributes", maximum: 256 });
     });
   });
 
@@ -1127,6 +1136,12 @@ describe("read errors and locations", () => {
       },
     ]);
     expect(createReadError("assesskit/xml/example", "m").issues[0]).not.toHaveProperty("location");
+  });
+
+  it("carries the error it reports as its cause, and has none unless given one", () => {
+    const cause = new DataError("The text is not an integer.");
+    expect(createReadError("assesskit/xml/example", "m", { cause }).cause).toBe(cause);
+    expect("cause" in createReadError("assesskit/xml/example", "m")).toBe(false);
   });
 
   it("refuses options that are not an object", () => {

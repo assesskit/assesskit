@@ -104,10 +104,9 @@ export class TokenEndpointError extends ServiceError {
   /** Error class name. */
   override name = "TokenEndpointError";
 
-  /** @param failure - The error that the token request raised. */
+  /** @param failure - The error that the token request raised, which becomes the `cause`. */
   constructor(failure: ServiceError) {
-    super(failure.message, failure.status, failure.body);
-    this.cause = failure;
+    super(failure.message, failure.status, failure.body, { cause: failure });
   }
 }
 
@@ -130,8 +129,8 @@ function parseBody(text: string, what: string, status: number, maxTokens: number
   }
   try {
     return JSON.parse(text);
-  } catch {
-    throw new ServiceError(`${what} answered with a body that is not JSON.`, status, text);
+  } catch (error) {
+    throw new ServiceError(`${what} answered with a body that is not JSON.`, status, text, { cause: error });
   }
 }
 

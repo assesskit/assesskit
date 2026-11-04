@@ -1,3 +1,4 @@
+import { AssesskitError } from "../errors.js";
 import { ELEMENT_TYPES } from "./element-table.js";
 import type { AcceptDef, AttributeDef, SlotDef, TypeDef } from "./table.js";
 
@@ -101,10 +102,10 @@ const TYPE_INDEX: ReadonlyMap<string, TypeInfo> = new Map(
  *
  * @param name - The name of a type of the element table.
  * @returns The type with its slots and attributes.
- * @throws `Error` when the table has no such type, which only a table that is not consistent with itself causes.
+ * @throws `AssesskitError` when the table has no such type, which only a table that is not consistent with itself causes.
  */
 export function typeNamed(name: string): TypeInfo {
   const info = TYPE_INDEX.get(name);
-  if (info === undefined) throw new Error(`The element table has no type ${name}.`);
+  if (info === undefined) throw new AssesskitError(`The element table has no type ${name}.`);
   return info;
 }

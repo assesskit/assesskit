@@ -152,7 +152,9 @@ Four configurations check the package, each with the libraries of its side:
 
 The errors of the player extend `AssesskitError` of the runtime, and the player throws the runtime's `DataError`: both come from
 `@assesskit/runtime/errors`, which loads no other module, so that browser folders can import it. The messages are full sentences
-that say what is wrong and what is expected. The runtime's errors pass through the player unchanged.
+that say what is wrong and what is expected. The runtime's errors pass through the player unchanged. Every class takes
+`ErrorOptions` last, and an error that reports another holds it as `cause`, such as the `ServiceError` of a CAT request whose
+port failed.
 
 | Class          | Thrown when                                                                    | Carries             |
 | -------------- | ------------------------------------------------------------------------------ | ------------------- |

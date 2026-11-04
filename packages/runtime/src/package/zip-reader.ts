@@ -50,8 +50,8 @@ interface Entry {
   readonly offset: number;
 }
 
-function corrupt(message: string): ReadError {
-  return createReadError("assesskit/package/zip", message);
+function corrupt(message: string, options: ErrorOptions = {}): ReadError {
+  return createReadError("assesskit/package/zip", message, options);
 }
 
 function exceeded(limit: keyof ZipLimits, limits: ZipLimits, what: string): SecurityError {
@@ -218,8 +218,8 @@ function readEntry(
   let name: string;
   try {
     name = NAME_DECODER.decode(rawName);
-  } catch {
-    throw corrupt("The archive has an entry whose name is not valid UTF-8.");
+  } catch (error) {
+    throw corrupt("The archive has an entry whose name is not valid UTF-8.", { cause: error });
   }
   const flags = reader.u16(position + 8);
   if ((flags & ENCRYPTION_FLAGS) !== 0)
@@ -367,7 +367,9 @@ function inflate(data: Uint8Array, entry: Entry): Uint8Array {
     } while (offset < data.length);
   } catch (error) {
     if (error instanceof AssesskitError) throw error;
-    throw corrupt(`The entry ${JSON.stringify(entry.name)} has compressed data that cannot be inflated.`);
+    throw corrupt(`The entry ${JSON.stringify(entry.name)} has compressed data that cannot be inflated.`, {
+      cause: error,
+    });
   }
   return concatenate(chunks, produced);
 }

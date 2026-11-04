@@ -551,7 +551,7 @@ describe("containers", () => {
       limits: { maxContainerSize },
     });
     expect(run(xml, limits(3))).toMatchObject({ values: [1, expect.anything(), expect.anything()] });
-    expect(() => run(xml, limits(2))).toThrow(expect.objectContaining({ limit: "maxContainerSize", value: 2 }));
+    expect(() => run(xml, limits(2))).toThrow(expect.objectContaining({ limit: "maxContainerSize", maximum: 2 }));
     expect(() => run(xml, limits(2))).toThrow(`The operator ${name} builds a container of 3 values`);
   });
 
@@ -841,7 +841,7 @@ describe("evaluate", () => {
       `<qti-response-processing ${NS}><qti-set-outcome-value identifier="X">${nested(deepest)}</qti-set-outcome-value></qti-response-processing>`,
     );
     expect(readAsi(writeAsi(document))).toEqual(document);
-    expect(() => run(nested(deepest + 1))).toThrow(expect.objectContaining({ limit: "maxDepth", value: 256 }));
+    expect(() => run(nested(deepest + 1))).toThrow(expect.objectContaining({ limit: "maxDepth", maximum: 256 }));
   });
 
   it("keeps variables named like members of Object as data, and reads none that the item does not declare", () => {
@@ -1471,7 +1471,7 @@ describe("outcome processing", () => {
       `<qti-outcome-maximum outcome-identifier="SCORE" exclude-category="extra"/>`,
     ]) {
       expect(evaluated(xml, 3)).toMatchObject({ values: [expect.anything(), expect.anything(), expect.anything()] });
-      expect(() => evaluated(xml, 2)).toThrow(expect.objectContaining({ limit: "maxContainerSize", value: 2 }));
+      expect(() => evaluated(xml, 2)).toThrow(expect.objectContaining({ limit: "maxContainerSize", maximum: 2 }));
     }
   });
 

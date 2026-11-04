@@ -178,7 +178,7 @@ function checkTarget(target: XmlElement): XmlElement {
 function resourceError(href: string, error: unknown, location: IssueLocation): ReadError {
   const reason = error instanceof Error ? error.message : describe(error);
   const message = `The document ${JSON.stringify(href)} of an xi:include cannot be read and the include has no xi:fallback: ${reason}`;
-  return createReadError("assesskit/xml/xinclude-resource", message, { location });
+  return createReadError("assesskit/xml/xinclude-resource", message, { location, cause: error });
 }
 
 /**

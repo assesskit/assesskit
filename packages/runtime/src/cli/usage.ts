@@ -33,7 +33,7 @@ export function parseCommand<TOptions extends StringOptions>(
     return parseArgs({ args: [...args], options, allowPositionals: true });
   } catch (error) {
     // `parseArgs` reports a bad command line with a TypeError.
-    if (error instanceof TypeError) throw new UsageError(error.message);
+    if (error instanceof TypeError) throw new UsageError(error.message, { cause: error });
     throw error;
   }
 }

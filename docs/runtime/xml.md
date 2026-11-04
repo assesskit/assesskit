@@ -116,7 +116,7 @@ examples for size and node count (32 KiB, 1,126 nodes), 16 times its depth (16) 
 | `maxNodes`        | 1,000,000  | nodes      | Elements, text, CDATA sections, comments and processing instructions. |
 | `maxIncludeDepth` | 8          | levels     | Nesting of includes (`resolveIncludes`).                              |
 
-A limit that a document exceeds throws a `SecurityError` whose `limit` is the limit's name and `value` its value. The
+A limit that a document exceeds throws a `SecurityError` whose `limit` is the limit's name and `maximum` its value. The
 limits are checked while the tree grows: the reader never builds a tree larger than a limit allows. A limit that is not a
 positive integer is a `DataError` whose message begins `The limit maxBytes`, and so on for each name.
 

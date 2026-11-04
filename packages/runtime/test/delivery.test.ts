@@ -4906,7 +4906,7 @@ describe("candidate actions", () => {
       "The action is larger than the limit maxActionSize of 200.",
     );
     expect(() => readCandidateAction(comment("x".repeat(300)), { limits: { maxActionSize: 200 } })).toThrow(
-      expect.objectContaining({ name: "SecurityError", limit: "maxActionSize", value: 200 }),
+      expect.objectContaining({ name: "SecurityError", limit: "maxActionSize", maximum: 200 }),
     );
     expect(() => readCandidateAction(comment("x".repeat(DEFAULT_ACTION_LIMITS.maxActionSize)))).toThrow(
       "The action is larger than the limit maxActionSize of 4194304.",
@@ -4920,7 +4920,7 @@ describe("candidate actions", () => {
       'The PCI state of "P" has 11 code units, more than the limit maxPciStateLength of 10.',
     );
     expect(() => readCandidateAction(pci("x".repeat(11)), { limits: { maxPciStateLength: 10 } })).toThrow(
-      expect.objectContaining({ name: "SecurityError", limit: "maxPciStateLength", value: 10 }),
+      expect.objectContaining({ name: "SecurityError", limit: "maxPciStateLength", maximum: 10 }),
     );
     expect(() => readCandidateAction(pci("x".repeat(DEFAULT_ACTION_LIMITS.maxPciStateLength + 1)))).toThrow(
       /more than the limit maxPciStateLength of 1048576\.$/,
@@ -4952,7 +4952,7 @@ describe("candidate actions", () => {
       "A list in the settings of support-settings has 257 entries, more than the limit maxSettingListLength of 256.",
     );
     expect(() => readCandidateAction(fonts(names(4)), { limits: { maxSettingListLength: 3 } })).toThrow(
-      expect.objectContaining({ name: "SecurityError", limit: "maxSettingListLength", value: 3 }),
+      expect.objectContaining({ name: "SecurityError", limit: "maxSettingListLength", maximum: 3 }),
     );
     expect(readCandidateAction(fonts(names(300)), { limits: { maxSettingListLength: 300 } })).toMatchObject({
       type: "support-settings",

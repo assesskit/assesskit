@@ -1529,6 +1529,11 @@ describe("reading ZIP archives", () => {
     expect(issueCode(() => read({ name: "f", data, stored: new Uint8Array([0xff, 0xff, 0xff, 0xff]) }))).toBe(
       "assesskit/package/zip",
     );
+    const inflated = thrownAs(ReadError, () =>
+      read({ name: "f", data, stored: new Uint8Array([0xff, 0xff, 0xff, 0xff]) }),
+    );
+    expect(inflated.message).toBe('The entry "f" has compressed data that cannot be inflated.');
+    expect(inflated.cause).toBeInstanceOf(Error);
     expect(issueCode(() => read({ name: "f", data, localName: "g" }))).toBe("assesskit/package/zip");
     expect(issueCode(() => read({ name: "f", data, declaredCompressedSize: 5000 }))).toBe("assesskit/package/zip");
     expect(read({ name: "f", data })).toEqual(data);

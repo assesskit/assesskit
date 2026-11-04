@@ -47,9 +47,10 @@ export class ReadError extends AssesskitError {
   /**
    * @param message - Says what could not be read.
    * @param issues - The problems found.
+   * @param options - The `cause`: the error that this one reports.
    */
-  constructor(message: string, issues: readonly Issue[]) {
-    super(message);
+  constructor(message: string, issues: readonly Issue[], options?: ErrorOptions) {
+    super(message, options);
     this.issues = issues;
   }
 }
@@ -61,20 +62,21 @@ export class ReadError extends AssesskitError {
 export class SecurityError extends AssesskitError {
   /** Error class name. */
   override name = "SecurityError";
-  /** The name of the broken limit, such as `maxBytes`. */
+  /** The name of the broken limit or rule: the option that sets it, such as `maxBytes`, or a rule that the guide names, such as `symlink`. */
   readonly limit: string;
-  /** The value of the limit; `0` for a rule that allows none, such as a DOCTYPE. */
-  readonly value: number;
+  /** The value of the limit, in the unit of its name; `0` for a rule that allows none, such as a DOCTYPE. */
+  readonly maximum: number;
 
   /**
    * @param message - Says which input broke the limit.
-   * @param limit - The name of the broken limit.
-   * @param value - The value of the limit.
+   * @param limit - The name of the broken limit or rule.
+   * @param maximum - The value of the limit.
+   * @param options - The `cause`: the error that this one reports.
    */
-  constructor(message: string, limit: string, value: number) {
-    super(message);
+  constructor(message: string, limit: string, maximum: number, options?: ErrorOptions) {
+    super(message, options);
     this.limit = limit;
-    this.value = value;
+    this.maximum = maximum;
   }
 }
 

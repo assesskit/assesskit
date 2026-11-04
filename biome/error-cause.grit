@@ -1,0 +1,5 @@
+`throw new $class($args)` as $throw where {
+  $throw <: within JsCatchClause(),
+  $args <: not contains `cause`,
+  register_diagnostic(span=$throw, message="An error thrown in a catch reports the error it caught: pass { cause } to its constructor.", severity="error")
+}

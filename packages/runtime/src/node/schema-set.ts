@@ -45,7 +45,9 @@ function readVerified(directory: string, schema: SchemaFile): Uint8Array {
   try {
     bytes = readFileSync(join(directory, schema.file));
   } catch (error) {
-    throw new DataError(`The schema ${schema.file} cannot be read from ${directory}: ${reasonOf(error)}.`);
+    throw new DataError(`The schema ${schema.file} cannot be read from ${directory}: ${reasonOf(error)}.`, {
+      cause: error,
+    });
   }
   const hash = createHash("sha256").update(bytes).digest("hex");
   if (hash !== schema.sha256) {

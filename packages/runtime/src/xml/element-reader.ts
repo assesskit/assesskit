@@ -139,11 +139,13 @@ export class ElementReader {
    *
    * @param code - The issue code of the problem, such as `missing-attribute`; the module of the rules goes before it.
    * @param message - A full sentence that says what is wrong and what is expected.
+   * @param options - The `cause`: the error that this one reports.
    * @returns The error, with the position of the element.
    */
-  fail(code: string, message: string): ReadError {
+  fail(code: string, message: string, options: ErrorOptions = {}): ReadError {
     return createReadError(`assesskit/${this.rules.module}/${code}`, message, {
       location: locateElement(this.element, this.rules.path, { trail: this.trail }),
+      ...options,
     });
   }
 
@@ -162,7 +164,7 @@ export class ElementReader {
     try {
       return run();
     } catch (error) {
-      if (error instanceof DataError) throw this.fail(code, `${lead}${error.message}`);
+      if (error instanceof DataError) throw this.fail(code, `${lead}${error.message}`, { cause: error });
       throw error;
     }
   }

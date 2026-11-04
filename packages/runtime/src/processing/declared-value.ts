@@ -27,7 +27,11 @@ export function readPrimitive(text: string, baseType: BaseType, what: string): P
     return parsePrimitive(text, baseType);
   } catch (error) {
     if (!(error instanceof DataError)) throw error;
-    throw new ProcessingError(`${what} has the text ${describe(text)}, which is not a value of base type ${baseType}.`);
+    throw new ProcessingError(
+      `${what} has the text ${describe(text)}, which is not a value of base type ${baseType}.`,
+      undefined,
+      { cause: error },
+    );
   }
 }
 

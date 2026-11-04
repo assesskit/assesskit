@@ -69,6 +69,7 @@ export function readModuleResolution(text: string): ModuleResolution {
   } catch (error) {
     throw new DataError(
       `The module resolution file must be JSON: ${error instanceof Error ? error.message : String(error)}.`,
+      { cause: error },
     );
   }
   return parseWith(resolutionSchema, json, "The module resolution file");

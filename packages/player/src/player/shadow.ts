@@ -35,8 +35,8 @@ export function shadowRootOf(host: HTMLElement): ShadowRoot {
   let shadow: ShadowRoot;
   try {
     shadow = host.attachShadow({ mode: "open" });
-  } catch {
-    throw new DataError(HOST_SHADOW_RULE);
+  } catch (error) {
+    throw new DataError(HOST_SHADOW_RULE, { cause: error });
   }
   ATTACHED.add(shadow);
   return shadow;

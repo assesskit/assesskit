@@ -21,8 +21,10 @@ export function toJson(value: unknown): unknown {
   if (value === undefined) return null;
   try {
     return JSON.parse(JSON.stringify(value));
-  } catch {
-    throw new DataError("A value must be JSON, found a value with a cycle, a BigInt or too many levels.");
+  } catch (error) {
+    throw new DataError("A value must be JSON, found a value with a cycle, a BigInt or too many levels.", {
+      cause: error,
+    });
   }
 }
 function readState(value: unknown): string {

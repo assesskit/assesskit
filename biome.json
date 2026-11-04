@@ -904,6 +904,10 @@
       "plugins": ["./biome/no-spread-arguments.grit"]
     },
     {
+      "includes": ["packages/*/src/**"],
+      "plugins": ["./biome/error-cause.grit"]
+    },
+    {
       "includes": [
         "packages/player/src/**",
         "!packages/player/src/client/clock.ts",

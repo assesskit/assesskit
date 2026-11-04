@@ -9,6 +9,11 @@ describe("AccessError", () => {
     expect(error.name).toBe("AccessError");
     expect(error.reason).toBe("session-exists");
   });
+
+  it("carries the error it reports as its cause", () => {
+    const cause = new Error("The store refused the record.");
+    expect(new AccessError("The session exists.", "session-exists", { cause }).cause).toBe(cause);
+  });
 });
 
 describe("ServiceError", () => {
@@ -18,6 +23,11 @@ describe("ServiceError", () => {
     expect(error.name).toBe("ServiceError");
     expect(error.status).toBe(503);
     expect(error.body).toBe("unavailable");
+  });
+
+  it("carries the error it reports as its cause", () => {
+    const cause = new TypeError("fetch failed");
+    expect(new ServiceError("The CAT service did not answer.", 0, "", { cause }).cause).toBe(cause);
   });
 });
 

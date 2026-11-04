@@ -165,8 +165,10 @@ export function deserializeState(text: string): DeliveryState {
   let json: unknown;
   try {
     json = JSON.parse(text);
-  } catch {
-    throw new DataError("The state must be the JSON text that serializeState writes, found text that is not JSON.");
+  } catch (error) {
+    throw new DataError("The state must be the JSON text that serializeState writes, found text that is not JSON.", {
+      cause: error,
+    });
   }
   return parseWith(stateSchema, json, "The state");
 }

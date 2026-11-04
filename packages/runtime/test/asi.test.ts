@@ -3743,6 +3743,9 @@ describe("reading input and errors", () => {
       message:
         'The attribute adaptive of qti-assessment-item is invalid: The text "maybe" is not a boolean: expected true, false, 1 or 0.',
     });
+    expect(thrown(() => readAsi(item("", ' adaptive="maybe"')))).toMatchObject({
+      cause: new DataError('The text "maybe" is not a boolean: expected true, false, 1 or 0.'),
+    });
   });
 
   it("rejects an integer attribute that is not a safe integer", () => {
@@ -4293,6 +4296,9 @@ describe("writing documents", () => {
         "The property title of qti-assessment-item is invalid: A value must be a string, found 5. It is in qti-assessment-item.",
       ),
     );
+    expect(thrown(() => write({ ...valid(), title: 5 }))).toMatchObject({
+      cause: new DataError("A value must be a string, found 5."),
+    });
     expect(() => write({ ...valid(), adaptive: "yes" })).toThrow(DataError);
   });
 

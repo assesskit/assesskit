@@ -19,6 +19,7 @@ async function openSchemas(directory: string | undefined, fallback: string): Pro
         : `assesskit schemas fetch --dir ${JSON.stringify(directory)}`;
     throw new DataError(
       `The directory ${schemaDirectory} does not hold the pinned schemas. Run ${command} to download them.`,
+      { cause: error },
     );
   }
 }

@@ -48,6 +48,7 @@ export function customOperator(
     if (!(error instanceof DataError)) throw error;
     throw new DataError(
       `The custom operator ${JSON.stringify(name)} returned ${describe(result)}, which is not a value: ${error.message}`,
+      { cause: error },
     );
   }
   checkContainerSize(environment, primitivesOf(value).length, "qti-custom-operator");

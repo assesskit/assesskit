@@ -79,9 +79,10 @@ function head(bytes: Uint8Array): string {
 function decode(bytes: Uint8Array, encoding: string, path: string | undefined): string {
   try {
     return new TextDecoder(encoding, { fatal: true }).decode(bytes);
-  } catch {
+  } catch (error) {
     throw createReadError("assesskit/xml/encoding", `${documentName(path)} is not valid ${encoding}.`, {
       location: { path },
+      cause: error,
     });
   }
 }

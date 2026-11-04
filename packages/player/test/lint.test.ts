@@ -246,6 +246,47 @@ const spread = {
   dom: source(`${SRC}/player/dom.ts`, [...spreadHeader, "parent.append(...nodes.slice(0, 10_000));"]),
 };
 const SPREAD = "A spread into the arguments of a call throws a RangeError";
+const causes = {
+  flagged: [`${SRC}/server`, `${SRC}/player`, "packages/runtime/src/delivery"].map((folder) =>
+    source(`${folder}/cause.ts`, [
+      "export function read(text: string): unknown {",
+      "  try {",
+      "    return JSON.parse(text);",
+      "  } catch (error) {",
+      "    throw new SyntaxError(String(error));",
+      "  }",
+      "}",
+      "export function decode(bytes: Uint8Array): string {",
+      "  try {",
+      '    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);',
+      "  } catch {",
+      '    throw new TypeError("The bytes are not UTF-8.");',
+      "  }",
+      "}",
+    ]),
+  ),
+  passed: source(`${SRC}/player/cause-passed.ts`, [
+    "export function read(text: string): unknown {",
+    "  try {",
+    "    return JSON.parse(text);",
+    "  } catch (error) {",
+    '    throw new SyntaxError("The text is not JSON.", { cause: error });',
+    "  }",
+    "}",
+    "export function again(text: string): unknown {",
+    "  try {",
+    "    return JSON.parse(text);",
+    "  } catch (cause) {",
+    "    if (!(cause instanceof SyntaxError)) throw cause;",
+    "    throw new TypeError(cause.message, { cause });",
+    "  }",
+    "}",
+    "export function outside(text: string): void {",
+    '  if (text === "") throw new TypeError("The text is empty.");',
+    "}",
+  ]),
+};
+const CAUSE = "An error thrown in a catch reports the error it caught";
 const IMPORTS = "Browser code imports from @assesskit/runtime/delivery only";
 const REEXPORTS = "Browser code re-exports from @assesskit/runtime/delivery only";
 const LOADS = "Only client/local/session.ts loads @assesskit/runtime/delivery";
@@ -406,6 +447,18 @@ describe("browser-delivery-imports.grit", () => {
   it("does not apply to the server folders", () => {
     expect(messagesFor(delivery.server, "Browser code")).toEqual([]);
     expect(messagesFor(delivery.server, "Only client")).toEqual([]);
+  });
+});
+
+describe("error-cause.grit", () => {
+  it("refuses an error built in a catch without the error it caught, in every folder of src", () => {
+    for (const path of causes.flagged) {
+      expect(messagesFor(path, CAUSE), path).toHaveLength(2);
+    }
+  });
+
+  it("lets a catch throw the caught error again, or a new error with it as the cause, and leaves a throw outside a catch alone", () => {
+    expect(messagesFor(causes.passed, CAUSE)).toEqual([]);
   });
 });
 

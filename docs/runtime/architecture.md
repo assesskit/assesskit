@@ -75,14 +75,20 @@ except `node` and `cli`, so the root stays portable. `bin` maps `assesskit` to t
 
 ## Errors and issues
 
-All errors extend `AssesskitError`, and their messages are full sentences that say what is wrong and what is expected.
+All errors extend `AssesskitError`, and their messages are full sentences that say what is wrong and what is expected. Every
+class takes `ErrorOptions` last, and an error that reports another, such as a `ReadError` for a value that is not in its lexical
+form, holds it as `cause`. A broken invariant of the runtime itself, such as an element table that is not consistent with
+itself, is an `AssesskitError`.
 
-| Class             | Thrown when                                                                                                               | Carries             |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------- |
-| `DataError`       | An argument has the wrong type or is out of range, an untrusted action is not an action, or a state has an unknown format | the message         |
-| `ReadError`       | A document is not well-formed, not in the expected namespace, or cannot be mapped to the model                            | `issues`            |
-| `SecurityError`   | Input breaks a security rule or a limit: a DOCTYPE, a path escape, a size, depth or ratio above its limit                 | `limit` and `value` |
-| `ProcessingError` | Processing meets a condition the specification does not define as NULL                                                    | `identifier`        |
+| Class             | Thrown when                                                                                                               | Carries               |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `DataError`       | An argument has the wrong type or is out of range, an untrusted action is not an action, or a state has an unknown format | the message           |
+| `ReadError`       | A document is not well-formed, not in the expected namespace, or cannot be mapped to the model                            | `issues`              |
+| `SecurityError`   | Input breaks a security rule or a limit: a DOCTYPE, a path escape, a size, depth or ratio above its limit                 | `limit` and `maximum` |
+| `ProcessingError` | Processing meets a condition the specification does not define as NULL                                                    | `identifier`          |
+
+`limit` names the option that sets the limit, such as `maxBytes`, or the rule, such as `doctype`; `maximum` is the value of the
+limit, `0` for a rule that allows none.
 
 The subpath `errors` exports the errors and the types `Issue` and `IssueLocation` without any other module. The player imports
 `AssesskitError` and `DataError` from it.

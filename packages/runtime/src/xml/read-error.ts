@@ -20,6 +20,12 @@ export interface CreateReadErrorOptions {
    * @defaultValue none
    */
   readonly location?: IssueLocation;
+  /**
+   * The error that this one reports, such as the `DataError` of a value that is not in its lexical form.
+   *
+   * @defaultValue none
+   */
+  readonly cause?: unknown;
 }
 
 /**
@@ -35,7 +41,7 @@ export function createReadError(code: string, message: string, options: CreateRe
   const { location } = options;
   const issue: Issue = { severity: "error", code, message, ...(location ? { location } : {}) };
   const position = location?.line === undefined ? "" : ` (line ${location.line}, column ${location.column ?? 1})`;
-  return new ReadError(`${message}${position}`, [issue]);
+  return new ReadError(`${message}${position}`, [issue], "cause" in options ? { cause: options.cause } : undefined);
 }
 
 /** The options of {@link locateElement}. */
