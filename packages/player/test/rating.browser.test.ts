@@ -181,7 +181,7 @@ describe("the form of each kind", () => {
   });
 
   it("shows the weight of a criterion only when it is not 1, written for the language of the interface", () => {
-    const { shadow } = show(HALF, { language: "id", messages: { id: ID_MESSAGES } });
+    const { shadow } = show(HALF, { language: "id", catalogs: { id: ID_MESSAGES } });
     expect(all(shadow, ".ak-rating-weight").map((node) => node.textContent)).toEqual(["Bobot 0,5"]);
     expect(all(show(HOLISTIC).shadow, ".ak-rating-weight")).toEqual([]);
   });
@@ -389,7 +389,7 @@ describe("showing another rubric", () => {
 
 describe("the languages", () => {
   it("marks the language of the interface on the form and the language of the rubric on each text of it", () => {
-    const { shadow } = show(ESSAY, { language: "id", messages: { id: ID_MESSAGES } }, {});
+    const { shadow } = show(ESSAY, { language: "id", catalogs: { id: ID_MESSAGES } }, {});
     expect(el(shadow, "form").getAttribute("lang")).toBe("id");
     const texts = all(shadow, '[dir="auto"]');
     expect(texts.length).toBeGreaterThan(0);
@@ -403,14 +403,14 @@ describe("the languages", () => {
   });
 
   it("leaves the language of a text to the interface when the rubric gives none, and writes numbers for the interface", async () => {
-    const { shadow } = show(FRACTIONS, { language: "id", messages: { id: ID_MESSAGES } });
+    const { shadow } = show(FRACTIONS, { language: "id", catalogs: { id: ID_MESSAGES } });
     expect(all(shadow, "[lang]:not(form):not(output)")).toEqual([]);
     await choose(shadow, 0, 1);
     expect(status(shadow)).toBe("Skor 1,5 dari maksimum 1,5");
   });
 
   it("takes the messages that a host gives, for the language of the interface", () => {
-    const { shadow } = show(ESSAY, { language: "id", messages: { id: { ...ID_MESSAGES, ratingScore: "Nilai" } } });
+    const { shadow } = show(ESSAY, { language: "id", catalogs: { id: { ...ID_MESSAGES, ratingScore: "Nilai" } } });
     expect(status(shadow)).toBe("Nilai belum dinilai");
   });
 });
@@ -525,7 +525,7 @@ describe("mounting and taking down", () => {
     expect(() => mount({ ...(json('{"extra":1}') as object), stylesheet: sheet })).toThrow(DataError);
     expect(() => mount({ stylesheet: json("1") })).toThrow(DataError);
     expect(() => mount({ stylesheet: sheet, language: json("1") })).toThrow(DataError);
-    expect(() => mount({ stylesheet: sheet, messages: json("null") })).toThrow(DataError);
+    expect(() => mount({ stylesheet: sheet, catalogs: json("null") })).toThrow(DataError);
     expect(() => mount({ stylesheet: sheet, ratings: json("{}") })).toThrow(DataError);
     expect(() => mount({ stylesheet: sheet, readOnly: json('"yes"') })).toThrow(DataError);
     expect(() => mount({ stylesheet: sheet, onChange: json("1") })).toThrow(DataError);

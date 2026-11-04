@@ -98,7 +98,7 @@ export interface MountOptions {
    *
    * @defaultValue None, so that the messages are English
    */
-  readonly messages?: Readonly<Record<string, Partial<Messages>>>;
+  readonly catalogs?: Readonly<Record<string, Partial<Messages>>>;
   /**
    * The origins besides the package's that content and portable custom interactions may load from.
    *
@@ -263,7 +263,7 @@ const ITEM_OPTION_NAMES = [
   "stylesheet",
   "fetch",
   "language",
-  "messages",
+  "catalogs",
   "origins",
   "mathjax",
   "hooks",
@@ -339,7 +339,7 @@ function checkSharedOptions(
   }
   checkFunction(options.fetch, "The option fetch must be a function");
   if (options.language !== undefined) checkNonEmptyString(options.language, "The option language");
-  if (options.messages !== undefined) checkRecord(options.messages, "The option messages must be an object");
+  if (options.catalogs !== undefined) checkRecord(options.catalogs, "The option catalogs must be an object");
   if (options.origins !== undefined) readOrigins(options.origins);
   if (options.mathjax !== undefined) checkString(options.mathjax, "The option mathjax");
   checkRecord(options.client, "The option client must be a session client");

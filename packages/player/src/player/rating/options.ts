@@ -13,8 +13,8 @@ import { type Messages, selectMessages } from "../../messages/index.js";
 import type { MountOptions } from "../delivery/index.js";
 import { numberFormatter } from "../internal.js";
 
-/** The options of {@link mountRatingForm}; `stylesheet`, `language` and `messages` mean what they do for the player. */
-export interface RatingFormOptions extends Pick<MountOptions, "stylesheet" | "language" | "messages"> {
+/** The options of {@link mountRatingForm}; `stylesheet`, `language` and `catalogs` mean what they do for the player. */
+export interface RatingFormOptions extends Pick<MountOptions, "stylesheet" | "language" | "catalogs"> {
   /**
    * The ratings to show at first, such as those of an earlier rater.
    *
@@ -53,7 +53,7 @@ export interface RatingSettings {
   readonly format: (value: number) => string;
 }
 
-const OPTION_NAMES = ["stylesheet", "language", "messages", "ratings", "readOnly", "onChange"];
+const OPTION_NAMES = ["stylesheet", "language", "catalogs", "ratings", "readOnly", "onChange"];
 
 /**
  * Checks the options of a form and fills in their defaults.
@@ -65,9 +65,9 @@ const OPTION_NAMES = ["stylesheet", "language", "messages", "ratings", "readOnly
 export function readRatingOptions(options: unknown): RatingSettings {
   checkRecord(options, "The options must be an object");
   checkProperties(options, "The options", OPTION_NAMES);
-  const { language = "en", messages = {}, ratings = [], readOnly = false, onChange, stylesheet } = options;
+  const { language = "en", catalogs = {}, ratings = [], readOnly = false, onChange, stylesheet } = options;
   checkString(language, "The option language");
-  checkRecord(messages, "The option messages must be an object");
+  checkRecord(catalogs, "The option catalogs must be an object");
   checkArray(ratings, "The option ratings must be an array");
   checkBoolean(readOnly, "The option readOnly");
   if (onChange !== undefined) checkFunction(onChange, "The option onChange must be a function");
@@ -77,7 +77,7 @@ export function readRatingOptions(options: unknown): RatingSettings {
   const format = numberFormatter(language);
   return {
     // `selectMessages` checks the catalogs, language by language, down to each message.
-    messages: selectMessages(language, messages as Readonly<Record<string, Partial<Messages>>>),
+    messages: selectMessages(language, catalogs as Readonly<Record<string, Partial<Messages>>>),
     language,
     stylesheet,
     ratings: ratings as readonly RubricRating[],

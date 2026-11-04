@@ -224,14 +224,14 @@ its media type: an image as `img`, audio and video with controls, anything else 
 | `assets`       | `(path: string) => string`          | Turns the path of a file in the package into the URL to load it from. Required                                                                                                                                          |
 | `stylesheet`   | `CSSStyleSheet`                     | The player's stylesheet, built from `player.css` ([styling](styling.md)). Required                                                                                                                                      |
 | `language`     | `string`                            | The language of the interface, a BCP 47 tag. Default: `"en"`                                                                                                                                                            |
-| `messages`     | `Record<string, Partial<Messages>>` | The catalogs of the languages the host shows, by language tag ([messages](messages.md)). Default: none, English                                                                                                         |
+| `catalogs`     | `Record<string, Partial<Messages>>` | The catalogs of the languages the host shows, by language tag ([messages](messages.md)). Default: none, English                                                                                                         |
 | `files`        | `{ url(file: FileValue): string }`  | The URL that plays or opens a file value that a candidate submitted. Default: none, so that a file shows as its name                                                                                                    |
 | `origins`      | `readonly string[]`                 | The origins besides the package's that content may reference. Default: none                                                                                                                                             |
 | `mathjax`      | `string`                            | The URL of MathJax 4's `mml-chtml.js` ([math](math.md)). Default: none, so that the browser renders MathML                                                                                                              |
 | `interactions` | `InteractionRenderers`              | The renderers of interactions by kind. Default: none, so that each interaction is a placeholder                                                                                                                         |
 | `itemPath`     | `(item: ItemKey) => string`         | The path in the package of the document of an item instance, such as `items/q1/item.xml`, against which the relative references of its content resolve. The scorer view does not carry it. Default: `""` for every item |
 
-`stylesheet`, `language`, `messages`, `origins`, `mathjax` and `files.url` are the options of the same names of `mountDelivery` ([delivery](delivery.md)),
+`stylesheet`, `language`, `catalogs`, `origins`, `mathjax` and `files.url` are the options of the same names of `mountDelivery` ([delivery](delivery.md)),
 so a host passes the same values to both.
 
 | Member               | Meaning                                                                                                                           |

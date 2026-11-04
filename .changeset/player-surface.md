@@ -9,3 +9,5 @@
 `buildSpeechRequest`, `SpeechOptions`, `echoTyping`, `TypingEchoOptions` and `applyReadingType` are no longer exported from `@assesskit/player/player`: `mountSpoken` holds all three, and a host replaces the voice through `SpeechHook`, which gets the request. `mountSpoken` checks the items of its `lexicons` option when it mounts (it checked only that the option was an array).
 
 `AUTOSAVE_MS`, `FLUSH_BEFORE_DEADLINE_MS` (`@assesskit/player/client`), `MAX_SAVE_RETRIES`, `DEFAULT_TTL_SECONDS`, `DEFAULT_UPLOAD_TTL_SECONDS` and `collectAssetPrefixes` (`@assesskit/player/server`) are no longer exported: no consumer reads them, the guides state each value, and the session host collects the prefixes itself.
+
+The option that holds catalogs by language is `catalogs` (was `messages`) on `mountDelivery`, `mountItem`, `mountSubmission` and `mountRatingForm`, as `selectMessages` calls it; `messages` keeps meaning one `Messages` everywhere else.

@@ -480,13 +480,13 @@ describe("mountSubmission", () => {
   });
 
   it("speaks the language of the interface that the host gives, and uses its messages", () => {
-    const { shadow } = show(submission(), { language: "id", messages: { id: ID_MESSAGES } });
+    const { shadow } = show(submission(), { language: "id", catalogs: { id: ID_MESSAGES } });
     expect(el(shadow, "article").getAttribute("lang")).toBe("id");
     expect(el(shadow, "h2").textContent).toBe(ID_MESSAGES.submissionTitle);
     expect(fact(shadow, ID_MESSAGES.submissionScorer)).toBe(ID_MESSAGES.submissionHuman);
     const custom = show(submission(), {
       language: "id",
-      messages: { id: { ...ID_MESSAGES, submissionTitle: "Work to score" } },
+      catalogs: { id: { ...ID_MESSAGES, submissionTitle: "Work to score" } },
     });
     expect(el(custom.shadow, "h2").textContent).toBe("Work to score");
     expect(el(show(submission()).shadow, "article").getAttribute("lang")).toBe("en");
@@ -521,7 +521,7 @@ describe("mountSubmission", () => {
       [{ ...base, assets: "x" }, /^The option assets must be a function/],
       [{ ...base, stylesheet: {} }, "The option stylesheet must be a CSSStyleSheet, found an object."],
       [{ ...base, language: 5 }, "The option language must be a string, found 5."],
-      [{ ...base, messages: [] }, "The option messages must be an object, found an array."],
+      [{ ...base, catalogs: [] }, "The option catalogs must be an object, found an array."],
       [{ ...base, files: { url: 1 } }, "The url of the option files must be a function, found 1."],
       [{ ...base, files: null }, "The option files must be an object with a function url, found null."],
       [{ ...base, itemPath: "x" }, 'The option itemPath must be a function, found "x".'],

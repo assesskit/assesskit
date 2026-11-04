@@ -92,7 +92,7 @@ async function embed(
     readonly wrap?: (client: SessionClient) => SessionClient;
     readonly language?: string;
     /** The catalogs of the languages the host shows, by tag. */
-    readonly messages?: Readonly<Record<string, Partial<Messages>>>;
+    readonly catalogs?: Readonly<Record<string, Partial<Messages>>>;
   } = {},
 ): Promise<Embed> {
   const parsed = readAsi(lessonItem(id, options.extra));
@@ -123,7 +123,7 @@ async function embed(
     stylesheet: player,
     fetch: fetcher,
     ...(options.language === undefined ? {} : { language: options.language }),
-    ...(options.messages === undefined ? {} : { messages: options.messages }),
+    ...(options.catalogs === undefined ? {} : { catalogs: options.catalogs }),
   });
   return { host, ui: host.shadowRoot as ShadowRoot, client: shown, mounted };
 }
@@ -235,7 +235,7 @@ describe("mountItem", () => {
   });
 
   it("writes the interface in the language of the candidate", async () => {
-    const s = await embed("l1", { language: "id", messages: { id: ID_MESSAGES } });
+    const s = await embed("l1", { language: "id", catalogs: { id: ID_MESSAGES } });
     await shown(s);
     expect(s.ui.querySelector(".ak-item")?.getAttribute("lang")).toBe("id");
     choices(s.ui)[1]?.click();
@@ -520,7 +520,7 @@ describe("accessibility of items in a page", () => {
     const items = await Promise.all([
       embed("l1"),
       embed("l2"),
-      embed("l3", { language: "id", messages: { id: ID_MESSAGES } }),
+      embed("l3", { language: "id", catalogs: { id: ID_MESSAGES } }),
     ]);
     await Promise.all(items.map(shown));
     expect(await axeViolations(page)).toEqual([]);

@@ -53,7 +53,7 @@ export function resolveItemSettings(options: ItemMountOptions): ItemSettings {
     origins,
     hooks,
     report: hooks.onError ?? ((error) => reportError(error)),
-    messages: selectMessages(language, options.messages),
+    messages: selectMessages(language, options.catalogs),
   };
 }
 

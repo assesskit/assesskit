@@ -15,11 +15,11 @@ export type SubmissionFiles = Pick<MountFiles, "url">;
  * The options of {@link mountSubmission}.
  *
  * @remarks
- * `stylesheet`, `language`, `messages`, `origins` and `mathjax` mean what they do for the player, so a host passes the
+ * `stylesheet`, `language`, `catalogs`, `origins` and `mathjax` mean what they do for the player, so a host passes the
  * same values to both.
  */
 export interface SubmissionOptions
-  extends Pick<MountOptions, "stylesheet" | "language" | "messages" | "origins" | "mathjax"> {
+  extends Pick<MountOptions, "stylesheet" | "language" | "catalogs" | "origins" | "mathjax"> {
   /**
    * Turns the path of a file in the package into the URL to load it from: the images and media in the content of the
    * items and the rubric.
@@ -72,7 +72,7 @@ const OPTION_NAMES = [
   "assets",
   "stylesheet",
   "language",
-  "messages",
+  "catalogs",
   "files",
   "origins",
   "mathjax",
@@ -105,9 +105,9 @@ function returningHttpUrl(url: (file: FileValue) => unknown): (file: FileValue) 
 export function readSubmissionOptions(options: unknown): SubmissionSettings {
   checkRecord(options, "The options must be an object");
   checkProperties(options, "The options", OPTION_NAMES);
-  const { language = "en", messages = {}, files, mathjax, itemPath = () => "" } = options;
+  const { language = "en", catalogs = {}, files, mathjax, itemPath = () => "" } = options;
   checkString(language, "The option language");
-  checkRecord(messages, "The option messages must be an object");
+  checkRecord(catalogs, "The option catalogs must be an object");
   checkFunction(itemPath, "The option itemPath must be a function");
   if (mathjax !== undefined) checkString(mathjax, "The option mathjax");
   let fileUrl: SubmissionSettings["fileUrl"];
@@ -118,7 +118,7 @@ export function readSubmissionOptions(options: unknown): SubmissionSettings {
     fileUrl = returningHttpUrl((file) => Reflect.apply(url, files, [file]));
   }
   // `selectMessages` checks the catalogs, language by language, down to each message.
-  const text = selectMessages(language, messages as Readonly<Record<string, Partial<Messages>>>);
+  const text = selectMessages(language, catalogs as Readonly<Record<string, Partial<Messages>>>);
   const { assets, origins, interactions } = readRenderOptions({
     messages: text,
     assets: options.assets,

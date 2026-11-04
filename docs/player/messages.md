@@ -32,7 +32,7 @@ selectMessages("id-ID", { id: ID_MESSAGES, "id-ID": { toolRule: "Penggaris kelas
 
 `selectMessages(language, catalogs)` returns the messages for the language of the interface. Each step of the diagram
 replaces the keys that it has; a language without a catalog gets English. The mounts of the player take the same `catalogs` as
-their option `messages`, with `language`, and call `selectMessages` themselves.
+their option `catalogs`, with `language`, and call `selectMessages` themselves.
 
 | Parameter  | Type                                | Meaning                                                                                                                                                                        |
 | ---------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
