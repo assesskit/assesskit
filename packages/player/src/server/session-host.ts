@@ -25,11 +25,10 @@ export interface SessionHostOptions {
    * The scheduler of time-outs, so that a session ends when its maximum time passes even if no request comes.
    *
    * @remarks
-   * A host of untimed practice leaves it out. A step that has a maximum time to schedule is then refused with a `DataError`
-   * before anything is saved: the start of a test with a maximum time from its start, and the step that enters a timed
-   * test part, section or item.
+   * A host of untimed practice leaves it out. `createSessionHost` then refuses an engine whose test has a maximum time
+   * anywhere (`Engine.hasMaximumTime`), before any session starts.
    *
-   * @defaultValue none, so that a session with a maximum time cannot run
+   * @defaultValue none, so that only a test with no maximum time runs
    */
   readonly scheduler?: Scheduler;
   /**
@@ -103,8 +102,7 @@ export interface SessionHost {
    * @param options - What `Engine.start` takes but the time, and the `signal` of the call, which does not reach the engine.
    * @returns The first envelope, with the sequence number 0.
    * @throws `AccessError` (`session-exists`) when the session exists: a session is never started again or rebound.
-   * @throws `DataError` when an argument has the wrong type, the engine cannot start, or the test has a maximum time from its
-   * start and the host has no scheduler.
+   * @throws `DataError` when an argument has the wrong type, or the engine cannot start.
    * @throws `signal.reason` when the signal aborts before the store or the scheduler is called. A call that waits on one
    * rejects when the service does.
    */
@@ -146,8 +144,7 @@ export interface SessionHost {
    * @param options - See {@link CallOptions}.
    * @returns The envelope that answers it.
    * @throws `AccessError` (`not-bound`) when the session is not bound to the caller's principal.
-   * @throws `DataError` when the envelope or the action is not valid, the action is outside the policy, the sequence number is
-   * stale, or the step starts a maximum time and the host has no scheduler.
+   * @throws `DataError` when the envelope or the action is not valid, the action is outside the policy, or the sequence number is stale.
    * @throws `SecurityError` when the action is above a limit of `limits`.
    * @throws `ServiceError` when the session cannot be saved after the retries.
    * @throws `signal.reason` when the signal aborts before a load, including the load of a retry. Nothing was applied.
@@ -161,8 +158,7 @@ export interface SessionHost {
    * @param action - The action.
    * @param options - See {@link CallOptions}.
    * @returns The events of the step, or the refusal.
-   * @throws `DataError` when the session does not exist, the action is not valid, or the step starts a maximum time and the
-   * host has no scheduler.
+   * @throws `DataError` when the session does not exist or the action is not valid.
    * @throws `ServiceError` when the session cannot be saved after the retries.
    * @throws `signal.reason` when the signal aborts before a load. Nothing was applied.
    */

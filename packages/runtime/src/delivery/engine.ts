@@ -32,7 +32,7 @@ import { drawsNothing, planTest, type TestPlan } from "./plan.js";
 import { assembleResults } from "./results-assembly.js";
 import { type ScorerView, scorerViewOf } from "./scorer-view.js";
 import { SessionStep } from "./session-step.js";
-import { additionalTestingTime } from "./time-limits.js";
+import { additionalTestingTime, hasMaximumTime } from "./time-limits.js";
 import { candidateView } from "./view.js";
 
 /** The options of `Engine.start`. */
@@ -81,6 +81,15 @@ export interface StartOptions {
  * the deadlines. One engine serves every session of its test.
  */
 export interface Engine {
+  /**
+   * Whether the test, a test part, a section or an item reference has a maximum time, so that a host knows before a session
+   * starts that it must schedule the time-outs.
+   *
+   * @remarks
+   * It is what the test declares and the engine applies: a section that ordering mixes into its parent has no limits, and a
+   * minimum time alone is none. The extra time of a candidate does not change it, not even when it is `unlimited`.
+   */
+  readonly hasMaximumTime: boolean;
   /**
    * Starts a session: plans it from the seed, and presents the first item, or ends a test that has none.
    *
@@ -358,6 +367,7 @@ function start(course: Course, options: StartOptions): Step {
 export function createEngine(definition: DeliveryDefinition, options: EngineOptions = {}): Engine {
   const course = buildCourse(definition, options);
   return {
+    hasMaximumTime: hasMaximumTime(course.structure),
     start: (startOptions) => start(course, startOptions),
     apply: (state, action) => {
       checkEngineState(course, state);

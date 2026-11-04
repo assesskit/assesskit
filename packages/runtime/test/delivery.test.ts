@@ -2220,6 +2220,26 @@ describe("deadlines", () => {
       "The state must be an object from Engine.start or deserializeState, found null.",
     );
   });
+
+  it("tells whether the test, a part, a section or an item reference has a maximum time, before any session", () => {
+    const max = limits('max-time="60"');
+    const linear = (sections: string, head = ""): string => testPart("P", sections, "linear", "individual", head);
+    expect(engineOf(linear(section("S", refs("a", "b")))).hasMaximumTime).toBe(false);
+    expect(engineOf(linear(section("S", refs("a", "b")), limits('min-time="10"'))).hasMaximumTime).toBe(false);
+    expect(engineOf(`${max}${linear(section("S", refs("a", "b")))}`).hasMaximumTime).toBe(true);
+    expect(engineOf(linear(section("S", refs("a", "b")), max)).hasMaximumTime).toBe(true);
+    expect(engineOf(linear(section("S", max + refs("a", "b")))).hasMaximumTime).toBe(true);
+    expect(engineOf(linear(section("S", refs("a") + itemRef("b", max)))).hasMaximumTime).toBe(true);
+    expect(
+      engineOf(linear(section("S", refs("a")) + section("W", section("V", refs("b") + itemRef("c", max)))))
+        .hasMaximumTime,
+    ).toBe(true);
+    // A section that ordering mixes into its parent has no limits, so its maximum time does not run.
+    const mixed = section("M", max + refs("b", "c"), 'visible="false" keep-together="false"');
+    expect(engineOf(linear(section("S", `<qti-ordering shuffle="true"/>${refs("a")}${mixed}`))).hasMaximumTime).toBe(
+      false,
+    );
+  });
 });
 
 /** What a view must not hold: each string stands for a key, a processing step or a content that is hidden. */

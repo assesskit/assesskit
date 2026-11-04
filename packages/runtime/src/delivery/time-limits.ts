@@ -2,7 +2,7 @@ import { checkRecord, describe } from "../checks.js";
 import { checkFinite, checkNonNegative, checkOptions } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import { type PersonalNeedsProfile, resolveSupports, type TestingTime } from "../pnp/index.js";
-import { findTestPart, listAncestors, type StructureNode } from "./structure.js";
+import { type ContentNode, findTestPart, listAncestors, type StructureNode, type TestStructure } from "./structure.js";
 
 /**
  * The time limits of one scope, in seconds, with the extra time of a candidate's profile applied.
@@ -143,4 +143,15 @@ export function timeLimits(node: StructureNode, options: TimeLimitsOptions = {})
     ...(maxTime === undefined ? {} : { maxTime }),
     allowLateSubmission: declared?.allowLateSubmission ?? false,
   };
+}
+
+/**
+ * Returns whether the test, a test part, a section or an item reference of a structure has a maximum time that the engine
+ * applies; a section that ordering mixes into its parent has none.
+ */
+export function hasMaximumTime(structure: TestStructure): boolean {
+  const timed = (node: StructureNode): boolean => timeLimits(node).maxTime !== undefined;
+  const below = (node: ContentNode): boolean => timed(node) || (node.kind === "section" && node.children.some(below));
+  const { test } = structure;
+  return timed(test) || test.parts.some((part) => timed(part) || part.sections.some(below));
 }

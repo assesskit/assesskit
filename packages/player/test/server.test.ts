@@ -1095,29 +1095,20 @@ describe("createSessionHost", () => {
     expect(store.records.get("exam-1")?.version).toBe(1);
   });
 
-  it("refuses without a scheduler a start that has a maximum time to schedule, and saves nothing", async () => {
-    const limits = '<qti-time-limits max-time="600"/>';
-    const { host, store } = await examHost({ scheduler: undefined }, examFiles({ limits }));
-    await expect(host.start(ALICE, { seed: 7 })).rejects.toThrow(
-      new DataError(
-        'The item "q1" has a maximum time, which the session host cannot schedule without the option scheduler: pass a Scheduler, so that the session ends when the time passes.',
-      ),
+  it("refuses a test with a maximum time without a scheduler before any session starts, wherever the test has it", async () => {
+    const refusal = new DataError(
+      "The test of the option engine has a maximum time, which the session host cannot schedule without the option scheduler: pass a Scheduler, so that a session ends when its time passes.",
     );
-    expect(store.records.size).toBe(0);
-  });
-
-  it("refuses without a scheduler the step that enters a timed item, and saves nothing", async () => {
+    const limits = '<qti-time-limits max-time="600"/>';
+    await expect(examHost({ scheduler: undefined }, examFiles({ limits }))).rejects.toThrow(refusal);
+    // A maximum time that starts only at the second item counts too: a candidate never meets the refusal halfway.
     const files = { ...examFiles() };
     files["tests/exam.xml"] = String(files["tests/exam.xml"]).replace(
       '<qti-assessment-item-ref identifier="q2" href="../items/q2/item.xml"/>',
-      '<qti-assessment-item-ref identifier="q2" href="../items/q2/item.xml"><qti-time-limits max-time="600"/></qti-assessment-item-ref>',
+      `<qti-assessment-item-ref identifier="q2" href="../items/q2/item.xml">${limits}</qti-assessment-item-ref>`,
     );
-    const { host, store } = await examHost({ scheduler: undefined }, files);
-    await host.start(ALICE, { seed: 7 });
-    await expect(host.handle(ALICE, request(1, { type: "move", to: "next" }))).rejects.toThrow(
-      'The item "q2" has a maximum time, which the session host cannot schedule without the option scheduler',
-    );
-    expect(store.records.get("exam-1")?.version).toBe(0);
+    await expect(examHost({ scheduler: undefined }, files)).rejects.toThrow(refusal);
+    await expect(examHost({}, files)).resolves.toBeDefined();
   });
 
   it("loses no time-out when the scheduler fails: nothing is saved and the request can be sent again", async () => {
@@ -1411,6 +1402,9 @@ describe("createSessionHost", () => {
     );
     expect(() => make({ clock: {} })).toThrow("The function now of the option clock");
     expect(() => make({ clock: null })).toThrow("The option clock");
+    expect(() => make({ engine: { ...good.engine, hasMaximumTime: "yes" } })).toThrow(
+      new DataError('The property hasMaximumTime of the option engine must be a boolean, found "yes".'),
+    );
     expect(make({ clock: undefined, scheduler: undefined })).toBeDefined();
     expect(() => make({ gate: {} })).toThrow(
       "The options object is invalid at gate: expected an object with the function sign, found an object.",

@@ -2,6 +2,7 @@ import type { CatSessionPort } from "@assesskit/runtime/cat";
 import {
   type CallOptions,
   checkAbortSignal,
+  checkBoolean,
   checkCallOptions,
   checkChoice,
   checkNonEmptyString,
@@ -103,7 +104,8 @@ const hostOptionsSchema = v.strictObject({
 });
 
 function checkHostOptions(options: unknown): asserts options is SessionHostOptions {
-  const { clock, maxIdleMs } = parseWith(hostOptionsSchema, options, "The options object");
+  const { engine, clock, maxIdleMs } = parseWith(hostOptionsSchema, options, "The options object");
+  checkBoolean(engine.hasMaximumTime, "The property hasMaximumTime of the option engine");
   checkOptional(clock, checkClock);
   checkOptional(maxIdleMs, (value) => checkPositiveInteger(value, "The option maxIdleMs"));
 }
@@ -132,8 +134,8 @@ function loggedAction(action: CandidateAction | HostAction, at: number): string 
  * - **Idempotence.** A repeated sequence number gets the stored answer, with fresh asset tokens; a stale one is refused.
  * - **Time.** An action is stamped with the server's clock (the runtime's `stamp` never goes back), the deadlines of the new
  *   state are scheduled before it is saved so that a failure of the scheduler loses no time-out, and the scheduler's job
- *   calls `session(id).apply` with `time`. Without a scheduler, a step that has a maximum time to schedule is refused with
- *   a `DataError` and nothing is saved. With {@link SessionHostOptions.maxIdleMs}, a gap above it counts as suspended, and
+ *   calls `session(id).apply` with `time`. A host without a scheduler serves only a test that has no maximum time, which
+ *   `Engine.hasMaximumTime` tells. With {@link SessionHostOptions.maxIdleMs}, a gap above it counts as suspended, and
  *   the job's `time` action that finds one is dropped.
  * - **Saving.** The store saves by version; a conflict reloads and handles the request again.
  * - **Signals.** A call with an aborted `signal` stops before its next load and applies nothing. The signal reaches the
@@ -144,7 +146,8 @@ function loggedAction(action: CandidateAction | HostAction, at: number): string 
  *
  * @param options - See {@link SessionHostOptions}.
  * @returns The session host.
- * @throws `DataError` when an option has the wrong type, or `maxIdleMs` is set and `clientActions` omit `suspend`.
+ * @throws `DataError` when an option has the wrong type, `maxIdleMs` is set and `clientActions` omit `suspend`, or the test
+ * of the engine has a maximum time and there is no `scheduler`.
  */
 export function createSessionHost(options: SessionHostOptions): SessionHost {
   checkHostOptions(options);
@@ -167,6 +170,12 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
   if (maxIdleMs !== undefined && !policy.has("suspend")) {
     throw new DataError(
       'The option maxIdleMs counts a long gap as a suspension, which the option clientActions does not let a client take: it has no "suspend". Add "suspend" to clientActions for a host where candidates may pause, and leave maxIdleMs out for an exam.',
+    );
+  }
+  // Refused here, before any session starts, so that no candidate loses a sitting halfway to a host without a scheduler.
+  if (scheduler === undefined && engine.hasMaximumTime) {
+    throw new DataError(
+      "The test of the option engine has a maximum time, which the session host cannot schedule without the option scheduler: pass a Scheduler, so that a session ends when its time passes.",
     );
   }
   const idle = { engine, stamp };
@@ -207,13 +216,8 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     signal: AbortSignal | undefined,
   ): Promise<void> => {
     for (const deadline of engine.deadlines(state)) {
-      if (deadline.kind !== "max-time") continue;
-      if (scheduler === undefined) {
-        throw new DataError(
-          `The ${deadline.scope} ${describe(deadline.identifier)} has a maximum time, which the session host cannot schedule without the option scheduler: pass a Scheduler, so that the session ends when the time passes.`,
-        );
-      }
-      await scheduler.schedule(session, Math.ceil(deadline.at), { signal });
+      // A host without a scheduler was refused for a test with a maximum time, so it meets none here.
+      if (deadline.kind === "max-time") await scheduler?.schedule(session, Math.ceil(deadline.at), { signal });
     }
   };
 
