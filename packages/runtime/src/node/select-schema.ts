@@ -33,11 +33,10 @@ const SCHEMAS_BY_FILE: ReadonlyMap<string, SchemaFile> = new Map(SCHEMA_FILES.ma
 function hintedSchema(root: XmlElement): SchemaFile | undefined {
   const hint = root.attributes.find(({ namespace, name }) => namespace === XSI_NAMESPACE && name === "schemaLocation");
   const tokens = hint?.value.split(/[ \t\r\n]+/).filter((token) => token !== "") ?? [];
-  const pairs = Array.from({ length: Math.floor(tokens.length / 2) }, (_, pair) =>
-    tokens.slice(2 * pair, 2 * pair + 2),
-  );
-  const [, location] = pairs.find(([namespace]) => namespace === root.namespace) ?? [];
-  return location === undefined ? undefined : SCHEMAS_BY_URL.get(location);
+  for (let index = 0; index + 1 < tokens.length; index += 2) {
+    if (tokens[index] === root.namespace) return SCHEMAS_BY_URL.get(tokens[index + 1] ?? "");
+  }
+  return undefined;
 }
 
 /**
