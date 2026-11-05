@@ -161,10 +161,12 @@ a file when `file(path)` asks for it; a package of 10,000 items costs the manife
 The reader supports stored and deflated entries, UTF-8 names, directory entries (left out of `paths`), data descriptors, archive
 comments and ZIP64 (the ZIP64 end of central directory record and locator, and the 64-bit values in the extra field). It does not
 read archives in several parts, other compression methods, or encrypted entries. `writePackage` writes the classic format only:
-it throws a `DataError` for more than 65,534 files or an archive of 4 GiB or more. It writes through `zipSync` of `fflate`: the manifest first, then the files in the order of the map, deflated when that makes them
-smaller, with one fixed time stamp, so that equal input gives equal bytes in every time zone. `zipSync` holds its files in a plain
-object, so a file at the root whose name is a whole number, such as `12`, comes first, and a file named `__proto__` at the root is
-refused.
+it throws a `DataError` for more than 65,534 files or an archive of 4 GiB or more. It writes the manifest first, then the files
+in the order of the map, each deflated once with `deflateSync` of `fflate` and stored when that does not make it smaller, with one
+fixed time stamp, so that equal input gives equal bytes in every time zone. For the same files in the same order the bytes are
+those that `zipSync` of `fflate` writes, which the writer does not call: it would deflate each file a second time, 1.7 times the
+time of a package of 3.9 MB, and it keeps its files in a plain object, where a name at the root that is a whole number comes
+first and `__proto__` has no place.
 
 ### Why the reader is written here
 
@@ -270,11 +272,11 @@ platform that launches it.
 
 ## Errors
 
-| Class           | Thrown when                                                                                                                                                                                                                                                                                        |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DataError`     | An argument has the wrong type, a limit is not a positive integer, the paths of `PackageFiles` are not normalized and unique, `writeManifest` and `writePackage` get a model that is not valid, or a path of `writePackage` is not normalized, is `imsmanifest.xml` or is `__proto__` at the root. |
-| `ReadError`     | The data is not a ZIP archive or is cut off; a manifest, document or link cannot be read; a reference cannot be resolved. `issues` names the rule.                                                                                                                                                 |
-| `SecurityError` | The input breaks a rule or limit of the table above, or an XML limit.                                                                                                                                                                                                                              |
+| Class           | Thrown when                                                                                                                                                                                                                                                            |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DataError`     | An argument has the wrong type, a limit is not a positive integer, the paths of `PackageFiles` are not normalized and unique, `writeManifest` and `writePackage` get a model that is not valid, or a path of `writePackage` is not normalized or is `imsmanifest.xml`. |
+| `ReadError`     | The data is not a ZIP archive or is cut off; a manifest, document or link cannot be read; a reference cannot be resolved. `issues` names the rule.                                                                                                                     |
+| `SecurityError` | The input breaks a rule or limit of the table above, or an XML limit.                                                                                                                                                                                                  |
 
 ## Not included
 

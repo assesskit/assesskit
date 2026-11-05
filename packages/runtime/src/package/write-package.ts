@@ -8,14 +8,12 @@ import { writeZip, type ZipEntry } from "./zip-writer.js";
 
 /**
  * Writes a package as a ZIP archive: `imsmanifest.xml` first, written from the manifest, then the files in the order of
- * the map, except that a file at the root whose name is a whole number comes first, as `zipSync` of `fflate` keeps its
- * files in a plain object; IMS Content Packaging asks only that the manifest be at the root. The archive has no ZIP64
- * records: it holds at most 65,534 files and is below 4 GiB. Equal input gives equal bytes: every entry has the same time
- * stamp.
+ * the map, each deflated when that makes it smaller. The archive has no ZIP64 records: it holds at most 65,534 files and is
+ * below 4 GiB. Equal input gives equal bytes: every entry has the same time stamp.
  *
  * @param manifest - The manifest, written as in {@link writeManifest}.
  * @param files - The other files by path. A path must be normalized, which excludes absolute paths, `..` segments,
- * backslashes, drive letters and control characters, and must not be `imsmanifest.xml` or `__proto__`.
+ * backslashes, drive letters and control characters, and must not be `imsmanifest.xml`.
  * @returns The archive.
  * @throws `DataError` when an argument has the wrong type, the manifest is not valid, a path is not allowed, or the
  * archive would need ZIP64.
@@ -33,10 +31,6 @@ export function writePackage(manifest: Manifest, files: ReadonlyMap<string, Uint
     }
     if (path === MANIFEST_PATH)
       throw new DataError(`The files must not contain ${MANIFEST_PATH}: it is written from the manifest.`);
-    if (path === "__proto__")
-      throw new DataError(
-        'A file at the root of a package cannot be named "__proto__"; move it to a folder or rename it.',
-      );
     if (!(data instanceof Uint8Array))
       throw new DataError(`The bytes of ${describe(path)} must be a Uint8Array, found ${describe(data)}.`);
     entries.push({ name: path, data });
