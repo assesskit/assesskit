@@ -1,6 +1,8 @@
 import type { AdaptiveSelection } from "@assesskit/runtime/asi";
 import type { CatPort } from "@assesskit/runtime/cat";
 import { DataError } from "@assesskit/runtime/errors";
+import { CP_NAMESPACE } from "@assesskit/runtime/metadata";
+import { openPackage } from "@assesskit/runtime/package";
 import { describe, expect, it } from "vitest";
 import catGuide from "../../../docs/player/cat.md?raw";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
@@ -97,6 +99,27 @@ describe("deployCatSections", () => {
     expect(engine.calls[0]).toBe(`create ${PREFIX} ${JSON.stringify({ sectionConfiguration: "" })}`);
   });
 
+  it("sends the metadata file that qti-metadata-ref references, and names it when the package lacks it", async () => {
+    const MetadataRef = '<qti-metadata-ref identifier="meta" href="cat/metadata.json"/>';
+    const test = testXml(adaptiveSection(selectionXml(SETTINGS_REF, `${USAGE_REF}${MetadataRef}`), IDS));
+    const engine = recordingEngine();
+    await deployCatSections(
+      packageOf({ "test.xml": test, ...FILES, "cat/metadata.json": '{"bank":"A"}' }),
+      () => engine.port,
+    );
+    const data = {
+      sectionConfiguration: base64(FILES["cat/settings.json"]),
+      qtiUsagedata: base64(FILES["cat/usage.xml"]),
+      qtiMetadata: base64('{"bank":"A"}'),
+    };
+    expect(engine.calls[0]).toBe(`create ${PREFIX} ${JSON.stringify(data)}`);
+    expect(
+      await rejection(deployCatSections(packageOf({ "test.xml": test, ...FILES }), () => recordingEngine().port)),
+    ).toBe(
+      'The adaptive section "cat" references the metadata "cat/metadata.json", which is not a file of the package.',
+    );
+  });
+
   it("deploys each adaptive section of each test, in document order, and nothing for a package without one", async () => {
     const second = `<qti-assessment-section identifier="cat2" title="Second" visible="true">${selectionXml(SETTINGS_REF, USAGE_REF)}${itemRefs(["x1", "x2"])}</qti-assessment-section>`;
     // Create Section is the first request of the engine, Get Section the second: the second section is engine-3.
@@ -118,6 +141,23 @@ describe("deployCatSections", () => {
     });
     expect(await deployCatSections(plain, () => none.port)).toEqual(new Map());
     expect(none.calls).toEqual([]);
+  });
+
+  it("passes over a test resource that names no file or whose document is not a test", async () => {
+    const item = `<qti-assessment-item xmlns="${ASI}" identifier="i" title="I" adaptive="false" time-dependent="false"><qti-item-body><p>x</p></qti-item-body></qti-assessment-item>`;
+    const resources = [
+      '<resource identifier="r1" type="imsqti_test_xmlv3p0" href="item.xml"><file href="item.xml"/></resource>',
+      '<resource identifier="r2" type="imsqti_test_xmlv3p0"><file href="item.xml"/></resource>',
+    ].join("");
+    const manifest = `<manifest xmlns="${CP_NAMESPACE}" identifier="m"><metadata><schema>QTI Package</schema><schemaversion>3.0.0</schemaversion></metadata><organizations/><resources>${resources}</resources></manifest>`;
+    const encoded = new Map([
+      ["imsmanifest.xml", new TextEncoder().encode(manifest)],
+      ["item.xml", new TextEncoder().encode(item)],
+    ]);
+    const pkg = openPackage({ paths: [...encoded.keys()], read: (path) => encoded.get(path) });
+    const engine = recordingEngine();
+    expect(await deployCatSections(pkg, () => engine.port)).toEqual(new Map());
+    expect(engine.calls).toEqual([]);
   });
 
   it("fails when the pool of the engine and the item references disagree, and names the section at the engine", async () => {
