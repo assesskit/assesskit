@@ -16,7 +16,9 @@ concurrency:
 
 # The downloads of the jobs (pnpm schemas and pnpm corpus) are kept between runs by the hash of the lock that pins each, and a
 # file that holds its pinned hash is not fetched again. A download that stalls for 30 s or fails is tried again, three times in
-# all (scripts/download.ts).
+# all (scripts/download.ts). The jobs that run a browser run in the image of the Playwright that the lock file pins, which holds
+# its browsers and their system libraries, so that no job installs them: apt under sudo outlives the timeout of a step, and a
+# slow mirror once held such an install past the limit of the job. scripts/test/versions.test.ts holds the tag to the lock file.
 jobs:
   # What a push or a pull request changed since the last commit of main whose run passed, or since the base of a pull request,
   # and so which jobs have something to check. A job that is skipped passes a required check. When nothing can be compared,
@@ -331,16 +333,23 @@ jobs:
     if: needs.changes.outputs.player_bench == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --ipc=host
+    # The image runs as root, and a browser refuses a home that another user owns, as the runner's is.
+    env:
+      HOME: /root
     steps:
       - uses: actions/checkout@v7
+      # The container's user does not own the checkout, so git refuses it, and the hooks that pnpm install sets up with it,
+      # until it is marked safe.
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # An install that stalls is stopped after 240 s and tried again, three times in all, as STANDARDS section 7 asks of a download.
-      - run: for attempt in 1 2 3; do timeout 240 pnpm exec playwright install --with-deps chromium && exit 0; echo "The install stalled or failed, try $attempt of 3."; done; exit 1
       - run: pnpm --filter @assesskit/player bench
 
   # The rendering tests of the player, and its tests that render the 1EdTech examples, in the current Chromium, Firefox and
@@ -351,11 +360,17 @@ jobs:
     if: needs.changes.outputs.browsers == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    # The runner has no sound card: scripts/linux-audio.sh gives the browsers an output, and a test that needs audio fails without it.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --ipc=host
+    # The container has no sound card: scripts/linux-audio.sh gives the browsers an output, and a test that needs audio fails
+    # without it. The image runs as root, and Firefox refuses to start in a home that another user owns, as the runner's is.
     env:
       REQUIRE_AUDIO: "1"
+      HOME: /root
     steps:
       - uses: actions/checkout@v7
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
@@ -372,10 +387,13 @@ jobs:
           path: .cache/corpus
           key: corpus-${{ hashFiles('scripts/corpus.lock.json') }}
       - run: pnpm corpus
-      # An install that stalls is stopped after 240 s and tried again, three times in all, as STANDARDS section 7 asks of a download.
-      - run: for attempt in 1 2 3; do timeout 240 pnpm exec playwright install --with-deps chromium firefox webkit && exit 0; echo "The install stalled or failed, try $attempt of 3."; done; exit 1
-      - run: sudo apt-get install -y pulseaudio
-      - run: scripts/linux-audio.sh
+      # Firefox plays sound only through a PulseAudio server, which the image does not hold. Its packages are kept by the tag of
+      # the image, so apt fetches them once for each image, in steps that its timeout stops.
+      - uses: actions/cache@v5
+        with:
+          path: .cache/pulseaudio
+          key: pulseaudio-playwright:v1.64.1-noble
+      - run: scripts/linux-audio.sh .cache/pulseaudio
       # Chromium runs with coverage, the one engine that reports it, and holds the floors of the folders that draw a page.
       - if: needs.changes.outputs.player_browsers == 'true'
         run: pnpm test:coverage:browser

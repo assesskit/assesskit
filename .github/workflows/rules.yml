@@ -23,15 +23,20 @@ jobs:
     runs-on: ubuntu-latest
     # No run has finished yet: lower this to three times the first green run.
     timeout-minutes: 120
+    # The rules of the code that runs in a page are checked in Chromium, from the image of the Playwright that the lock file
+    # pins, as in ci.yml, so that no install of a browser or its libraries can hold the job.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --ipc=host
+    env:
+      HOME: /root
     steps:
       - uses: actions/checkout@v7
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # The rules of the code that runs in a page are checked in Chromium.
-      # An install that stalls is stopped after 240 s and tried again, three times in all, as STANDARDS section 7 asks of a download.
-      - run: for attempt in 1 2 3; do timeout 240 pnpm exec playwright install --with-deps chromium && exit 0; echo "The install stalled or failed, try $attempt of 3."; done; exit 1
       - run: pnpm check:rules

@@ -89,8 +89,10 @@ focuses a control and presses its keys.
 | LTI frame                    | `lti-setup.ts`, `lti/storage.html`, `lti/tool.html`, `lti-exam-fixture.ts` | A platform serves a storage page written from LTI postMessage Storage, and two tool origins serve a tool page that runs the scenario the query names, talks to the storage frame and the player as LTI Client Side postMessages describes, and reports each step at `/report/<token>/<step>`. `lti-frame.browser.test.ts` mounts the frames alone and with `mountDelivery` over an essay and a link to a tool. The launch, the grade services and Caliper are tested in [interopkit](https://github.com/interopkit/interopkit), and the exchange between a session host and a platform in [the example](lti-items.md) |
 
 **Audio.** The tests that play a recording to its end, follow its playback with a companion, count its plays and record a
-stream need an audio output. A Linux host with no sound card has none, so `scripts/linux-audio.sh` starts PulseAudio with a
-sink that plays to nowhere, and all three engines then play and record. With `REQUIRE_AUDIO=1`, which CI and the container
+stream need an audio output. A Linux host with no sound card has none: Chromium and WebKit play without one, and Firefox only
+through PulseAudio, so `scripts/linux-audio.sh` starts PulseAudio with a sink that plays to nowhere, and all three engines then
+play and record. The image of Playwright has no PulseAudio, so the script installs it from the packages that a folder keeps,
+which apt fetches into it once and the `browsers` job keeps by the tag of the image. With `REQUIRE_AUDIO=1`, which CI and the container
 below set, a test that needs audio fails when the output is missing; without it the test skips. Three tests skip in WebKit on
 Linux, whose Playwright build has no `MediaRecorder`: the two of the browser's recorder and the one of a recording in a type
 that the interaction accepts run in Chromium and Firefox, and the WAV recording through the worklet runs in all three. WebKit
@@ -107,7 +109,8 @@ WebKit, as when the fake microphone presses its button while a test presses Reco
 press can be under way.
 
 Where the Firefox of Playwright does not start, such as on macOS 27, run the suite in a Linux container from the root of the
-repository. The container needs network access to install the dependencies and the browsers. The examples in
+repository, in the image of the Playwright that the lock file pins, as CI does: it holds the browsers, and the container needs
+network access only for the dependencies and the packages of PulseAudio. The examples in
 `examples/player/` have measurekit and interopkit as dev dependencies, linked from `../../../../measurekit/packages/*` and
 `../../../../interopkit/packages/*`, so the container mounts the built checkouts of both (`pnpm install && pnpm build` in each)
 beside the repository at `/measurekit` and `/interopkit`:
@@ -116,8 +119,7 @@ beside the repository at `/measurekit` and `/interopkit`:
 docker run --rm --ipc=host --volume "$PWD":/src:ro --volume "$PWD/../measurekit":/measurekit:ro --volume "$PWD/../interopkit":/interopkit:ro mcr.microsoft.com/playwright:v1.64.1-noble bash -c '
   mkdir /work && tar -C /src --exclude=node_modules --exclude=.git --exclude=dist --exclude=.cache -cf - . | tar -C /work -xf - &&
   cd /work && npm install --global pnpm@12.8.1 && pnpm install --frozen-lockfile --ignore-scripts &&
-  apt-get update && apt-get install -y pulseaudio && sh scripts/linux-audio.sh &&
-  pnpm exec playwright install chromium firefox webkit &&
+  sh scripts/linux-audio.sh .cache/pulseaudio &&
   pnpm schemas && pnpm corpus && REQUIRE_AUDIO=1 pnpm test:browser && pnpm test:corpus'
 ```
 
