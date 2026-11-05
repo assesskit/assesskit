@@ -38,6 +38,7 @@ flowchart LR
 | Import                                     | Contents                                                                                                                                                                                        |
 | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@assesskit/custom-interactions`           | `PCI_TYPE_IDENTIFIERS`, the type identifier of each interaction by its name, and `InteractionName`; `writeCharacterModule` and `CharacterStrokes`, the module of a character for stroke writing |
+| `@assesskit/custom-interactions`           | `CallOptions` of `@assesskit/runtime`: the type that its reader of module files takes, exported here so that a program that installs this package imports it from here                          |
 | `@assesskit/custom-interactions/node`      | `readModuleFiles`: the files of an interaction's module, by their paths in the package                                                                                                          |
 | `@assesskit/custom-interactions/modules/*` | The built modules and the files beside them, for a tool that copies them                                                                                                                        |
 
