@@ -60,6 +60,8 @@ export interface ContentState {
   readonly ids: Set<string>;
   /** Whether a text of the item is Markdown, which is kept as plain text. */
   markdown: boolean;
+  /** The elements that did not fill the places of their type, by the types they failed as, so that each is tried once. */
+  readonly unfilled: WeakMap<ParsedElement, Set<TypeInfo>>;
 }
 
 /** An interaction that takes the place of the missing word, and whether it was placed. */
@@ -79,6 +81,7 @@ export function createContentState(limits: ItemFormatLimits): ContentState {
     attributes: new Set(),
     ids: new Set(),
     markdown: false,
+    unfilled: new WeakMap(),
   };
 }
 
@@ -284,25 +287,68 @@ function fillsSlots(type: TypeInfo, children: readonly XmlNode[]): boolean {
   });
 }
 
+/** The sizes of the records of the state, and whether the blank was placed, before an element is placed. */
+interface Mark {
+  readonly sizes: readonly number[];
+  readonly placed: boolean | undefined;
+}
+
+function recordsOf(state: ContentState): readonly Set<string>[] {
+  return [state.unwrapped, state.dropped, state.attributes, state.ids];
+}
+
+function markState(state: ContentState, blank: Blank | undefined): Mark {
+  return { sizes: recordsOf(state).map(({ size }) => size), placed: blank?.placed };
+}
+
+/** Takes back what the state recorded since a mark: the records added, in the order of insertion, and the blank. */
+function rollBack(state: ContentState, blank: Blank | undefined, mark: Mark): void {
+  for (const [at, records] of recordsOf(state).entries()) {
+    const size = mark.sizes[at] ?? 0;
+    if (records.size === size) continue;
+    let index = 0;
+    for (const value of records) if (index++ >= size) records.delete(value);
+  }
+  if (blank !== undefined && mark.placed !== undefined) blank.placed = mark.placed;
+}
+
+/**
+ * Converts the content of an element as its type, or returns `undefined` when it does not fill the places that the type
+ * needs. A failure is remembered, so that the element is not converted again as that type when its content goes to its
+ * parent: each element is tried once for each type, rather than once for each element around it that fails too.
+ */
+function convertAsType(run: Run, node: ParsedElement, type: TypeInfo): XmlNode[] | undefined {
+  const { state } = run;
+  const failed = state.unfilled.get(node);
+  if (failed?.has(type) === true) return undefined;
+  const children = convertNodes(node.childNodes, type, checkDepth(run.depth + 1, state), state, run.blank);
+  if (fillsSlots(type, children)) return children;
+  state.unfilled.set(node, (failed ?? new Set()).add(type));
+  return undefined;
+}
+
 function placeElement(run: Run, node: ParsedElement): void {
-  const { parent, wrapper, state } = run;
+  const { parent, wrapper, state, blank } = run;
   const name = node.tagName;
   const type = childType(parent, name);
+  // The content before the element is converted first, so that the first of two equal identifiers is the one kept.
+  if (type !== undefined) flush(run);
+  const mark = markState(state, blank);
   const attributes = type === undefined ? undefined : keepAttributes(node, type, state);
-  const children =
-    type === undefined || attributes === undefined
-      ? undefined
-      : convertNodes(node.childNodes, type, checkDepth(run.depth + 1, state), state, run.blank);
-  if (type !== undefined && attributes !== undefined && children !== undefined && fillsSlots(type, children)) {
-    flush(run);
+  const children = type === undefined || attributes === undefined ? undefined : convertAsType(run, node, type);
+  if (attributes !== undefined && children !== undefined) {
     run.out.push({ kind: "element", namespace: ASI_NAMESPACE, name, attributes, children });
-  } else if (children === undefined && wrapper !== undefined && childType(wrapper, name) !== undefined)
+    return;
+  }
+  // The element is not kept: what it recorded is taken back, as its content goes to a `div` or to its parent.
+  rollBack(state, blank, mark);
+  if (attributes === undefined && wrapper !== undefined && childType(wrapper, name) !== undefined) {
     run.pending.push(node);
-  else {
-    if (!BLOCKS.has(name)) state.unwrapped.add(name);
-    for (const child of convertNodes(node.childNodes, parent, checkDepth(run.depth + 1, state), state, run.blank)) {
-      run.out.push(child);
-    }
+    return;
+  }
+  if (!BLOCKS.has(name)) state.unwrapped.add(name);
+  for (const child of convertNodes(node.childNodes, parent, checkDepth(run.depth + 1, state), state, blank)) {
+    run.out.push(child);
   }
 }
 

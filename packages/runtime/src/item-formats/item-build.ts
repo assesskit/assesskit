@@ -541,6 +541,13 @@ function modalFeedback(id: string, text: FormattedText, content: Content): XmlEl
   ]);
 }
 
+/**
+ * The marker of the missing word in a text: a lone low surrogate, which no text of a file holds (a GIFT file is read as UTF-8
+ * and Moodle XML as XML), which no character reference of HTML gives, and which no character before or after the blank
+ * pairs with.
+ */
+const BLANK_MARKER = "\uDFFF";
+
 /** Puts the marker of the missing word in place of the `_____` that Moodle wrote there. */
 function markBlank(text: FormattedText, at: number, marker: string): FormattedText {
   return { ...text, text: `${text.text.slice(0, at)}${marker}${text.text.slice(at + 5)}` };
@@ -554,10 +561,8 @@ function bodyWithBlank(
   content: Content,
   losses: ItemLoss[],
 ): XmlNode[] {
-  const marker = "\uE000";
-  const blank: Blank = { marker, element: interaction, placed: false };
-  const text = question.text.text.includes(marker) ? question.text : markBlank(question.text, at, marker);
-  const body = content(text, typeNamed("ItemBody"), blank);
+  const blank: Blank = { marker: BLANK_MARKER, element: interaction, placed: false };
+  const body = content(markBlank(question.text, at, blank.marker), typeNamed("ItemBody"), blank);
   if (blank.placed) return body;
   losses.push({
     reason: "content",

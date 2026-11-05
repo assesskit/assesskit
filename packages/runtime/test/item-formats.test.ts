@@ -465,6 +465,23 @@ describe("the content of a question", () => {
     );
   });
 
+  it("converts an element without the children that QTI needs once, and keeps the missing word and identifiers within it", () => {
+    // Each details lacks its summary, so its content goes to its parent; tried again for each one around it, the time doubled
+    // with each level.
+    expect(readGift(`[html]${"<details>".repeat(40)}x${"</details>".repeat(40)}{}`).items).toHaveLength(1);
+    const { items, losses } = readGift(
+      "::Q::[html]<details><p id='a'>The {=cat} sat.</p></details><p id='a'>Again.</p>",
+    );
+    const item = items[0]?.item;
+    expect(item === undefined ? "" : writeAsi({ kind: "item", item })).toContain(
+      '<qti-item-body><div><p id="a">The <qti-text-entry-interaction response-identifier="RESPONSE" base-type="string"/> sat.</p></div><p>Again.</p></qti-item-body>',
+    );
+    expect(losses.map(({ message }) => message)).toStrictEqual([
+      "The elements details are not QTI content where they stand: their content is kept without them.",
+      "The attributes id are not QTI content or have invalid values: they are left out.",
+    ]);
+  });
+
   it("labels the choices of a true-false question as the option says", () => {
     const { items } = readGift("Is it?{T}", { trueFalseLabels: { true: "Benar", false: "Salah" } });
     expect(items.map(({ item }) => choiceTexts(item))).toStrictEqual([["Benar", "Salah"]]);
