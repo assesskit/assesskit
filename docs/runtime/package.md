@@ -270,11 +270,11 @@ platform that launches it.
 
 ## Errors
 
-| Class           | Thrown when                                                                                                                                                                                        |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DataError`     | An argument has the wrong type, a limit is not a positive integer, the paths of `PackageFiles` are not normalized and unique, or `writeManifest` and `writePackage` get a model that is not valid. |
-| `ReadError`     | The data is not a ZIP archive or is cut off; a manifest, document or link cannot be read; a reference cannot be resolved. `issues` names the rule.                                                 |
-| `SecurityError` | The input breaks a rule or limit of the table above, or an XML limit.                                                                                                                              |
+| Class           | Thrown when                                                                                                                                                                                                                                                                                        |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DataError`     | An argument has the wrong type, a limit is not a positive integer, the paths of `PackageFiles` are not normalized and unique, `writeManifest` and `writePackage` get a model that is not valid, or a path of `writePackage` is not normalized, is `imsmanifest.xml` or is `__proto__` at the root. |
+| `ReadError`     | The data is not a ZIP archive or is cut off; a manifest, document or link cannot be read; a reference cannot be resolved. `issues` names the rule.                                                                                                                                                 |
+| `SecurityError` | The input breaks a rule or limit of the table above, or an XML limit.                                                                                                                                                                                                                              |
 
 ## Not included
 

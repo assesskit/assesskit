@@ -8,8 +8,10 @@ import { writeZip, type ZipEntry } from "./zip-writer.js";
 
 /**
  * Writes a package as a ZIP archive: `imsmanifest.xml` first, written from the manifest, then the files in the order of
- * the map. The archive has no ZIP64 records: it holds at most 65,534 files and is below 4 GiB. Equal input gives equal
- * bytes: every entry has the same time stamp.
+ * the map, except that a file at the root whose name is a whole number comes first, as `zipSync` of `fflate` keeps its
+ * files in a plain object; IMS Content Packaging asks only that the manifest be at the root. The archive has no ZIP64
+ * records: it holds at most 65,534 files and is below 4 GiB. Equal input gives equal bytes: every entry has the same time
+ * stamp.
  *
  * @param manifest - The manifest, written as in {@link writeManifest}.
  * @param files - The other files by path. A path must be normalized, which excludes absolute paths, `..` segments,
