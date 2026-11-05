@@ -10,5 +10,7 @@ expression reader of `@assesskit/runtime/operators` reads, and the item's decima
 (`urn:fdc:assesskit.wakan.dev:2026:stroke-writing`) is Hanzi Writer 3.7.3's quiz of a character, which checks each stroke's
 shape, direction and order, with the record `{ strokes, mistakes }` as the response that response processing scores;
 `writeCharacterModule` writes the module of a character's reference strokes, which the item's package carries.
-`INTERACTION_TYPES` gives the type identifiers, and `readModuleFiles` of `/node` the files of a module, MathLive's fonts and
-their license with it, by their paths in the package.
+`PCI_TYPE_IDENTIFIERS` gives the type identifier of each interaction by its name. `readModuleFiles(name, { signal })` of
+`/node` gives the files of a module, MathLive's fonts and their license with it, keyed by their paths under `modules/`, the
+folder of the guides; a tool that keeps the modules elsewhere renames the keys of the `Map`. An option that a function does
+not take is refused, whatever its type.

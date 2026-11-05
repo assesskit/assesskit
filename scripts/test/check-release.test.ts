@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   type Bump,
+  historyInFirstReleases,
   type PackageManifest,
   readRepository,
   releasedBumps,
@@ -70,12 +71,39 @@ describe("wrongFirstReleases", () => {
   });
 });
 
+describe("historyInFirstReleases", () => {
+  const released = { name: "@assesskit/player", version: "1.0.0" };
+
+  it("names a changeset of a package never released that tells a change against an earlier state", () => {
+    const changesets = new Map([
+      ["names.md", '---\n"@assesskit/runtime": major\n---\n\n`readView` (was `viewFromJson`) reads a view.\n'],
+      ["surface.md", '---\n"@assesskit/runtime": major\n---\n\n`single` is no longer exported.\n'],
+    ]);
+    expect(historyInFirstReleases(changesets, [PUBLIC])).toStrictEqual([
+      'names.md says "(was `" of a package that has never been released; state what the first release is.',
+      'surface.md says "no longer" of a package that has never been released; state what the first release is.',
+    ]);
+  });
+
+  it("accepts the notes of a first release that state what it is, and history in the notes of a later release", () => {
+    const changesets = new Map([
+      ["first.md", '---\n"@assesskit/runtime": major\n---\n\n`readView` reads a view, before any session.\n'],
+      [
+        "later.md",
+        '---\n"@assesskit/player": minor\n---\n\n`mount` is renamed `mountDelivery`; `mount` is no longer exported.\n',
+      ],
+    ]);
+    expect(historyInFirstReleases(changesets, [PUBLIC, released])).toStrictEqual([]);
+  });
+});
+
 describe("the changesets of the repository", () => {
-  it("release only packages that are published, and a package that is not yet released as 1.0.0", () => {
+  it("release only packages that are published, and a package that is not yet released as 1.0.0, with notes free of history", () => {
     const { changesets, manifests } = readRepository(join(import.meta.dirname, "../.."));
-    const bumps = releasedBumps(changesets);
+    const bumps = releasedBumps([...changesets.values()]);
     expect([...bumps.keys()]).toContain("@assesskit/runtime");
     expect(unpublishable(bumps.keys(), manifests)).toStrictEqual([]);
     expect(wrongFirstReleases(bumps, manifests)).toStrictEqual([]);
+    expect(historyInFirstReleases(changesets, manifests)).toStrictEqual([]);
   });
 });

@@ -65,25 +65,55 @@ export function wrongFirstReleases(bumps: ReadonlyMap<string, Bump>, manifests: 
   });
 }
 
+/** A change against an earlier state, which a changeset of a first release has none of: no release shipped that state. */
+const HISTORY = /\((?:was|were) `|\bno longer\b|\b(?:is|are) gone\b|\bin place of\b|\brenamed\b/i;
+
+/**
+ * Returns the changesets of a package at 0.0.0 that tell a change against an earlier state, as sentences: their notes reach
+ * the changelog of 1.0.0, whose reader never had that state, so they state what the release is.
+ */
+export function historyInFirstReleases(
+  changesets: ReadonlyMap<string, string>,
+  manifests: readonly PackageManifest[],
+): string[] {
+  const unreleased = new Set(manifests.filter(({ version }) => version === UNRELEASED).map(({ name }) => name));
+  return [...changesets].flatMap(([file, text]) => {
+    const released = [...releasedBumps([text]).keys()];
+    const match = HISTORY.exec(text.replace(/^---\r?\n[\s\S]*?\r?\n---/, ""));
+    return match !== null && released.some((name) => unreleased.has(name))
+      ? [`${file} says "${match[0]}" of a package that has never been released; state what the first release is.`]
+      : [];
+  });
+}
+
 /** The text of the changesets and the manifests of the packages of a repository. */
 export function readRepository(root: string): {
-  readonly changesets: string[];
+  readonly changesets: Map<string, string>;
   readonly manifests: PackageManifest[];
 } {
-  const changesets = readdirSync(join(root, ".changeset"))
-    .filter((file) => file.endsWith(".md") && file !== "README.md")
-    .map((file) => readFileSync(join(root, ".changeset", file), "utf8"));
+  const changesets = new Map(
+    readdirSync(join(root, ".changeset"))
+      .filter((file) => file.endsWith(".md") && file !== "README.md")
+      .map((file) => [file, readFileSync(join(root, ".changeset", file), "utf8")] as const),
+  );
   const manifests = readdirSync(join(root, "packages")).map(
     (folder): PackageManifest => JSON.parse(readFileSync(join(root, "packages", folder, "package.json"), "utf8")),
   );
   return { changesets, manifests };
 }
 
-/** Checks that every package of a changeset is published, and as 1.0.0 when it is a first release, and returns the exit code. */
+/**
+ * Checks that every package of a changeset is published, and as 1.0.0 with notes free of history when it is a first release,
+ * and returns the exit code.
+ */
 function main(): number {
   const { changesets, manifests } = readRepository(resolve(import.meta.dirname, ".."));
-  const bumps = releasedBumps(changesets);
-  const found = [...unpublishable(bumps.keys(), manifests), ...wrongFirstReleases(bumps, manifests)];
+  const bumps = releasedBumps([...changesets.values()]);
+  const found = [
+    ...unpublishable(bumps.keys(), manifests),
+    ...wrongFirstReleases(bumps, manifests),
+    ...historyInFirstReleases(changesets, manifests),
+  ];
   for (const line of found) console.error(line);
   console.log(
     found.length === 0
