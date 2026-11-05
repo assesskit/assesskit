@@ -15,6 +15,7 @@ import {
   writeView,
 } from "@assesskit/runtime/delivery/wire";
 import { DataError, ServiceError } from "@assesskit/runtime/errors";
+import { createPackageResolvers } from "@assesskit/runtime/package";
 import { type PersonalNeedsProfile, PNP_NAMESPACE, readPnp } from "@assesskit/runtime/pnp";
 import { buildSingle } from "@assesskit/runtime/values";
 import fc from "fast-check";
@@ -131,6 +132,46 @@ describe("collectAssetPrefixes", () => {
     expect(collectAssetPrefixes(viewOf(started), pkg)).toEqual(new Set([""]));
     await host.proctor(ALICE.session, { type: "end-test" });
     expect(collectAssetPrefixes(viewOf(await host.view(ALICE)), pkg)).toEqual(new Set(["tests/styles/"]));
+  });
+
+  it("finds the documents of an item delivered alone by the identifier of the item, as it finds those of a test", async () => {
+    const pkg = packageOf(examFiles());
+    const document = pkg.document("items/q1/item.xml");
+    if (document.kind !== "item") throw new Error("The fixture item is not an item.");
+    const engine = createEngine({
+      kind: "item",
+      item: document.item,
+      base: "items/q1/item.xml",
+      resolvers: createPackageResolvers(pkg),
+    });
+    const started = engine.start({ seed: 1, at: 0 });
+    if (!started.ok) throw new Error("The start was refused.");
+    expect(collectAssetPrefixes(engine.view(started.state, 0), pkg)).toEqual(new Set(["items/q1/"]));
+  });
+
+  it("widens the prefix of an item delivered alone to the directory of its stimulus", async () => {
+    const files = { ...examFiles() };
+    files["items/q1/item.xml"] = String(files["items/q1/item.xml"]).replace(
+      "<qti-item-body>",
+      '<qti-assessment-stimulus-ref identifier="passage" href="../../stimuli/passage.xml"/><qti-item-body>',
+    );
+    files["stimuli/passage.xml"] =
+      `<qti-assessment-stimulus xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="passage" title="Passage"><qti-stimulus-body><p>Read <img src="pic.png" alt="A picture" width="1" height="1"/></p></qti-stimulus-body></qti-assessment-stimulus>`;
+    files["stimuli/pic.png"] = "png";
+    const pkg = packageOf(files);
+    const document = pkg.document("items/q1/item.xml");
+    if (document.kind !== "item") throw new Error("The fixture item is not an item.");
+    const engine = createEngine({
+      kind: "item",
+      item: document.item,
+      base: "items/q1/item.xml",
+      resolvers: createPackageResolvers(pkg),
+    });
+    const started = engine.start({ seed: 1, at: 0 });
+    if (!started.ok) throw new Error("The start was refused.");
+    const view = engine.view(started.state, 0);
+    expect(view.current?.stimuli.map(({ identifier }) => identifier)).toEqual(["passage"]);
+    expect(collectAssetPrefixes(view, pkg)).toEqual(new Set([""]));
   });
 
   it("gives no prefix to a view that shows no file", async () => {
