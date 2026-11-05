@@ -1,11 +1,10 @@
 # Stroke writing
 
-`stroke-writing` is a portable custom interaction that asks a candidate to write a character with strokes: a hanzi, a kana,
-a kanji or a hangul jamo, drawn with a pointer. [Hanzi Writer](https://hanziwriter.org)'s quiz checks each stroke's shape,
-direction and order against the character's reference strokes, and the response is the record `{ strokes, mistakes }`, which
-response processing scores with QTI's own expressions; no model is called. Any QTI item may use it. Its module, and the
-module of the character, are AMD files of the item's package, so they run in the player's frame of a portable custom
-interaction, which reaches no network.
+`stroke-writing` is a portable custom interaction that asks a candidate to write a character with a pointer: a hanzi, a
+kana, a kanji or a hangul jamo. [Hanzi Writer](https://hanziwriter.org)'s quiz checks each stroke's shape, direction and
+order against the character's reference strokes; the response is the record `{ strokes, mistakes }`, which response
+processing scores with QTI's own expressions. Its module and the character's module are AMD files of the item's package, so
+they run in the player's frame, which reaches no network.
 
 ```mermaid
 flowchart LR
@@ -16,12 +15,12 @@ flowchart LR
   quiz -- "record: strokes, mistakes" --> rp["Response processing<br/>SCORE from mistakes"]
 ```
 
-| Export                                                   | Does                                                                                                |
-| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `PCI_TYPE_IDENTIFIERS["stroke-writing"]`                 | The `custom-interaction-type-identifier`, `urn:fdc:assesskit.wakan.dev:2026:stroke-writing`.        |
-| `writeCharacterModule(character, strokes)`               | The AMD module of a character, which the item's module resolution names `stroke-writing-character`. |
-| `CharacterStrokes`                                       | The reference strokes, in the form of Hanzi Writer's data: `strokes`, `medians` and `radStrokes`.   |
-| `readModuleFiles("stroke-writing", options?)` of `/node` | The module, by its path in the package.                                                             |
+| Export                                                      | Does                                                                                                |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `PCI_TYPE_IDENTIFIERS["stroke-writing"]`                    | The `custom-interaction-type-identifier`, `urn:fdc:assesskit.wakan.dev:2026:stroke-writing`.        |
+| `writeCharacterModule(character, strokes)`                  | The AMD module of a character, which the item's module resolution names `stroke-writing-character`. |
+| `CharacterStrokes`                                          | The reference strokes, in the form of Hanzi Writer's data: `strokes`, `medians` and `radStrokes`.   |
+| `readModuleFiles("stroke-writing", { signal? })` of `/node` | The module, by its path in the package; `signal` ends the reading (default none).                   |
 
 ## Quick start
 
@@ -137,9 +136,16 @@ the package of the interaction holds none, and its tests hold one character unde
 | The bank's experts                                                | Hangul jamo and any character the sources lack    | The bank's                                                     | Writes the strokes in the same form                                                                                                  |
 
 The form: each stroke an outline as SVG path data and a median as points from where the pen starts to where it lifts, in a
-box of 1024 units whose y axis points up from -124 to 900. `writeCharacterModule` refuses a character of no stroke or more
-than 64, a missing median, a path that is not SVG path data or longer than 4,096 characters, and a median of fewer than 2 or
-more than 256 points; hanzi-writer-data's largest is 33 strokes, a path of 758 characters and a median of 38 points.
+box of 1024 units whose y axis points up from -124 to 900. `writeCharacterModule` refuses any other property and holds the
+data to these limits:
+
+| Limit                   | Value                                                                                   | Largest in hanzi-writer-data 2.0.1 |
+| ----------------------- | --------------------------------------------------------------------------------------- | ---------------------------------- |
+| The character           | 1 to 8 UTF-16 code units: one code point, with a variation selector or a combining mark |                                    |
+| Strokes                 | 1 to 64, each with a median                                                             | 33                                 |
+| The outline of a stroke | SVG path data, at most 4,096 characters                                                 | 758                                |
+| The median of a stroke  | 2 to 256 points of finite numbers                                                       | 38                                 |
+| `radStrokes`            | At most 64 indices, each of a stroke of the character                                   |                                    |
 
 ## Accessibility
 
@@ -162,11 +168,12 @@ the item out of the candidate's form; the interaction itself offers no other way
 
 ## Errors
 
-| Error                                  | When                                                                                                                       | What to do                                                    |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `DataError` of `writeCharacterModule`  | The character is empty or longer than 8 code units, or the strokes break a rule of [Reference strokes](#reference-strokes) | Pass a file of Hanzi Writer's form                            |
-| The frame's `failed` event, `instance` | A property is not valid, or the character module defines no character                                                      | Fix the item, or write the module with `writeCharacterModule` |
-| The frame's `failed` event, `modules`  | The module or the character is not at its `primary-path` in the package                                                    | Put both at the paths the item names                          |
+| Error                                              | When                                                                                  | What to do                                                    |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `DataError` of `writeCharacterModule`              | The character or the strokes break a limit of [Reference strokes](#reference-strokes) | Pass a file of Hanzi Writer's form                            |
+| `DataError`, `AssesskitError` of `readModuleFiles` | As in [math entry](math-entry.md#errors)                                              | As there                                                      |
+| The frame's `failed` event, `instance`             | A property is not valid, or the character module defines no character                 | Fix the item, or write the module with `writeCharacterModule` |
+| The frame's `failed` event, `modules`              | The module or the character is not at its `primary-path` in the package               | Put both at the paths the item names                          |
 
 ## Not included
 

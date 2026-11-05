@@ -30,16 +30,14 @@ flowchart LR
 
 ## Not included
 
-| Not included                                       | Why                                                                                                                                                                                                           |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Scoring inside a module                            | A module is code that the candidate can read, so it holds no key: the item's response processing scores what it writes                                                                                        |
-| A field that refuses what the reader leaves unread | A paste, MathLive's LaTeX mode and its menu write any LaTeX; the response is untrusted anyway, and `readable` reports to the candidate what the reader cannot read ([math entry](math-entry.md#not-included)) |
-| MathLive's words in Indonesian                     | MathLive 0.111.4 has no Indonesian strings                                                                                                                                                                    |
-| The player's themes in the field and its keyboard  | MathLive draws the field and the keyboard in its own colors, light or dark by the browser's color scheme                                                                                                      |
-| A way to answer with a keyboard or a switch        | In stroke writing the task is the path of each stroke; the author gives such a candidate another item ([stroke writing](stroke-writing.md#accessibility))                                                     |
-| Several characters in one interaction              | One interaction is one character; a word is an interaction for each of its characters ([stroke writing](stroke-writing.md#not-included))                                                                      |
-| Converting KanjiVG to Hanzi Writer's form          | It is preparation of the bank's content, done once for each character, not delivery                                                                                                                           |
-| An authoring tool for items that use the modules   | The package gives the type identifiers and the files; the item is the author's tool's ([architecture](architecture.md))                                                                                       |
-| Certification by 1EdTech                           | Certification is for products, with member-only test sets. [Conformance](../runtime/conformance.md) says what is implemented, feature by feature                                                              |
+| Not included                                                         | Why                                                                                                                                              |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Scoring inside a module                                              | A module is code that the candidate can read, so it holds no key                                                                                 |
+| A field that refuses what the reader leaves unread                   | The response is untrusted anyway, and `readable` reports what does not read ([math entry](math-entry.md#not-included))                           |
+| MathLive's words in Indonesian, and the player's themes in the field | MathLive has no Indonesian strings and draws in its own colors ([math entry](math-entry.md#not-included))                                        |
+| A way to answer stroke writing with a keyboard or a switch           | The task is the path of each stroke; the author gives such a candidate another item ([stroke writing](stroke-writing.md#accessibility))          |
+| Several characters in one interaction, and converting KanjiVG        | One interaction is one character, and converting strokes prepares the bank's content ([stroke writing](stroke-writing.md#not-included))          |
+| An authoring tool for items that use the modules                     | The package gives the type identifiers and the files; the item is the author's tool's ([architecture](architecture.md))                          |
+| Certification by 1EdTech                                             | Certification is for products, with member-only test sets. [Conformance](../runtime/conformance.md) says what is implemented, feature by feature |
 
 The claim is the one of [the player](../player/supported.md#the-claim) for what the frame decides, and [evidence](evidence.md) counts the tests of the modules.

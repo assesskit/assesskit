@@ -1,11 +1,9 @@
 # Evidence for custom-interactions
 
-What shows that `@assesskit/custom-interactions` does what it says: tests of each module in Node, tests of the built modules in the
-player's frame in three browser engines, the items of the interactions against the published schema, and the sizes of the
-modules. The counts below are those of the repository at `1647c74`, run on 2026-11-05: every test passed, and none failed or was
-skipped. The tests in Node ran on Node.js 22.23.4 and the tests in a browser in Chromium; Firefox and WebKit run the same files in the
-job `browsers` of `.github/workflows/ci.yml`, and their results are not counted here. Every other count comes from the file that the
-last column names.
+What shows that `@assesskit/custom-interactions` does what it says. The counts are those of the repository at `1647c74`, run
+on 2026-11-05: every test passed, none failed or was skipped. Node tests ran on Node.js 22.23.4 and browser tests in Chromium;
+Firefox and WebKit run the same files in the `browsers` job of `.github/workflows/ci.yml`, not counted here. Every other count
+comes from the file that the last column names.
 
 ```mermaid
 flowchart LR
@@ -27,10 +25,6 @@ flowchart LR
 | Libraries              | MathLive 0.111.4 and Hanzi Writer 3.7.3, MIT  | `package.json` of the package, pinned exactly; the license of each heads its module                                        |
 | Interactions           | 2                                             | `PCI_TYPE_IDENTIFIERS` of `src/interaction-types.ts`                                                                       |
 
-What each layer holds is in [architecture](architecture.md#tests): the keys of the virtual keyboard of math entry and its shortcuts write
-LaTeX that the reader of `@assesskit/runtime/operators` reads; the built module runs in the frame with real keys and taps, and the
-response is scored end to end; axe finds no violation of WCAG 2.2 AA with the keyboard shown and with worked steps
-([math entry](math-entry.md#accessibility)). The stroke-writing tests draw the character 十 with Playwright's pointer and score the record
-([stroke writing](stroke-writing.md#scoring)).
+What each test file holds is in [architecture](architecture.md#tests).
 
 The tests of the runtime's reader of LaTeX, which scores what math entry writes, are in the [evidence of the runtime](../runtime/evidence.md).

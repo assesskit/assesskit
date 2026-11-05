@@ -1,14 +1,14 @@
 # @assesskit/custom-interactions
 
-QTI 3.0 portable custom interactions for JavaScript and TypeScript: math entry for formulas in LaTeX and stroke writing for characters, each an AMD module that loads entirely from the item's package. `math-entry` is a formula typed in a [MathLive](https://mathlive.io) field with a virtual keyboard, whose LaTeX the `expression-equivalent` operator of [`@assesskit/runtime`](https://assesskit.wakan.dev/_assesskit/runtime/) scores, and `stroke-writing` is a character written with strokes in [Hanzi Writer](https://hanziwriter.org)'s quiz, whose strokes and mistakes response processing scores. The item's package carries each module, so that it loads from the package in the frame of [`@assesskit/player`](https://assesskit.wakan.dev/_assesskit/player/), which reaches no network, or in any delivery engine that loads modules by the QTI 3.0 Best Practices and Implementation Guide.
+QTI 3.0 portable custom interactions for JavaScript and TypeScript: math entry for formulas in LaTeX and stroke writing for characters, each an AMD module that loads entirely from the item's package. A module runs in the frame of [`@assesskit/player`](https://assesskit.wakan.dev/_assesskit/player/), which reaches no network, or in any delivery engine that loads modules by the QTI 3.0 Best Practices and Implementation Guide.
 
 ```bash
 npm install @assesskit/custom-interactions
 ```
 
-The package depends on [`@assesskit/runtime`](https://assesskit.wakan.dev/_assesskit/runtime/), for its checks and errors. The modules hold their
-libraries, bundled and pinned exactly, with each library's license at the head of its module: MathLive 0.111.4 (MIT) and
-Hanzi Writer 3.7.3 (MIT).
+The runtime dependencies are [`@assesskit/runtime`](https://assesskit.wakan.dev/_assesskit/runtime/), for checks and errors,
+and valibot. Each module bundles its library, pinned exactly, with the library's license at its head:
+[MathLive](https://mathlive.io) 0.111.4 and [Hanzi Writer](https://hanziwriter.org) 3.7.3, both MIT.
 
 ## Quick start
 
@@ -21,13 +21,10 @@ const files = await readModuleFiles("math-entry");
 [...files.keys()][0]; // => "modules/math-entry.js"
 ```
 
-The item names the module at `primary-path="modules/math-entry"`, and the package lists the files.
-[Math entry](https://assesskit.wakan.dev/_assesskit/custom-interactions/math-entry/) writes a whole item
-and its package.
+The item names the module at `primary-path="modules/math-entry"`, and the package lists the files;
+[math entry](https://assesskit.wakan.dev/_assesskit/custom-interactions/math-entry/) writes a whole item and its package.
 
 ## Architecture
-
-An author's tool puts the module into the item's package, and the player's frame loads it.
 
 ```mermaid
 flowchart LR
@@ -38,11 +35,11 @@ flowchart LR
 
 ## API
 
-| Import                                     | Contents                                                                                           |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------- |
-| `@assesskit/custom-interactions`           | `PCI_TYPE_IDENTIFIERS`, the type identifier of each interaction by its name, and `InteractionName` |
-| `@assesskit/custom-interactions/node`      | `readModuleFiles`: the files of an interaction's module, by their paths in the package             |
-| `@assesskit/custom-interactions/modules/*` | The built modules and the files beside them, for a tool that copies them                           |
+| Import                                     | Contents                                                                                                                                                                                        |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@assesskit/custom-interactions`           | `PCI_TYPE_IDENTIFIERS`, the type identifier of each interaction by its name, and `InteractionName`; `writeCharacterModule` and `CharacterStrokes`, the module of a character for stroke writing |
+| `@assesskit/custom-interactions/node`      | `readModuleFiles`: the files of an interaction's module, by their paths in the package                                                                                                          |
+| `@assesskit/custom-interactions/modules/*` | The built modules and the files beside them, for a tool that copies them                                                                                                                        |
 
 ## Supported
 
@@ -51,9 +48,9 @@ flowchart LR
 | `math-entry`     | `single` `string`: LaTeX; `ordered` `string`: worked steps, one line a step | `expression-equivalent` and `readable`; the steps by `compareMathSteps` |
 | `stroke-writing` | `record`: `strokes` and `mistakes`, integers                                | QTI's own expressions, by `qti-field-value`                             |
 
-The modules run in Chromium 111, Firefox 115 and Safari 16.4, and later versions, the
-[baseline](https://assesskit.wakan.dev/_assesskit/player/baseline/) of the player, and are tested in its
-frame in the current Chromium, Firefox and WebKit.
+The modules run in Chromium 111, Firefox 115, Safari 16.4 and later, the player's
+[baseline](https://assesskit.wakan.dev/_assesskit/player/baseline/), and are tested in its frame in the current Chromium,
+Firefox and WebKit.
 
 ## Documentation
 

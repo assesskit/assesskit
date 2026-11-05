@@ -1,10 +1,9 @@
 # Math entry
 
-`math-entry` is a portable custom interaction that asks for mathematics typed as a formula: a [MathLive](https://mathlive.io)
-field with a virtual keyboard, which a candidate on a phone needs, whose LaTeX is the response. Any QTI item may use it. Its
-module is an AMD file of the item's package, so it runs in the player's frame of a portable custom interaction, which reaches
-no network, and the `expression-equivalent` operator of [`@assesskit/runtime/operators`](../runtime/operators.md) scores
-what it writes.
+`math-entry` is a portable custom interaction that asks for a formula: a [MathLive](https://mathlive.io) field with a
+virtual keyboard, which a candidate on a phone needs. The response is the field's LaTeX, which the `expression-equivalent`
+operator of [`@assesskit/runtime/operators`](../runtime/operators.md) scores. Its module is an AMD file of the item's
+package, so it runs in the player's frame, which reaches no network.
 
 ```mermaid
 flowchart LR
@@ -14,11 +13,11 @@ flowchart LR
   field -. "worked steps" .-> steps["compareMathSteps<br/>or a rater of steps"]
 ```
 
-| Export                                                | Does                                                                                     |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `PCI_TYPE_IDENTIFIERS["math-entry"]`                  | The `custom-interaction-type-identifier`, `urn:fdc:assesskit.wakan.dev:2026:math-entry`. |
-| `readModuleFiles("math-entry", options?)` of `/node`  | The module, MathLive's fonts and their license, by their paths in the package.           |
-| `modules/math-entry.js`, `modules/math-entry/fonts/*` | The same files, as files of the npm package, for a tool that copies them.                |
+| Export                                                  | Does                                                                                                                                       |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PCI_TYPE_IDENTIFIERS["math-entry"]`                    | The `custom-interaction-type-identifier`, `urn:fdc:assesskit.wakan.dev:2026:math-entry`.                                                   |
+| `readModuleFiles("math-entry", { signal? })` of `/node` | The module, MathLive's fonts and their license, by their paths in the package, under `modules/`; `signal` ends the reading (default none). |
+| `modules/math-entry.js`, `modules/math-entry/fonts/*`   | The same files, as files of the npm package, for a tool that copies them.                                                                  |
 
 ## Quick start
 
@@ -73,19 +72,19 @@ pkg.paths.slice(0, 3); // => ["imsmanifest.xml", "items/expand/item.xml", "modul
 validatePackage(pkg, { customOperators: createScoringOperators() }); // => []
 ```
 
-`validatePackage` checks that the module is in the package and listed, and finds nothing to report; it takes the operators as
-`customOperators`, so that it knows `expression-equivalent`.
+`validatePackage` checks that the module is in the package and listed; it takes the operators as `customOperators`, so that
+it knows `expression-equivalent`.
 
 ## The item
 
-| Part                                  | Value                                                                                                                                      |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `custom-interaction-type-identifier`  | `urn:fdc:assesskit.wakan.dev:2026:math-entry`, `PCI_TYPE_IDENTIFIERS["math-entry"]`                                                        |
-| `module`, `qti-interaction-module id` | `math-entry`, the id that the module defines                                                                                               |
-| `primary-path`                        | The module's path in the package without `.js`, from the root of the package: `modules/math-entry` with `readModuleFiles`'s default folder |
-| Response, an answer                   | `cardinality="single" base-type="string"`: the field's LaTeX; NULL while the field is empty                                                |
-| Response, worked steps                | `cardinality="ordered" base-type="string"`: one line a step, the empty lines left out; NULL while every line is empty                      |
-| `qti-prompt`                          | Names the frame, and the field, for assistive technology                                                                                   |
+| Part                                  | Value                                                                                                                                   |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `custom-interaction-type-identifier`  | `urn:fdc:assesskit.wakan.dev:2026:math-entry`, `PCI_TYPE_IDENTIFIERS["math-entry"]`                                                     |
+| `module`, `qti-interaction-module id` | `math-entry`, the id that the module defines                                                                                            |
+| `primary-path`                        | The module's path in the package without `.js`, from the root of the package: `modules/math-entry` at the paths `readModuleFiles` gives |
+| Response, an answer                   | `cardinality="single" base-type="string"`: the field's LaTeX; NULL while the field is empty                                             |
+| Response, worked steps                | `cardinality="ordered" base-type="string"`: one line a step, the empty lines left out; NULL while every line is empty                   |
+| `qti-prompt`                          | Names the frame, and the field, for assistive technology                                                                                |
 
 The module reads the cardinality from the response it is bound to, so an `ordered` declaration gives worked steps and needs
 no attribute of its own. Keep the module files in a resource of their own, of type `webcontent`, as the Quick start does: the
@@ -137,8 +136,7 @@ Typed with real keys in the player's frame, MathLive 0.111.4 writes, and the bro
 
 `→` is the right arrow, which leaves a fraction, a power or a root. Two traps of MathLive's that the keys keep: `1 1/2` is
 `\frac{11}{2}`, since the field takes no space between numbers, and `|x-1|` typed on a physical keyboard leaves the field
-empty in Chromium, as it did in the engine specification's measurement of 0.111.4, so a candidate writes an absolute value
-with the keyboard's bar key or `abs(x)`.
+empty in Chromium, so a candidate writes an absolute value with the virtual keyboard's bar key or `abs(x)`.
 
 ### Worked steps
 
@@ -158,12 +156,13 @@ each against the nearest earlier line that reads.
 
 ## Errors
 
-| Error                                  | When                                                                                                                                                                        | What to do                                                                 |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `DataError` of `readModuleFiles`       | The name is not an interaction of the package, an option is unknown, the folder is not a folder of a package ending in `/` (or `""`), or the signal is not an `AbortSignal` | Pass `"math-entry"` and a folder such as `modules/`                        |
-| `AssesskitError` of `readModuleFiles`  | The package was installed without its built modules                                                                                                                         | Install the published package, or run `pnpm build` in a checkout           |
-| The frame's `failed` event, `instance` | `data-decimal-separator` is neither `.` nor `,`                                                                                                                             | Fix the item                                                               |
-| The frame's `failed` event, `modules`  | The module is not at `primary-path` in the package                                                                                                                          | Put the files of `readModuleFiles` at the folder that `primary-path` names |
+| Error                                  | When                                                                                                     | What to do                                                                 |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `DataError` of `readModuleFiles`       | The name is not an interaction of the package, an option is unknown, or `signal` is not an `AbortSignal` | Pass `"math-entry"` and at most `{ signal }`                               |
+| `AssesskitError` of `readModuleFiles`  | The package was installed without its built modules                                                      | Install the published package, or run `pnpm build` in a checkout           |
+| The signal's reason                    | `signal` aborted the reading                                                                             | Nothing: the caller ended it                                               |
+| The frame's `failed` event, `instance` | `data-decimal-separator` is neither `.` nor `,`                                                          | Fix the item                                                               |
+| The frame's `failed` event, `modules`  | The module is not at `primary-path` in the package                                                       | Put the files of `readModuleFiles` at the folder that `primary-path` names |
 
 ## Not included
 
@@ -177,10 +176,9 @@ each against the nearest earlier line that reads.
 
 ## Differences from the references
 
-| Reference                                                   | Difference                                                                                                                                                                                                                                            |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| MathLive's defaults                                         | The keyboard, the shortcuts and `log` as the table of [What the field writes](#what-the-field-writes) says; the keyboard is MathLive's own in the frame, which MathLive would send to the top window                                                  |
-| MathLive 0.111.4, which the engine's specification measured | The module pins the same version. With real keys in a browser it writes what the specification's measurement wrote for every case both took; the keys of `log`, `oo`, `infinity`, `ii`, `sum` and `int` differ by the module's shortcuts, as intended |
+| Reference           | Difference                                                                                                                                                                                                                                                                       |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MathLive's defaults | The keyboard and the shortcuts as [What the field writes](#what-the-field-writes) says, so `log`, `oo`, `infinity`, `ii`, `sum` and `int` write what the reader reads or stay as typed; the keyboard is MathLive's own in the frame, which MathLive would send to the top window |
 
 ## Files
 

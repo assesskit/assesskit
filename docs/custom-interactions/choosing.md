@@ -1,9 +1,8 @@
 # Choosing custom-interactions
 
 When `@assesskit/custom-interactions` fits an item that needs a formula or a handwritten character, and when another way fits
-better. The comparison study of 2026-11-02 read delivery and validation libraries, not libraries of portable custom
-interactions, so the rows below hold what it found about portable custom interactions, with the date of each source; MathQuill was
-read on 2026-11-04 for the architecture of this package. No comparator was run.
+better. The comparators are delivery and validation libraries, not libraries of custom interactions, each dated by the day its
+source was read; none was run.
 
 ```mermaid
 flowchart TD
