@@ -9,7 +9,9 @@
       "@assesskit/runtime/checks": ["../runtime/src/checks.ts"],
       "@assesskit/runtime/errors": ["../runtime/src/errors.ts"],
       "@assesskit/runtime/delivery/wire": ["../runtime/src/delivery/wire.ts"],
-      "@assesskit/runtime/*": ["../runtime/src/*/index.ts"]
+      "@assesskit/runtime/*": ["../runtime/src/*/index.ts"],
+      "@assesskit/player": ["./src/index.ts"],
+      "@assesskit/player/*": ["./src/*/index.ts"]
     },
     "types": ["node"]
   },

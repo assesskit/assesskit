@@ -1,17 +1,21 @@
+import { EN_MESSAGES } from "@assesskit/player";
+import { createLocalSession, type LocalStore } from "@assesskit/player/client/local";
+import { mountDelivery, mountItem, mountTools } from "@assesskit/player/player";
 import { ASI_NAMESPACE, readAsi } from "@assesskit/runtime/asi";
 import ampUpStyles from "qti3-item-player/dist/qti3Player.css?raw";
 import ampUpPlayer from "qti3-item-player/dist/qti3Player.umd.min.js?raw";
 import { afterEach, describe, expect, inject, it } from "vitest";
 import { commands } from "vitest/browser";
 import vue from "vue/dist/vue.min.js?raw";
-import { createLocalSession, type LocalStore } from "../src/client/local/index.js";
-import { EN_MESSAGES } from "../src/index.js";
-import { mountDelivery, mountItem, mountTools } from "../src/player/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
 import { examDefinition, fakeClock } from "./exam-fixture.js";
 import { NO_RECORDING } from "./files-fixture.js";
 import { AMP_UP_RATIO, CPU_SLOWDOWN, HIGHLIGHT_WORDS, LESSON_ITEMS, MOUNT_BUDGETS, SAMPLES } from "./mount-budgets.js";
 import { supportView } from "./supports-fixture.js";
+
+// The player and the runtime are the build, imported by name, which `pnpm bench` makes first: the sources would run through
+// Vite's rewrite of their imports, which is not the code that ships. The fixtures build the documents from the sources,
+// outside the time.
 
 const player = new CSSStyleSheet();
 player.replaceSync(PLAYER_CSS);

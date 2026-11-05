@@ -126,8 +126,8 @@ export default defineConfig({
         },
       },
       {
-        // The time to mount, with the CPU slowed by a factor that only Chromium can apply: `pnpm bench` runs it.
-        resolve: { alias: RUNTIME_SOURCES },
+        // The time to mount, with the CPU slowed by a factor that only Chromium can apply: `pnpm bench` builds the packages and
+        // runs it on the build, which the benchmark imports by name.
         test: {
           name: "player-bench",
           include: ["packages/player/test/**/*.browser.bench.ts"],
