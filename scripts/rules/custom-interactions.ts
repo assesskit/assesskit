@@ -48,6 +48,14 @@ export const CUSTOM_INTERACTION_RULES: readonly Rule[] = [
     browser: true,
   },
   {
+    rule: "Tab and Shift+Tab leave a field where MathLive has nowhere to go, so that a keyboard does not stay in the frame.",
+    file: INTERACTION,
+    find: "if (!deadEnd) event.preventDefault();",
+    replace: "event.preventDefault();",
+    test: BROWSER_TEST,
+    browser: true,
+  },
+  {
     rule: "A stroke drawn that does not match its reference stroke counts as a mistake.",
     file: STROKES,
     find: "onMistake: ({ strokeNum, totalMistakes }) => update({ strokes: strokeNum, mistakes: before + totalMistakes }),",

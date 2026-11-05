@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import type {} from "../../player/test/fixtures/commands.js";
 import { waitFor } from "../../player/test/wait.js";
-import { hitsOf, mount, ready, responseOf, scoreOf, stateOf } from "./fixtures/frame.js";
+import { hitsOf, mount, ready, responseOf, scoreOf, stateOf, surround, tabUntil } from "./fixtures/frame.js";
 import { writeMathEntryItem, writeStepsItem } from "./fixtures/items.js";
 
 /** The WCAG levels that axe checks, as the player's tests check them. */
@@ -76,6 +76,13 @@ const TYPED: readonly {
   // MathLive's own shortcut would write \infty, which the reader does not read; the item's shortcuts leave the letters.
   { keys: ["oo"], latex: "oo", key: expression("o^2") },
 ];
+
+/** The name of the element that has the focus in the frame of an interaction, or `false` when the frame has none. */
+const focusIn = (title: string): Promise<unknown> =>
+  commands.readInFrame(
+    title,
+    "document.hasFocus() && (document.activeElement?.ariaLabel ?? document.activeElement?.textContent)",
+  );
 
 /** Mounts an item of one expression and waits for its interaction. */
 async function mountExpression(key: ExpressionKey, title: string, attributes = "") {
@@ -301,24 +308,44 @@ describe("the frame", () => {
     expect(await commands.axeInFrame("Steps.", WCAG_TAGS)).toEqual([]);
   });
 
-  it("takes a keyboard only: Tab reaches the field from the page, and the keys type into it", async () => {
-    const before = document.createElement("button");
-    before.textContent = "Before";
-    document.body.prepend(before);
-    try {
-      const { xml, mounted } = await mountExpression(expression("2x"), "Keyboard only.");
-      before.focus();
-      // Firefox stops at the frame itself before its content, as it does at any frame.
-      const inField = async () =>
-        (await commands.readInFrame("Keyboard only.", "document.activeElement?.tagName")) === "MATH-FIELD";
-      for (let presses = 0; presses < 3 && !(await inField()); presses++) await userEvent.tab();
-      await waitFor(async () => expect(await inField()).toBe(true));
-      await userEvent.keyboard("x+x");
-      const response = await responseOf(mounted);
-      expect(response).toEqual(buildSingle("string", "x+x"));
-      expect(scoreOf(xml, response ?? null)).toEqual(FULL);
-    } finally {
-      before.remove();
-    }
+  it("takes a keyboard only: Tab reaches the field from the page, the keys type into it, and Tab and Shift+Tab leave it", async () => {
+    const title = "Keyboard only.";
+    const { xml, mounted } = await mountExpression(expression("2x"), title);
+    const { before, after } = surround();
+    // The field is named by the prompt.
+    const inField = async () => (await focusIn(title)) === title;
+    before.focus();
+    await tabUntil(inField);
+    await userEvent.keyboard("x+x");
+    const places = () => [mounted.frame.element, after].map((element) => element.getBoundingClientRect().toJSON());
+    const placed = places();
+    await tabUntil(() => document.activeElement === after);
+    expect(places()).toEqual(placed);
+    await tabUntil(inField, true);
+    await tabUntil(() => document.activeElement === before, true);
+    const response = await responseOf(mounted);
+    expect(response).toEqual(buildSingle("string", "x+x"));
+    expect(scoreOf(xml, response ?? null)).toEqual(FULL);
+  });
+
+  it("moves with Tab to the next slot of a template while MathLive has one, and leaves the field after", async () => {
+    const title = "Tab to a slot.";
+    const { mounted } = await mountExpression(expression("\\frac23"), title);
+    const { after } = surround();
+    await commands.keysInFrame(title, "math-field", ["2/", "ArrowLeft", "Tab", "3"]);
+    expect(await focusIn(title)).toBe(title);
+    expect(await responseOf(mounted)).toEqual(buildSingle("string", "\\frac23"));
+    await tabUntil(() => document.activeElement === after);
+  });
+
+  it("lets Tab leave worked steps past their buttons, and Shift+Tab leave the first line", async () => {
+    const title = "Steps by keyboard.";
+    const mounted = mount(writeStepsItem(title), { title });
+    await ready(mounted);
+    const { before, after } = surround();
+    await commands.keysInFrame(title, "math-field", ["x"]);
+    await tabUntil(() => document.activeElement === after);
+    await commands.keysInFrame(title, "math-field", []);
+    await tabUntil(() => document.activeElement === before, true);
   });
 });

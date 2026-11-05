@@ -3,7 +3,17 @@ import { describe, expect, it } from "vitest";
 import { commands } from "vitest/browser";
 import type {} from "../../player/test/fixtures/commands.js";
 import { waitFor } from "../../player/test/wait.js";
-import { hitsOf, type Mounted, mount, ready, responseOf, scoreOf, stateOf } from "./fixtures/frame.js";
+import {
+  hitsOf,
+  type Mounted,
+  mount,
+  ready,
+  responseOf,
+  scoreOf,
+  stateOf,
+  surround,
+  tabUntil,
+} from "./fixtures/frame.js";
 import { writeStrokeWritingItem } from "./fixtures/items.js";
 
 /** The WCAG levels that axe checks, as the player's tests check them. */
@@ -127,5 +137,14 @@ describe("the frame", () => {
       await commands.readInFrame(title, `document.querySelector(".stroke-writing-area").getAttribute("aria-label")`),
     ).toBe(title);
     expect(await commands.axeInFrame(title, WCAG_TAGS)).toEqual([]);
+  });
+
+  it("holds no keyboard: Tab and Shift+Tab pass the frame, which has nothing to focus", async () => {
+    const title = "Pass 十.";
+    await mountCharacter(title);
+    const { before, after } = surround();
+    before.focus();
+    await tabUntil(() => document.activeElement === after);
+    await tabUntil(() => document.activeElement === before, true);
   });
 });

@@ -5,6 +5,7 @@ import { createScoringOperators } from "@assesskit/runtime/operators";
 import { createItemVariables, runResponseProcessing } from "@assesskit/runtime/processing";
 import type { Value } from "@assesskit/runtime/values";
 import { afterEach, expect, inject } from "vitest";
+import { userEvent } from "vitest/browser";
 import { waitFor } from "../../../player/test/wait.js";
 import { interactionOf } from "./items.js";
 
@@ -29,6 +30,9 @@ export interface MountOptions {
 }
 
 const mounted: { readonly frame: PciFrame; readonly host: HTMLElement }[] = [];
+
+/** The fields of the page around the frames, which the test removes after it. */
+const around: HTMLElement[] = [];
 
 /**
  * Mounts the one interaction of an item in the player's frame, its package under a token of its own on the asset origin,
@@ -71,7 +75,37 @@ afterEach(async () => {
     await frame.destroy();
     host.remove();
   }
+  for (const field of around.splice(0)) field.remove();
 });
+
+/** A text field of the page with a name, which the test removes after it. */
+function pageField(label: string): HTMLInputElement {
+  const input = document.createElement("input");
+  input.setAttribute("aria-label", label);
+  around.push(input);
+  return input;
+}
+
+/**
+ * Puts a text field of the page before the frames that a test mounted and one after them, which a keyboard leaves a frame
+ * for: text fields, because Safari's default is to skip buttons when Tab moves the focus.
+ */
+export function surround(): { readonly before: HTMLInputElement; readonly after: HTMLInputElement } {
+  const before = pageField("Before");
+  const after = pageField("After");
+  document.body.prepend(before);
+  document.body.append(after);
+  return { before, after };
+}
+
+/**
+ * Presses Tab, or Shift+Tab, until a condition holds, six times at most: Firefox stops at a frame itself too, and Chromium
+ * and Firefox at the buttons that Safari skips. A keyboard that a frame traps never meets it.
+ */
+export async function tabUntil(reached: () => Promise<boolean> | boolean, shift = false): Promise<void> {
+  for (let presses = 0; presses < 6 && !(await reached()); presses++) await userEvent.tab({ shift });
+  await waitFor(async () => expect(await reached()).toBe(true));
+}
 
 /** Waits until the interaction of a frame is ready, and fails at once on a frame that failed. */
 export async function ready({ events }: Mounted): Promise<void> {

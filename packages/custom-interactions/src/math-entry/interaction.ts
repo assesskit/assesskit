@@ -66,6 +66,36 @@ function configureMathLive(moduleUrl: string, separator: DecimalSeparator, langu
 }
 
 /**
+ * Lets Tab and Shift+Tab leave a field where MathLive has nowhere to go, so that the browser moves the focus on in the
+ * page's order, out of the frame past its last element.
+ *
+ * @remarks
+ * MathLive keeps the key either way and moves the focus only among the elements of the frame's document, so a keyboard
+ * stays in a frame of one field. The handler runs MathLive's command for the key with the `move-out` event that tells of
+ * the dead end cancelled, and holds the key back from MathLive. Tab in LaTeX mode accepts a suggestion, and stays
+ * MathLive's.
+ *
+ * @see {@link https://www.w3.org/WAI/WCAG22/Understanding/no-keyboard-trap.html | Understanding WCAG 2.2, 2.1.2 No Keyboard Trap}
+ */
+function leaveOnTab(field: MathfieldElement, event: KeyboardEvent): void {
+  if (event.key !== "Tab" || event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return;
+  if (field.mode === "latex" && !event.shiftKey) return;
+  let deadEnd = false;
+  const onMoveOut = (moveOut: Event): void => {
+    moveOut.preventDefault();
+    deadEnd = true;
+  };
+  field.addEventListener("move-out", onMoveOut);
+  try {
+    field.executeCommand(event.shiftKey ? "moveToPreviousGroup" : "moveToNextGroup");
+  } finally {
+    field.removeEventListener("move-out", onMoveOut);
+  }
+  event.stopPropagation();
+  if (!deadEnd) event.preventDefault();
+}
+
+/**
  * Creates the math entry interaction: a MathLive field whose value, LaTeX, is the response, or one field a line for worked
  * steps when the response variable is `ordered`.
  *
@@ -100,6 +130,8 @@ export function createMathEntry(args: InstanceArguments): PciInstance {
     // has the focus already: the window takes it with the press, or a press that follows a frame removed while it had the
     // focus leaves the field deaf to the keys while MathLive takes it for focused.
     field.addEventListener("pointerdown", () => window.focus(), { capture: true });
+    // Before MathLive, which takes every Tab: the field is the host of the element that has the focus.
+    field.addEventListener("keydown", (event) => leaveOnTab(field, event), { capture: true });
     return field;
   };
 
