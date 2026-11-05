@@ -8,6 +8,9 @@ import type { MountState } from "./state.js";
 /** How often in milliseconds the player checks a test that a proctor paused; each check of a remote client is one request. */
 export const RESUME_CHECK_MS = 30_000;
 
+/** Every message that the check for a resume may write in the status region. */
+export const RESUME_MESSAGES: readonly (keyof Messages)[] = ["stillSuspended", "checkFailed"];
+
 /** What the check for a resume needs of the player. */
 export interface ResumeContext {
   /** The session client that asks the host for its view. */

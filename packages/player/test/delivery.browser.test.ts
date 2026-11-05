@@ -409,6 +409,29 @@ describe("mountDelivery", () => {
     expect(s.ui.activeElement?.textContent).not.toBe("");
   });
 
+  it("keeps the room of the longest message at 320 pixels, so that neither the actions nor a host's control move as the Indonesian refusal of several lines is written", async () => {
+    const s = await shell({
+      language: "id",
+      catalogs: { id: ID_MESSAGES },
+      wrap: (client) =>
+        withDispatch(client, async () => ({
+          view: client.view,
+          refusal: { reason: "setting-not-adjustable", message: "The profile sets it." },
+        })),
+    });
+    s.page.style.width = "320px";
+    await shown(s);
+    const submit = buttonNamed(s.ui, "Kirim jawaban");
+    const next = hostButton(s, "Berikutnya");
+    const before = [boxOf(submit), boxOf(next)];
+    submit.click();
+    await waitFor(() => expect(statusOf(s.ui)).toBe(ID_MESSAGES.refusalSettingNotAdjustable));
+    const region = s.ui.querySelector<HTMLElement>(".ak-status");
+    // The message takes more than one line at this width, and the region already had their room.
+    expect(region?.getBoundingClientRect().height).toBeGreaterThan(40);
+    expect([boxOf(submit), boxOf(next)]).toEqual(before);
+  });
+
   it("writes the interface in the language of the candidate, the refusals included", async () => {
     const s = await shell({
       language: "id",

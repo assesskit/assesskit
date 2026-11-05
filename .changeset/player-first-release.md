@@ -46,7 +46,10 @@ candidate whom a proctor paused learns of the resume through `SessionClient.refr
 `SessionHost.handle`; the player asks on a button, when the page becomes visible and every 30 seconds. The status lines, the
 line of the timer warnings, the line of an upload, which holds its status, its clock and the stored file in the height of a
 button, the notice of a media interaction whose rules can hold its playback, and the hint of an interaction whose
-response can break a rule while the candidate responds keep their room whether or not they hold text, so that writing a message moves nothing under a pointer; a line stays announced (`role="status"`).
+response can break a rule while the candidate responds keep their room whether or not they hold text, so that writing a
+message moves nothing under a pointer; a line stays announced (`role="status"`). The status lines and the timer warnings
+of `mountDelivery` stand after the item and its actions, and the status line of each mount keeps the room of its longest
+message at the width it has, so that a message of several lines on a narrow screen moves no item or control that follows.
 
 The frame of a portable custom interaction takes a relative URL from `assets`, resolved against the base URL of the page,
 and refuses at mount a module of the package on an origin that the frame loads no scripts from, the origin of `staticUrl`

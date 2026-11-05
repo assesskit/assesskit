@@ -91,8 +91,9 @@ export function createShell(parts: ShellParts): Shell {
     "div",
     { class: "ak-player", lang: language },
     ...(chrome ? [parts.timers] : []),
-    parts.timerStatus,
     layout,
+    // The lines of the status stand after the item and its actions, so that a message longer than a line moves none of them.
+    parts.timerStatus,
     parts.status,
   );
   return {

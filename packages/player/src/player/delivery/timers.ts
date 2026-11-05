@@ -52,8 +52,9 @@ interface Row {
  * Each shows the time left to its maximum, and the time before the candidate may leave when the scope has a minimum,
  * counted down from the moment the view was made. A limit that passed and still takes answers says so. The candidate can
  * hide the timers. The time left is not a live region: a screen reader would read it each second. Instead the status
- * region announces it 300 and 60 seconds before a limit, and says when the time is over. That region keeps the room of a
- * line from the first view that has a timer, so that a warning moves nothing; a test without timers has no such room.
+ * region announces it 300 and 60 seconds before a limit, and says when the time is over. That region stands after the item
+ * and its actions, so that a warning longer than a line moves none of them, and keeps the room of a line from the first view
+ * that has a timer; a test without timers has no such room.
  *
  * @param messages - The text of the interface.
  * @param language - The language of the interface, for the spoken time.

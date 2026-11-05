@@ -1,14 +1,14 @@
 import type { CandidateView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import { shadowRootOf } from "../internal.js";
-import { createAnnouncer } from "./announcer.js";
+import { createAnnouncer, keepRoomOf } from "./announcer.js";
 import { baseStyles } from "./base-styles.js";
 import { createBody } from "./body.js";
 import { mountContentAttachments } from "./content-attachments.js";
 import { createItemShell } from "./item-shell.js";
 import { bindToLifetime } from "./lifetime.js";
 import { checkItemOptions, type Mounted, type MountOptions } from "./options.js";
-import { createSender } from "./sender.js";
+import { createSender, SENDER_MESSAGES } from "./sender.js";
 import { resolveItemSettings } from "./settings.js";
 import { createMountState } from "./state.js";
 import { createViewChain } from "./view-chain.js";
@@ -60,7 +60,14 @@ export function mountItem(host: HTMLElement, options: MountOptions): Mounted {
 
   const status = createAnnouncer("ak-status");
   const sender = createSender({ client, messages, status, state, report: settings.report });
-  const shell = createItemShell(language, status.element);
+  // The items of a page follow each other, so the status keeps the room of the longest message it may say.
+  const shell = createItemShell(
+    language,
+    keepRoomOf(
+      status.element,
+      SENDER_MESSAGES.map((key) => messages[key]),
+    ),
+  );
   const body = createBody({ ...settings, state, sender, host: shell.contentHost });
   shadow.append(shell.app);
   const attachments = mountContentAttachments({

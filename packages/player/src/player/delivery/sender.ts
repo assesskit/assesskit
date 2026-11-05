@@ -55,6 +55,15 @@ export interface Sender {
   comment(text: string): void;
 }
 
+/** Every message that the sender may write in the status region: the refusals of the engine, and its own. */
+export const SENDER_MESSAGES: readonly (keyof Messages)[] = [
+  ...Object.values(REFUSAL_MESSAGES),
+  "sendRejected",
+  "sendFailed",
+  "answersSaved",
+  "commentSaved",
+];
+
 /**
  * Creates the sender of the player.
  *

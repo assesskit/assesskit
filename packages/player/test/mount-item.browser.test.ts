@@ -219,6 +219,26 @@ describe("mountItem", () => {
     expect(clicks).toBe(1);
   });
 
+  it("keeps the room of the longest message at 320 pixels, so that an item that follows does not move as the Indonesian refusal of several lines is written", async () => {
+    const s = await embed("l1", {
+      language: "id",
+      catalogs: { id: ID_MESSAGES },
+      wrap: (client) =>
+        withDispatch(client, async () => ({
+          view: client.view,
+          refusal: { reason: "setting-not-adjustable", message: "The profile sets it." },
+        })),
+    });
+    s.host.style.width = "320px";
+    const check = pageButton("Periksa jawaban");
+    await shown(s);
+    const before = boxOf(check);
+    choices(s.ui)[0]?.click();
+    await waitFor(() => expect(statusOf(s.ui)).toBe(ID_MESSAGES.refusalSettingNotAdjustable));
+    expect(s.ui.querySelector(".ak-status")?.getBoundingClientRect().height).toBeGreaterThan(40);
+    expect(boxOf(check)).toEqual(before);
+  });
+
   it("says in words why the engine refused, in the status region", async () => {
     const s = await embed("l1", {
       wrap: (client) =>

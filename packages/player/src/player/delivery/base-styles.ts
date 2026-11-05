@@ -13,7 +13,8 @@ export const FOCUS_RING = "outline: 3px solid CanvasText; outline-offset: 2px; b
  *
  * The status regions keep the room of a line whether or not they hold text. A region that took room only with its text would
  * move whatever follows it when a message is written, and a button that moves between the press and the release of a
- * pointer gets no click.
+ * pointer gets no click. A region that a control of the page may follow keeps the room of its longest message in a frame
+ * whose hidden texts share its cell (`ak-status-room`).
  *
  * @see {@link https://www.w3.org/TR/WCAG22/#use-of-color | WCAG 2.2, use of color}
  */
@@ -24,7 +25,10 @@ const BASE_CSS = `
 .ak-supports-slot > :not([hidden]) { margin: 0 0 0.5rem; }
 .ak-content-host { display: block; }
 .ak-player :focus-visible, .ak-item :focus-visible { ${FOCUS_RING} }
-.ak-status, .ak-timer-status { min-height: 1.5rem; margin: 0; padding: 0.25rem 0; font-weight: 700; }
+.ak-status, .ak-timer-status, .ak-status-sizer { min-height: 1.5rem; margin: 0; padding: 0.25rem 0; font-weight: 700; }
+.ak-status-room { display: grid; grid-template-columns: minmax(0, 1fr); }
+.ak-status-room > * { grid-area: 1 / 1; }
+.ak-status-sizer { visibility: hidden; }
 .ak-item { gap: 0.5rem; }
 `;
 

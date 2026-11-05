@@ -1,6 +1,6 @@
 import { shadowRootOf } from "../internal.js";
 import { createLtiSlot } from "../lti-frame/index.js";
-import { createAnnouncer } from "./announcer.js";
+import { createAnnouncer, keepRoomOf } from "./announcer.js";
 import { mountAttachments } from "./attachments.js";
 import { baseStyles } from "./base-styles.js";
 import { createBody } from "./body.js";
@@ -8,8 +8,8 @@ import { createChrome } from "./chrome.js";
 import { createCommentBox } from "./comment.js";
 import { bindToLifetime } from "./lifetime.js";
 import { checkDeliveryOptions, type DeliveryOptions, type Mounted } from "./options.js";
-import { createResumeWatch } from "./resume.js";
-import { createSender } from "./sender.js";
+import { createResumeWatch, RESUME_MESSAGES } from "./resume.js";
+import { createSender, SENDER_MESSAGES } from "./sender.js";
 import { resolveSettings } from "./settings.js";
 import { createShell } from "./shell.js";
 import { createMountState } from "./state.js";
@@ -71,7 +71,11 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
     ...settings,
     timers: timers.element,
     timerStatus: timerStatus.element,
-    status: status.element,
+    // A host that draws its own controls puts them after the player, so the status keeps the room of its longest message.
+    status: keepRoomOf(
+      status.element,
+      [...SENDER_MESSAGES, ...RESUME_MESSAGES].map((key) => messages[key]),
+    ),
     lti: lti.element,
     comment: comment.element,
     resume: resume.element,
