@@ -6,9 +6,9 @@ QTI 3.0 runtime for JavaScript and TypeScript: reads, writes, validates and scor
 npm install @assesskit/runtime
 ```
 
-The runtime has six runtime dependencies, pinned to exact versions: `saxes` and `xmlchars` read XML, `parse5` reads the HTML of
-the questions of other platforms' item formats, `fflate` reads and writes ZIP archives, `valibot` reads untrusted JSON, and
-`libxml2-wasm` validates against the published schemas in the `node` subpath ([SECURITY](https://github.com/assesskit/assesskit/blob/main/SECURITY.md#runtime-dependencies)).
+The runtime has seven runtime dependencies, pinned to exact versions: `saxes` and `xmlchars` read XML, `parse5` reads the HTML of
+the questions of other platforms' item formats, `fflate` reads and writes ZIP archives, `valibot` reads untrusted JSON, `@scure/base`
+reads and writes base64, and `libxml2-wasm` validates against the published schemas in the `node` subpath ([SECURITY](https://github.com/assesskit/assesskit/blob/main/SECURITY.md#runtime-dependencies)).
 
 ## Quick start
 

@@ -171,7 +171,7 @@ promote(buildSingle("integer", 3), "float"); // => { cardinality: "single", base
 
 ## Base64
 
-`encodeBase64` and `decodeBase64` convert bytes to and from base 64 with padding, the encoding of the files of CAT 1.0.
+`encodeBase64` and `decodeBase64` convert bytes to and from base 64 with padding, the encoding of the files of CAT 1.0, through `@scure/base`.
 `decodeBase64Url` reads the URL and filename safe alphabet without padding, the form of the parts of a JWT. The decoders return `undefined`, not an error, for a text that is not an encoding of bytes. Only the canonical encoding
 decodes: a character outside the alphabet, wrong padding, a lone last digit, or bits after the last byte that are not zero
 refuse the text, so that one byte string has one spelling.

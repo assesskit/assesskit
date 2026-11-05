@@ -39,6 +39,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   "@assesskit/runtime/cat": {
     gzip: 12_000,
     holds: [
+      "@scure/base",
       "runtime/checks",
       "runtime/checks-internal",
       "runtime/errors",
@@ -56,6 +57,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   "@assesskit/runtime/delivery": {
     gzip: 140_500,
     holds: [
+      "@scure/base",
       "runtime/asi",
       "runtime/cat",
       "runtime/checks",
@@ -172,6 +174,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   "@assesskit/runtime/item-formats": {
     gzip: 153_000,
     holds: [
+      "@scure/base",
       "entities",
       "parse5",
       "runtime/asi",
@@ -253,7 +256,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   },
   "@assesskit/runtime/values": {
     gzip: 23_500,
-    holds: ["runtime/checks", "runtime/checks-internal", "runtime/errors", "valibot"],
+    holds: ["@scure/base", "runtime/checks", "runtime/checks-internal", "runtime/errors", "valibot"],
   },
   "@assesskit/runtime/xml": {
     gzip: 21_000,
@@ -311,6 +314,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   "@assesskit/player/player": {
     gzip: 134_500,
     holds: [
+      "@scure/base",
       "player/errors",
       "player/messages",
       "player/protocol",
@@ -371,6 +375,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   "@assesskit/player/cat": {
     gzip: 24_500,
     holds: [
+      "@scure/base",
       "runtime/cat",
       "runtime/checks",
       "runtime/checks-internal",
@@ -388,6 +393,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   "@assesskit/player/cat-rest": {
     gzip: 18_000,
     holds: [
+      "@scure/base",
       "runtime/cat",
       "runtime/checks",
       "runtime/checks-internal",
@@ -401,6 +407,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   "@assesskit/player/server": {
     gzip: 62_000,
     holds: [
+      "@scure/base",
       "jose",
       "player/errors",
       "player/protocol",
