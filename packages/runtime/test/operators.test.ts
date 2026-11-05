@@ -657,6 +657,17 @@ describe("compareMathSteps", () => {
     expect(() => compareMathSteps(["x", "x"], { maxSteps: 1 })).toThrow(SecurityError);
   });
 
+  it("finds the nearest earlier line that reads in linear time, past any count of lines that do not", () => {
+    const steps = ["x", ...Array.from({ length: 100_000 }, () => "\\text{}"), "x"];
+    const started = performance.now();
+    expect(compareMathSteps(steps, { maxSteps: steps.length }).at(-1)).toStrictEqual({
+      step: 100_001,
+      equivalent: true,
+      from: 0,
+    });
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
   it("refuses input of other types", () => {
     expect(() => compareMathSteps(json('"x"'))).toThrow("The steps must be an array of strings");
     expect(() => compareMathSteps(json("[1]"))).toThrow("The step 0 must be a string");

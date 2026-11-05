@@ -210,16 +210,17 @@ export function compareMathSteps(
       "maxSteps",
       maxSteps,
     );
-  const lines: (Line | undefined)[] = [];
+  let earlier: { readonly line: Line; readonly step: number } | undefined;
   return steps.map((text, step) => {
     checkString(text, `The step ${step}`);
     const line = readLine(text, separator, limits);
-    let from: number | null = null;
-    for (let index = lines.length - 1; index >= 0 && from === null; index -= 1)
-      if (lines[index] !== undefined) from = index;
-    lines.push(line);
-    const earlier = from === null ? undefined : lines[from];
-    if (line === undefined || earlier === undefined) return { step, equivalent: null, from };
-    return { step, equivalent: follows(line, earlier, ranges), from };
+    const from = earlier?.step ?? null;
+    const check = {
+      step,
+      equivalent: line === undefined || earlier === undefined ? null : follows(line, earlier.line, ranges),
+      from,
+    };
+    if (line !== undefined) earlier = { line, step };
+    return check;
   });
 }
