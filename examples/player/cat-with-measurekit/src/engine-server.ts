@@ -41,19 +41,6 @@ interface Grant {
 const unknownObject = (what: string): ServiceError => new ServiceError(`The ${what} is unknown.`, 404, "");
 
 /**
- * Refuses every request, as an unknown object. It is the port of the handler, so that a path of `authorize` that returns
- * `true` by mistake reaches no section: only the port of a client serves.
- */
-const REFUSING_PORT: CatPort = {
-  createSection: () => Promise.reject(unknownObject("section")),
-  getSection: () => Promise.reject(unknownObject("section")),
-  createSession: () => Promise.reject(unknownObject("section")),
-  submitResults: () => Promise.reject(unknownObject("session")),
-  endSession: () => Promise.reject(unknownObject("session")),
-  endSection: () => Promise.reject(unknownObject("section")),
-};
-
-/**
  * Returns the port of one client over the shared engine: it records who created each section and answers as an unknown
  * object, which also hides that it exists, for a section that another client created. What the caller sent wrong is a
  * `DataError`, `ReadError` or `SecurityError` of the engine; it becomes the refusal that the handler answers with 400.
@@ -138,7 +125,7 @@ function refusal(status: number, error: string, headers: Readonly<Record<string,
  *
  * A request without a token answers 401, one with an unknown or expired token 401 with `invalid_token`, and one whose token
  * lacks the scope of its operation 403. Each client sees only the sections it created: `authorize` answers with the port of
- * the client, which asks the engine for nothing that another client owns, and the port of the handler refuses every request.
+ * the client, which asks the engine for nothing that another client owns.
  *
  * @param options - The engine, the check of the clients, the source of tokens and the clock.
  * @returns The handler of the server.
@@ -176,7 +163,7 @@ export function engineServer(options: EngineServerOptions): (request: Request) =
     return { port: portOf(engine, grant.clientId, owners) };
   };
 
-  const cat = createCatRestHandler(REFUSING_PORT, { authorize });
+  const cat = createCatRestHandler({ authorize });
   return (request) =>
     request.method === "POST" && new URL(request.url).pathname === TOKEN_PATH ? issue(request) : cat(request);
 }

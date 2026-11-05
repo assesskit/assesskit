@@ -28,10 +28,10 @@ flowchart LR
 | `@assesskit/player/cat`      | shared | `deployCatSections(pkg, port, options?)`            | Creates the sections of a package's adaptive selections at the engine and checks their pool.  |
 | `@assesskit/player/cat`      | shared | `DeployedCatSection`                                | What a deployment returns for an adaptive section.                                            |
 | `@assesskit/player/cat-rest` | server | `createRestCatPort(options)`                        | A client of a remote engine, over the REST/JSON binding of CAT 1.0.                           |
-| `@assesskit/player/cat-rest` | server | `createCatRestHandler(port, options)`               | The engine side of the binding: a `Request` to a `Response`, over any `CatPort`.              |
+| `@assesskit/player/cat-rest` | server | `createCatRestHandler(options)`                     | The engine side of the binding: a `Request` to a `Response`, over any `CatPort`.              |
 | `@assesskit/player/cat-rest` | server | `CatAuthorizer`, `CatAuthorization`, `CatOperation` | The callback that authorizes a request, what it answers, and the names of the six operations. |
 | `@assesskit/player/cat-rest` | server | `CAT_SCOPES`, `listScopes(operation)`               | The scopes of the binding, and the scopes that enable an operation.                           |
-| `@assesskit/player/cat-rest` | server | `CatEngine`, `CatEngines`, `CatEngineResolver`      | The engines that `createRestCatPort` reaches, by the reference that a package names.          |
+| `@assesskit/player/cat-rest` | server | `CatEngine`, `CatEngineResolver`                    | The engines that `createRestCatPort` reaches, by the reference that a package names.          |
 | `@assesskit/player/cat-rest` | server | `CatFetch`, `CatFetchRequest`, `CatFetchResponse`   | The part of `fetch` that `createRestCatPort` uses.                                            |
 | `@assesskit/player/cat-rest` | server | `OAuthClientCredentials`                            | The client credentials with which `createRestCatPort` asks for a token.                       |
 
@@ -50,23 +50,21 @@ const fetch = async (url, request) => {
 };
 // The package names the engine by its public address; the platform reaches it through a gateway.
 const reference = "https://engine.example/ims/cat/v1p0";
-const port = createRestCatPort({
-  fetch,
-  engines: new Map([
-    [
-      reference,
-      {
-        endpoint: "https://gateway.internal/engines/a/ims/cat/v1p0",
-        credentials: {
-          tokenUrl: "https://auth.example/token",
-          clientId: "tool",
-          clientSecret: "secret",
-          scope: "https://purl.imsglobal.org/cat/v1p0/scope/api",
-        },
+const engines = new Map([
+  [
+    reference,
+    {
+      endpoint: "https://gateway.internal/engines/a/ims/cat/v1p0",
+      credentials: {
+        tokenUrl: "https://auth.example/token",
+        clientId: "tool",
+        clientSecret: "secret",
+        scope: "https://purl.imsglobal.org/cat/v1p0/scope/api",
       },
-    ],
-  ]),
-});
+    },
+  ],
+]);
+const port = createRestCatPort({ fetch, engines: (known) => engines.get(known) });
 const section = await port.createSection(reference, { sectionConfiguration: "e30=" });
 section; // => { sectionIdentifier: "s1" }
 requests; // => ["POST https://auth.example/token", "POST https://gateway.internal/engines/a/ims/cat/v1p0/sections"]
@@ -228,12 +226,12 @@ flowchart LR
   token --> call["HTTPS request with the bearer token"]
 ```
 
-| Option      | Default   | Meaning                                                                                                                                                              |
-| ----------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fetch`     | required  | `fetch`, or a replacement.                                                                                                                                           |
-| `engines`   | required  | A `Map` from reference to engine, or a function from a reference to its engine, or to `undefined` for a reference that the host did not configure (it may be async). |
-| `timeoutMs` | `10000`   | The milliseconds after which a request, the token request included, is aborted.                                                                                      |
-| `maxTokens` | `1000000` | The most tokens of the JSON of an answer, the token endpoint's included, counted before the parse: an answer with more is a `ServiceError`.                          |
+| Option      | Default   | Meaning                                                                                                                                                                                                                          |
+| ----------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fetch`     | required  | `fetch`, or a replacement.                                                                                                                                                                                                       |
+| `engines`   | required  | A function from a reference, without trailing slashes, to its engine, or to `undefined` for a reference that the host did not configure (it may be async): `(reference) => engines.get(reference)` over a `Map` for a fixed set. |
+| `timeoutMs` | `10000`   | The milliseconds after which a request, the token request included, is aborted.                                                                                                                                                  |
+| `maxTokens` | `1000000` | The most tokens of the JSON of an answer, the token endpoint's included, counted before the parse: an answer with more is a `ServiceError`.                                                                                      |
 
 | Field of an engine | Default  | Meaning                                                                                                             |
 | ------------------ | -------- | ------------------------------------------------------------------------------------------------------------------- |
@@ -244,7 +242,7 @@ flowchart LR
 - **Which engine.** The `prefix` of a request is the reference that the package names, with trailing slashes removed. A
   reference that `engines` does not know is a `DataError`, and nothing is sent: no candidate data and no token leave for an
   engine that the host did not configure (CAT section 2.2). The delivery definition keeps the reference, not the endpoint.
-- **A function is an allowlist.** The reference is the package's word. A function maps known references to configured
+- **An allowlist.** The reference is the package's word. `engines` maps known references to configured
   engines. It never builds an `endpoint` or a `tokenUrl` from the reference, and never returns shared credentials for any
   reference, because the port sends the client secret and the candidate's data to the engine it returns.
 - **One port, many engines.** The port keeps a token for each token URL, client and scope, so engines with their own
@@ -268,12 +266,11 @@ flowchart LR
   section 4.4). The binding recommends the scope `https://purl.imsglobal.org/cat/v1p0/scope/api` for every endpoint, or
   `.../scope/configure` for sections and `.../scope/deliver` for sessions; an engine may define others.
 - **Token.** The port keeps the token. It reads no clock, so it learns that the token expired from a `401`: it asks for a new
-  token with the credentials that `engines` gives for the request, and repeats the request once. A `Map` of `engines` is read
-  once, when the port is created, so a secret that rotates needs the function form, which the port calls for every request.
-  A `403` is a failure and is not repeated.
+  token with the credentials that `engines` gives for the request, and repeats the request once. The port calls `engines` for
+  every request, so a secret that rotates is read as it changes. A `403` is a failure and is not repeated.
 - **Transport.** Every URL is `https` (binding section 4.1). Redirects are errors, because a redirect would send the token to
   another address. The error of `fetch`, such as a timeout, is passed on unchanged.
-- **Signals.** The `signal` of a call aborts its request and ends its wait, also for a function of `engines`, which gets the
+- **Signals.** The `signal` of a call aborts its request and ends its wait, also for the lookup of `engines`, which gets the
   options of the call. The token request, which the calls share, goes on to its timeout. A call whose signal has aborted
   sends nothing.
 - **Failure.** A status other than 2xx, and a body that is not JSON, are a `ServiceError` with the `status` and the `body`. A
@@ -327,8 +324,8 @@ listing in Appendix B1.2 of <https://www.imsglobal.org/spec/cat/v1p0/bind> is th
 
 ## createCatRestHandler
 
-`createCatRestHandler(port, options)`, from `@assesskit/player/cat-rest`, is the engine side of the same binding: a function from a web
-`Request` to a `Response` that answers the six requests by calling a `CatPort`. It is the mirror of `createRestCatPort`, built on the
+`createCatRestHandler(options)`, from `@assesskit/player/cat-rest`, is the engine side of the same binding: a function from a web
+`Request` to a `Response` that answers the six requests by calling the `CatPort` that `authorize` answers with. It is the mirror of `createRestCatPort`, built on the
 same codec (the JSON of the binding is written once, in `cat-rest`, and read by both), so the two meet without an adapter.
 
 ```mermaid
@@ -369,13 +366,15 @@ const engine = {
 };
 // A token store of your own: the scopes that each token carries.
 const tokens = new Map([["t0ken", new Set([CAT_SCOPES.deliver])]]);
-const handle = createCatRestHandler(engine, {
+const handle = createCatRestHandler({
   authorize: (request, operation) => {
     const token = request.headers.get("authorization")?.replace(/^Bearer /, "");
     if (token === undefined) return false;
     const scopes = tokens.get(token);
     if (scopes === undefined) return { denied: "invalid-token" };
-    return listScopes(operation).some((scope) => scopes.has(scope)) ? true : { denied: "insufficient-scope" };
+    return listScopes(operation).some((scope) => scopes.has(scope))
+      ? { port: engine }
+      : { denied: "insufficient-scope" };
   },
 });
 const create = (token) =>
@@ -394,9 +393,8 @@ const create = (token) =>
 
 | Result                                      | The handler                                                                                                                        |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `true`                                      | Serves the request with the `port` that it was created with.                                                                       |
+| `{ port }`                                  | Serves the request with that port: the engine, or the port of the caller for several clients on one root.                          |
 | `false`                                     | Answers 401 with `WWW-Authenticate: Bearer`: the request carries no credentials, or you do not say why.                            |
-| `{ port }`                                  | Serves the request with that port: the port of the caller, for several clients on one root.                                        |
 | `{ denied: "invalid-token" }`               | Answers 401 with `WWW-Authenticate: Bearer error="invalid_token"`: the token is unknown, expired or malformed.                     |
 | `{ denied: "insufficient-scope", scopes? }` | Answers 403 with the code minor `forbidden` and `error="insufficient_scope"`, naming `scopes`, by default `listScopes(operation)`. |
 
@@ -407,9 +405,8 @@ host: 500, and `onError`.
 ### Several clients on one root
 
 The port has no idea who calls. A host that serves several clients answers with the port of the caller, which it builds over the
-shared engine with a check of the owner of every section and session, and gives the handler a port that refuses everything, so that
-a path that returns `true` by mistake reaches no section. An object of another client is an unknown object (a `ServiceError` of status
-404), which also hides that it exists. [The example](../../examples/player/cat-with-measurekit/README.md) does exactly this.
+shared engine with a check of the owner of every section and session, and refuses a caller it does not know. An object of another
+client is an unknown object (a `ServiceError` of status 404), which also hides that it exists. [The example](../../examples/player/cat-with-measurekit/README.md) does exactly this.
 
 ```ts
 import { ServiceError } from "@assesskit/runtime/errors";
@@ -428,16 +425,8 @@ const portOf = (engine, client) => ({
     return engine.getSection(prefix, section);
   },
 });
-const refusing = {
-  createSection: unknown,
-  getSection: unknown,
-  createSession: unknown,
-  submitResults: unknown,
-  endSession: unknown,
-  endSection: unknown,
-};
-// authorize: (request, operation) => ({ port: portOf(engine, clientOf(request)) })
-// createCatRestHandler(refusing, { authorize })
+// authorize: (request, operation) => (known(request) ? { port: portOf(engine, clientOf(request)) } : false)
+// createCatRestHandler({ authorize })
 owners.size; // => 0
 ```
 
@@ -450,25 +439,18 @@ reference, and `createRestCatPort` reaches the upstream endpoint:
 import { createCatRestHandler, createRestCatPort } from "@assesskit/player/cat-rest";
 
 const reference = "https://engine.example/ims/cat/v1p0";
-const upstream = createRestCatPort({
-  fetch,
-  engines: new Map([
-    [
-      reference,
-      {
-        endpoint: "https://engine.internal/ims/cat/v1p0",
-        credentials: {
-          tokenUrl: "https://auth.internal/token",
-          clientId: "gateway",
-          clientSecret: "secret",
-          scope: "https://purl.imsglobal.org/cat/v1p0/scope/api",
-        },
-      },
-    ],
-  ]),
-});
-const gateway = createCatRestHandler(upstream, {
-  authorize: (request) => request.headers.has("authorization"),
+const internal = {
+  endpoint: "https://engine.internal/ims/cat/v1p0",
+  credentials: {
+    tokenUrl: "https://auth.internal/token",
+    clientId: "gateway",
+    clientSecret: "secret",
+    scope: "https://purl.imsglobal.org/cat/v1p0/scope/api",
+  },
+};
+const upstream = createRestCatPort({ fetch, engines: (known) => (known === reference ? internal : undefined) });
+const gateway = createCatRestHandler({
+  authorize: (request) => request.headers.has("authorization") && { port: upstream },
   prefix: reference,
 });
 typeof gateway; // => "function"
@@ -490,7 +472,7 @@ flowchart TD
   auth -->|"invalid-token"| e401b["401 with error invalid_token"]
   auth -->|"insufficient-scope"| e403["403 forbidden"]
   auth -->|"throws, or not a decision"| e500a["500 and onError"]
-  auth -->|"true or a port"| body{"Body within the limit, JSON, and valid?"}
+  auth -->|"a port"| body{"Body within the limit, JSON, and valid?"}
   body -->|"no: a DataError of the readers"| e400b["400 with the first problem"]
   body -->|"no: another error"| e500b["500 and onError"]
   body -->|yes| call["The port is called"]

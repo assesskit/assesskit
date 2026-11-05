@@ -1,14 +1,7 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers are those of their specifications.
 
 import type { CatPort } from "@assesskit/runtime/cat";
-import {
-  functionSchema,
-  guardSchema,
-  methodsSchema,
-  parseWith,
-  positiveIntegerSchema,
-  raceAbort,
-} from "@assesskit/runtime/checks";
+import { functionSchema, guardSchema, parseWith, positiveIntegerSchema, raceAbort } from "@assesskit/runtime/checks";
 import * as v from "valibot";
 import { type CatAuthorizer, grantOf } from "./authorization.js";
 import {
@@ -36,7 +29,7 @@ import {
 
 /** Options of {@link createCatRestHandler}. */
 export interface CatRestHandlerOptions {
-  /** Decides whether a request may use an operation, and with which port; the handler serves nothing without it. */
+  /** Decides whether a request may use an operation, and answers with the port that serves it; the handler holds no other. */
   readonly authorize: CatAuthorizer;
   /**
    * The path that the handler receives, from the root of the host, with no trailing slash, or `""` where a proxy strips the
@@ -104,15 +97,6 @@ const optionsSchema = v.strictObject({
   onError: v.optional(functionSchema<NonNullable<CatRestHandlerOptions["onError"]>>()),
 });
 
-const portSchema = methodsSchema<CatPort>(
-  "createSection",
-  "getSection",
-  "createSession",
-  "submitResults",
-  "endSession",
-  "endSection",
-);
-
 const requestSchema = guardSchema((value): value is Request => value instanceof Request, "a Request");
 
 /** Calls the port and returns the function that encodes its answer, so that a failure of the port is told from one of the encoding. */
@@ -129,8 +113,9 @@ type Invocation = () => Promise<() => unknown>;
  * - **Order.** The path and method select the operation (404 or 405 if none), `authorize` decides (401 or 403) before any of
  *   the body is read, then the body is read and checked (413 above a limit, else 400), then the port is called.
  * - **Authorization.** The handler holds no credentials. The authorization server issues the tokens of the OAuth 2.0
- *   client credentials grant, and `authorize` checks the bearer token and its scope. It may answer with the port of the
- *   caller, so that several clients share one root and one engine without seeing each other's sections. TLS is the host's.
+ *   client credentials grant, and `authorize` checks the bearer token and its scope and answers with the port that serves
+ *   the request: the engine, or the port of the caller, so that several clients share one root and one engine without
+ *   seeing each other's sections. TLS is the host's.
  * - **Failures.** The answers are those of table 2.4 of the binding and its `default` response, with the status
  *   information as JSON. The status follows the origin of the error: a malformed request is 400 with the path of the value,
  *   and a body above `maxBodyBytes` or `maxTokens` 413 with the name and the value of the limit;
@@ -144,17 +129,12 @@ type Invocation = () => Promise<() => unknown>;
  *   it. The metadata file of the section data is not returned, because the binding gives the file no place (see the guide).
  * - **Session end.** A stage without items is sent as no `nextItems`, which is how the binding ends a session.
  *
- * @param port - The engine, for a request that `authorize` answers with `true`.
  * @param options - Authorization, the root path, the reference, the size limits of a body and the callback for faults.
  * @returns The handler.
- * @throws `DataError` when `port` lacks a method or an option has the wrong type.
+ * @throws `DataError` when an option has the wrong type.
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding}
  */
-export function createCatRestHandler(
-  port: CatPort,
-  options: CatRestHandlerOptions,
-): (request: Request) => Promise<Response> {
-  parseWith(portSchema, port, "The port");
+export function createCatRestHandler(options: CatRestHandlerOptions): (request: Request) => Promise<Response> {
   const { authorize, root, prefix, maxBodyBytes, maxTokens, onError } = parseWith(
     optionsSchema,
     options,
@@ -263,13 +243,7 @@ export function createCatRestHandler(
 
     let invoke: Invocation;
     try {
-      invoke = await invocation(
-        operation,
-        identifiers,
-        granted.port ?? port,
-        reference ?? `${url.origin}${root}`,
-        request,
-      );
+      invoke = await invocation(operation, identifiers, granted.port, reference ?? `${url.origin}${root}`, request);
     } catch (error) {
       return failed(bodyFailure(error), error);
     }

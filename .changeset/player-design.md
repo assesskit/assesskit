@@ -17,3 +17,7 @@ The option `profileBreaks` of `createSessionHost` is gone, with the behavior of 
 `BROWSER_CLOCK` (`@assesskit/player/client`) and `SYSTEM_CLOCK` (`@assesskit/player/server`) are no longer exported: they were one clock under two names, and the default of every `clock` option is the clock of the machine, `Date.now()`, as before. `Clock` is exported from `@assesskit/player/protocol` only.
 
 `createAssetGate` takes a `clock`, the session host's, and `sign`, `signFile` and `serve` no longer take `now`: `sign(session, prefixes, options?)`, `signFile(session, file, options?)` and `serve(request, options?)`.
+
+`createCatRestHandler(options)` takes no port: `authorize` answers `{ port }` with the port that serves the request, the engine or the port of the caller, and `true` is no longer a decision (`false` stays the bare 401). A host with one engine answers `{ port: engine }`; the stub port that refused everything for a mistaken `true` is no longer needed.
+
+The option `engines` of `createRestCatPort` is a `CatEngineResolver` only, and `CatEngines` is gone: a host with a fixed set passes `(reference) => engines.get(reference)` over its `Map`, keyed by references without trailing slashes. Each engine is checked by the same schema at its first use, and a duplicate reference is no longer refused at creation.

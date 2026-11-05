@@ -6,7 +6,6 @@ import {
   checkString,
   describe,
   functionSchema,
-  guardSchema,
   parseWith,
   positiveIntegerSchema,
   positiveSchema,
@@ -47,22 +46,17 @@ export interface CatEngine {
 }
 
 /**
- * The engines that a port reaches, by the reference that a package names (its `qti-adaptive-engine-ref`, which is the
- * `prefix` of every request): a map from references to engines, or a function that returns the engine of a reference, or
- * `undefined` for a reference that the host did not configure.
+ * The engines that a port reaches: a function from the reference that a package names (its `qti-adaptive-engine-ref`, the
+ * `prefix` of every request, without trailing slashes) to the engine it stands for, or `undefined` for a reference that the
+ * host did not configure. It gets the options of the call of the port, whose `signal` ends the wait for it whether or not it
+ * honours the signal.
  *
  * @remarks
- * The package's word is not trusted: a reference only selects among the engines that the host configured. A function is an
- * allowlist from known references to configured engines. It never derives an address or a token URL from the reference,
- * and never returns shared credentials for any reference, because the port sends the client secret and the candidate's
- * data to the engine it returns. A `Map` is read once, when the port is created, and a later change to it is not seen: a
- * secret that rotates needs the function, which the port calls for every request.
- */
-export type CatEngines = ReadonlyMap<string, CatEngine> | CatEngineResolver;
-
-/**
- * A function from the reference that a package names to the engine it stands for, or `undefined` for an unknown reference. It
- * gets the options of the call of the port, whose `signal` ends the wait for it whether or not it honours the signal.
+ * The package's word is not trusted: a reference only selects among the engines that the host configured, so the function
+ * is an allowlist from known references to configured engines, such as `(reference) => engines.get(reference)` over a
+ * `Map`. It never derives an address or a token URL from the reference, and never returns shared credentials for any
+ * reference, because the port sends the client secret and the candidate's data to the engine it returns. The port calls it
+ * for every request, so a secret that rotates is read as it changes.
  */
 export type CatEngineResolver = (
   reference: string,
@@ -74,7 +68,7 @@ export interface RestCatPortOptions {
   /** Sends the requests: `fetch`, or a replacement. */
   readonly fetch: CatFetch;
   /** The engines that the port reaches, by the reference that a package names. */
-  readonly engines: CatEngines;
+  readonly engines: CatEngineResolver;
   /**
    * The milliseconds after which a request is aborted, the token request included.
    *
@@ -100,14 +94,9 @@ const engineSchema: Schema<CatEngine> = v.strictObject({
   sharePnp: v.optional(v.boolean()),
 });
 
-const enginesSchema = v.union([
-  guardSchema((value): value is ReadonlyMap<string, CatEngine> => value instanceof Map, "a Map"),
-  functionSchema<CatEngineResolver>(),
-]);
-
 const optionsSchema = v.strictObject({
   fetch: functionSchema<CatFetch>(),
-  engines: enginesSchema,
+  engines: functionSchema<CatEngineResolver>(),
   timeoutMs: v.optional(positiveSchema, DEFAULT_TIMEOUT_MS),
   maxTokens: v.optional(positiveIntegerSchema, DEFAULT_MAX_TOKENS),
 });
@@ -119,22 +108,6 @@ const optionsSchema = v.strictObject({
  * @see {@link https://url.spec.whatwg.org/#single-dot-path-segment | URL Standard, dot segments}
  */
 const DOT_SEGMENTS: ReadonlySet<string> = new Set([".", ".."]);
-
-/** Checks the engines of a map, and keys them by their reference without trailing slashes. */
-function checkedMap(engines: ReadonlyMap<string, CatEngine>): ReadonlyMap<string, CatEngine> {
-  const keyed = new Map<string, CatEngine>();
-  for (const [reference, engine] of engines) {
-    checkNonEmptyString(reference, "A reference of the option engines");
-    const key = withoutTrailingSlashes(reference);
-    if (keyed.has(key)) {
-      throw new DataError(
-        `The option engines has the reference ${describe(key)} twice, with and without a trailing slash; give each engine one reference.`,
-      );
-    }
-    keyed.set(key, parseWith(engineSchema, engine, `The engine of the reference ${describe(reference)}`));
-  }
-  return keyed;
-}
 
 /**
  * Returns a CAT engine that speaks the REST/JSON binding of CAT 1.0 to the remote engines that the host configured.
@@ -152,7 +125,7 @@ function checkedMap(engines: ReadonlyMap<string, CatEngine>): ReadonlyMap<string
  * - **Requests.** Redirects are errors, and every request, the token request included, is aborted after `timeoutMs`. A
  *   network error or a timeout rejects with the error of `fetch`. An answer is read whole, and its JSON has at most
  *   `maxTokens` tokens.
- * - **Signals.** The `signal` of a call ends its wait, for the engine of a resolver function too, and aborts its request;
+ * - **Signals.** The `signal` of a call ends its wait, for the engine that `engines` looks up too, and aborts its request;
  *   the token request, which the calls share, goes on to its timeout. A call whose signal has aborted sends nothing.
  * - **Personal data.** Create Session sends the personal needs and preferences only to an engine with `sharePnp`.
  * - **Binding.** The bodies are those of the binding's OpenAPI file, and the port sends no other shape. The `qtiMetadata`
@@ -168,26 +141,19 @@ function checkedMap(engines: ReadonlyMap<string, CatEngine>): ReadonlyMap<string
 export function createRestCatPort(options: RestCatPortOptions): CatPort {
   const { fetch, engines, timeoutMs, maxTokens } = parseWith(optionsSchema, options, "The options object");
 
-  const known = typeof engines === "function" ? undefined : checkedMap(engines);
-  const resolve = typeof engines === "function" ? engines : undefined;
   const client = createRestClient({ fetch, timeoutMs, maxTokens });
 
   /** Finds the engine that a reference stands for; a reference that the host did not configure is refused. */
   const engineOf = async (prefix: unknown, signal: AbortSignal | undefined): Promise<CatEngine> => {
     checkString(prefix, "The prefix");
     const reference = withoutTrailingSlashes(prefix);
-    const found =
-      resolve === undefined
-        ? known?.get(reference)
-        : await raceAbort(Promise.resolve(resolve(reference, { signal })), { signal });
+    const found = await raceAbort(Promise.resolve(engines(reference, { signal })), { signal });
     if (found === undefined) {
       throw new DataError(
         `The reference ${describe(prefix)} is not an engine that the host configured; the port sends nothing to another engine.`,
       );
     }
-    return resolve === undefined
-      ? found
-      : parseWith(engineSchema, found, `The engine of the reference ${describe(prefix)}`);
+    return parseWith(engineSchema, found, `The engine of the reference ${describe(prefix)}`);
   };
 
   /** Where a path is at an engine, and the engine. */

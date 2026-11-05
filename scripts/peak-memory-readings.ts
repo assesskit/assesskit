@@ -335,17 +335,15 @@ const settingsOf = (names: number) => ({
 /** The status that the handler of the CAT binding answers to a body, which it reads whole before it parses it. */
 async function catStatus(body: Uint8Array): Promise<string> {
   const unused = () => Promise.reject(new Error("The port is not called."));
-  const handle = createCatRestHandler(
-    {
-      createSection: unused,
-      getSection: unused,
-      createSession: unused,
-      submitResults: unused,
-      endSession: unused,
-      endSection: unused,
-    },
-    { authorize: () => true },
-  );
+  const port = {
+    createSection: unused,
+    getSection: unused,
+    createSession: unused,
+    submitResults: unused,
+    endSession: unused,
+    endSection: unused,
+  };
+  const handle = createCatRestHandler({ authorize: () => ({ port }) });
   const response = await handle(
     new Request("https://engine.example/ims/cat/v1p0/sections", {
       method: "POST",

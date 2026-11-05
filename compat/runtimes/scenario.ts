@@ -194,17 +194,15 @@ function runLimits(): Results["limits"] {
 /** The statuses that the handler of the CAT binding answers to requests it refuses, from the `Request` and `Response` of the runtime. */
 async function runCat(): Promise<Results["cat"]> {
   const unused = () => Promise.reject(new Error("The port is not called."));
-  const handle = createCatRestHandler(
-    {
-      createSection: unused,
-      getSection: unused,
-      createSession: unused,
-      submitResults: unused,
-      endSession: unused,
-      endSection: unused,
-    },
-    { authorize: () => true, maxBodyBytes: 64 },
-  );
+  const port = {
+    createSection: unused,
+    getSection: unused,
+    createSession: unused,
+    submitResults: unused,
+    endSession: unused,
+    endSection: unused,
+  };
+  const handle = createCatRestHandler({ authorize: () => ({ port }), maxBodyBytes: 64 });
   const post = (path: string, body: string) =>
     handle(
       new Request(`https://engine.example/ims/cat/v1p0/${path}`, {

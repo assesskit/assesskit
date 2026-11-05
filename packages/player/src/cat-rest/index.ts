@@ -13,7 +13,6 @@ export { type CatRestHandlerOptions, createCatRestHandler } from "./rest-handler
 export {
   type CatEngine,
   type CatEngineResolver,
-  type CatEngines,
   createRestCatPort,
   type RestCatPortOptions,
 } from "./rest-port.js";

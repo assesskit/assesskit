@@ -114,7 +114,7 @@ if (import.meta.main) {
   // The same section over the REST binding: the client of the player, the engine server, and the engine behind it.
   const client = createRestCatPort({
     fetch: fetchFrom(demoServer()),
-    engines: new Map([[PREFIX, { endpoint: PREFIX, credentials: DEMO_CREDENTIALS }]]),
+    engines: (reference) => (reference === PREFIX ? { endpoint: PREFIX, credentials: DEMO_CREDENTIALS } : undefined),
   });
   console.log((await administer(client, answersEasyItems)).join(", "));
 }

@@ -21,7 +21,10 @@ const SECTION = sectionDataOf({ length: 1 }, BANK);
 
 /** The client of the player for the one engine that the package names by its endpoint. */
 const clientOf = (fetch: CatFetch, credentials: OAuthClientCredentials): CatPort =>
-  createRestCatPort({ fetch, engines: new Map([[PREFIX, { endpoint: PREFIX, credentials }]]) });
+  createRestCatPort({
+    fetch,
+    engines: (reference) => (reference === PREFIX ? { endpoint: PREFIX, credentials } : undefined),
+  });
 
 /** A server whose clock a test moves and whose tokens count up, so that a run is the same every time. */
 function fixture() {

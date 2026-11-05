@@ -232,8 +232,9 @@ it is built to send them only to the engines that the host configured.
 items to present. It trusts nothing it is sent.
 
 - It serves nothing without the host's `authorize`, which it calls with the request and the operation before it reads a
-  body, so that a caller who is not authorized costs one function call. Only `true` or the port of the caller authorizes; a
-  callback that throws, or answers anything else, answers 500. A token that lacks the scope of the operation answers 403 and an
+  body, so that a caller who is not authorized costs one function call. Only an answer with a port authorizes, and the
+  request goes to that port, the engine or the port of the caller; a callback that throws, or answers anything else,
+  answers 500. A token that lacks the scope of the operation answers 403 and an
   invalid one 401. The handler holds no secret and issues no token, and the host terminates TLS in front of it.
 - The handler does not know who a client is. A host that serves several clients on one root answers with the port of the
   caller, built over the shared engine with a check of the owner of every section and session. Without it every client with a

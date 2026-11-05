@@ -49,10 +49,10 @@ export const CAT_REST_RULES: readonly Rule[] = [
     test: TEST,
   },
   {
-    rule: "Only `true` and the port of the caller serve a request; every other decision refuses or fails it.",
+    rule: "Only an answer with a port serves a request; every other decision refuses or fails it.",
     file: AUTHORIZATION,
-    find: "if (decision === true) return { serve: true, port: undefined };",
-    replace: "if (decision !== false) return { serve: true, port: undefined };",
+    find: 'if ("port" in decision) return { serve: true, port: decision.port };',
+    replace: "return { serve: true, port: (decision as { readonly port: CatPort }).port };",
     test: TEST,
   },
   {

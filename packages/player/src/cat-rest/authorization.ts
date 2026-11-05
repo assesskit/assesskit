@@ -10,10 +10,10 @@ import { failureResponse } from "./status.js";
 /**
  * What an authorization step decides about a request.
  *
- * - `true` serves the request with the port that the handler was created with.
+ * - `{ port }` serves the request with that port. A host with one engine for every client answers with that engine; a host
+ *   whose clients share an engine answers with the port of the caller, built over the engine with a check of the owner of
+ *   each section and session, so that a client cannot read or end the objects of another.
  * - `false` answers 401.
- * - `{ port }` serves the request with that port: the port of the caller, which a host builds over a shared engine with a
- *   check of the owner of each section and session, so that a client cannot read or end the objects of another.
  * - `{ denied: "invalid-token" }` answers 401 with `error="invalid_token"`: the request carries a token that is not valid.
  * - `{ denied: "insufficient-scope" }` answers 403 with the code minor `forbidden` and `error="insufficient_scope"`: the
  *   token is valid and does not carry the scope of the operation. `scopes` names the scopes that would do, by default
@@ -23,9 +23,9 @@ import { failureResponse } from "./status.js";
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding, security and scopes}
  */
 export type CatAuthorization =
-  | boolean
+  | false
   | {
-      /** The port that serves this request: the port of the caller. */
+      /** The port that serves this request: the engine, or the port of the caller. */
       readonly port: CatPort;
     }
   | {
@@ -59,7 +59,7 @@ const scopesSchema = v.pipe(
 );
 
 const decisionSchema = v.union([
-  v.boolean(),
+  v.literal(false),
   v.strictObject({
     port: methodsSchema<CatPort>(
       "createSection",
@@ -74,9 +74,9 @@ const decisionSchema = v.union([
   v.strictObject({ denied: v.literal("insufficient-scope"), scopes: v.optional(scopesSchema) }),
 ]);
 
-/** What the handler does after the authorization step: serve with a port (its own when `undefined`), or answer. */
+/** What the handler does after the authorization step: serve with a port, or answer. */
 export type Grant =
-  | { readonly serve: true; readonly port: CatPort | undefined }
+  | { readonly serve: true; readonly port: CatPort }
   | { readonly serve: false; readonly response: Response };
 
 /**
@@ -86,7 +86,6 @@ export type Grant =
  */
 export function grantOf(result: unknown, operation: CatOperation): Grant {
   const decision = parseWith(decisionSchema, result, "The result of authorize");
-  if (decision === true) return { serve: true, port: undefined };
   if (decision === false) {
     return {
       serve: false,
