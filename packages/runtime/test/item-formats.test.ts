@@ -351,6 +351,10 @@ describe("readGift and readMoodleXml", () => {
     const late = Array.from({ length: 0x2000 }, (_, offset) => String.fromCharCode(0xe000 + offset)).join("");
     const missing = readGift(`{=cat} sat.${late}`);
     expect(body(missing)).toMatch(/^<qti-item-body><div><qti-text-entry-interaction [^>]*\/> sat\./);
+    // The blank stands where it does in the text that Moodle reads: after the format, the escape and the spaces trimmed.
+    expect(body(readGift("[html]  <p>Time\\: 10 {=x} o'clock.</p>"))).toBe(
+      '<qti-item-body><p>Time: 10 <qti-text-entry-interaction response-identifier="RESPONSE" base-type="string"/> o\'clock.</p>',
+    );
     const replaced =
       "The question holds characters that XML does not allow, such as control characters: each is U+FFFD.";
     expect(missing.losses.map(({ message }) => message)).toStrictEqual([replaced]);
@@ -471,6 +475,9 @@ function choiceTexts(item: AssessmentItem): string[] {
   );
 }
 
+/** The time within which the nested elements of a text read, where each try more for each level around them takes seconds. */
+const NESTING_TIMEOUT_MS = 5000;
+
 describe("the content of a question", () => {
   it("keeps QTI's HTML, gives the content of other elements to their parents, and leaves out code, each with a loss", () => {
     const { items, losses } = readGift(HTML_EDGES.markup);
@@ -521,10 +528,17 @@ describe("the content of a question", () => {
     );
   });
 
+  it(
+    "converts nested elements without the children that QTI needs in time that does not double with each level",
+    () => {
+      // Each details lacks its summary, so its content goes to its parent. Tried again as its type for each one around it,
+      // 26 levels take about 17 seconds on a laptop and each further level doubles that; tried once, a few milliseconds.
+      expect(readGift(`[html]${"<details>".repeat(26)}x${"</details>".repeat(26)}{}`).items).toHaveLength(1);
+    },
+    NESTING_TIMEOUT_MS,
+  );
+
   it("converts an element without the children that QTI needs once, and keeps the missing word and identifiers within it", () => {
-    // Each details lacks its summary, so its content goes to its parent; tried again for each one around it, the time doubled
-    // with each level.
-    expect(readGift(`[html]${"<details>".repeat(40)}x${"</details>".repeat(40)}{}`).items).toHaveLength(1);
     const { items, losses } = readGift(
       "::Q::[html]<details><p id='a'>The {=cat} sat.</p></details><p id='a'>Again.</p>",
     );

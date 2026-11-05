@@ -679,6 +679,20 @@ export const RUNTIME_RULES: readonly Rule[] = [
     test: FORMATS_TEST,
   },
   {
+    rule: "A reader tries an HTML element as its type once, so that nested elements that lack their children take time that does not double with each level.",
+    file: `${FORMATS}/html-content.ts`,
+    find: "if (failed?.has(type) === true) return undefined;",
+    replace: "",
+    test: FORMATS_TEST,
+  },
+  {
+    rule: "The GIFT reader finds the missing word in the text that Moodle reads, after the format, the escapes and the spaces trimmed before it, with no search for a character that the text does not hold.",
+    file: `${FORMATS}/gift-parse.ts`,
+    find: "return head.length - BLANK.length;",
+    replace: "return split.blank;",
+    test: FORMATS_TEST,
+  },
+  {
     rule: "The GIFT reader reads a lone surrogate of a string as U+FFFD, as its UTF-8 holds it, which the parser of HTML fails on.",
     file: `${FORMATS}/import-items.ts`,
     find: 'return input.replaceAll(LONE_SURROGATE, "\\uFFFD");',
