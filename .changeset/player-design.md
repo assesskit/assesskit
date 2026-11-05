@@ -21,3 +21,5 @@ The option `profileBreaks` of `createSessionHost` is gone, with the behavior of 
 `createCatRestHandler(options)` takes no port: `authorize` answers `{ port }` with the port that serves the request, the engine or the port of the caller, and `true` is no longer a decision (`false` stays the bare 401). A host with one engine answers `{ port: engine }`; the stub port that refused everything for a mistaken `true` is no longer needed.
 
 The option `engines` of `createRestCatPort` is a `CatEngineResolver` only, and `CatEngines` is gone: a host with a fixed set passes `(reference) => engines.get(reference)` over its `Map`, keyed by references without trailing slashes. Each engine is checked by the same schema at its first use, and a duplicate reference is no longer refused at creation.
+
+`@assesskit/player/protocol` no longer exports `REFUSAL_REASONS`: import it from `@assesskit/runtime/delivery/wire`, which owns it, as `CANDIDATE_ACTION_TYPES`. `SuppliedGrade.scorer` is the runtime's `Scorer`, and `ToolSlots` is `Readonly<Partial<Record<SlotTool, ToolSlot>>>`, the same keys.

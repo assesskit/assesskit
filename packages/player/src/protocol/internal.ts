@@ -13,7 +13,6 @@ export { checkHostApplyOptions } from "./host-session.js";
 export { stepAfterIdle } from "./idle.js";
 export { checkAllowList, checkLtiFrame } from "./lti-frame.js";
 export { isOfficialResult, markOfficial } from "./official.js";
-export { SCORERS } from "./scorers.js";
 export { checkDeclaration } from "./scoring-declaration.js";
 export { checkSubmission } from "./submission.js";
 export { checkViewEnvelope } from "./view-envelope.js";

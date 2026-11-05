@@ -1,8 +1,9 @@
 /**
  * The wire forms of the candidate side of delivery: the JSON of a candidate view and of a candidate action, with the limits
- * that a server puts on the actions of its clients. No file of the engine is reachable from this module, so a client that
- * reads views and sends actions imports it rather than `@assesskit/runtime/delivery`: a bundler that splits code by file,
- * such as esbuild, then keeps the engine out of the first load of a page, even one that also loads the engine on demand.
+ * that a server puts on the actions of its clients, and the lists of the types of a candidate's actions and of the reasons
+ * of a refusal. No file of the engine is reachable from this module, so a client that reads views and sends actions imports
+ * it rather than `@assesskit/runtime/delivery`: a bundler that splits code by file, such as esbuild, then keeps the engine
+ * out of the first load of a page, even one that also loads the engine on demand.
  *
  * @module @assesskit/runtime/delivery/wire
  */
@@ -31,4 +32,5 @@ export type {
   TimerView,
   VariantView,
 } from "./candidate-view.js";
+export { REFUSAL_REASONS } from "./refusal.js";
 export { readView, writeView } from "./view-json.js";

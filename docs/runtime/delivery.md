@@ -75,7 +75,8 @@ sequenceDiagram
 | `Refusal`, `RefusalReason`, `DeliveryEvent`, …                        | Why a step is refused, and what an accepted step reports.                                                  |
 
 `writeView`, `readView`, `writeCandidateAction`, `readCandidateAction`, `DEFAULT_ACTION_LIMITS`, `ActionLimits`, `CandidateAction`,
-`CANDIDATE_ACTION_TYPES` and the types of the candidate's view are exported by `@assesskit/runtime/delivery/wire` and by no other entry
+`CANDIDATE_ACTION_TYPES`, `REFUSAL_REASONS` and the types of the candidate's view are exported by
+`@assesskit/runtime/delivery/wire` and by no other entry
 ([Wire forms](#wire-forms)); every other name of this guide is exported by `@assesskit/runtime/delivery`. The session of an item
 and the plan of a test are reached through the engine: `start` and `apply` step them, and the state holds them as plain data.
 

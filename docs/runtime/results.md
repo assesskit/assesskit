@@ -20,14 +20,14 @@ flowchart LR
   items --> variables
 ```
 
-| Export                                                                                                                  | Purpose                                                                |
-| ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `readResults(input)`                                                                                                    | Reads text, bytes or a parsed element into an `AssessmentResult`.      |
-| `writeResults(result)`                                                                                                  | Writes an `AssessmentResult` as a document that the RR schema accepts. |
-| `RESULTS_NAMESPACE`                                                                                                     | The namespace of the RR schema.                                        |
-| `AssessmentResult`, `ResultContext`, `TestResult`, `ItemResult`, `SessionIdentifier`, `SupportUse`                      | The model.                                                             |
-| `ResultVariable`, `ResponseVariable`, `OutcomeVariable`, `TemplateVariable`, `ContextVariable`, `ResultCorrectResponse` | The variables.                                                         |
-| `SessionStatus`, `AnsweredStatus`, `ScoreStatus`, `SupportAssignment`, `OutcomeView`, `OutcomeScorer`                   | The vocabularies.                                                      |
+| Export                                                                                                                   | Purpose                                                                |
+| ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| `readResults(input)`                                                                                                     | Reads text, bytes or a parsed element into an `AssessmentResult`.      |
+| `writeResults(result)`                                                                                                   | Writes an `AssessmentResult` as a document that the RR schema accepts. |
+| `RESULTS_NAMESPACE`                                                                                                      | The namespace of the RR schema.                                        |
+| `AssessmentResult`, `ResultContext`, `TestResult`, `ItemResult`, `SessionIdentifier`, `SupportUse`                       | The model.                                                             |
+| `ResultVariable`, `ResponseVariable`, `OutcomeVariable`, `TemplateVariable`, `ContextVariable`, `ResultCorrectResponse`  | The variables.                                                         |
+| `SessionStatus`, `AnsweredStatus`, `ScoreStatus`, `SupportAssignment`, `OutcomeView`, `OutcomeScorer`, `OUTCOME_SCORERS` | The vocabularies.                                                      |
 
 ## Quick start
 

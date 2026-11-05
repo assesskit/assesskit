@@ -1,4 +1,4 @@
-import type { DeliveryEvent } from "@assesskit/runtime/delivery";
+import type { DeliveryEvent, Scorer } from "@assesskit/runtime/delivery";
 import type { Value } from "@assesskit/runtime/values";
 
 /** The score that a `supply-scores` action supplied: the runtime's events name the request and not the value, so the step carries it. */
@@ -6,7 +6,7 @@ export interface SuppliedGrade {
   /** The value of the action. */
   readonly value: Value | null;
   /** Whether a person or a scoring service scored, as the action says. */
-  readonly scorer: "human" | "externalMachine";
+  readonly scorer: Scorer;
   /**
    * Who scored, as `HostApplyOptions.scoredBy` gave it.
    *

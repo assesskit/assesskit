@@ -514,7 +514,7 @@ describe("buildSupplyScores", () => {
       buildSupplyScores({ ...request, declaration: json('{"cardinality":"single"}') as never }, 1, "human"),
     ).toThrow(/^The declaration of the request is invalid: missing the property "baseType"/);
     expect(() => buildSupplyScores(request, 1, json('"robot"') as "human")).toThrow(
-      new DataError('The scorer must be "human" or "externalMachine", found "robot".'),
+      new DataError('The scorer must be "externalMachine" or "human", found "robot".'),
     );
     expect(() => buildSupplyScores(request, json("{}") as Value, "human")).toThrow(DataError);
     expect(() => buildSupplyScores(request, json("[1]") as unknown as number, "human")).toThrow(DataError);

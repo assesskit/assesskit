@@ -7,13 +7,13 @@ import {
   type DeliveryEvent,
   type DeliveryState,
   type HostAction,
-  type RefusalReason,
   stamp,
 } from "@assesskit/runtime/delivery";
 import {
   CANDIDATE_ACTION_TYPES,
   type CandidateAction,
   type CandidateView,
+  REFUSAL_REASONS,
   writeCandidateAction,
 } from "@assesskit/runtime/delivery/wire";
 import { DataError, ServiceError } from "@assesskit/runtime/errors";
@@ -25,7 +25,7 @@ import protocolGuide from "../../../docs/player/protocol.md?raw";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import readme from "../README.md?raw";
 import { createLocalSession } from "../src/client/local/index.js";
-import { type HostStep, LTI_STORAGE_FRAME, LTI_TOOL_FRAME, REFUSAL_REASONS } from "../src/protocol/index.js";
+import { type HostStep, LTI_STORAGE_FRAME, LTI_TOOL_FRAME } from "../src/protocol/index.js";
 import {
   type CatAnswerer,
   checkActionEnvelope,
@@ -268,33 +268,8 @@ describe("checkViewEnvelope: documents and refusal", () => {
   });
 });
 
-describe("REFUSAL_REASONS", () => {
-  it("lists every refusal reason of the runtime", () => {
-    const every: Readonly<Record<RefusalReason, true>> = {
-      "attempts-exhausted": true,
-      "awaiting-cat": true,
-      "clock-regression": true,
-      "comment-not-allowed": true,
-      ended: true,
-      "invalid-response": true,
-      "item-closed": true,
-      "linear-backward": true,
-      "min-time-not-reached": true,
-      "not-current": true,
-      "review-not-allowed": true,
-      "score-type-mismatch": true,
-      "setting-not-adjustable": true,
-      "skipping-not-allowed": true,
-      "solution-not-allowed": true,
-      "support-not-available": true,
-      suspended: true,
-      "time-over": true,
-      "unknown-item": true,
-      "unknown-request": true,
-      "value-out-of-range": true,
-      "wrong-submission-mode": true,
-    };
-    expect([...REFUSAL_REASONS].sort()).toEqual(Object.keys(every).sort());
+describe("the refusal reasons of the runtime", () => {
+  it("are each read in a view envelope", () => {
     for (const reason of REFUSAL_REASONS) {
       const envelope = json(`{"seq":2,"view":{},"assets":{},"refusal":{"reason":"${reason}","message":"m"}}`);
       expect(() => checkViewEnvelope(envelope), reason).not.toThrow();
@@ -823,7 +798,7 @@ describe("checkSubmission", () => {
     const cases: readonly (readonly [readonly Step[], unknown, string | RegExp])[] = [
       [["request"], "", "A submission is invalid at request: expected a length of at least 1, found 0."],
       [["outcome"], 5, "A submission is invalid at outcome: expected a string, found 5."],
-      [["mode"], "robot", 'A submission is invalid at mode: expected "human" or "externalMachine", found "robot".'],
+      [["mode"], "robot", 'A submission is invalid at mode: expected "externalMachine" or "human", found "robot".'],
       [["lti"], false, "A submission is invalid at lti: expected true, found false."],
       [["variableIdentifierRef"], 1, "A submission is invalid at variableIdentifierRef: expected a string, found 1."],
       [["requestedAt"], "now", 'A submission is invalid at requestedAt: expected a number, found "now".'],
@@ -843,7 +818,7 @@ describe("checkSubmission", () => {
       [
         ["supplied", "scorer"],
         "x",
-        'A submission is invalid at supplied.scorer: expected "human" or "externalMachine", found "x".',
+        'A submission is invalid at supplied.scorer: expected "externalMachine" or "human", found "x".',
       ],
       [["supplied", "value"], 5, "A submission is invalid at supplied.value: expected an object, found 5."],
       [["declaration", "cardinality"], "pair", /^A submission is invalid at declaration\.cardinality: expected /],

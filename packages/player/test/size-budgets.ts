@@ -327,6 +327,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
       "runtime/package",
       "runtime/pci",
       "runtime/pnp",
+      "runtime/results",
       "runtime/values",
       "runtime/xml",
       "saxes",
@@ -357,7 +358,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   },
   "@assesskit/player/protocol": {
     gzip: 7_500,
-    holds: ["valibot"],
+    holds: [],
   },
   "@assesskit/player/scoring": {
     gzip: 13_000,
@@ -368,6 +369,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
       "runtime/checks-internal",
       "runtime/errors",
       "runtime/processing",
+      "runtime/results",
       "runtime/values",
       "valibot",
     ],

@@ -12,7 +12,6 @@ export type { ViewDocuments } from "./documents.js";
 export type { CatFailure, HostApplyOptions, HostSession, HostStep } from "./host-session.js";
 export { LTI_STORAGE_FRAME, LTI_TOOL_FRAME, type LtiFrame } from "./lti-frame.js";
 export type { OfficialResult } from "./official.js";
-export { REFUSAL_REASONS } from "./refusal.js";
 export type { DispatchResult, SessionClient } from "./session-client.js";
 export type {
   Submission,

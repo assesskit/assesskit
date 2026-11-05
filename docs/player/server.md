@@ -207,7 +207,8 @@ first.
 
 The exam default lists every action of the candidate but `suspend` and `resume`, because the runtime counts suspended time nowhere
 a candidate who could suspend would stop the clock. The host filters `view.actions` through the policy, so the chrome
-never offers such an action. Practice allows every action, and so does a host that passes `CANDIDATE_ACTION_TYPES` of `@assesskit/runtime/delivery/wire`.
+never offers such an action. Practice allows every action, and so does a host that passes `CANDIDATE_ACTION_TYPES` of
+`@assesskit/runtime/delivery/wire`.
 
 A candidate whose profile has breaks (`environment` with `breaks`, on) may also send `suspend` and `resume`: CERT asks that such a
 candidate can pause the assessment to take a break and return without losing a response or incurring a penalty (`A-11`). The

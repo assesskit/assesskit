@@ -10,9 +10,9 @@ import {
   transformWith,
 } from "@assesskit/runtime/checks";
 import type { ItemKey, Scorer, ScoringDeclaration } from "@assesskit/runtime/delivery";
+import { OUTCOME_SCORERS } from "@assesskit/runtime/results";
 import type { WireValue } from "@assesskit/runtime/values";
 import * as v from "valibot";
-import { SCORERS } from "./scorers.js";
 import { declarationSchema } from "./scoring-declaration.js";
 
 /** A value in a submission: the runtime's {@link WireValue}, which decodes without a declaration, or `null` for NULL. */
@@ -158,12 +158,12 @@ const sameKey = (a: ItemKey, b: ItemKey): boolean => a.ref === b.ref && a.instan
 const submissionShape = v.strictObject({
   request: nonEmptyStringSchema,
   outcome: nonEmptyStringSchema,
-  mode: v.picklist(SCORERS),
+  mode: v.picklist(OUTCOME_SCORERS),
   variableIdentifierRef: optionalString,
   lti: v.optional(v.literal(true)),
   declaration: declarationSchema,
   requestedAt: instantSchema,
-  supplied: v.optional(v.strictObject({ value: valueSchema, at: instantSchema, scorer: v.picklist(SCORERS) })),
+  supplied: v.optional(v.strictObject({ value: valueSchema, at: instantSchema, scorer: v.picklist(OUTCOME_SCORERS) })),
   rubric: nodesSchema,
   scoringRubric: v.optional(scoringRubricSchema),
   parts: v.array(partSchema),

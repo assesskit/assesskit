@@ -2,8 +2,9 @@ import { checkChoice, checkNonEmptyString, checkRecord } from "@assesskit/runtim
 import type { Scorer, ScoringRequest } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { describeType, fitsBaseType } from "@assesskit/runtime/processing";
+import { OUTCOME_SCORERS } from "@assesskit/runtime/results";
 import { buildSingle, normalizeValue, promote, type Value } from "@assesskit/runtime/values";
-import { checkDeclaration, SCORERS } from "../protocol/internal.js";
+import { checkDeclaration } from "../protocol/internal.js";
 
 /**
  * The `supply-scores` action of the host, which the runtime's engine applies in any state while the request exists. The
@@ -86,6 +87,6 @@ export function buildSupplyScores(
   checkNonEmptyString(request.id, "The id of the request");
   checkNonEmptyString(request.outcome, "The outcome of the request");
   checkDeclaration(request.declaration);
-  checkChoice(scorer, "The scorer", SCORERS);
+  checkChoice(scorer, "The scorer", OUTCOME_SCORERS);
   return { type: "supply-scores", request: request.id, value: typedScore(request, score), scorer };
 }

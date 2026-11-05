@@ -22,12 +22,13 @@ export type {
 } from "./model.js";
 export { RESULTS_NAMESPACE } from "./namespace.js";
 export { readResults } from "./read-results.js";
-export type {
-  AnsweredStatus,
-  OutcomeScorer,
-  OutcomeView,
-  ScoreStatus,
-  SessionStatus,
-  SupportAssignment,
+export {
+  type AnsweredStatus,
+  OUTCOME_SCORERS,
+  type OutcomeScorer,
+  type OutcomeView,
+  type ScoreStatus,
+  type SessionStatus,
+  type SupportAssignment,
 } from "./vocabularies.js";
 export { writeResults } from "./write-results.js";

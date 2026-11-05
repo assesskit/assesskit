@@ -1,5 +1,5 @@
 import { createEngine } from "@assesskit/runtime/delivery";
-import type { CandidateView } from "@assesskit/runtime/delivery/wire";
+import { type CandidateView, REFUSAL_REASONS } from "@assesskit/runtime/delivery/wire";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES } from "../src/index.js";
@@ -13,7 +13,6 @@ import {
   resolveItemSettings,
   spokenText,
 } from "../src/player/delivery/internal.js";
-import { REFUSAL_REASONS } from "../src/protocol/index.js";
 import { examDefinition, examFiles, packageOf } from "./exam-fixture.js";
 
 const START = 1_700_000_000_000;

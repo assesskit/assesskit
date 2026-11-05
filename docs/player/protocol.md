@@ -27,7 +27,6 @@ submission, because the server writes it and the browser shows it.
 | `Caller`                                      | The identity that authentication gives to a request.                                                   |
 | `ActionEnvelope`                              | What a client sends: a sequence number and one action.                                                 |
 | `ViewEnvelope`                                | What a host answers: the view, the asset prefixes and, when they apply, the documents and the refusal. |
-| `REFUSAL_REASONS`                             | The refusal reasons of the engine.                                                                     |
 | `ViewDocuments`                               | Where the content of a view comes from, so that references in it resolve.                              |
 | `LtiFrame`                                    | What the player needs to show a tool.                                                                  |
 | `LTI_TOOL_FRAME`, `LTI_STORAGE_FRAME`         | The names of the two frames of an LTI item.                                                            |
@@ -39,14 +38,13 @@ submission, because the server writes it and the browser shows it.
 
 ## Quick start
 
-Tell the two frames of an LTI item and the reasons of a refusal:
+Tell the two frames of an LTI item:
 
 ```ts
-import { LTI_STORAGE_FRAME, LTI_TOOL_FRAME, REFUSAL_REASONS } from "@assesskit/player/protocol";
+import { LTI_STORAGE_FRAME, LTI_TOOL_FRAME } from "@assesskit/player/protocol";
 
 LTI_TOOL_FRAME; // => "lti-tool"
 LTI_STORAGE_FRAME; // => "lti-storage"
-REFUSAL_REASONS.includes("time-over"); // => true
 ```
 
 ## Caller
@@ -79,8 +77,8 @@ one is refused.
 ## Refusal
 
 When the engine refuses a well-formed action, the host answers with the view of the state as it was, and the refusal in the
-envelope. A refusal has the properties `reason` and `message` of the runtime's `Refusal`. `REFUSAL_REASONS` lists the reasons, and
-the player has a message for each ([delivery](delivery.md#refusals-and-status-messages)).
+envelope. A refusal has the properties `reason` and `message` of the runtime's `Refusal`. `REFUSAL_REASONS` of
+`@assesskit/runtime/delivery/wire` lists the reasons, and the player has a message for each ([delivery](delivery.md#refusals-and-status-messages)).
 
 ## Documents
 
@@ -220,7 +218,7 @@ local session, `mountSubmission` and the LTI slot run the checks on what they re
 | A `Caller`                   | `value` is not an object with a non-empty `session` and `principal`                                                                                                                                                                                                      |
 | An action or a view envelope | `value` is not an object, has a property outside the table, or has a `seq` that is not a non-negative safe integer                                                                                                                                                       |
 | An action envelope           | `action` is missing                                                                                                                                                                                                                                                      |
-| A view envelope              | `view` is missing, `assets` is not an object of strings by directories, `documents` or `refusal` is malformed (a refusal is an object with a `reason` of `REFUSAL_REASONS` and a string `message`)                                                                       |
+| A view envelope              | `view` is missing, `assets` is not an object of strings by directories, `documents` or `refusal` is malformed (a refusal is an object with a `reason` of the runtime's `REFUSAL_REASONS` and a string `message`)                                                         |
 | An `LtiFrame`                | `value` is not an object of `url`, `storageUrl` and `allow` only, a URL is not absolute `http` or `https`, or `allow` is empty or has a character outside an allow list                                                                                                  |
 | A `Submission`               | a property outside the form, a field of another type, a time outside the years 1 to 9999, content that is not a list of nodes with a string `kind`, a scoring rubric that `checkScoringRubric` refuses, a part that names an item the submission lacks, or an item twice |
 

@@ -1,7 +1,8 @@
 import { checkChoice, checkRecord } from "@assesskit/runtime/checks";
+import type { HostAction } from "@assesskit/runtime/delivery";
 
 /** The types of the actions of the host, which a candidate never sends. */
-const HOST_ACTION_TYPES = ["time", "supply-scores", "cat-response"] as const;
+const HOST_ACTION_TYPES = ["time", "supply-scores", "cat-response"] as const satisfies readonly HostAction["type"][];
 
 /**
  * Checks that a value is an action of the host by its type. The engine checks the rest of the action when it stamps it.

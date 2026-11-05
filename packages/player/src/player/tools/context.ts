@@ -34,33 +34,11 @@ export interface ToolOptions {
 export type ToolSlot = (host: HTMLElement, options: ToolOptions) => () => void;
 
 /**
- * The tools that the host provides, by name; a tool without a function says that it is not available.
- *
- * @remarks
- * The names are those of {@link SlotTool}.
+ * The tools that the host provides, by the names of {@link SlotTool}; a tool without a function says that it is not
+ * available. The scientific calculator replaces the built-in one; the graphing calculator and the elective tools have none
+ * built in.
  */
-export interface ToolSlots {
-  /** The scientific calculator, in place of the built-in one. */
-  readonly "scientific-calculator"?: ToolSlot;
-  /** The graphing calculator, which the player does not build in. */
-  readonly "graphing-calculator"?: ToolSlot;
-  /** A dictionary. */
-  readonly dictionary?: ToolSlot;
-  /** A thesaurus. */
-  readonly thesaurus?: ToolSlot;
-  /** A checker of homophones. */
-  readonly "homophone-checker"?: ToolSlot;
-  /** A place to take notes. */
-  readonly "note-taking"?: ToolSlot;
-  /** A visual organizer. */
-  readonly "visual-organizer"?: ToolSlot;
-  /** An outliner. */
-  readonly outliner?: ToolSlot;
-  /** A way to talk with a peer. */
-  readonly "peer-interaction"?: ToolSlot;
-  /** A spell checker. */
-  readonly "spell-checker"?: ToolSlot;
-}
+export type ToolSlots = Readonly<Partial<Record<SlotTool, ToolSlot>>>;
 
 /** What the tools remember of the content shown, which outlasts a tool that is turned off. */
 export interface ToolMemory {
