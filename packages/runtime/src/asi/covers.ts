@@ -1,5 +1,4 @@
-import { checkArray, checkRecord, checkString, describe } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import { checkArray, checkRecord, checkString, describe, parseWith } from "../checks.js";
 import { DataError } from "../errors.js";
 import { isIdentifier } from "../values/index.js";
 import { xmlTokens } from "../values/internal.js";
@@ -9,9 +8,9 @@ import {
   type ListEntry,
   OUTCOME_ATTRIBUTE,
   type RubricBlockOptions,
+  rubricBlockOptionsSchema,
 } from "./convention-markup.js";
 import type { AssessmentTest, ElementModel, TestRubricBlock } from "./model.js";
-import { isModelNode } from "./nodes.js";
 
 /** The class token that marks a test-level rubric block as the covers of an outcome (a convention of the runtime). */
 export const SCORE_COVERS_CLASS = "external-score-covers";
@@ -171,12 +170,7 @@ export function buildScoreCoversBlock(
 ): TestRubricBlock {
   checkIdentifier(outcomeIdentifier, "The outcome identifier");
   checkArray(covers, "The covers must be an array");
-  checkOptions(options);
-  const { notes = [] } = options;
-  checkArray(notes, "The notes must be an array");
-  if (!notes.every(isModelNode)) {
-    throw new DataError(`The notes must be nodes of body content, found ${describe(notes)}.`);
-  }
+  const { notes } = parseWith(rubricBlockOptionsSchema, options, "The options object");
   const list: List = { kind: "ul", items: covers.map(coverEntry), extensions: [] };
   return {
     kind: "rubric-block",

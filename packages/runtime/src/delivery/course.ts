@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import {
   type AssessmentItem,
   type AssessmentStimulus,
@@ -8,22 +9,28 @@ import {
   type ScoreCover,
 } from "../asi/index.js";
 import {
-  checkBoolean,
   checkFunction,
-  checkNonEmptyString,
-  checkPositiveInteger,
   checkRecord,
   checkString,
   describe,
+  functionSchema,
+  nonEmptyStringSchema,
+  parseWith,
+  strictRecord,
 } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import { limitsSchema } from "../checks-internal.js";
 import { HAZARD_TERMS } from "../content/internal.js";
 import { DataError, type Issue } from "../errors.js";
 import type { DrdHazard } from "../metadata/index.js";
 import type { DeliverableItem, LtiLink, ResolvedItem, Resolvers } from "../package/index.js";
 import { resolveReference } from "../package/index.js";
 import { checkSynchronous } from "../package/internal.js";
-import type { CustomOperator, ProcessingLimits, VariableType } from "../processing/index.js";
+import {
+  type CustomOperator,
+  DEFAULT_PROCESSING_LIMITS,
+  type ProcessingLimits,
+  type VariableType,
+} from "../processing/index.js";
 import {
   BUILT_IN_CONTEXTS,
   checkItem,
@@ -32,6 +39,7 @@ import {
   readDeclaredValue,
 } from "../processing/internal.js";
 import { validateAsi, validateTest } from "../validate/index.js";
+import { customOperatorsSchema } from "../validate/internal.js";
 import type { Value } from "../values/index.js";
 import type { CatSectionRef } from "./cat-session.js";
 import { ltiItem } from "./lti-item.js";
@@ -257,30 +265,31 @@ export function itemContextValues(
 /** The kind of the model of `qti-assessment-test`. */
 const TEST_KIND = "assessment-test";
 
-/** Checks the options of `createEngine` and applies their defaults. */
-function checkEngineOptions(
+const engineOptionsSchema = strictRecord({
+  customOperators: v.optional(customOperatorsSchema),
+  resolveTemplate: v.optional(functionSchema<(uri: string) => ResponseProcessing | undefined>()),
+  limits: v.optional(limitsSchema({ ...DEFAULT_PROCESSING_LIMITS, ...DEFAULT_PLAN_LIMITS }), {}),
+  contentVersion: v.optional(nonEmptyStringSchema),
+  eventOutcomes: v.optional(v.boolean(), false),
+  reviewAfterEnd: v.optional(v.boolean(), false),
+});
+
+/** Reads the options of `createEngine` and applies their defaults. */
+function readEngineOptions(
   options: EngineOptions,
 ): Pick<
   Course,
   "customOperators" | "resolveTemplate" | "limits" | "contentVersion" | "eventOutcomes" | "reviewAfterEnd"
 > {
-  checkOptions(options);
-  const { customOperators, resolveTemplate, limits: processing } = checkProcessingOptions(options);
-  const { maxPlanNodes = DEFAULT_PLAN_LIMITS.maxPlanNodes } = options.limits ?? {};
-  checkPositiveInteger(maxPlanNodes, "The limit maxPlanNodes");
-  const { contentVersion } = options;
-  if (contentVersion !== undefined) checkNonEmptyString(contentVersion, "The option contentVersion");
-  const { eventOutcomes = false } = options;
-  checkBoolean(eventOutcomes, "The option eventOutcomes");
-  const { reviewAfterEnd = false } = options;
-  checkBoolean(reviewAfterEnd, "The option reviewAfterEnd");
+  const { limits, ...read } = parseWith(engineOptionsSchema, options, "The options object");
+  const { customOperators, resolveTemplate, limits: processing } = checkProcessingOptions({ ...read, limits });
   return {
     customOperators,
     resolveTemplate,
-    limits: { ...processing, maxPlanNodes },
-    contentVersion,
-    eventOutcomes,
-    reviewAfterEnd,
+    limits: { ...processing, maxPlanNodes: limits.maxPlanNodes },
+    contentVersion: read.contentVersion,
+    eventOutcomes: read.eventOutcomes,
+    reviewAfterEnd: read.reviewAfterEnd,
   };
 }
 
@@ -464,6 +473,11 @@ function checkCatSections(structure: TestStructure, given: unknown): ReadonlyMap
   return given;
 }
 
+/** The options of the static checks, among the options of the engine. */
+function validationOf({ customOperators, resolveTemplate }: Pick<Course, "customOperators" | "resolveTemplate">) {
+  return { customOperators, resolveTemplate };
+}
+
 /** Builds the course of a test: the static checks, then the structure and every item it can reach. */
 function testCourse(definition: Extract<DeliveryDefinition, { kind: "test" }>, options: EngineOptions): Course {
   const { test, base, resolvers, catSections = new Map<string, CatSectionRef>() } = definition;
@@ -472,8 +486,8 @@ function testCourse(definition: Extract<DeliveryDefinition, { kind: "test" }>, o
     throw new DataError(`The test must be the model of a qti-assessment-test, found the kind ${describe(test.kind)}.`);
   }
   checkString(base, "The base");
-  const checked = checkEngineOptions(options);
-  gate(validateTest(test, base, resolvers, checked), "test");
+  const checked = readEngineOptions(options);
+  gate(validateTest(test, base, resolvers, validationOf(checked)), "test");
   const structure = resolveStructure(test, base, resolvers);
   const resolved = new Map<string, ResolvedItem>();
   const items = new Map<string, CourseItem>();
@@ -501,9 +515,9 @@ function itemCourse(definition: Extract<DeliveryDefinition, { kind: "item" }>, o
   checkString(base, "The base");
   if (resolvers !== undefined) checkRecord(resolvers, "The resolvers must be an object with a function stimuli");
   if (resolvers !== undefined) checkFunction(resolvers.stimuli, "The stimuli of the resolvers must be a function");
-  const checked = checkEngineOptions(options);
+  const checked = readEngineOptions(options);
   const effective = resolveStandaloneSessionControl({ control });
-  gate(validateAsi({ kind: "item", item }, { ...checked, path: base }), "item");
+  gate(validateAsi({ kind: "item", item }, { ...validationOf(checked), path: base }), "item");
   const structure = standaloneTest(item);
   const node = structure.itemRef(item.identifier);
   if (node === undefined)

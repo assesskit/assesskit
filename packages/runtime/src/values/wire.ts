@@ -1,6 +1,5 @@
 import * as v from "valibot";
-import { describe, isRecord, parseWith, type Schema, transformWith } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import { describe, isRecord, objectSchema, parseWith, type Schema, strictRecord, transformWith } from "../checks.js";
 import { DataError } from "../errors.js";
 import { type BaseType, baseTypeSchema, isBaseType } from "./base-type.js";
 import { type Cardinality, isCardinality } from "./cardinality.js";
@@ -48,6 +47,8 @@ function ownDeclaration(value: unknown): ValueDeclaration {
   throw new DataError(`The value must be a value or NULL, found ${describe(value)}.`);
 }
 
+const writeWireValueOptionsSchema = strictRecord({ declaration: v.optional(objectSchema<ValueDeclaration>()) });
+
 /**
  * Writes a value, or NULL, as a {@link WireValue}.
  *
@@ -62,8 +63,8 @@ function ownDeclaration(value: unknown): ValueDeclaration {
  * `value` is NULL and there is no declaration.
  */
 export function writeWireValue(value: Value | null, options: WriteWireValueOptions = {}): WireValue {
-  checkOptions(options);
-  const { declaration = ownDeclaration(value) } = options;
+  const read = parseWith(writeWireValueOptionsSchema, options, "The options object");
+  const declaration = read.declaration ?? ownDeclaration(value);
   const json = writeJsonValue(value, declaration);
   const { cardinality, baseType } = declaration;
   const typed = cardinality === "record" ? { cardinality } : { cardinality, baseType };

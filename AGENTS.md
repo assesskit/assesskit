@@ -191,8 +191,14 @@ that the player needs and the runtime lacks is a change in the runtime, with its
   `The option <name>`, and a value is shown with `describe`. Inner functions validate shallowly, so that a call does not cost
   the size of the model.
 - JSON and objects that a host passes in are read with a valibot schema named `<name>Schema` and `parseWith(schema, input, label)`,
-  which throws the `DataError` of the first issue with its path. `check*` calls stay for the arguments of inner functions and
-  for the options of the player, which hold DOM objects and callbacks.
+  which throws the `DataError` of the first issue with its path. `check*` calls stay for the arguments of inner functions.
+- Every options object is read one way: `parseWith(strictRecord({...}), options, "The options object")`, so that an option the
+  function does not take, a misspelled one, is refused whatever its type. A host's callback is `functionSchema`, its object
+  with methods `methodsSchema`, any other object `objectSchema`, a DOM object `guardSchema`; the limits of a module are
+  `limitsSchema(DEFAULTS, caps)` of `checks-internal.ts`. The options of a call that waits (`CallOptions`, `HostApplyOptions`)
+  are read by `checkCallOptions` and `checkHostApplyOptions`, which are over the key list: every port call reads them, and one
+  sentence serves them all. A schema that only a part of a bundle reads is built where it is read (`deliveryOptionsSchema()`),
+  so that `mountItem` does not hold the tools.
 - A rule that a schema cannot express is a `check` or a `rawCheck` with a message of its own, or code after the parse; code
   that throws `DataError` joins a schema with `transformWith`.
 - `strictRecord` where nothing else is allowed. `recordSchema` before an object schema of untrusted input: it refuses an
@@ -265,7 +271,6 @@ tests of every engine, and waits for the next change to that part.
 | The change of a set of points                 | `player/player/elements/{position-object,select-point}.ts`                                                            | Candidate: a method of `InteractionElement`, which every other element would then carry for two.                                                     |
 | The four arrow keys                           | `player/player/elements/graphic/picker.ts`, `player/player/tools/placed-tool.ts`                                      | Candidate: one constant of `player/internal.ts`.                                                                                                     |
 | The check that opens a mount                  | `player/player/supports/{content,spoken,panel,variant}.ts`, `player/player/tools/mount.ts`                            | A host element in a document, and the options as a record with the properties that the mount takes; each lists its own. Candidate: the host check.   |
-| The notes of a block                          | `runtime/asi/{covers,scoring-rubric-block}.ts`                                                                        | The check of the option `notes` in two functions that open with different checks of their first argument.                                            |
 | The optional fields of an outcome variable    | `runtime/cat/result-json-read.ts`, `runtime/delivery/results-assembly.ts`                                             | One reads them from JSON and the other from the engine's variables, to the same model; the shape of the model is the repeat.                         |
 | The checks that open a function of a session  | `runtime/delivery/item-lifecycle.ts`                                                                                  | `presentItem` and `closeItem` check the session, the time and the context alike before they switch on the status.                                    |
 | The settling of closed items                  | `runtime/delivery/{step-time,step-walk}.ts`                                                                           | The loop body of two walks over the items of a step, which choose the items differently.                                                             |

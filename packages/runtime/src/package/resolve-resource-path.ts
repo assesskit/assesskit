@@ -1,8 +1,10 @@
-import { checkArray, checkRecord, checkString } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import * as v from "valibot";
+import { checkArray, checkRecord, checkString, parseWith, strictRecord } from "../checks.js";
 import type { Manifest, Resource } from "./manifest.js";
 import type { QtiPackage } from "./package.js";
 import { resolveReference } from "./paths.js";
+
+const resolveResourcePathOptionsSchema = strictRecord({ href: v.optional(v.string()) });
 
 /** The options of {@link resolveResourcePath}. */
 export interface ResolveResourcePathOptions {
@@ -40,8 +42,8 @@ export function resolveResourcePath(
 ): string | undefined {
   checkRecord(manifest, "The manifest must be an object");
   checkRecord(resource, "The resource must be an object");
-  checkOptions(options);
-  const target = options.href ?? mainHref(resource);
+  const { href } = parseWith(resolveResourcePathOptionsSchema, options, "The options object");
+  const target = href ?? mainHref(resource);
   if (target === undefined) return undefined;
   checkString(target, "The href");
   let base = "";

@@ -1,5 +1,5 @@
-import { checkArray, checkRecord, checkString } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import * as v from "valibot";
+import { checkString, guardSchema, isRecord, parseWith, strictRecord } from "../checks.js";
 import { XML_NAMESPACE, type XmlAttribute, type XmlElement, type XmlNode, XSI_NAMESPACE } from "./tree.js";
 
 /** The prefixes that an attribute name may carry, with their namespaces: no other prefix is declared by `buildElement`. */
@@ -34,6 +34,17 @@ export interface BuildElementOptions {
   readonly children?: readonly (XmlNode | string)[];
 }
 
+const buildElementOptionsSchema = strictRecord({
+  attributes: v.optional(
+    guardSchema((value): value is ElementAttributes => isRecord(value), "an object"),
+    {},
+  ),
+  children: v.optional(
+    v.array(v.union([v.string(), guardSchema((value): value is XmlNode => isRecord(value), "an object")])),
+    [],
+  ),
+});
+
 /**
  * Builds an element for a writer. Attributes whose value is `undefined` are left out, so that an optional field of a model
  * is written only when it is set; the others keep the order of the object.
@@ -47,10 +58,7 @@ export interface BuildElementOptions {
 export function buildElement(namespace: string, name: string, options: BuildElementOptions = {}): XmlElement {
   checkString(namespace, "The namespace of an element");
   checkString(name, "The name of an element");
-  checkOptions(options);
-  const { attributes = {}, children = [] } = options;
-  checkRecord(attributes, "The attributes of an element must be an object");
-  checkArray(children, "The children of an element must be an array");
+  const { attributes, children } = parseWith(buildElementOptionsSchema, options, "The options object");
   return {
     kind: "element",
     namespace,

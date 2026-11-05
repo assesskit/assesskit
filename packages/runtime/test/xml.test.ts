@@ -124,12 +124,15 @@ describe("building elements", () => {
   it("rejects arguments of other types", () => {
     expect(() => buildElement(JSON.parse("5"), "a")).toThrow("The namespace of an element must be a string, found 5.");
     expect(() => buildElement("", JSON.parse("null"))).toThrow("The name of an element must be a string, found null.");
-    expect(() => buildElement("", "a", JSON.parse("null"))).toThrow("The options must be an object, found null.");
+    expect(() => buildElement("", "a", JSON.parse("null"))).toThrow(
+      "The options object is invalid: expected an object, found null",
+    );
+    expect(() => buildElement("", "a", JSON.parse('{"bogus":1}'))).toThrow('unexpected property "bogus"');
     expect(() => buildElement("", "a", { attributes: JSON.parse("null") })).toThrow(
-      "The attributes of an element must be an object, found null.",
+      "The options object is invalid at attributes: expected an object, found null.",
     );
     expect(() => buildElement("", "a", { children: JSON.parse('{"0":"x"}') })).toThrow(
-      "The children of an element must be an array, found an object.",
+      "The options object is invalid at children: expected an array, found an object.",
     );
   });
 });
@@ -393,8 +396,9 @@ describe("mapping an element to a model", () => {
         'The color must be "a" or "b", found "c".',
       );
       expect(() => createTermConverter(["a"], JSON.parse("null"))).toThrow(
-        "The options must be an object, found null.",
+        "The options object is invalid: expected an object, found null",
       );
+      expect(() => createTermConverter(["a"], JSON.parse('{"bogus":1}'))).toThrow('unexpected property "bogus"');
       expect(failure(() => open(`<a xmlns="${Ns}">blue</a>`).text(terms)).issues[0]?.rule).toBe(
         "assesskit/demo/invalid-text",
       );
@@ -646,13 +650,16 @@ describe("XInclude", () => {
       "The resolver must be a function of an href and a base, found an object.",
     );
     expect(() => resolveIncludes(root, "a.xml", resolve, JSON.parse("null"))).toThrow(
-      "The options must be an object, found null.",
+      "The options object is invalid: expected an object, found null",
+    );
+    expect(() => resolveIncludes(root, "a.xml", resolve, JSON.parse('{"bogus":1}'))).toThrow(
+      'unexpected property "bogus"',
     );
     expect(() => resolveIncludes(root, "a.xml", resolve, JSON.parse('{"limits": null}'))).toThrow(
-      "The option limits must be an object, found null.",
+      "The options object is invalid at limits: expected an object, found null.",
     );
     expect(() => resolveIncludes(root, "a.xml", resolve, JSON.parse('{"limits": {"maxIncludeDepth": 0}}'))).toThrow(
-      "The limit maxIncludeDepth must be a positive integer, found 0.",
+      "The options object is invalid at limits.maxIncludeDepth: expected a value of at least 1, found 0.",
     );
     expect(() => resolveIncludes(element("a", [include("f.xml")]), "a.xml", () => JSON.parse("null"))).toThrow(
       "The include resolver must return an element, found null.",
@@ -1071,22 +1078,31 @@ describe("parsing", () => {
         expect(() => parseXml(JSON.parse(input))).toThrow(DataError);
       }
       expect(() => parseXml(JSON.parse("1"))).toThrow("The XML input must be a string or a Uint8Array, found 1.");
-      expect(() => parseXml("<a/>", JSON.parse("null"))).toThrow("The options must be an object, found null.");
-      expect(() => parseXml("<a/>", JSON.parse('{"path": 5}'))).toThrow("The option path must be a string, found 5.");
+      expect(() => parseXml("<a/>", JSON.parse("null"))).toThrow(
+        "The options object is invalid: expected an object, found null",
+      );
+      expect(() => parseXml("<a/>", JSON.parse('{"limits":{"maxByte":5}}'))).toThrow('unexpected property "maxByte"');
+      expect(() =>
+        ElementReader.open("<a/>", { module: "demo", namespaces: [] }, "The demo", JSON.parse('{"bogus":1}')),
+      ).toThrow('unexpected property "bogus"');
+      expect(() => parseXml("<a/>", JSON.parse('{"bogus":1}'))).toThrow('unexpected property "bogus"');
+      expect(() => parseXml("<a/>", JSON.parse('{"path": 5}'))).toThrow(
+        "The options object is invalid at path: expected a string, found 5.",
+      );
       expect(() => parseXml("<a/>", JSON.parse('{"path": null}'))).toThrow(
-        "The option path must be a string, found null.",
+        "The options object is invalid at path: expected a string, found null.",
       );
       expect(() => parseXml("<a/>", JSON.parse('{"limits": null}'))).toThrow(
-        "The option limits must be an object, found null.",
+        "The options object is invalid at limits: expected an object, found null.",
       );
       expect(() => parseXml("<a/>", JSON.parse('{"limits": {"maxBytes": "5"}}'))).toThrow(
-        'The limit maxBytes must be a positive integer, found "5".',
+        'The options object is invalid at limits.maxBytes: expected a number, found "5".',
       );
       expect(() => parseXml("<a/>", JSON.parse('{"limits": {"maxDepth": 0}}'))).toThrow(
-        "The limit maxDepth must be a positive integer, found 0.",
+        "The options object is invalid at limits.maxDepth: expected a value of at least 1, found 0.",
       );
       expect(() => parseXml("<a/>", JSON.parse('{"limits": {"maxNodes": null}}'))).toThrow(
-        "The limit maxNodes must be a positive integer, found null.",
+        "The options object is invalid at limits.maxNodes: expected a number, found null.",
       );
     });
   });
@@ -1108,6 +1124,7 @@ describe("reading a tree without mapping it", () => {
     expect(findAttribute(root, "lang", { namespace: XML_NAMESPACE })).toBe("en");
     expect(findAttribute(root, "y")).toBeUndefined();
     expect(findAttribute(root, "lang")).toBeUndefined();
+    expect(() => findAttribute(root, "x", JSON.parse('{"bogus":1}'))).toThrow('unexpected property "bogus"');
   });
 
   it("joins the text and CDATA children of an element, and leaves out comments, instructions and child elements", () => {
@@ -1142,14 +1159,20 @@ describe("read errors and locations", () => {
     const cause = new DataError("The text is not an integer.");
     expect(createReadError("assesskit/xml/example", "m", { cause }).cause).toBe(cause);
     expect("cause" in createReadError("assesskit/xml/example", "m")).toBe(false);
+    expect(() => createReadError("assesskit/xml/example", "m", JSON.parse('{"bogus":1}'))).toThrow(
+      'unexpected property "bogus"',
+    );
   });
 
   it("refuses options that are not an object", () => {
     expect(() => createReadError("assesskit/xml/example", "m", JSON.parse("null"))).toThrow(
-      "The options must be an object, found null.",
+      "The options object is invalid: expected an object, found null",
     );
     expect(() => locateElement(parseXml("<a/>"), "x.xml", JSON.parse("null"))).toThrow(
-      "The options must be an object, found null.",
+      "The options object is invalid: expected an object, found null",
+    );
+    expect(() => locateElement(parseXml("<a/>"), "x.xml", JSON.parse('{"bogus":1}'))).toThrow(
+      'unexpected property "bogus"',
     );
   });
 

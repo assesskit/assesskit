@@ -1,4 +1,5 @@
-import { checkOptions } from "../checks-internal.js";
+import * as v from "valibot";
+import { parseWith, strictRecord } from "../checks.js";
 import { type Issue, type IssueLocation, ReadError } from "../errors.js";
 import type { XmlElement } from "./tree.js";
 
@@ -28,6 +29,18 @@ export interface CreateReadErrorOptions {
   readonly cause?: unknown;
 }
 
+const createReadErrorOptionsSchema = strictRecord({
+  location: v.optional(
+    strictRecord({
+      path: v.optional(v.string()),
+      line: v.optional(v.number()),
+      column: v.optional(v.number()),
+      element: v.optional(v.string()),
+    }),
+  ),
+  cause: v.optional(v.unknown()),
+});
+
 /**
  * Builds the `ReadError` for one problem. The issue carries the message as given; the error's message adds the position.
  *
@@ -37,11 +50,11 @@ export interface CreateReadErrorOptions {
  * @returns The error, with one issue.
  */
 export function createReadError(rule: string, message: string, options: CreateReadErrorOptions = {}): ReadError {
-  checkOptions(options);
-  const { location } = options;
+  const read = parseWith(createReadErrorOptionsSchema, options, "The options object");
+  const { location } = read;
   const issue: Issue = { severity: "error", rule, message, ...(location ? { location } : {}) };
   const position = location?.line === undefined ? "" : ` (line ${location.line}, column ${location.column ?? 1})`;
-  return new ReadError(`${message}${position}`, [issue], "cause" in options ? { cause: options.cause } : undefined);
+  return new ReadError(`${message}${position}`, [issue], "cause" in read ? { cause: read.cause } : undefined);
 }
 
 /** The options of {@link locateElement}. */
@@ -53,6 +66,8 @@ export interface LocateElementOptions {
    */
   readonly trail?: string;
 }
+
+const locateElementOptionsSchema = strictRecord({ trail: v.optional(v.string()) });
 
 /**
  * Returns the location of an element: its path in the document, the position of its start tag and, when the caller tracks it,
@@ -68,7 +83,6 @@ export function locateElement(
   path: string | undefined,
   options: LocateElementOptions = {},
 ): IssueLocation {
-  checkOptions(options);
-  const { trail } = options;
+  const { trail } = parseWith(locateElementOptionsSchema, options, "The options object");
   return { path, line: element.line, column: element.column, ...(trail === undefined ? {} : { element: trail }) };
 }

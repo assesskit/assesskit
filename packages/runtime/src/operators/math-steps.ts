@@ -1,13 +1,12 @@
 import * as v from "valibot";
 import {
   checkArray,
-  checkProperties,
-  checkRecord,
   checkString,
-  describe,
   finiteSchema,
   mapSchema,
   parseWith,
+  positiveIntegerSchema,
+  strictRecord,
 } from "../checks.js";
 import { DataError, SecurityError } from "../errors.js";
 import type { VariableRange } from "../keys/index.js";
@@ -15,7 +14,7 @@ import { agree, compareShapes, residualAt, type Shape, shapeOf } from "./compare
 import { complex } from "./complex.js";
 import { collectVariables, evaluate, measured } from "./evaluate.js";
 import { checkVariableName } from "./expression-equivalent.js";
-import { type OperatorLimits, resolveOperatorLimits } from "./limits.js";
+import { type OperatorLimits, operatorLimitsSchema } from "./limits.js";
 import { isBlank } from "./operands.js";
 import { readStatement } from "./read.js";
 import { MIN_POINTS, POINT_COUNT, type Ranges, Sample } from "./sample.js";
@@ -69,6 +68,13 @@ const rangesSchema = mapSchema(
     v.check(({ min, max }) => min < max, "a range has its min below its max"),
   ),
 );
+
+const compareMathStepsOptionsSchema = strictRecord({
+  decimalSeparator: v.optional(v.picklist([".", ","]), "."),
+  variables: v.optional(rangesSchema, {}),
+  limits: v.optional(operatorLimitsSchema, {}),
+  maxSteps: v.optional(positiveIntegerSchema, DEFAULT_MAX_STEPS),
+});
 
 /** A line as the steps use it: an expression, an equation, or the values that solve an earlier line. */
 type Line =
@@ -170,24 +176,6 @@ function follows(line: Line, earlier: Line, ranges: Ranges): boolean | null {
   return compareShapes(line.shape, { shape: earlier.shape }, ranges);
 }
 
-function checkStepsOptions(options: unknown): {
-  separator: DecimalSeparator;
-  ranges: Ranges;
-  limits: OperatorLimits;
-  maxSteps: number;
-} {
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", ["decimalSeparator", "variables", "limits", "maxSteps"]);
-  const { decimalSeparator = ".", variables = {}, limits, maxSteps = DEFAULT_MAX_STEPS } = options;
-  if (decimalSeparator !== "." && decimalSeparator !== ",")
-    throw new DataError(`The option decimalSeparator must be "." or ",", found ${describe(decimalSeparator)}.`);
-  const ranges = parseWith(rangesSchema, variables, "The option variables");
-  for (const name of ranges.keys()) checkVariableName(name, `variables[${JSON.stringify(name)}]`);
-  if (!(typeof maxSteps === "number" && Number.isSafeInteger(maxSteps) && maxSteps >= 1))
-    throw new DataError(`The option maxSteps must be a positive integer, found ${describe(maxSteps)}.`);
-  return { separator: decimalSeparator, ranges, limits: resolveOperatorLimits(limits), maxSteps };
-}
-
 /**
  * Checks each line of worked steps against the nearest earlier line that reads: a step is equivalent when it and that line
  * are expressions that agree, or equations that agree as an equation does (the same equation rearranged or scaled), or when
@@ -209,7 +197,13 @@ export function compareMathSteps(
   options: CompareMathStepsOptions = {},
 ): readonly StepCheck[] {
   checkArray(steps, "The steps must be an array of strings");
-  const { separator, ranges, limits, maxSteps } = checkStepsOptions(options);
+  const {
+    decimalSeparator: separator,
+    variables: ranges,
+    limits,
+    maxSteps,
+  } = parseWith(compareMathStepsOptionsSchema, options, "The options object");
+  for (const name of ranges.keys()) checkVariableName(name, `variables[${JSON.stringify(name)}]`);
   if (steps.length > maxSteps)
     throw new SecurityError(
       `The steps hold ${steps.length} lines, over the limit maxSteps of ${maxSteps}.`,

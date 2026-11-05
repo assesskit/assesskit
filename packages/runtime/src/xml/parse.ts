@@ -1,9 +1,9 @@
 import { type EventNameToHandler, SaxesParser } from "saxes";
-import { checkString, describe } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import * as v from "valibot";
+import { describe, parseWith, strictRecord } from "../checks.js";
 import { AssesskitError, DataError, type ReadError, SecurityError } from "../errors.js";
 import { decodeXml } from "./encoding.js";
-import { resolveXmlLimits, type XmlLimits } from "./limits.js";
+import { type XmlLimits, xmlLimitsSchema } from "./limits.js";
 import { Locator } from "./locator.js";
 import { createReadError, documentName } from "./read-error.js";
 import type { XmlElement } from "./tree.js";
@@ -24,6 +24,12 @@ export interface ParseXmlOptions {
    */
   readonly limits?: Partial<XmlLimits>;
 }
+
+/** The schema of {@link ParseXmlOptions}, which also reads the options of the readers that parse a document. */
+export const parseXmlOptionsSchema = strictRecord({
+  path: v.optional(v.string()),
+  limits: v.optional(xmlLimitsSchema, {}),
+});
 
 /** Returns whether the UTF-8 encoding of a string has more bytes than a limit; a string has at least as many bytes as UTF-16 code units. */
 export function exceedsBytes(text: string, limit: number): boolean {
@@ -168,14 +174,16 @@ function parseText(text: string, limits: XmlLimits, path: string | undefined): X
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, XML security}
  */
 export function parseXml(input: string | Uint8Array, options: ParseXmlOptions = {}): XmlElement {
-  checkOptions(options);
-  const { path, limits = {} } = options;
-  if (path !== undefined) checkString(path, "The option path");
+  const { path, limits } = parseWith(parseXmlOptionsSchema, options, "The options object");
   if (!(typeof input === "string" || input instanceof Uint8Array)) {
     throw new DataError(`The XML input must be a string or a Uint8Array, found ${describe(input)}.`);
   }
-  const resolved = resolveXmlLimits(limits);
-  const { maxBytes } = resolved;
+  return parseDocument(input, limits, path);
+}
+
+/** Parses a document with its options read: the part of {@link parseXml} that the readers share. */
+export function parseDocument(input: string | Uint8Array, limits: XmlLimits, path: string | undefined): XmlElement {
+  const { maxBytes } = limits;
   if (typeof input === "string" ? exceedsBytes(input, maxBytes) : input.byteLength > maxBytes) {
     throw new SecurityError(
       `${documentName(path)} is larger than the limit maxBytes of ${maxBytes}.`,
@@ -183,5 +191,5 @@ export function parseXml(input: string | Uint8Array, options: ParseXmlOptions = 
       maxBytes,
     );
   }
-  return parseText(typeof input === "string" ? input : decodeXml(input, path), resolved, path);
+  return parseText(typeof input === "string" ? input : decodeXml(input, path), limits, path);
 }

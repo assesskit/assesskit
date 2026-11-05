@@ -1,6 +1,14 @@
+import * as v from "valibot";
 import type { ItemSessionControl } from "../asi/index.js";
-import { checkBoolean, checkNonNegativeInteger, checkRecord, describe } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import {
+  checkBoolean,
+  checkNonNegativeInteger,
+  checkRecord,
+  describe,
+  objectSchema,
+  parseWith,
+  strictRecord,
+} from "../checks.js";
 import { DataError } from "../errors.js";
 import { type ItemRefNode, listAncestors, type StructureNode } from "./structure.js";
 
@@ -115,6 +123,10 @@ export function resolveSessionControl(item: ItemRefNode): EffectiveSessionContro
     );
 }
 
+const resolveStandaloneSessionControlOptionsSchema = strictRecord({
+  control: v.optional(objectSchema<ItemSessionControl>()),
+});
+
 /** The options of {@link resolveStandaloneSessionControl}. */
 export interface ResolveStandaloneSessionControlOptions {
   /**
@@ -141,10 +153,8 @@ export interface ResolveStandaloneSessionControlOptions {
 export function resolveStandaloneSessionControl(
   options: ResolveStandaloneSessionControlOptions = {},
 ): EffectiveSessionControl {
-  checkOptions(options);
-  const { control } = options;
+  const { control } = parseWith(resolveStandaloneSessionControlOptionsSchema, options, "The options object");
   if (control === undefined) return STANDALONE_SESSION_CONTROL;
-  checkRecord(control, "The item session control must be an object of the model of qti-item-session-control");
   if (control.kind !== CONTROL_KIND) {
     throw new DataError(
       `The item session control must be the model of a qti-item-session-control, found the kind ${describe(control.kind)}.`,

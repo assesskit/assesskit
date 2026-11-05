@@ -1911,7 +1911,7 @@ describe("results", () => {
     const bad = (resultContext: unknown) => () =>
       engine.start({ seed: 1, at: 0, resultContext: resultContext as never });
     expect(bad(JSON.parse("null"))).toThrow(
-      "The option resultContext must be an object with the array sessionIdentifiers, found null.",
+      "The options object is invalid at resultContext: expected an object, found null.",
     );
     expect(bad(JSON.parse('{"sessionIdentifiers":"S-1"}'))).toThrow(
       'The sessionIdentifiers of the option resultContext must be an array, found "S-1".',
@@ -1962,7 +1962,7 @@ describe("datestamps and times", () => {
 
   it("refuses a time outside the years 1 to 9999, which no datestamp can show", () => {
     expect(() => engine.start({ seed: 1, at: Last + 1 })).toThrow(
-      "The option at must be epoch milliseconds from the year 1 to the year 9999, found 253402300800000.",
+      "The options object is invalid at at: expected a value of at most 253402300799999, found 253402300800000.",
     );
     expect(() => engine.start({ seed: 1, at: First - 1 })).toThrow(DataError);
     const { state } = begun(engine);

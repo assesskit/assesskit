@@ -250,9 +250,12 @@ describe("metadata of the pool", () => {
     const metadata: QtiMetadata = { interactionTypes: [], scoringModes: [] };
     expect(() => buildCatMetadata(json("{}"))).toThrow("The items must be an array, found an object.");
     expect(() => buildCatMetadata(json("null"))).toThrow(DataError);
-    expect(() => buildCatMetadata([], json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => buildCatMetadata([], json("null"))).toThrow(
+      "The options object is invalid: expected an object, found null",
+    );
+    expect(() => buildCatMetadata([], json('{"bogus":1}'))).toThrow('unexpected property "bogus"');
     expect(() => buildCatMetadata([], json('{"externalMetadata":null}'))).toThrow(
-      "The option externalMetadata must be an array, found null.",
+      "The options object is invalid at externalMetadata: expected an array, found null.",
     );
     expect(() => buildCatMetadata(json("[5]"))).toThrow("The item at index 0 must be an object, found 5.");
     expect(() => buildCatMetadata(json('[{"identifier":5}]'))).toThrow(
@@ -938,13 +941,19 @@ describe("the JSON of results and stages", () => {
   });
 
   it("refuses options of the wrong type when it reads an assessment result", () => {
-    expect(() => readResultsJson({}, json("null"))).toThrow("The options must be an object");
-    expect(() => readResultsJson({}, json('{"limits": null}'))).toThrow("The option limits must be an object");
+    expect(() => readResultsJson({}, json("null"))).toThrow("The options object is invalid: expected an object");
+    expect(() => readResultsJson({}, json('{"bogus":1}'))).toThrow('unexpected property "bogus"');
+    expect(() => readResultsJson({}, json('{"limits":{"maxResultSiz":1}}'))).toThrow(
+      'unexpected property "maxResultSiz"',
+    );
+    expect(() => readResultsJson({}, json('{"limits": null}'))).toThrow(
+      "The options object is invalid at limits: expected an object, found null",
+    );
     expect(() => readResultsJson({}, json('{"limits": {"maxResultSize": "5"}}'))).toThrow(
-      'The limit maxResultSize must be a positive integer, found "5".',
+      'The options object is invalid at limits.maxResultSize: expected a number, found "5".',
     );
     expect(() => readResultsJson({}, json('{"limits": {"maxResultSize": null}}'))).toThrow(
-      "The limit maxResultSize must be a positive integer, found null.",
+      "The options object is invalid at limits.maxResultSize: expected a number, found null.",
     );
     expect(() => readResultsJson({}, { limits: { maxResultSize: 0 } })).toThrow(DataError);
   });

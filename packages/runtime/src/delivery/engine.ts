@@ -1,5 +1,15 @@
-import { checkArray, checkRecord, checkString, describe } from "../checks.js";
-import { checkFinite, checkOptions, checkSeed } from "../checks-internal.js";
+import * as v from "valibot";
+import {
+  checkArray,
+  checkRecord,
+  checkString,
+  describe,
+  guardSchema,
+  objectSchema,
+  parseWith,
+  strictRecord,
+} from "../checks.js";
+import { checkFinite, seedSchema } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import {
   isSupportName,
@@ -10,7 +20,7 @@ import {
   type SupportSetting,
   writePnp,
 } from "../pnp/index.js";
-import { givenContext } from "../processing/internal.js";
+import { givenContext, valueMapSchema } from "../processing/internal.js";
 import { createRandom, type Random } from "../random.js";
 import type { AssessmentResult, ResultContext } from "../results/index.js";
 import { encodeBase64, type Value } from "../values/index.js";
@@ -18,7 +28,7 @@ import type { Action } from "./action.js";
 import { checkAction } from "./action-check.js";
 import type { CandidateView } from "./candidate-view.js";
 import { buildCourse, type Course, type DeliveryDefinition, type EngineOptions } from "./course.js";
-import { checkInstant } from "./datestamp.js";
+import { instantSchema } from "./datestamp.js";
 import { type Deadline, deadlinesOf } from "./deadlines.js";
 import {
   type CandidateNeeds,
@@ -249,9 +259,6 @@ function supportsOf(
  * @throws `DataError` when a value names no context variable or does not fit one of its declarations.
  */
 function checkContextValues(course: Course, values: ReadonlyMap<string, Value | null>): void {
-  if (!(values instanceof Map)) {
-    throw new DataError(`The option context must be a Map from identifier to value, found ${describe(values)}.`);
-  }
   for (const [identifier, value] of values) {
     checkString(identifier, "An identifier of the option context");
     const types = course.contextTypes.get(identifier);
@@ -299,29 +306,26 @@ const FIXED_PLANS = new WeakMap<Course, TestPlan>();
 function planOf(course: Course, random: Random): TestPlan {
   const known = FIXED_PLANS.get(course);
   if (known !== undefined) return known;
-  const plan = planTest(course.structure, { random, limits: course.limits });
+  const plan = planTest(course.structure, { random, limits: { maxPlanNodes: course.limits.maxPlanNodes } });
   if (drawsNothing(course.structure)) FIXED_PLANS.set(course, plan);
   return plan;
 }
 
+const startOptionsSchema = strictRecord({
+  seed: seedSchema,
+  at: instantSchema,
+  pnp: v.optional(objectSchema<PersonalNeedsProfile>()),
+  universalSupports: v.optional(v.array(guardSchema(isSupportName, "a support name")), []),
+  context: v.optional(valueMapSchema, () => new Map<string, Value | null>()),
+  resultContext: v.optional(objectSchema<ResultContext>(), (): ResultContext => ({ sessionIdentifiers: [] })),
+});
+
 function start(course: Course, options: StartOptions): Step {
-  checkOptions(options);
-  const {
-    seed,
-    at,
-    pnp,
-    universalSupports = [],
-    context = new Map<string, Value | null>(),
-    resultContext = { sessionIdentifiers: [] },
-  } = options;
-  checkSeed(seed);
-  checkInstant(at, "The option at");
-  if (pnp !== undefined) checkRecord(pnp, "The option pnp must be an object of the model of a PNP");
-  checkArray(universalSupports, "The option universalSupports must be an array of support names");
-  for (const name of universalSupports) {
-    if (!isSupportName(name))
-      throw new DataError(`A universal support must be a support name, found ${describe(name)}.`);
-  }
+  const { seed, at, pnp, universalSupports, context, resultContext } = parseWith(
+    startOptionsSchema,
+    options,
+    "The options object",
+  );
   checkContextValues(course, context);
   const random = createRandom(seed);
   const { structure } = course;

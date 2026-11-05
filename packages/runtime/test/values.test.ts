@@ -1277,8 +1277,9 @@ describe("wire values", () => {
       new DataError("The value must be a value or NULL, found an object."),
     );
     expect(() => writeWireValue(buildSingle("integer", 1), json("null"))).toThrow(
-      "The options must be an object, found null.",
+      "The options object is invalid: expected an object, found null",
     );
+    expect(() => writeWireValue(buildSingle("integer", 1), json('{"bogus":1}'))).toThrow('unexpected property "bogus"');
   });
 
   it("reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
@@ -1694,23 +1695,27 @@ describe("regular expressions", () => {
     it("refuses a pattern that is not a string and options that are not an object", () => {
       expect(() => compileXsdRegex(json("5"))).toThrow("The pattern must be a string, found 5.");
       expect(() => compileXsdRegex(json("null"))).toThrow(DataError);
-      expect(() => compileXsdRegex("a", json("null"))).toThrow("The options must be an object, found null.");
+      expect(() => compileXsdRegex("a", json("null"))).toThrow(
+        "The options object is invalid: expected an object, found null",
+      );
+      expect(() => compileXsdRegex("a", json('{"limits":{"maxState":1}}'))).toThrow('unexpected property "maxState"');
+      expect(() => compileXsdRegex("a", json('{"bogus":1}'))).toThrow('unexpected property "bogus"');
       expect(() => compileXsdRegex("a", json('"x"'))).toThrow(DataError);
       expect(() => compileXsdRegex("a", json("[]"))).toThrow(DataError);
     });
 
     it("refuses limits that are not an object and a limit that is not a positive integer", () => {
       expect(() => compileXsdRegex("a", { limits: json("null") })).toThrow(
-        "The option limits must be an object, found null.",
+        "The options object is invalid at limits: expected an object, found null.",
       );
       expect(() => compileXsdRegex("a", { limits: json("[]") })).toThrow(DataError);
       expect(() => compileXsdRegex("a", { limits: { maxStates: json('"5"') } })).toThrow(
-        'The limit maxStates must be a positive integer, found "5".',
+        'The options object is invalid at limits.maxStates: expected a number, found "5".',
       );
       expect(() => compileXsdRegex("a", { limits: { maxStates: 0 } })).toThrow(DataError);
       expect(() => compileXsdRegex("a", { limits: { maxStates: 1.5 } })).toThrow(DataError);
       expect(() => compileXsdRegex("a", { limits: { maxDepth: json("null") } })).toThrow(
-        "The limit maxDepth must be a positive integer, found null.",
+        "The options object is invalid at limits.maxDepth: expected a number, found null.",
       );
     });
 

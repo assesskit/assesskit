@@ -600,8 +600,10 @@ describe("compareMathSteps", () => {
   it("refuses input of other types", () => {
     expect(() => compareMathSteps(json('"x"'))).toThrow("The steps must be an array of strings");
     expect(() => compareMathSteps(json("[1]"))).toThrow("The step 0 must be a string");
-    expect(() => compareMathSteps([], json("null"))).toThrow("The options must be an object");
-    expect(() => compareMathSteps([], json('{"other":1}'))).toThrow("The options has");
+    expect(() => compareMathSteps([], json("null"))).toThrow("The options object is invalid: expected an object");
+    expect(() => compareMathSteps([], json('{"other":1}'))).toThrow(
+      'The options object is invalid: unexpected property "other"',
+    );
     expect(() => compareMathSteps([], json('{"decimalSeparator":";"}'))).toThrow("decimalSeparator");
     expect(() => compareMathSteps([], json('{"maxSteps":0}'))).toThrow("maxSteps");
     expect(() => compareMathSteps([], json('{"variables":{"x":{"min":2,"max":1}}}'))).toThrow("variables");
@@ -802,14 +804,20 @@ describe("createScoringOperators", () => {
   });
 
   it("refuses options of other types, and limits past their caps", () => {
-    expect(() => createScoringOperators(json("null"))).toThrow("The options must be an object");
-    expect(() => createScoringOperators(json('{"other":1}'))).toThrow('The options has the property "limits"');
-    expect(() => createScoringOperators(json('{"limits":[]}'))).toThrow("The option limits must be an object");
+    expect(() => createScoringOperators(json("null"))).toThrow("The options object is invalid: expected an object");
+    expect(() => createScoringOperators(json('{"other":1}'))).toThrow(
+      'The options object is invalid: unexpected property "other"',
+    );
+    expect(() => createScoringOperators(json('{"limits":[]}'))).toThrow(
+      "The options object is invalid at limits: expected an object, found an array",
+    );
     expect(() => createScoringOperators(json('{"limits":{"maxSolutions":"2"}}'))).toThrow(
-      "The limit maxSolutions must be a positive integer",
+      'The options object is invalid at limits.maxSolutions: expected a number, found "2"',
     );
     expect(() => createScoringOperators({ limits: { maxExpressionDepth: 129 } })).toThrow("at most 128");
-    expect(() => createScoringOperators(json('{"limits":{"maxFindings":1}}'))).toThrow("The option limits has");
+    expect(() => createScoringOperators(json('{"limits":{"maxFindings":1}}'))).toThrow(
+      'The options object is invalid at limits: unexpected property "maxFindings"',
+    );
   });
 });
 

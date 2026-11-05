@@ -20,4 +20,4 @@ export { evaluateTestExpression } from "./outcome-processing.js";
 export { DEFAULT_RANDOM_MIN, DEFAULT_RANDOM_STEP } from "./random-values.js";
 export { OPERATOR_SIGNATURES, type OperandSignature, type OperatorSignature } from "./signatures.js";
 export { findStandardTemplate, isQti2TemplateUri, STANDARD_TEMPLATES } from "./standard-templates.js";
-export { checkItem, checkVariables, givenContext, initialOutcome } from "./variables.js";
+export { checkItem, checkVariables, givenContext, initialOutcome, valueMapSchema } from "./variables.js";

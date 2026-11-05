@@ -674,25 +674,30 @@ describe("creating an engine", () => {
       "The base must be a string, found 1.",
     );
     expect(() => createEngine({ kind: "test", test, base: "t.xml", resolvers }, json("null"))).toThrow(
-      "The options must be an object, found null.",
+      "The options object is invalid: expected an object, found null",
+    );
+    expect(() => createEngine({ kind: "test", test, base: "t.xml", resolvers }, json('{"bogus":1}'))).toThrow(
+      'unexpected property "bogus"',
     );
     expect(() =>
       createEngine({ kind: "test", test, base: "t.xml", resolvers }, { customOperators: json("{}") }),
-    ).toThrow("The option customOperators must be a Map from a definition or class to a function, found an object.");
+    ).toThrow(
+      "The options object is invalid at customOperators: expected a Map from a definition or class to a function, found an object.",
+    );
     expect(() =>
       createEngine({ kind: "test", test, base: "t.xml", resolvers }, { limits: json('{"maxPlanNodes":"9"}') }),
-    ).toThrow('The limit maxPlanNodes must be a positive integer, found "9".');
+    ).toThrow('The options object is invalid at limits.maxPlanNodes: expected a number, found "9".');
     expect(() => createEngine({ kind: "item", item: json("[]"), base: "i.xml" })).toThrow(
       "The item must be an object of the model of qti-assessment-item, found an array.",
     );
     for (const [given, found] of [
-      ["null", "null"],
-      ["5", "5"],
-      ['""', '""'],
+      ["null", "a string, found null"],
+      ["5", "a string, found 5"],
+      ['""', "a length of at least 1, found 0"],
     ] as const) {
       expect(() =>
         createEngine({ kind: "test", test, base: "t.xml", resolvers }, { contentVersion: json(given) }),
-      ).toThrow(`The option contentVersion must be a non-empty string, found ${found}.`);
+      ).toThrow(`The options object is invalid at contentVersion: expected ${found}.`);
     }
   });
 });
@@ -804,19 +809,22 @@ describe("starting a session", () => {
 
   it("refuses options of other types", () => {
     const engine = engineOf(simple);
-    expect(() => engine.start(json("null"))).toThrow("The options must be an object, found null.");
-    expect(() => engine.start({ seed: 1.5, at: 0 })).toThrow("A seed must be a safe integer, found 1.5.");
+    expect(() => engine.start(json("null"))).toThrow("The options object is invalid: expected an object, found null");
+    expect(() => engine.start(json('{"seed":1,"at":0,"bogus":1}'))).toThrow('unexpected property "bogus"');
+    expect(() => engine.start({ seed: 1.5, at: 0 })).toThrow(
+      "The options object is invalid at seed: expected a safe integer, found 1.5.",
+    );
     expect(() => engine.start({ seed: 1, at: json('"0"') })).toThrow(
-      'The option at must be a finite number, found "0".',
+      'The options object is invalid at at: expected a number, found "0".',
     );
     expect(() => engine.start({ seed: 1, at: 0, universalSupports: json('["chocolate"]') })).toThrow(
-      'A universal support must be a support name, found "chocolate".',
+      'The options object is invalid at universalSupports[0]: expected a support name, found "chocolate".',
     );
     expect(() => engine.start({ seed: 1, at: 0, context: json("{}") })).toThrow(
-      "The option context must be a Map from identifier to value, found an object.",
+      "The options object is invalid at context: expected a Map from identifier to value, found an object.",
     );
     expect(() => engine.start({ seed: 1, at: 0, pnp: json("null") })).toThrow(
-      "The option pnp must be an object of the model of a PNP, found null.",
+      "The options object is invalid at pnp: expected an object, found null.",
     );
   });
 });
@@ -1840,10 +1848,10 @@ describe("the events of an attempt", () => {
 
   it("refuses an eventOutcomes option or context field that is not a boolean", () => {
     expect(() => engineOf(content, {}, { eventOutcomes: json("1") })).toThrow(
-      "The option eventOutcomes must be a boolean, found 1.",
+      "The options object is invalid at eventOutcomes: expected true or false, found 1.",
     );
     expect(() => engineOf(content, {}, { eventOutcomes: json("null") })).toThrow(
-      "The option eventOutcomes must be a boolean, found null.",
+      "The options object is invalid at eventOutcomes: expected true or false, found null.",
     );
     const context = contextOf(counterItem());
     expect(() => startItemSession(KEY, 0, { ...context, eventOutcomes: json('"yes"') })).toThrow(
@@ -2200,10 +2208,10 @@ describe("a review after the end", () => {
 
   it("refuses an option that is not a boolean", () => {
     expect(() => engineOf(two(""), {}, { reviewAfterEnd: json("1") })).toThrow(
-      "The option reviewAfterEnd must be a boolean, found 1.",
+      "The options object is invalid at reviewAfterEnd: expected true or false, found 1.",
     );
     expect(() => engineOf(two(""), {}, { reviewAfterEnd: json("null") })).toThrow(
-      "The option reviewAfterEnd must be a boolean, found null.",
+      "The options object is invalid at reviewAfterEnd: expected true or false, found null.",
     );
   });
 });
@@ -3358,7 +3366,10 @@ describe("starting an item session", () => {
     expect(() => startItemSession(KEY, 0, { ...context, item: json('{"kind": "assessment-test"}') })).toThrow(
       DataError,
     );
-    expect(() => startItemSession(KEY, 0, context, json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => startItemSession(KEY, 0, context, json("null"))).toThrow(
+      "The options object is invalid: expected an object, found null",
+    );
+    expect(() => startItemSession(KEY, 0, context, json('{"bogus":1}'))).toThrow('unexpected property "bogus"');
     expect(() => startItemSession(KEY, 0, context, { contextValues: json("{}") })).toThrow(DataError);
     expect(() => startItemSession(KEY, 0, context, { contextValues: new Map([["QTI_CONTEXT", integer(1)]]) })).toThrow(
       DataError,
@@ -4153,26 +4164,34 @@ describe("planning a test", () => {
     const random = createRandom(1);
     expect(() => planTest(json("null"), { random })).toThrow(DataError);
     expect(() => planTest(json('{"test":{"parts":1}}'), { random })).toThrow(DataError);
-    expect(() => planTest(structure, json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => planTest(structure, json("null"))).toThrow(
+      "The options object is invalid: expected an object, found null",
+    );
+    expect(() =>
+      planTest(structure, { random: createRandom(1), ...json<Record<string, unknown>>('{"bogus":1}') }),
+    ).toThrow('unexpected property "bogus"');
     expect(() => planTest(structure, json("{}"))).toThrow(
-      "The option random must be an object with a function uniform",
+      'The options object is invalid: missing the property "random"',
     );
     expect(() => planTest(structure, json('{"random":{"uniform":1}}'))).toThrow(
-      "The option random must be an object with a function uniform, found 1.",
+      "The options object is invalid at random: expected an object with the function uniform, found an object.",
     );
     expect(() => planTest(structure, { random, limits: json("null") })).toThrow(
-      "The option limits must be an object, found null.",
+      "The options object is invalid at limits: expected an object, found null.",
     );
     expect(() => planTest(structure, { random, limits: json('{"maxPlanNodes":"3"}') })).toThrow(
-      'The limit maxPlanNodes must be a positive integer, found "3".',
+      'The options object is invalid at limits.maxPlanNodes: expected a number, found "3".',
     );
     expect(() => planTest(structure, { random, limits: { maxPlanNodes: 0 } })).toThrow(DataError);
     expect(() => listPlanItems(json("null"))).toThrow(DataError);
     expect(() => listPlanItems(json('{"parts":{}}'))).toThrow(DataError);
     expect(() => listPlanItems(plan(structure), { part: json("1") })).toThrow(
-      "The test part must be a string, found 1.",
+      "The options object is invalid at part: expected a string, found 1.",
     );
-    expect(() => listPlanItems(plan(structure), json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => listPlanItems(plan(structure), json("null"))).toThrow(
+      "The options object is invalid: expected an object, found null",
+    );
+    expect(() => listPlanItems(plan(structure), json('{"bogus":1}'))).toThrow('unexpected property "bogus"');
   });
 
   it("refuses a random source that returns anything but a number in [0, 1)", () => {
@@ -4573,7 +4592,10 @@ describe("item session control", () => {
 
   it("refuses a control that is not an item session control", () => {
     expect(() => resolveStandaloneSessionControl({ control: json("null") })).toThrow(DataError);
-    expect(() => resolveStandaloneSessionControl(json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => resolveStandaloneSessionControl(json("null"))).toThrow(
+      "The options object is invalid: expected an object, found null",
+    );
+    expect(() => resolveStandaloneSessionControl(json('{"bogus":1}'))).toThrow('unexpected property "bogus"');
     expect(() => resolveStandaloneSessionControl({ control: json('{"kind": "assessment-item"}') })).toThrow(
       'The item session control must be the model of a qti-item-session-control, found the kind "assessment-item".',
     );
@@ -5095,18 +5117,21 @@ describe("candidate actions", () => {
 
   it("refuses limits of other types", () => {
     const input = writeCandidateAction({ type: "end-test" });
-    expect(() => readCandidateAction(input, json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => readCandidateAction(input, json("null"))).toThrow(
+      "The options object is invalid: expected an object, found null",
+    );
+    expect(() => readCandidateAction(input, json('{"bogus":1}'))).toThrow('unexpected property "bogus"');
     expect(() => readCandidateAction(input, json('{"limits":null}'))).toThrow(
-      "The option limits must be an object, found null.",
+      "The options object is invalid at limits: expected an object, found null.",
     );
     expect(() => readCandidateAction(input, json('{"limits":{"maxActionSize":"1"}}'))).toThrow(
-      'The limit maxActionSize must be a positive integer, found "1".',
+      'The options object is invalid at limits.maxActionSize: expected a number, found "1".',
     );
     expect(() => readCandidateAction(input, { limits: { maxPciStateLength: 0 } })).toThrow(
-      "The limit maxPciStateLength must be a positive integer, found 0.",
+      "The options object is invalid at limits.maxPciStateLength: expected a value of at least 1, found 0.",
     );
     expect(() => readCandidateAction(input, json('{"limits":{"maxSettingListLength":null}}'))).toThrow(
-      "The limit maxSettingListLength must be a positive integer, found null.",
+      "The options object is invalid at limits.maxSettingListLength: expected a number, found null.",
     );
   });
 
@@ -5742,10 +5767,10 @@ describe("time limits", () => {
     const item = nonlinear(section("S", refs("a"))).itemRef("a") ?? fail("No a.");
     expect(() => timeLimits(json("null"))).toThrow("The node must be an object from resolveStructure, found null.");
     expect(() => timeLimits(item, { extra: json("null") })).toThrow(
-      "The extra testing time must be an object, found null.",
+      "The options object is invalid at extra: expected an object, found null.",
     );
     const noOptions = json("null");
-    expect(() => timeLimits(item, noOptions)).toThrow("The options must be an object, found null.");
+    expect(() => timeLimits(item, noOptions)).toThrow("The options object is invalid: expected an object, found null");
     expect(() => timeLimits(item, { extra: json('{"kind":"double"}') })).toThrow(
       'The kind of the extra testing time must be "time-multiplier", "fixed-minutes" or "unlimited", found "double".',
     );

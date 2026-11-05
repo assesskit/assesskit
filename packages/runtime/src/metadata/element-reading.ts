@@ -1,5 +1,8 @@
-import { checkRecord, checkString } from "../checks.js";
+import * as v from "valibot";
+import { checkRecord, parseWith, strictRecord } from "../checks.js";
 import type { ElementReader } from "../xml/internal.js";
+
+const readMetadataOptionsSchema = strictRecord({ path: v.optional(v.string()) });
 
 /** The options of the readers of the metadata of a resource. */
 export interface ReadMetadataOptions {
@@ -16,12 +19,12 @@ export interface ReadMetadataOptions {
  *
  * @param element - The element to read.
  * @param options - The options of the reader.
- * @throws `DataError` when the element or the options are not objects or the option `path` is not a string.
+ * @throws `DataError` when the element or the options are not objects, the options hold another property, or the option `path`
+ * is not a string.
  */
 export function checkReadArguments(element: unknown, options: unknown): void {
   checkRecord(element, "The element must be an element");
-  checkRecord(options, "The options must be an object");
-  if (options.path !== undefined) checkString(options.path, "The option path");
+  parseWith(readMetadataOptionsSchema, options, "The options object");
 }
 
 /**

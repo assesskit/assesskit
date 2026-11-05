@@ -1,13 +1,16 @@
-import { checkProperties, checkRecord } from "../checks.js";
+import * as v from "valibot";
+import { parseWith, strictRecord } from "../checks.js";
 import type { CustomOperator } from "../processing/index.js";
 import { OPERATOR_DEFINITIONS } from "./definitions.js";
 import { prepareExpression, scoreExpression } from "./expression-equivalent.js";
 import { prepareAreas, scoreAreas } from "./hotspot-matching.js";
-import { type OperatorLimits, resolveOperatorLimits } from "./limits.js";
+import { type OperatorLimits, operatorLimitsSchema } from "./limits.js";
 import { prepareNumber, scoreNumber } from "./number-equivalent.js";
 import { readOptions } from "./options.js";
 import { prepareReadable, scoreReadable } from "./readable.js";
 import { prepareText, scoreText } from "./text-equivalent.js";
+
+const createScoringOperatorsOptionsSchema = strictRecord({ limits: v.optional(operatorLimitsSchema, {}) });
 
 /** The options of {@link createScoringOperators}. */
 export interface CreateScoringOperatorsOptions {
@@ -41,9 +44,7 @@ export interface CreateScoringOperatorsOptions {
 export function createScoringOperators(
   options: CreateScoringOperatorsOptions = {},
 ): ReadonlyMap<string, CustomOperator> {
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", ["limits"]);
-  const limits = resolveOperatorLimits(options.limits);
+  const { limits } = parseWith(createScoringOperatorsOptionsSchema, options, "The options object");
   const operators: [string, CustomOperator][] = [
     [
       OPERATOR_DEFINITIONS["expression-equivalent"],

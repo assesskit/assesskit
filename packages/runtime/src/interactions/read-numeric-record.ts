@@ -1,6 +1,5 @@
-import { checkString } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
-import { DataError } from "../errors.js";
+import * as v from "valibot";
+import { checkString, parseWith, strictRecord } from "../checks.js";
 import { buildRecord, buildSingle, type RecordValue, type SingleValue } from "../values/index.js";
 
 /**
@@ -11,6 +10,10 @@ import { buildRecord, buildSingle, type RecordValue, type SingleValue } from "..
 const MIN_BASE = 2;
 const MAX_BASE = 36;
 const DECIMAL = 10;
+
+const readNumericRecordOptionsSchema = strictRecord({
+  base: v.optional(v.pipe(v.number(), v.integer(), v.minValue(MIN_BASE), v.maxValue(MAX_BASE)), DECIMAL),
+});
 
 /**
  * A decimal number as typed: a sign, the digits left and right of the point, and an exponent.
@@ -108,11 +111,7 @@ export interface ReadNumericRecordOptions {
  */
 export function readNumericRecord(text: string, options: ReadNumericRecordOptions = {}): RecordValue | null {
   checkString(text, "The text");
-  checkOptions(options);
-  const { base = DECIMAL } = options;
-  if (!(Number.isInteger(base) && base >= MIN_BASE && base <= MAX_BASE)) {
-    throw new DataError(`The base must be an integer from ${MIN_BASE} to ${MAX_BASE}, found ${String(base)}.`);
-  }
+  const { base } = parseWith(readNumericRecordOptionsSchema, options, "The options object");
   const stringValue = buildSingle("string", text);
   if (stringValue === null) return null;
   const trimmed = text.trim();

@@ -52,7 +52,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   "@assesskit/runtime/checks": { gzip: 5_500, holds: ["runtime/errors", "valibot"] },
   "@assesskit/runtime/content": {
     gzip: 10_500,
-    holds: ["runtime/asi", "runtime/checks", "runtime/checks-internal", "runtime/errors", "runtime/values", "valibot"],
+    holds: ["runtime/asi", "runtime/checks", "runtime/errors", "runtime/values", "valibot"],
   },
   "@assesskit/runtime/delivery": {
     gzip: 140_500,

@@ -231,7 +231,7 @@ describe("catalogs and cards", () => {
     expect(files("tactile", { mathType: "nemeth" }, "fr")).toEqual(["nemeth.svg"]);
     expect(files("tactile", { mathType: "ueb" }, "fr")).toEqual(["ueb-2.svg"]);
     expect(() => selectCard(braille, "braille", { braille: JSON.parse('"ueb"') })).toThrow(
-      'The braille settings must be an object, found "ueb".',
+      'The options object is invalid at braille: expected an object, found "ueb".',
     );
     const settingsOf = (json: string): Braille => ({ name: "braille", replaceAccessModes: [], ...JSON.parse(json) });
     expect(() => selectCard(braille, "braille", { braille: settingsOf('{"brailleType": 5}') })).toThrow(
@@ -331,7 +331,10 @@ describe("catalogs and cards", () => {
     expect(() => selectCard(json('{"cards": 1}'), "spoken")).toThrow(DataError);
     expect(() => selectCard(catalog(), json("1"))).toThrow(DataError);
     expect(() => selectCard(catalog(), "spoken", { language: json("1") })).toThrow(DataError);
-    expect(() => selectCard(catalog(), "spoken", json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => selectCard(catalog(), "spoken", json("null"))).toThrow(
+      "The options object is invalid: expected an object, found null",
+    );
+    expect(() => selectCard(catalog(), "spoken", json('{"bogus":1}'))).toThrow('unexpected property "bogus"');
     expect(() => validateCatalog(json("null"))).toThrow(DataError);
   });
 });
@@ -456,8 +459,13 @@ describe("hazards", () => {
     expect(() => deriveHazardExposure(json('["olfactory-hazard"]'))).toThrow(
       'A hazard must be one of flashing, motionSimulation, olfactoryHazard, sound, found "olfactory-hazard".',
     );
-    expect(() => deriveHazardExposure([], { profile: json("1") })).toThrow("The profile must be an object, found 1.");
-    expect(() => deriveHazardExposure([], json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => deriveHazardExposure([], { profile: json("1") })).toThrow(
+      "The options object is invalid at profile: expected an object, found 1.",
+    );
+    expect(() => deriveHazardExposure([], json("null"))).toThrow(
+      "The options object is invalid: expected an object, found null",
+    );
+    expect(() => deriveHazardExposure([], json('{"bogus":1}'))).toThrow('unexpected property "bogus"');
   });
 });
 
@@ -761,8 +769,11 @@ describe("resolving content", () => {
     expect(() => resolveContent(body, variables(), json("null"), options)).toThrow(DataError);
     expect(() => resolveContent(body, variables(), json('{"templateDeclarations": 1}'), options)).toThrow(DataError);
     expect(() => resolveContent(body, variables(), sample, json("null"))).toThrow(DataError);
+    expect(() => resolveContent(body, variables(), sample, json('{"view":"author","bogus":1}'))).toThrow(
+      'unexpected property "bogus"',
+    );
     expect(() => resolveContent(body, variables(), sample, json('{"view": "student"}'))).toThrow(
-      'The option view must be "author", "candidate", "proctor", "scorer", "testConstructor" or "tutor", found "student".',
+      'The options object is invalid at view: expected "author", "candidate", "proctor", "scorer", "testConstructor" or "tutor", found "student".',
     );
   });
 });

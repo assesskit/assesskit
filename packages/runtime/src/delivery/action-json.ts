@@ -2,14 +2,14 @@ import * as v from "valibot";
 import {
   checkChoice,
   checkJsonInput,
-  checkPositiveInteger,
   checkRecord,
   describe,
   isRecord,
   parseWith,
   type Schema,
+  strictRecord,
 } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import { limitsSchema } from "../checks-internal.js";
 import { DataError, SecurityError } from "../errors.js";
 import { CANDIDATE_ACTION_TYPES, type CandidateAction, candidateActionSchemas, HOST_ACTION_TYPES } from "./action.js";
 import { entriesSchema, valuesSchema, valuesToJson } from "./entries-json.js";
@@ -56,18 +56,9 @@ export const DEFAULT_ACTION_LIMITS: ActionLimits = {
   maxSettingListLength: 256,
 };
 
-function readLimits(limits: Partial<ActionLimits>): ActionLimits {
-  checkRecord(limits, "The option limits must be an object");
-  const {
-    maxActionSize = DEFAULT_ACTION_LIMITS.maxActionSize,
-    maxPciStateLength = DEFAULT_ACTION_LIMITS.maxPciStateLength,
-    maxSettingListLength = DEFAULT_ACTION_LIMITS.maxSettingListLength,
-  } = limits;
-  checkPositiveInteger(maxActionSize, "The limit maxActionSize");
-  checkPositiveInteger(maxPciStateLength, "The limit maxPciStateLength");
-  checkPositiveInteger(maxSettingListLength, "The limit maxSettingListLength");
-  return { maxActionSize, maxPciStateLength, maxSettingListLength };
-}
+const readCandidateActionOptionsSchema = strictRecord({
+  limits: v.optional(limitsSchema(DEFAULT_ACTION_LIMITS), {}),
+});
 
 const actionSchema: Schema<CandidateAction> = v.variant(
   "type",
@@ -143,9 +134,8 @@ function checkPciStates(action: CandidateAction, limit: number): void {
  * a list in the settings of `support-settings` is longer than `maxSettingListLength`.
  */
 export function readCandidateAction(json: unknown, options: ReadCandidateActionOptions = {}): CandidateAction {
-  checkOptions(options);
-  const { limits = {} } = options;
-  const { maxActionSize, maxPciStateLength, maxSettingListLength } = readLimits(limits);
+  const { limits } = parseWith(readCandidateActionOptionsSchema, options, "The options object");
+  const { maxActionSize, maxPciStateLength, maxSettingListLength } = limits;
   checkJsonInput(json, "The action", maxActionSize, "maxActionSize");
   refuseHostAction(json);
   checkSettingLists(json, maxSettingListLength);

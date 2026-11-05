@@ -1,6 +1,15 @@
-import { checkFunction, checkString } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import * as v from "valibot";
+import { functionSchema, parseWith, strictRecord } from "../checks.js";
 import { defaultSchemaDirectory } from "../node/index.js";
+
+const writeFunctionSchema = functionSchema<(text: string) => void>();
+
+const runCliOptionsSchema = strictRecord({
+  stdout: v.optional(writeFunctionSchema, (): ((text: string) => void) => (text) => void process.stdout.write(text)),
+  stderr: v.optional(writeFunctionSchema, (): ((text: string) => void) => (text) => void process.stderr.write(text)),
+  schemaDirectory: v.optional(v.string(), defaultSchemaDirectory),
+  fetch: v.optional(functionSchema<typeof fetch>(), () => fetch),
+});
 
 /** Options of {@link runCli}: what the command line touches besides its arguments. */
 export interface RunCliOptions {
@@ -39,16 +48,5 @@ export interface RunCliOptions {
  * @throws `DataError` when they are not an object, or an option has the wrong type.
  */
 export function resolveOptions(options: RunCliOptions): Required<RunCliOptions> {
-  checkOptions(options);
-  const {
-    stdout = (text) => void process.stdout.write(text),
-    stderr = (text) => void process.stderr.write(text),
-    schemaDirectory = defaultSchemaDirectory(),
-    fetch: fetchUrl = fetch,
-  } = options;
-  checkFunction(stdout, "The option stdout must be a function of a text");
-  checkFunction(stderr, "The option stderr must be a function of a text");
-  checkString(schemaDirectory, "The option schemaDirectory");
-  checkFunction(fetchUrl, "The option fetch must be a function of an address");
-  return { stdout, stderr, schemaDirectory, fetch: fetchUrl };
+  return parseWith(runCliOptionsSchema, options, "The options object");
 }

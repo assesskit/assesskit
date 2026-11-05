@@ -2,8 +2,6 @@
 import * as v from "valibot";
 import {
   checkJsonInput,
-  checkPositiveInteger,
-  checkRecord,
   describe,
   finiteSchema,
   nonEmptyStringSchema,
@@ -11,9 +9,10 @@ import {
   parseWith,
   recordSchema,
   type Schema,
+  strictRecord,
   transformWith,
 } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import { limitsSchema } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import type {
   AssessmentResult,
@@ -265,6 +264,10 @@ export interface ReadResultsJsonOptions {
  */
 export const DEFAULT_RESULTS_JSON_LIMITS: ResultsJsonLimits = { maxResultSize: 8_388_608 };
 
+const readResultsJsonOptionsSchema = strictRecord({
+  limits: v.optional(limitsSchema(DEFAULT_RESULTS_JSON_LIMITS), {}),
+});
+
 /**
  * Reads an assessment result that a CAT engine returned in the JSON of the binding, or that a host sent to a CAT engine.
  *
@@ -283,11 +286,7 @@ export const DEFAULT_RESULTS_JSON_LIMITS: ResultsJsonLimits = { maxResultSize: 8
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, JSON binding of the assessment result}
  */
 export function readResultsJson(json: unknown, options: ReadResultsJsonOptions = {}): AssessmentResult {
-  checkOptions(options);
-  const { limits = {} } = options;
-  checkRecord(limits, "The option limits must be an object");
-  const { maxResultSize = DEFAULT_RESULTS_JSON_LIMITS.maxResultSize } = limits;
-  checkPositiveInteger(maxResultSize, "The limit maxResultSize");
+  const { maxResultSize } = parseWith(readResultsJsonOptionsSchema, options, "The options object").limits;
   checkJsonInput(json, "The assessmentResult", maxResultSize, "maxResultSize");
   return parseWith(assessmentResultSchema, json, "The assessmentResult");
 }

@@ -1,8 +1,8 @@
-import { checkArray, checkChoice, checkRecord, checkString, describe } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import * as v from "valibot";
+import { checkArray, checkChoice, checkRecord, checkString, describe, parseWith, strictRecord } from "../checks.js";
 import { DataError, type ReadError } from "../errors.js";
 import { isXmlLanguage } from "./language.js";
-import { type ParseXmlOptions, parseXml } from "./parse.js";
+import { type ParseXmlOptions, parseDocument, parseXmlOptionsSchema } from "./parse.js";
 import { createReadError, locateElement } from "./read-error.js";
 import { XML_NAMESPACE, XMLNS_NAMESPACE, type XmlAttribute, type XmlElement, XSI_NAMESPACE } from "./tree.js";
 
@@ -30,6 +30,8 @@ export interface CreateTermConverterOptions {
   readonly label?: string;
 }
 
+const createTermConverterOptionsSchema = strictRecord({ label: v.optional(v.string(), "The text") });
+
 /**
  * Returns a conversion for `ElementReader.text` and `ElementReader.attribute`: the text must be one of some terms.
  *
@@ -42,8 +44,7 @@ export function createTermConverter<T extends string>(
   terms: readonly T[],
   options: CreateTermConverterOptions = {},
 ): (text: string) => T {
-  checkOptions(options);
-  const { label = "The text" } = options;
+  const { label } = parseWith(createTermConverterOptionsSchema, options, "The options object");
   return (text) => {
     checkChoice(text, label, terms);
     return text;
@@ -108,10 +109,10 @@ export class ElementReader {
    * @throws `ReadError` and `SecurityError` as {@link parseXml} does.
    */
   static open(input: unknown, rules: ReaderRules, what: string, options: ParseXmlOptions = {}): ElementReader {
-    checkOptions(options);
-    const located = options.path === undefined ? rules : { ...rules, path: options.path };
+    const { path, limits } = parseWith(parseXmlOptionsSchema, options, "The options object");
+    const located = path === undefined ? rules : { ...rules, path };
     if (typeof input === "string" || input instanceof Uint8Array) {
-      return new ElementReader(parseXml(input, options), located);
+      return new ElementReader(parseDocument(input, limits, path), located);
     }
     if (typeof input === "object" && input !== null && Reflect.get(input, "kind") === "element") {
       return new ElementReader(input as XmlElement, located);

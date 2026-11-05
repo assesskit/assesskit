@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import {
   type AssessmentItem,
   type AssociableHotspot,
@@ -22,7 +23,7 @@ import {
   type TextNode,
 } from "../asi/index.js";
 import { isBodyNode } from "../asi/internal.js";
-import { checkArray, checkChoice, checkRecord, describe } from "../checks.js";
+import { checkArray, checkRecord, describe, parseWith, strictRecord } from "../checks.js";
 import { DataError } from "../errors.js";
 import type { Value } from "../values/index.js";
 import { formatPrintedVariable } from "./printed-variable.js";
@@ -30,6 +31,8 @@ import { VIEWS, type View } from "./rubric.js";
 import { substituteMath, templateText } from "./substitution.js";
 import type { ContentVariables } from "./variables.js";
 import { isShown } from "./visibility.js";
+
+const resolveContentOptionsSchema = strictRecord({ view: v.picklist(VIEWS) });
 
 /** The options of {@link resolveContent}. */
 export interface ResolveContentOptions {
@@ -202,9 +205,8 @@ export function resolveContent(
   const input: unknown = item;
   checkRecord(input, "The item must be an object of the model of qti-assessment-item");
   checkArray(input.templateDeclarations, "The template declarations of the item must be an array");
-  checkRecord(options, "The options must be an object with the property view");
-  checkChoice(options.view, "The option view", VIEWS);
-  const resolution: Resolution = { variables, view: options.view, ...substitutions(item, variables) };
+  const { view } = parseWith(resolveContentOptionsSchema, options, "The options object");
+  const resolution: Resolution = { variables, view, ...substitutions(item, variables) };
   return nodes.flatMap((node) => {
     const resolved = resolveNode(node, resolution);
     return isBodyNode(resolved) ? [resolved] : [];

@@ -349,6 +349,10 @@ describe("reading package files", () => {
     await expect(readPackageFile(JSON.parse("5"))).rejects.toThrow("The path must be a string, found 5.");
     await expect(readPackageFile(JSON.parse("null"))).rejects.toThrow(DataError);
     await expect(readPackageFile(directory, JSON.parse("null"))).rejects.toThrow(DataError);
+    await expect(readPackageFile(directory, JSON.parse('{"bogus":1}'))).rejects.toThrow('unexpected property "bogus"');
+    await expect(readPackageFile(directory, JSON.parse('{"limits":{"maxEntry":9}}'))).rejects.toThrow(
+      'unexpected property "maxEntry"',
+    );
     await expect(readPackageFile(directory, JSON.parse('{"limits":{"maxEntries":-1}}'))).rejects.toThrow(DataError);
   });
 });

@@ -1,8 +1,7 @@
-import { checkFunction, checkRecord, checkString, describe } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import { checkFunction, checkRecord, describe, parseWith } from "../checks.js";
 import { DataError } from "../errors.js";
-import { type ParseXmlOptions, parseXml, serializeXml, type XmlElement } from "../xml/index.js";
-import { XMLNS_NAMESPACE } from "../xml/internal.js";
+import { type ParseXmlOptions, serializeXml, type XmlElement, type XmlLimits } from "../xml/index.js";
+import { parseDocument, parseXmlOptionsSchema, XMLNS_NAMESPACE } from "../xml/internal.js";
 import { DOCUMENT_ELEMENTS } from "./element-table.js";
 import { isElement } from "./guards.js";
 import type {
@@ -79,9 +78,9 @@ export interface ReadAsiOptions {
    */
   readonly path?: string;
   /**
-   * Limits that replace the defaults of {@link parseXml}, field by field; they apply to text and bytes.
+   * Limits that replace the defaults of {@link ParseXmlOptions.limits}, field by field; they apply to text and bytes.
    *
-   * @defaultValue `{}`, which keeps the defaults of {@link parseXml}
+   * @defaultValue `{}`, which keeps the defaults of {@link ParseXmlOptions.limits}
    */
   readonly limits?: ParseXmlOptions["limits"];
 }
@@ -118,13 +117,11 @@ function withoutSchemaLocation(root: XmlElement): XmlElement {
   return { ...root, attributes };
 }
 
-function rootOf(input: string | Uint8Array | XmlElement, options: ReadAsiOptions): XmlElement {
-  const { path, limits = {} } = options;
-  if (path !== undefined) checkString(path, "The option path");
-  checkRecord(limits, "The option limits must be an object");
-  if (typeof input === "string" || input instanceof Uint8Array) {
-    return parseXml(input, { path, limits });
-  }
+function rootOf(
+  input: string | Uint8Array | XmlElement,
+  { path, limits }: { readonly path?: string; readonly limits: XmlLimits },
+): XmlElement {
+  if (typeof input === "string" || input instanceof Uint8Array) return parseDocument(input, limits, path);
   if (!isElement(input)) {
     throw new DataError(`The input must be a string, a Uint8Array or an XmlElement, found ${describe(input)}.`);
   }
@@ -155,9 +152,9 @@ function rootOf(input: string | Uint8Array | XmlElement, options: ReadAsiOptions
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
  */
 export function readAsi(input: string | Uint8Array | XmlElement, options: ReadAsiOptions = {}): AsiDocument {
-  checkOptions(options);
-  const root = rootOf(input, options);
-  const context: ReadContext = { path: options.path, trail: [] };
+  const read = parseWith(parseXmlOptionsSchema, options, "The options object");
+  const root = rootOf(input, read);
+  const context: ReadContext = { path: read.path, trail: [] };
   const entry = root.namespace === ASI_NAMESPACE ? BY_ELEMENT.get(root.name) : undefined;
   if (entry === undefined) {
     const names = ENTRIES.map(({ element }) => element).join(", ");

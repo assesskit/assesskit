@@ -1,14 +1,14 @@
+import * as v from "valibot";
 import { type AsiDocument, readAsi } from "../asi/index.js";
-import { checkArray, checkFunction, checkRecord, checkString, describe } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import { checkArray, checkFunction, checkRecord, checkString, describe, parseWith, strictRecord } from "../checks.js";
 import { AssesskitError, DataError, SecurityError } from "../errors.js";
 import { parseXml, resolveIncludes, type XmlElement, type XmlLimits } from "../xml/index.js";
-import { createReadError } from "../xml/internal.js";
+import { createReadError, xmlLimitsSchema } from "../xml/internal.js";
 import type { Manifest } from "./manifest.js";
 import type { PackageFiles } from "./package-files.js";
 import { normalizeEntryName, resolveReference } from "./paths.js";
 import { readManifest } from "./read-manifest.js";
-import { resolveZipLimits, type ZipLimits } from "./zip-limits.js";
+import { type ZipLimits, zipLimitsSchema } from "./zip-limits.js";
 import { memorySource, openZip } from "./zip-reader.js";
 
 /** The path of the manifest in a package. */
@@ -72,15 +72,23 @@ export interface ReadPackageOptions extends OpenPackageOptions {
   readonly limits?: Partial<ZipLimits>;
 }
 
+const openPackageOptionsSchema = strictRecord({ xmlLimits: v.optional(xmlLimitsSchema, {}) });
+
+/** The schema of {@link ReadPackageOptions}, which `readPackageFile` reads as `readPackage` does. */
+export const readPackageOptionsSchema = strictRecord({
+  limits: v.optional(zipLimitsSchema, {}),
+  xmlLimits: v.optional(xmlLimitsSchema, {}),
+});
+
 class OpenedPackage implements QtiPackage {
   readonly manifest: Manifest;
   readonly paths: readonly string[];
   private readonly files: PackageFiles;
   private readonly listed: ReadonlySet<string>;
-  private readonly xmlLimits: Partial<XmlLimits>;
+  private readonly xmlLimits: XmlLimits;
   private readonly documents = new Map<string, AsiDocument>();
 
-  constructor(files: PackageFiles, xmlLimits: Partial<XmlLimits>) {
+  constructor(files: PackageFiles, xmlLimits: XmlLimits) {
     this.files = files;
     this.paths = [...files.paths];
     this.listed = new Set(files.paths);
@@ -183,9 +191,7 @@ class OpenedPackage implements QtiPackage {
  * @throws `SecurityError` as {@link parseXml} does for the manifest.
  */
 export function openPackage(files: PackageFiles, options: OpenPackageOptions = {}): QtiPackage {
-  checkOptions(options);
-  const { xmlLimits = {} } = options;
-  checkRecord(xmlLimits, "The option xmlLimits must be an object");
+  const { xmlLimits } = parseWith(openPackageOptionsSchema, options, "The options object");
   checkRecord(files, "The files must be an object");
   checkArray(files.paths, "The paths of the files must be an array");
   checkFunction(files.read, "The files must have a function read of a path");
@@ -216,11 +222,7 @@ export function openPackage(files: PackageFiles, options: OpenPackageOptions = {
  * @see {@link https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT | ZIP File Format Specification (APPNOTE)}
  */
 export function readPackage(zip: Uint8Array, options: ReadPackageOptions = {}): QtiPackage {
-  checkOptions(options);
-  const { limits = {}, xmlLimits } = options;
+  const { limits, xmlLimits } = parseWith(readPackageOptionsSchema, options, "The options object");
   if (!(zip instanceof Uint8Array)) throw new DataError(`The archive must be a Uint8Array, found ${describe(zip)}.`);
-  return openPackage(
-    openZip(memorySource(zip), resolveZipLimits(limits)),
-    xmlLimits === undefined ? {} : { xmlLimits },
-  );
+  return openPackage(openZip(memorySource(zip), limits), { xmlLimits });
 }

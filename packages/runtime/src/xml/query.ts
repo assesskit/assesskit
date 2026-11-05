@@ -1,3 +1,5 @@
+import * as v from "valibot";
+import { parseWith, strictRecord } from "../checks.js";
 import type { XmlElement } from "./tree.js";
 
 /**
@@ -9,6 +11,8 @@ import type { XmlElement } from "./tree.js";
 export function listChildElements(element: XmlElement): readonly XmlElement[] {
   return element.children.filter((child): child is XmlElement => child.kind === "element");
 }
+
+const findAttributeOptionsSchema = strictRecord({ namespace: v.optional(v.string(), "") });
 
 /** The options of {@link findAttribute}. */
 export interface FindAttributeOptions {
@@ -33,7 +37,7 @@ export function findAttribute(
   name: string,
   options: FindAttributeOptions = {},
 ): string | undefined {
-  const { namespace = "" } = options;
+  const { namespace } = parseWith(findAttributeOptionsSchema, options, "The options object");
   return element.attributes.find((attribute) => attribute.namespace === namespace && attribute.name === name)?.value;
 }
 

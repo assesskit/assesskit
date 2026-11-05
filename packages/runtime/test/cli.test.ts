@@ -254,7 +254,7 @@ describe("running the command line", () => {
       new DataError("An argument must be a string, found 1."),
     );
     await expect(runCli([], JSON.parse("null"))).rejects.toThrow(
-      new DataError("The options must be an object, found null."),
+      new DataError("The options object is invalid: expected an object, found null."),
     );
   });
 });
@@ -278,12 +278,16 @@ describe("options of the command line", () => {
 
   it("rejects options of other types, as JavaScript or JSON pass them", () => {
     const wrong: [string, string][] = [
-      ["null", "The options must be an object, found null."],
-      ['{"stdout":1}', "The option stdout must be a function of a text, found 1."],
-      ['{"stderr":"x"}', 'The option stderr must be a function of a text, found "x".'],
-      ['{"schemaDirectory":[]}', "The option schemaDirectory must be a string, found an array."],
-      ['{"fetch":{}}', "The option fetch must be a function of an address, found an object."],
-      ['{"schemaDirectory":null}', "The option schemaDirectory must be a string, found null."],
+      ["null", "The options object is invalid: expected an object, found null."],
+      ['{"bogus":1}', 'The options object is invalid: unexpected property "bogus".'],
+      ['{"stdout":1}', "The options object is invalid at stdout: expected a function, found 1."],
+      ['{"stderr":"x"}', 'The options object is invalid at stderr: expected a function, found "x".'],
+      [
+        '{"schemaDirectory":[]}',
+        "The options object is invalid at schemaDirectory: expected a string, found an array.",
+      ],
+      ['{"fetch":{}}', "The options object is invalid at fetch: expected a function, found an object."],
+      ['{"schemaDirectory":null}', "The options object is invalid at schemaDirectory: expected a string, found null."],
     ];
     for (const [json, message] of wrong) {
       expect(() => resolveOptions(JSON.parse(json)), json).toThrow(new DataError(message));

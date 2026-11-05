@@ -1,5 +1,6 @@
-import { checkPositiveInteger, checkRecord, checkString } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import * as v from "valibot";
+import { checkString, parseWith, strictRecord } from "../checks.js";
+import { limitsSchema } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import { buildMatcher, type XsdPattern } from "./xsd-regex-matcher.js";
 import { countStates } from "./xsd-regex-nfa.js";
@@ -23,6 +24,10 @@ export interface XsdRegexLimits {
 
 /** The default limits: `maxStates` allows `a{100000}`, the largest repeat of one character. */
 export const DEFAULT_XSD_REGEX_LIMITS: XsdRegexLimits = { maxStates: 100_000, maxDepth: 100 };
+
+const compileXsdRegexOptionsSchema = strictRecord({
+  limits: v.optional(limitsSchema(DEFAULT_XSD_REGEX_LIMITS), {}),
+});
 
 /** The options of {@link compileXsdRegex}. */
 export interface CompileXsdRegexOptions {
@@ -53,12 +58,7 @@ export interface CompileXsdRegexOptions {
  */
 export function compileXsdRegex(pattern: string, options: CompileXsdRegexOptions = {}): XsdPattern {
   checkString(pattern, "The pattern");
-  checkOptions(options);
-  const { limits = {} } = options;
-  checkRecord(limits, "The option limits must be an object");
-  const { maxStates = DEFAULT_XSD_REGEX_LIMITS.maxStates, maxDepth = DEFAULT_XSD_REGEX_LIMITS.maxDepth } = limits;
-  checkPositiveInteger(maxStates, "The limit maxStates");
-  checkPositiveInteger(maxDepth, "The limit maxDepth");
+  const { maxStates, maxDepth } = parseWith(compileXsdRegexOptionsSchema, options, "The options object").limits;
   const tree = new PatternParser(pattern, maxDepth).parse();
   if (countStates(tree, maxStates) > maxStates) {
     throw new DataError(

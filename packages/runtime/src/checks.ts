@@ -589,6 +589,16 @@ export function functionSchema<TFunction extends (...args: never[]) => unknown>(
 }
 
 /**
+ * The schema of a host's object that passes on whole, such as a profile or a stylesheet: only that it is an object is
+ * checked, and the fields are the host's to keep, or a check of its own follows.
+ *
+ * @typeParam TObject - The type of the object.
+ */
+export function objectSchema<TObject extends object>(): Schema<TObject> {
+  return guardSchema((value): value is TObject => isRecord(value), "an object");
+}
+
+/**
  * The schema of a host's object with functions, such as a store or an engine. Only that each is a function is checked:
  * the object passes on whole, so a class instance keeps its methods.
  *

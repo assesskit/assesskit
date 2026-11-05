@@ -1,16 +1,7 @@
 // The checks of one value that only the runtime uses. `checks.ts` holds those that the player shares.
 import * as v from "valibot";
-import { checkRecord, describe } from "./checks.js";
+import { describe, positiveIntegerSchema, type Schema, strictRecord } from "./checks.js";
 import { DataError } from "./errors.js";
-
-/**
- * Checks a function's options: an object, as a caller from JavaScript may pass `null` or another value.
- *
- * @throws `DataError` when they are not.
- */
-export function checkOptions(options: unknown): void {
-  checkRecord(options, "The options must be an object");
-}
 
 /**
  * Checks that a value is bytes, such as the content of a file.
@@ -57,5 +48,34 @@ export function checkSeed(seed: unknown): asserts seed is number {
   }
 }
 
+/** A seed: a safe integer. */
+export const seedSchema = v.pipe(v.number(), v.safeInteger());
+
 /** A finite number of at least 0. */
 export const nonNegativeSchema = v.pipe(v.number(), v.finite(), v.minValue(0));
+
+/**
+ * The schema of the limits that a caller sets: each a positive integer of at most its cap, and a limit left out has its
+ * default. A name that is not a limit is refused, so that a misspelled limit never passes unseen.
+ *
+ * @param defaults - The limits as they are when the caller sets none; its names are the limits.
+ * @param caps - The most a caller may set for a limit; a limit not named has no cap.
+ * @param names - The limits that the caller may set, if not all of them.
+ * @returns A schema whose output is every limit, frozen.
+ */
+export function limitsSchema<TLimits extends Readonly<Record<keyof TLimits, number>>>(
+  defaults: TLimits,
+  caps?: Readonly<Partial<Record<keyof TLimits, number>>>,
+  names: readonly string[] = Object.keys(defaults),
+): Schema<Readonly<TLimits>> {
+  const entries: Record<string, v.GenericSchema> = {};
+  for (const name of names) {
+    const cap: unknown = caps === undefined ? undefined : Reflect.get(caps, name);
+    const limit = typeof cap === "number" ? v.pipe(positiveIntegerSchema, v.maxValue(cap)) : positiveIntegerSchema;
+    entries[name] = v.optional(limit, Reflect.get(defaults, name));
+  }
+  return v.pipe(
+    strictRecord(entries),
+    v.transform((given): Readonly<TLimits> => Object.freeze({ ...defaults, ...given })),
+  );
+}

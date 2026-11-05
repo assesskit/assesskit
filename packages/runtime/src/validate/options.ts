@@ -1,7 +1,6 @@
+import * as v from "valibot";
 import type { ResponseProcessing } from "../asi/index.js";
-import { checkFunction, checkPositiveInteger, checkString, describe } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
-import { DataError } from "../errors.js";
+import { functionSchema, guardSchema, parseWith, positiveIntegerSchema, strictRecord } from "../checks.js";
 import type { CustomOperator } from "../processing/index.js";
 import { DEFAULT_MAX_FINDINGS } from "./findings.js";
 
@@ -48,35 +47,45 @@ export interface CheckedOptions {
   readonly maxFindings: number;
 }
 
+/** The schema of the option `customOperators`: a Map, whose entries the engine and the processing check. */
+export const customOperatorsSchema = guardSchema(
+  (value): value is ReadonlyMap<string, CustomOperator> => value instanceof Map,
+  "a Map from a definition or class to a function",
+);
+
+const maxFindingsSchema = v.optional(positiveIntegerSchema, DEFAULT_MAX_FINDINGS);
+
+const findingsOptionsSchema = strictRecord({ maxFindings: maxFindingsSchema });
+
+const validateOptionsSchema = strictRecord({
+  path: v.optional(v.string()),
+  customOperators: v.optional(customOperatorsSchema),
+  resolveTemplate: v.optional(functionSchema<(uri: string) => ResponseProcessing | undefined>()),
+  maxFindings: maxFindingsSchema,
+});
+
 /**
- * Checks the option `maxFindings` of a validation and returns it, or its default.
+ * Reads the option `maxFindings` of a validation and returns it, or its default.
  *
- * @throws `DataError` when it is not a positive integer.
+ * @throws `DataError` when the options are not an object, hold another option, or `maxFindings` is not a positive integer.
  */
 export function checkMaxFindings(options: Pick<ValidateOptions, "maxFindings">): number {
-  checkOptions(options);
-  const { maxFindings = DEFAULT_MAX_FINDINGS } = options;
-  checkPositiveInteger(maxFindings, "The option maxFindings");
-  return maxFindings;
+  return parseWith(findingsOptionsSchema, options, "The options object").maxFindings;
 }
 
 /**
- * Checks the options of a validation function and returns them.
+ * Reads the options of a validation function and returns them.
  *
  * @param options - The options of a validation function.
  * @returns The options as the checks use them.
- * @throws `DataError` when they are not an object, or `path` is not a string, `customOperators` not a `Map`,
- * `resolveTemplate` not a function or `maxFindings` not a positive integer.
+ * @throws `DataError` when they are not an object, hold another option, or `path` is not a string, `customOperators` not a
+ * `Map`, `resolveTemplate` not a function or `maxFindings` not a positive integer.
  */
 export function checkValidateOptions(options: ValidateOptions): CheckedOptions {
-  const maxFindings = checkMaxFindings(options);
-  const { path, customOperators, resolveTemplate } = options;
-  if (path !== undefined) checkString(path, "The option path");
-  if (customOperators !== undefined && !(customOperators instanceof Map)) {
-    throw new DataError(
-      `The option customOperators must be a Map from a definition or class to a function, found ${describe(customOperators)}.`,
-    );
-  }
-  if (resolveTemplate !== undefined) checkFunction(resolveTemplate, "The option resolveTemplate must be a function");
+  const { path, customOperators, resolveTemplate, maxFindings } = parseWith(
+    validateOptionsSchema,
+    options,
+    "The options object",
+  );
   return { path, customOperators, resolveTemplate, maxFindings };
 }

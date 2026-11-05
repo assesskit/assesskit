@@ -1,5 +1,5 @@
-import { checkArray, checkRecord, describe } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import * as v from "valibot";
+import { checkArray, describe, objectSchema, parseWith, strictRecord } from "../checks.js";
 import { DataError } from "../errors.js";
 import type { DrdHazard } from "../metadata/index.js";
 import type { PersonalNeedsProfile, PnpHazard } from "../pnp/index.js";
@@ -24,6 +24,8 @@ export interface HazardExposure {
   /** Whether the profile lists the hazard under `hazard-avoidance`, so that the candidate should not be exposed to it. */
   readonly avoided: boolean;
 }
+
+const deriveHazardExposureOptionsSchema = strictRecord({ profile: v.optional(objectSchema<PersonalNeedsProfile>()) });
 
 /** The options of {@link deriveHazardExposure}. */
 export interface DeriveHazardExposureOptions {
@@ -53,9 +55,7 @@ export function deriveHazardExposure(
   options: DeriveHazardExposureOptions = {},
 ): readonly HazardExposure[] {
   checkArray(hazards, "The hazards must be an array");
-  checkOptions(options);
-  const { profile } = options;
-  if (profile !== undefined) checkRecord(profile, "The profile must be an object");
+  const { profile } = parseWith(deriveHazardExposureOptionsSchema, options, "The options object");
   const setting = profile?.supports.get("hazard-avoidance");
   const avoided = new Set(setting?.name === "hazard-avoidance" ? setting.hazards : []);
   return [...new Set(hazards)].map((hazard) => {

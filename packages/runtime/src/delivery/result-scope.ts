@@ -1,6 +1,6 @@
+import * as v from "valibot";
 import type { AssessmentItem } from "../asi/index.js";
-import { checkArray, checkFunction, checkRecord, describe } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import { checkArray, checkFunction, checkRecord, describe, guardSchema, parseWith, strictRecord } from "../checks.js";
 import { DataError } from "../errors.js";
 import {
   type ItemSessionFilter,
@@ -39,6 +39,16 @@ export interface TestInputs {
   /** The item sessions and the other variables of the test. */
   readonly scope: TestScope;
 }
+
+const readTestInputsOptionsSchema = strictRecord({
+  variables: v.optional(
+    guardSchema(
+      (value): value is ReadonlyMap<number, ItemVariables> => value instanceof Map,
+      "a Map from position to variables",
+    ),
+    () => new Map<number, ItemVariables>(),
+  ),
+});
 
 /** The options of {@link readTestInputs}. */
 export interface ReadTestInputsOptions {
@@ -185,11 +195,7 @@ export function readTestInputs(
   if (!(items instanceof Map)) {
     throw new DataError(`The items must be a Map from item reference identifier to item, found ${describe(items)}.`);
   }
-  checkOptions(options);
-  const { variables = new Map<number, ItemVariables>() } = options;
-  if (!(variables instanceof Map)) {
-    throw new DataError(`The option variables must be a Map from position to variables, found ${describe(variables)}.`);
-  }
+  const { variables } = parseWith(readTestInputsOptionsSchema, options, "The options object");
   const { testResult } = result;
   if (testResult === undefined) {
     throw new DataError(

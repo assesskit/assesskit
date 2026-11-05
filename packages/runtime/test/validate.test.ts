@@ -2439,12 +2439,17 @@ describe("the entry points", () => {
 
   it("throw a DataError for an option or an argument of the wrong type, as JavaScript and JSON pass them", () => {
     expect(() => validateAsi(document(), json("null"))).toThrow(DataError);
-    expect(() => validateAsi(document(), json('{"path":1}'))).toThrow("The option path must be a string, found 1.");
+    expect(() => validateAsi(document(), json('{"bogus":1}'))).toThrow('unexpected property "bogus"');
+    expect(() => validateResults(report([]), json('{"bogus":1}'))).toThrow('unexpected property "bogus"');
+    expect(() => validatePnpNamespace(parseXml("<a/>"), json('{"bogus":1}'))).toThrow('unexpected property "bogus"');
+    expect(() => validateAsi(document(), json('{"path":1}'))).toThrow(
+      "The options object is invalid at path: expected a string, found 1.",
+    );
     expect(() => validateAsi(document(), json('{"customOperators":{}}'))).toThrow(
-      "The option customOperators must be a Map",
+      "The options object is invalid at customOperators: expected a Map from a definition or class to a function, found an object.",
     );
     expect(() => validateAsi(document(), json('{"resolveTemplate":1}'))).toThrow(
-      "The option resolveTemplate must be a function",
+      "The options object is invalid at resolveTemplate: expected a function, found 1.",
     );
     expect(() => validateAsi(json<AsiDocument>("null"))).toThrow(DataError);
     expect(() => validateAsi(json<AsiDocument>('{"kind":"other"}'))).toThrow(
@@ -2603,9 +2608,7 @@ describe("the entry points", () => {
         '{"maxFindings":"3"}',
         '{"maxFindings":null}',
       ]) {
-        expect(() => validateAsi(document(), json(options))).toThrow(
-          "The option maxFindings must be a positive integer",
-        );
+        expect(() => validateAsi(document(), json(options))).toThrow("The options object is invalid at maxFindings");
         expect(() => validateResults(report([]), json(options))).toThrow(DataError);
         expect(() => validatePnpNamespace(parseXml("<a/>"), json(options))).toThrow(DataError);
       }

@@ -1,5 +1,4 @@
-import { checkPositiveInteger, checkProperties, checkRecord, describe } from "../checks.js";
-import { DataError } from "../errors.js";
+import { limitsSchema } from "../checks-internal.js";
 
 /** The limits of what the operators read from a response; past one, the response is unreadable, never an error. */
 export interface OperatorLimits {
@@ -49,31 +48,5 @@ const CAPS: OperatorLimits = Object.freeze({
   maxEditBand: 256,
 });
 
-const NAMES: readonly (keyof OperatorLimits)[] = [
-  "maxInputLength",
-  "maxExpressionDepth",
-  "maxSolutions",
-  "maxEditBand",
-];
-
-/**
- * Applies the defaults to the limits that a host sets.
- *
- * @throws `DataError` for limits that are not an object or hold another property, or a limit that is not a positive integer
- *   or is past its cap.
- */
-export function resolveOperatorLimits(limits: unknown): OperatorLimits {
-  if (limits === undefined) return DEFAULT_OPERATOR_LIMITS;
-  checkRecord(limits, "The option limits must be an object");
-  checkProperties(limits, "The option limits", NAMES);
-  const resolved: Record<keyof OperatorLimits, number> = { ...DEFAULT_OPERATOR_LIMITS };
-  for (const name of NAMES) {
-    const value = limits[name];
-    if (value === undefined) continue;
-    checkPositiveInteger(value, `The limit ${name}`);
-    if (value > CAPS[name])
-      throw new DataError(`The limit ${name} must be at most ${CAPS[name]}, found ${describe(value)}.`);
-    resolved[name] = value;
-  }
-  return Object.freeze(resolved);
-}
+/** The schema of the limits that a host sets: a limit left out has its default, and one past its cap is refused. */
+export const operatorLimitsSchema = limitsSchema(DEFAULT_OPERATOR_LIMITS, CAPS);

@@ -656,10 +656,16 @@ describe("errors", () => {
     expect(() => readGift(wrong.input)).toThrow(DataError);
     expect(() => readGift("x", wrong.options)).toThrow(DataError);
     expect(() => readGift("x", wrong.unknown)).toThrow(DataError);
-    expect(() => readGift("x", wrong.limits)).toThrow("The limit maxBytes must be a positive integer");
+    expect(() => readGift("x", wrong.limits)).toThrow(
+      "The options object is invalid at limits.maxBytes: expected a number",
+    );
     expect(() => writeGift(JSON.parse("{}"))).toThrow(DataError);
     expect(() => writeGift([JSON.parse("null")])).toThrow(DataError);
     expect(() => writeGift([], JSON.parse('{"customOperators": {}}'))).toThrow(DataError);
+    expect(() => writeGift([], JSON.parse('{"bogus":1}'))).toThrow('unexpected property "bogus"');
+    expect(() => writeGift([], JSON.parse('{"limits":{"maxBytes":1}}'))).toThrow('unexpected property "maxBytes"');
+    expect(() => readGift("", JSON.parse('{"bogus":1}'))).toThrow('unexpected property "bogus"');
+    expect(() => readMoodleXml("", JSON.parse('{"limits":{"maxByte":1}}'))).toThrow('unexpected property "maxByte"');
     const item = qtiItem(`<qti-item-body><p>x</p></qti-item-body>`);
     expect(() => writeGift([{ item, category: JSON.parse("5") }])).toThrow(DataError);
     expect(() => writeMoodleXml([{ item, tags: JSON.parse("[1]") }])).toThrow(DataError);

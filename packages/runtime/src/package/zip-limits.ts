@@ -1,4 +1,4 @@
-import { checkPositiveInteger, checkRecord } from "../checks.js";
+import { limitsSchema } from "../checks-internal.js";
 
 /** The limits that keep an archive or a directory from using more memory or time than a caller allows. */
 export interface ZipLimits {
@@ -51,24 +51,5 @@ export const DEFAULT_ZIP_LIMITS: ZipLimits = {
 /** The size below which the ratio of an entry is not checked. */
 export const RATIO_GRACE_BYTES = 102_400;
 
-/**
- * Returns the default limits with the given ones in place of theirs.
- *
- * @param limits - The limits to change; a limit left out keeps its default.
- * @returns All the limits.
- * @throws `DataError` when `limits` is not an object or a limit is not a positive integer.
- */
-export function resolveZipLimits(limits: Partial<ZipLimits>): ZipLimits {
-  checkRecord(limits, "The option limits must be an object");
-  const {
-    maxEntries = DEFAULT_ZIP_LIMITS.maxEntries,
-    maxEntryBytes = DEFAULT_ZIP_LIMITS.maxEntryBytes,
-    maxTotalBytes = DEFAULT_ZIP_LIMITS.maxTotalBytes,
-    maxRatio = DEFAULT_ZIP_LIMITS.maxRatio,
-  } = limits;
-  checkPositiveInteger(maxEntries, "The limit maxEntries");
-  checkPositiveInteger(maxEntryBytes, "The limit maxEntryBytes");
-  checkPositiveInteger(maxTotalBytes, "The limit maxTotalBytes");
-  checkPositiveInteger(maxRatio, "The limit maxRatio");
-  return { maxEntries, maxEntryBytes, maxTotalBytes, maxRatio };
-}
+/** The schema of the limits that a caller sets, which reads them as all of {@link ZipLimits}: a limit left out has its default. */
+export const zipLimitsSchema = limitsSchema(DEFAULT_ZIP_LIMITS);

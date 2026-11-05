@@ -1153,11 +1153,16 @@ describe("the numeric record of a text entry", () => {
 
   it("rejects a text that is not a string and a base outside 2 to 36", () => {
     expect(() => readNumericRecord(json("1"))).toThrow("The text must be a string, found 1.");
-    expect(() => readNumericRecord("1", { base: 1 })).toThrow("The base must be an integer from 2 to 36, found 1.");
+    expect(() => readNumericRecord("1", { base: 1 })).toThrow(
+      "The options object is invalid at base: expected a value of at least 2, found 1.",
+    );
     expect(() => readNumericRecord("1", { base: 37 })).toThrow(DataError);
     expect(() => readNumericRecord("1", { base: json('"10"') })).toThrow(DataError);
     expect(() => readNumericRecord("1", { base: 10.5 })).toThrow(DataError);
-    expect(() => readNumericRecord("1", json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => readNumericRecord("1", json("null"))).toThrow(
+      "The options object is invalid: expected an object, found null",
+    );
+    expect(() => readNumericRecord("1", json('{"bogus":1}'))).toThrow('unexpected property "bogus"');
   });
 });
 

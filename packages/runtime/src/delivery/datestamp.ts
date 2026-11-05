@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import { describe } from "../checks.js";
 import { checkFinite } from "../checks-internal.js";
 import { DataError } from "../errors.js";
@@ -7,6 +8,9 @@ const FIRST_INSTANT = -62_135_596_800_000;
 
 /** The time `9999-12-31T23:59:59.999Z` in epoch milliseconds, the last that a datestamp with a four-digit year can show. */
 const LAST_INSTANT = 253_402_300_799_999;
+
+/** The schema of a time of the engine: epoch milliseconds from the year 1 to the year 9999, as {@link checkInstant} checks it. */
+export const instantSchema = v.pipe(v.number(), v.finite(), v.minValue(FIRST_INSTANT), v.maxValue(LAST_INSTANT));
 
 /**
  * Checks a time of the engine: epoch milliseconds, between the years 1 and 9999, so that a results report can write it

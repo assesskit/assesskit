@@ -2277,9 +2277,12 @@ describe("item variables", () => {
   });
 
   it("refuses options of other types, undeclared context variables and values that do not fit", () => {
-    expect(() => createItemVariables(item, json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => createItemVariables(item, json("null"))).toThrow(
+      "The options object is invalid: expected an object, found null",
+    );
+    expect(() => createItemVariables(item, json('{"bogus":1}'))).toThrow('unexpected property "bogus"');
     expect(() => createItemVariables(item, { context: json("{}") })).toThrow(
-      "The option context must be a Map from identifier to value, found an object.",
+      "The options object is invalid at context: expected a Map from identifier to value, found an object.",
     );
     expect(() => createItemVariables(item, { context: new Map([["OTHER", null]]) })).toThrow(
       'The option context gives "OTHER", which the item declares no context variable for.',

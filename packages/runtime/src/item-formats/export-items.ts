@@ -4,7 +4,7 @@ import { DataError } from "../errors.js";
 import type { CustomOperator } from "../processing/index.js";
 import type { ItemLoss } from "./item-build.js";
 import { convertItem } from "./item-convert.js";
-import { resolveItemFormatLimits } from "./limits.js";
+import { writeLimitsSchema } from "./limits.js";
 import type { BankItem, ConversionLoss, WriteItemsOptions } from "./model.js";
 import type { Question } from "./question.js";
 
@@ -24,7 +24,7 @@ export interface ExportPlan {
 
 const writeItemsOptionsSchema = strictRecord({
   customOperators: v.optional(v.map(v.string(), functionSchema<CustomOperator>())),
-  limits: v.optional(v.unknown()),
+  limits: v.optional(writeLimitsSchema, {}),
 });
 
 /**
@@ -35,11 +35,8 @@ const writeItemsOptionsSchema = strictRecord({
  */
 export function planExport(items: readonly BankItem[], options: WriteItemsOptions): ExportPlan {
   checkArray(items, `The items must be an array, found ${describe(items)}`);
-  const { customOperators, limits = {} } = parseWith(writeItemsOptionsSchema, options, "The options");
-  const context = {
-    operators: customOperators ?? new Map<string, CustomOperator>(),
-    limits: resolveItemFormatLimits(limits, ["maxAnswers"]),
-  };
+  const { customOperators, limits } = parseWith(writeItemsOptionsSchema, options, "The options object");
+  const context = { operators: customOperators ?? new Map<string, CustomOperator>(), limits };
   const entries: ExportEntry[] = [];
   const losses: ConversionLoss[] = [];
   for (const [index, entry] of items.entries()) {

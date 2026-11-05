@@ -1,5 +1,6 @@
-import { checkArray, checkRecord, checkString } from "../checks.js";
-import { checkBytes, checkOptions } from "../checks-internal.js";
+import * as v from "valibot";
+import { checkArray, checkRecord, checkString, parseWith, strictRecord } from "../checks.js";
+import { checkBytes } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import {
   checkQtiMetadata,
@@ -36,6 +37,8 @@ export interface CatPoolItem {
    */
   readonly externalMetadata?: readonly CatMetadataFile[];
 }
+
+const buildCatMetadataOptionsSchema = strictRecord({ externalMetadata: v.optional(v.array(v.unknown()), []) });
 
 /** Options of `buildCatMetadata`. */
 export interface BuildCatMetadataOptions {
@@ -160,9 +163,7 @@ function itemMetadataOf(item: unknown, index: number, seen: Set<string>): CatIte
  */
 export function buildCatMetadata(items: readonly CatPoolItem[], options: BuildCatMetadataOptions = {}): CatMetadata {
   checkArray(items, "The items must be an array");
-  checkOptions(options);
-  const { externalMetadata = [] } = options;
-  checkArray(externalMetadata, "The option externalMetadata must be an array");
+  const { externalMetadata } = parseWith(buildCatMetadataOptionsSchema, options, "The options object");
   const external = externalOf(externalMetadata, "the option externalMetadata");
   const seen = new Set<string>();
   const itemMetadata = items.map((item, index) => itemMetadataOf(item, index, seen));

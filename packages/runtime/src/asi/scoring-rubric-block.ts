@@ -1,5 +1,4 @@
-import { checkArray, checkRecord, describe } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import { checkArray, checkRecord, describe, parseWith } from "../checks.js";
 import { DataError } from "../errors.js";
 import { formatPrimitive } from "../values/index.js";
 import { parsePrimitive, xmlTokens } from "../values/internal.js";
@@ -11,10 +10,11 @@ import {
   type ListEntry,
   OUTCOME_ATTRIBUTE,
   type RubricBlockOptions,
+  rubricBlockOptionsSchema,
 } from "./convention-markup.js";
 import { SCORE_COVERS_CLASS } from "./covers.js";
 import type { AssessmentItem, AssessmentTest, ElementModel, TestRubricBlock } from "./model.js";
-import { isModelNode, type ModelNode, withDescendants } from "./nodes.js";
+import { type ModelNode, withDescendants } from "./nodes.js";
 import {
   checkScoringRubric,
   DEFAULT_WEIGHT,
@@ -319,12 +319,7 @@ function criterionEntry({ identifier, weight, description, levels }: RubricCrite
  */
 export function buildScoringRubricBlock(rubric: ScoringRubric, options: RubricBlockOptions = {}): ScoringRubricBlock {
   checkScoringRubric(rubric);
-  checkOptions(options);
-  const { notes = [] } = options;
-  checkArray(notes, "The notes must be an array");
-  if (!notes.every(isModelNode)) {
-    throw new DataError(`The notes must be nodes of body content, found ${describe(notes)}.`);
-  }
+  const { notes } = parseWith(rubricBlockOptionsSchema, options, "The options object");
   if (notes.some(isOrderedList)) {
     throw new DataError("The notes must not contain an ol, which a reader would take for the criteria.");
   }

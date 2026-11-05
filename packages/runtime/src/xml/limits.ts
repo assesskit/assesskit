@@ -1,4 +1,4 @@
-import { checkPositiveInteger, checkRecord } from "../checks.js";
+import { limitsSchema } from "../checks-internal.js";
 
 /** The limits that keep a document from using more memory or time than a caller allows. */
 export interface XmlLimits {
@@ -55,26 +55,5 @@ export const DEFAULT_XML_LIMITS: XmlLimits = {
   maxIncludeDepth: 8,
 };
 
-/**
- * Returns the default limits with the given ones in place of theirs.
- *
- * @param limits - The limits to change; a limit left out keeps its default.
- * @returns All the limits.
- * @throws `DataError` when `limits` is not an object or a limit is not a positive integer.
- */
-export function resolveXmlLimits(limits: Partial<XmlLimits>): XmlLimits {
-  checkRecord(limits, "The option limits must be an object");
-  const {
-    maxBytes = DEFAULT_XML_LIMITS.maxBytes,
-    maxDepth = DEFAULT_XML_LIMITS.maxDepth,
-    maxAttributes = DEFAULT_XML_LIMITS.maxAttributes,
-    maxNodes = DEFAULT_XML_LIMITS.maxNodes,
-    maxIncludeDepth = DEFAULT_XML_LIMITS.maxIncludeDepth,
-  } = limits;
-  checkPositiveInteger(maxBytes, "The limit maxBytes");
-  checkPositiveInteger(maxDepth, "The limit maxDepth");
-  checkPositiveInteger(maxAttributes, "The limit maxAttributes");
-  checkPositiveInteger(maxNodes, "The limit maxNodes");
-  checkPositiveInteger(maxIncludeDepth, "The limit maxIncludeDepth");
-  return { maxBytes, maxDepth, maxAttributes, maxNodes, maxIncludeDepth };
-}
+/** The schema of the limits that a caller sets, which reads them as all of {@link XmlLimits}: a limit left out has its default. */
+export const xmlLimitsSchema = limitsSchema(DEFAULT_XML_LIMITS);

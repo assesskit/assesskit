@@ -1,6 +1,16 @@
+import * as v from "valibot";
 import type { Catalog, FileHref, HtmlContent } from "../asi/index.js";
-import { checkArray, checkOptional, checkPositiveInteger, checkRecord, checkString, describe } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import {
+  checkArray,
+  checkOptional,
+  checkPositiveInteger,
+  checkRecord,
+  checkString,
+  describe,
+  objectSchema,
+  parseWith,
+  strictRecord,
+} from "../checks.js";
 import type { Issue } from "../errors.js";
 import type { Braille, SupportName } from "../pnp/index.js";
 
@@ -119,6 +129,11 @@ export interface SelectCardOptions {
   readonly braille?: Braille;
 }
 
+const selectCardOptionsSchema = strictRecord({
+  language: v.optional(v.string()),
+  braille: v.optional(objectSchema<Braille>()),
+});
+
 /**
  * Selects the content of the card that a catalog has for a support.
  *
@@ -146,9 +161,7 @@ export function selectCard(
   checkRecord(catalog, "The catalog must be an object of the model of qti-catalog");
   checkArray(catalog.cards, "The cards of the catalog must be an array");
   checkString(support, "The support");
-  checkOptions(options);
-  const { language, braille } = options;
-  if (language !== undefined) checkString(language, "The language");
+  const { language, braille } = parseWith(selectCardOptionsSchema, options, "The options object");
   if (braille !== undefined) checkBraille(braille);
   const card = catalog.cards.find((candidate) => candidate.support === support);
   if (card === undefined) return undefined;

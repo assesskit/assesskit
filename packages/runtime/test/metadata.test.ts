@@ -858,10 +858,13 @@ describe("reading resource metadata", () => {
   it("throws a DataError for an argument of another type", () => {
     for (const input of ["null", '"x"', "[]"]) expect(() => readResourceMetadata(JSON.parse(input))).toThrow(DataError);
     expect(() => readResourceMetadata(resourceMetadata(""), { path: JSON.parse("3") })).toThrow(
-      "The option path must be a string, found 3.",
+      "The options object is invalid at path: expected a string, found 3.",
     );
     expect(() => readResourceMetadata(resourceMetadata(""), JSON.parse("null"))).toThrow(
-      "The options must be an object, found null.",
+      "The options object is invalid: expected an object, found null",
+    );
+    expect(() => readResourceMetadata(resourceMetadata(""), JSON.parse('{"bogus":1}'))).toThrow(
+      'unexpected property "bogus"',
     );
   });
 });

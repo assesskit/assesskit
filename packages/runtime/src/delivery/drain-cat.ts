@@ -1,14 +1,5 @@
 import type { CatResponse, CatSessionPort } from "../cat/index.js";
-import {
-  type CallOptions,
-  checkAbortSignal,
-  checkChoice,
-  checkFunction,
-  checkOptional,
-  checkRecord,
-  raceAbort,
-} from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import { type CallOptions, checkCallOptions, checkChoice, checkFunction, checkRecord, raceAbort } from "../checks.js";
 import { DataError } from "../errors.js";
 import type { DeliveryState } from "./delivery-state.js";
 import { checkState } from "./delivery-state.js";
@@ -33,10 +24,8 @@ function checkMethod(port: CatSessionPort, method: (typeof SESSION_METHODS)[numb
 
 /** Reads the option `signal` of a call that waits for the CAT engine. */
 function readSignal(options: CallOptions): AbortSignal | undefined {
-  checkOptions(options);
-  const { signal } = options;
-  checkOptional(signal, (value) => checkAbortSignal(value, "The option signal"));
-  return signal;
+  checkCallOptions(options);
+  return options.signal;
 }
 
 /** Calls the method of the port that the request needs, with the options of the caller. */

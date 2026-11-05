@@ -281,6 +281,7 @@ describe("reading LTI links", () => {
     for (const input of ["null", "3", "[]", "{}"])
       expect(() => readLtiLink(JSON.parse(input)), input).toThrow(DataError);
     expect(() => readLtiLink("<a/>", JSON.parse("null"))).toThrow(DataError);
+    expect(() => readLtiLink("<a/>", JSON.parse('{"bogus":1}'))).toThrow('unexpected property "bogus"');
     expect(() => readLtiLink("<a/>", { path: JSON.parse("3") })).toThrow(DataError);
     expect(securityLimit(() => readLtiLink('<!DOCTYPE a [<!ENTITY x "y">]><a/>'))).toBe("doctype");
   });
@@ -476,6 +477,8 @@ describe("opening a package", () => {
     for (const files of ["null", '"x"', '{"paths":"x","read":null}', '{"paths":[]}'])
       expect(() => openPackage(JSON.parse(files)), files).toThrow(DataError);
     expect(() => openPackage(base, JSON.parse("null"))).toThrow(DataError);
+    expect(() => openPackage(base, JSON.parse('{"bogus":1}'))).toThrow('unexpected property "bogus"');
+    expect(() => openPackage(base, JSON.parse('{"xmlLimits":{"maxByte":1}}'))).toThrow('unexpected property "maxByte"');
     expect(() => openPackage(base, JSON.parse('{"xmlLimits":null}'))).toThrow(DataError);
     const pkg = openPackage(base);
     expect(() => pkg.file(JSON.parse("3"))).toThrow(DataError);
@@ -1166,7 +1169,10 @@ describe("paths of resources", () => {
     expect(() => resolveResourcePath(manifest, JSON.parse("null"))).toThrow(DataError);
     expect(() => resolveResourcePath(manifest, a as Resource, { href: JSON.parse("3") })).toThrow(DataError);
     expect(() => resolveResourcePath(manifest, a as Resource, JSON.parse("null"))).toThrow(
-      "The options must be an object, found null.",
+      "The options object is invalid: expected an object, found null",
+    );
+    expect(() => resolveResourcePath(manifest, a as Resource, JSON.parse('{"bogus":1}'))).toThrow(
+      'unexpected property "bogus"',
     );
   });
 });
@@ -1649,9 +1655,12 @@ describe("reading ZIP archives", () => {
     for (const zip of ["null", '"x"', "[1]", "{}"]) expect(() => readPackage(JSON.parse(zip)), zip).toThrow(DataError);
     const zip = fixture("valid.zip");
     expect(() => readPackage(zip, JSON.parse("null"))).toThrow(DataError);
+    expect(() => readPackage(zip, JSON.parse('{"bogus":1}'))).toThrow('unexpected property "bogus"');
+    expect(() => readPackage(zip, JSON.parse('{"limits":{"maxEntry":9}}'))).toThrow('unexpected property "maxEntry"');
+    expect(() => readPackage(zip, JSON.parse('{"xmlLimits":{"maxByte":9}}'))).toThrow('unexpected property "maxByte"');
     expect(() => readPackage(zip, JSON.parse('{"limits":null}'))).toThrow(DataError);
     expect(() => readPackage(zip, JSON.parse('{"limits":{"maxEntries":0}}'))).toThrow(
-      /maxEntries must be a positive integer/,
+      /limits.maxEntries: expected a value of at least 1, found 0/,
     );
     expect(() => readPackage(zip, JSON.parse('{"limits":{"maxRatio":"2"}}'))).toThrow(DataError);
     expect(() => readPackage(zip, JSON.parse('{"xmlLimits":null}'))).toThrow(DataError);

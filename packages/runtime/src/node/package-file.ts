@@ -1,9 +1,8 @@
 import { type Stats, statSync } from "node:fs";
-import { checkString } from "../checks.js";
-import { checkOptions } from "../checks-internal.js";
+import { checkString, parseWith } from "../checks.js";
 import { DataError, SecurityError } from "../errors.js";
 import { openPackage, type QtiPackage, type ReadPackageOptions } from "../package/index.js";
-import { openZip, resolveZipLimits } from "../package/internal.js";
+import { openZip, readPackageOptionsSchema } from "../package/internal.js";
 import { openDirectory } from "./directory-files.js";
 import { fileSource } from "./file-source.js";
 
@@ -29,16 +28,14 @@ function reasonOf(error: unknown): string {
  */
 export async function readPackageFile(path: string, options: ReadPackageOptions = {}): Promise<QtiPackage> {
   checkString(path, "The path");
-  checkOptions(options);
-  const { limits = {}, xmlLimits } = options;
-  const resolved = resolveZipLimits(limits);
+  const { limits: resolved, xmlLimits } = parseWith(readPackageOptionsSchema, options, "The options object");
   let stat: Stats;
   try {
     stat = statSync(path);
   } catch (error) {
     throw new DataError(`The package ${path} cannot be read: ${reasonOf(error)}`, { cause: error });
   }
-  const packageOptions = xmlLimits === undefined ? {} : { xmlLimits };
+  const packageOptions = { xmlLimits };
   if (stat.isDirectory()) return openPackage(await openDirectory(path, resolved), packageOptions);
   // A ZIP file is smaller than its contents unless they are stored, so a file above the total limit cannot pass it.
   if (stat.size > resolved.maxTotalBytes) {

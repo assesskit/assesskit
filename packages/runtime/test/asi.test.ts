@@ -464,14 +464,15 @@ describe("building and reading the covers", () => {
       new DataError("A cover must be an object, found null."),
     );
     expect(() => buildScoreCoversBlock("O", [], { notes: JSON.parse("null") })).toThrow(
-      new DataError("The notes must be an array, found null."),
+      new DataError("The options object is invalid at notes: expected an array, found null."),
     );
     expect(() => buildScoreCoversBlock("O", [], { notes: JSON.parse('["x"]') })).toThrow(
-      new DataError("The notes must be nodes of body content, found an array."),
+      new DataError('The options object is invalid at notes[0]: expected a node of body content, found "x".'),
     );
     expect(() => buildScoreCoversBlock("O", [], JSON.parse("null"))).toThrow(
-      new DataError("The options must be an object, found null."),
+      new DataError("The options object is invalid: expected an object, found null."),
     );
+    expect(() => buildScoreCoversBlock("O", [], JSON.parse('{"bogus":1}'))).toThrow('unexpected property "bogus"');
     expect(() => buildScoreCoversBlock(JSON.parse("1"), [])).toThrow(
       new DataError("The outcome identifier must be an identifier, found 1."),
     );
@@ -1007,17 +1008,18 @@ describe("the arguments of the rubric functions", () => {
 
   it("refuses notes that are not nodes, or hold a list, and a rubric that fails the check", () => {
     expect(() => buildScoringRubricBlock(ESSAY, { notes: JSON.parse("null") })).toThrow(
-      new DataError("The notes must be an array, found null."),
+      new DataError("The options object is invalid at notes: expected an array, found null."),
     );
     expect(() => buildScoringRubricBlock(ESSAY, { notes: JSON.parse('["x"]') })).toThrow(
-      new DataError("The notes must be nodes of body content, found an array."),
+      new DataError('The options object is invalid at notes[0]: expected a node of body content, found "x".'),
     );
     expect(() => buildScoringRubricBlock(ESSAY, { notes: [{ kind: "ol", items: [], extensions: [] }] })).toThrow(
       new DataError("The notes must not contain an ol, which a reader would take for the criteria."),
     );
     expect(() => buildScoringRubricBlock(ESSAY, JSON.parse("null"))).toThrow(
-      new DataError("The options must be an object, found null."),
+      new DataError("The options object is invalid: expected an object, found null."),
     );
+    expect(() => buildScoringRubricBlock(ESSAY, JSON.parse('{"bogus":1}'))).toThrow('unexpected property "bogus"');
     expect(() => buildScoringRubricBlock(JSON.parse("{}"))).toThrow(DataError);
     expect(() => buildScoringRubricBlock({ ...ESSAY, kind: "holistic" })).toThrow(DataError);
   });
@@ -3869,13 +3871,14 @@ describe("reading input and errors", () => {
     expect(() => readAsi(JSON.parse("null"))).toThrow(DataError);
     expect(() => readAsi(JSON.parse('{"kind":"item"}'))).toThrow(DataError);
     expect(() => readAsi(item(), JSON.parse("null"))).toThrow(
-      new DataError("The options must be an object, found null."),
+      new DataError("The options object is invalid: expected an object, found null."),
     );
+    expect(() => readAsi(item(), JSON.parse('{"bogus":1}'))).toThrow('unexpected property "bogus"');
     expect(() => readAsi(item(), JSON.parse('{"path":5}'))).toThrow(
-      new DataError("The option path must be a string, found 5."),
+      new DataError("The options object is invalid at path: expected a string, found 5."),
     );
     expect(() => readAsi(item(), JSON.parse('{"limits":"x"}'))).toThrow(
-      new DataError('The option limits must be an object, found "x".'),
+      new DataError('The options object is invalid at limits: expected an object, found "x".'),
     );
     expect(() => readAsi(item(), JSON.parse('{"limits":null}'))).toThrow(DataError);
     expect(() => readAsi(item(), JSON.parse('{"limits":{"maxBytes":"x"}}'))).toThrow(DataError);
