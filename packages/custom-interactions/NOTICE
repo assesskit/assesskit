@@ -3,7 +3,7 @@ Copyright Fariz Wakan
 
 This package implements portable custom interactions of the QTI 3.0 specifications and includes no 1EdTech files.
 
-The module of math entry, modules/math-entry.js, includes MathLive 0.111.1. modules/math-entry/fonts/ holds MathLive's
+The module of math entry, modules/math-entry.js, includes MathLive 0.111.4. modules/math-entry/fonts/ holds MathLive's
 fonts, which are KaTeX's, under the SIL Open Font License 1.1: licenses/katex-fonts-ofl.txt and
 modules/math-entry/fonts/OFL.txt reproduce their copyright and the license.
 

@@ -118,7 +118,7 @@ MathLive writes more than the expression subset that the operators read: its def
 | Fonts             | `fontsDirectory` beside the module, `math-entry/fonts/`, with `OFL.txt`: the 20 fonts are KaTeX's, under the SIL Open Font License 1.1, whose text goes with them. No sounds (`soundsDirectory` is null), which MathLive would fetch                                                                                                                                                                                                                                                                                                                                        |
 | Response          | The field's `value`, its LaTeX; an empty slot stays `\placeholder{}`, which the reader takes as unreadable, so the `readable` operator tells the candidate                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
-Typed with real keys in the player's frame, MathLive 0.111.1 writes, and the browser tests hold:
+Typed with real keys in the player's frame, MathLive 0.111.4 writes, and the browser tests hold:
 
 | Keys                      | LaTeX                                              |
 | ------------------------- | -------------------------------------------------- |
@@ -170,17 +170,17 @@ each against the nearest earlier line that reads.
 | Not included                                       | Why                                                                                                                                                                                                    |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | A field that refuses what the reader leaves unread | A paste, MathLive's LaTeX mode (`\`) and its menu write any LaTeX; the response is untrusted anyway, and the reader takes what it cannot read as unreadable, which `readable` reports to the candidate |
-| MathLive's words in Indonesian                     | MathLive 0.111.1 has no Indonesian strings; its menu and keyboard tooltips fall back to English                                                                                                        |
+| MathLive's words in Indonesian                     | MathLive 0.111.4 has no Indonesian strings; its menu and keyboard tooltips fall back to English                                                                                                        |
 | A key of the virtual keyboard named in words       | MathLive names a key by the LaTeX it writes; a candidate who needs names types on the physical keyboard, where every key of the subset is                                                              |
 | The player's themes in the field and its keyboard  | The frame takes the candidate's presentation from `player.css`, but MathLive draws the field and the keyboard in its own colors, light or dark by the browser's color scheme                           |
 | Scoring worked steps                               | The response is the lines; `compareMathSteps` checks them, and a rubric or a rater judges what the checks leave                                                                                        |
 
 ## Differences from the references
 
-| Reference                                                   | Difference                                                                                                                                                                                                                                                                                                   |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| MathLive's defaults                                         | The keyboard, the shortcuts and `log` as the table of [What the field writes](#what-the-field-writes) says; the keyboard is MathLive's own in the frame, which MathLive would send to the top window                                                                                                         |
-| MathLive 0.111.4, which the engine's specification measured | The module pins 0.111.1, the newest release older than 14 days on 2026-11-04. With real keys in a browser it writes what 0.111.4 wrote in the specification's measurement for every case both took; the keys of `log`, `oo`, `infinity`, `ii`, `sum` and `int` differ by the module's shortcuts, as intended |
+| Reference                                                   | Difference                                                                                                                                                                                                                                            |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MathLive's defaults                                         | The keyboard, the shortcuts and `log` as the table of [What the field writes](#what-the-field-writes) says; the keyboard is MathLive's own in the frame, which MathLive would send to the top window                                                  |
+| MathLive 0.111.4, which the engine's specification measured | The module pins the same version. With real keys in a browser it writes what the specification's measurement wrote for every case both took; the keys of `log`, `oo`, `infinity`, `ii`, `sum` and `int` differ by the module's shortcuts, as intended |
 
 ## Files
 
@@ -197,4 +197,4 @@ each against the nearest earlier line that reads.
 | Reference                                                                                        | Topics                                                                  |
 | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
 | [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/) | Portable custom interactions, module resolution, the JSON of a response |
-| [MathLive 0.111.1](https://mathlive.io/mathfield/)                                               | The field, its keyboard, shortcuts and decimal separator                |
+| [MathLive 0.111.4](https://mathlive.io/mathfield/)                                               | The field, its keyboard, shortcuts and decimal separator                |

@@ -7,7 +7,7 @@ npm install @assesskit/custom-interactions
 ```
 
 The package depends on [`@assesskit/runtime`](https://assesskit.wakan.dev/_assesskit/runtime/), for its checks and errors. The modules hold their
-libraries, bundled and pinned exactly, with each library's license at the head of its module: MathLive 0.111.1 (MIT) and
+libraries, bundled and pinned exactly, with each library's license at the head of its module: MathLive 0.111.4 (MIT) and
 Hanzi Writer 3.7.3 (MIT).
 
 ## Quick start

@@ -336,8 +336,8 @@ importers:
         specifier: 3.7.3
         version: 3.7.3
       mathlive:
-        specifier: 0.111.1
-        version: 0.111.1
+        specifier: 0.111.4
+        version: 0.111.4
 
   packages/player:
     dependencies:
@@ -3133,8 +3133,8 @@ packages:
   mathjax@4.1.3:
     resolution: {integrity: sha512-BN/8Pkgn7G1pIDYJqd9md+JHsE/jydSYbyOZnSdSA0WziuVO8mRxdYiWFumkVVly/8U+hm9DpIIoWuvySverzw==}
 
-  mathlive@0.111.1:
-    resolution: {integrity: sha512-RVaC7NO02Lmx3ZNUxOHR2xCRpcvTfBb2BtdgV60cTanAMufaUkWcPPB2VxChcsNeL+0rTQKqOPDYxXLPOXJI+A==}
+  mathlive@0.111.4:
+    resolution: {integrity: sha512-1E5EOQnUHWn+KfEXaDTmuyxRWZrZw4WlQFyZLzJmjKEPdaX4WAnFqVfZb36mhulykcIl7/W7gKkTmutP2/9wjQ==}
 
   mathml-tag-names@4.0.0:
     resolution: {integrity: sha512-aa6AU2Pcx0VP/XWnh8IGL0SYSgQHDT6Ucror2j2mXeFAlN3ahaNs8EZtG1YiticMkSLj3Gt6VPFfZogt7G5iFQ==}
@@ -6524,7 +6524,7 @@ snapshots:
     dependencies:
       '@mathjax/mathjax-newcm-font': 4.1.3
 
-  mathlive@0.111.1: {}
+  mathlive@0.111.4: {}
 
   mathml-tag-names@4.0.0: {}
 

@@ -9,7 +9,7 @@ import { writeCharacterModule } from "../src/index.js";
 import { readModuleFiles } from "../src/node/index.js";
 import { writeMathEntryItem, writeStepsItem, writeStrokeWritingItem } from "./fixtures/items.js";
 
-/** The fonts of MathLive 0.111.1, which it loads all at once when a field first shows. */
+/** The fonts of MathLive 0.111.4, which it loads all at once when a field first shows. */
 const KATEX_FONTS = 20;
 
 describe("readModuleFiles", () => {
@@ -26,7 +26,7 @@ describe("readModuleFiles", () => {
       "This Font Software is licensed under the SIL Open Font License, Version 1.1.",
     );
     const script = new TextDecoder().decode(files.get("modules/math-entry.js"));
-    expect(script.startsWith("/*! mathlive 0.111.1 (MIT)\nCopyright (c) 2017 - present Arno Gourdol.")).toBe(true);
+    expect(script.startsWith("/*! mathlive 0.111.4 (MIT)\nCopyright (c) 2017 - present Arno Gourdol.")).toBe(true);
   });
 
   it("reads the module of stroke writing alone: the characters are content of the item's package", async () => {

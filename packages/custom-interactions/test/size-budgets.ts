@@ -14,8 +14,8 @@ export interface ModuleBudget {
  * (docs/custom-interactions/architecture.md lists them). A budget changes only with the reason in the commit that changes it.
  */
 export const MODULE_BUDGETS: Readonly<Record<string, ModuleBudget>> = {
-  // 228,053 bytes, and 264,499 bytes of 20 fonts and their license, with MathLive 0.111.1.
-  "math-entry": { gzip: 285_500, files: 331_000, holds: ["mathlive"] },
+  // 230,345 bytes, and 264,499 bytes of 20 fonts and their license, with MathLive 0.111.4.
+  "math-entry": { gzip: 288_000, files: 331_000, holds: ["mathlive"] },
   // 13,159 bytes with Hanzi Writer 3.7.3; the reference strokes are the item's, never the module's.
   "stroke-writing": { gzip: 16_500, files: 0, holds: ["hanzi-writer"] },
 };

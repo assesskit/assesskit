@@ -33,7 +33,7 @@ function isReadable(response: Value | null | undefined, key: ExpressionKey): boo
 }
 
 /**
- * Keys that a candidate presses, what MathLive 0.111.1 writes for them through the item's shortcuts, and a key that the
+ * Keys that a candidate presses, what MathLive 0.111.4 writes for them through the item's shortcuts, and a key that the
  * response is equivalent to. `ArrowRight` leaves a fraction, a power or a root, as a candidate does.
  */
 const TYPED: readonly {

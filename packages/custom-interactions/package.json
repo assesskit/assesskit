@@ -69,6 +69,6 @@
     "@assesskit/player": "workspace:^",
     "esbuild": "0.28.2",
     "hanzi-writer": "3.7.3",
-    "mathlive": "0.111.1"
+    "mathlive": "0.111.4"
   }
 }
