@@ -78,18 +78,12 @@ function codePointsOf(text: string): number[] {
 /**
  * Reads and checks the options of `text-equivalent`.
  *
- * @throws `DataError` for a `spelling` other than `"exact"`, which no source defines, a count above the answers, an answer
- *   with no text or pattern, no points to earn, a pattern that does not compile, or a `below` or `above` effect without its
- *   bound.
+ * @throws `DataError` for a count above the answers, an answer with no text or pattern, no points to earn, a pattern that
+ *   does not compile, or a `below` or `above` effect without its bound.
  * @throws `SecurityError` when the patterns of the key need more than `maxStates` of `DEFAULT_XSD_REGEX_LIMITS` together.
  */
 export function prepareText(options: OptionsOf<"text-equivalent">, prefix: string): PreparedText {
   const { key } = options;
-  if (key.spelling !== "exact")
-    throw optionsError(
-      pathOf(prefix, "key.spelling"),
-      'the operator defines "exact" spelling alone: list each accepted variant among the answer\'s texts.',
-    );
   if (key.count > key.answers.length)
     throw optionsError(
       pathOf(prefix, "key.count"),

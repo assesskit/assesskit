@@ -86,7 +86,6 @@ const textKeyObject = v.strictObject({
     }),
     {},
   ),
-  spelling: v.optional(v.picklist(["exact", "variants"]), "exact"),
   numericEquivalence: v.optional(v.boolean(), false),
   credit: creditSchema,
   length: v.optional(

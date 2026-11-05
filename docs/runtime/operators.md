@@ -278,9 +278,9 @@ score(of("Bandung"), capital).value; // => 0
 With `numericEquivalence`, a string and an answer's text that both read as a number with nothing after it match when their
 values are equal, in exact rationals: a sign, digits with the decimal mark `.`, `a/b` and a mixed `a b/c`, and a power of ten,
 as `number-equivalent` reads them. So `.5`, `0.50`, `5e-1`, `1/2` and `2/4` are one value, as the numeric entries of the GRE and
-the SAT accept equivalent forms of a number, and a text that is not a number still matches as written. `spelling` takes
-`"exact"` alone: the sources list each accepted spelling, which an answer's `texts` hold, and none defines a rule that finds
-variants by itself, so `"variants"` is refused.
+the SAT accept equivalent forms of a number, and a text that is not a number still matches as written. A spelling counts as
+written: the sources list each accepted spelling, which an answer's `texts` hold, and none defines a rule that finds variants
+by itself.
 
 ```ts
 import { buildOperatorCall, createScoringOperators, OPERATOR_DEFINITIONS } from "@assesskit/runtime/operators";

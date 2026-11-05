@@ -287,13 +287,6 @@ export interface TextKey {
    */
   readonly normalization?: TextNormalization;
   /**
-   * How spelling counts: `"exact"`, the one value defined, takes the texts as written; list each accepted variant among
-   * an answer's texts.
-   *
-   * @defaultValue `"exact"`
-   */
-  readonly spelling?: "exact" | "variants";
-  /**
    * Whether a string that reads as a number matches an answer's text that reads as the same number, in any notation:
    * `.5`, `0.50`, `5e-1` and `1/2` are one value.
    *

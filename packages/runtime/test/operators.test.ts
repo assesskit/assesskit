@@ -139,7 +139,6 @@ describe("buildOperatorCall", () => {
           caseSensitive: false,
           collapseWhitespace: true,
         },
-        spelling: "exact",
         numericEquivalence: false,
         credit: [],
         length: null,
@@ -200,8 +199,8 @@ describe("buildOperatorCall", () => {
       call({ operator: "text-equivalent", key: { kind: "text", answers: [{ texts: ["a"], patterns: ["("] }] } }),
     ).toThrow("key.answers[0].patterns[0]");
     expect(() =>
-      call({ operator: "text-equivalent", key: { kind: "text", answers: [{ texts: ["a"] }], spelling: "variants" } }),
-    ).toThrow("key.spelling");
+      call(json('{"operator":"text-equivalent","key":{"kind":"text","answers":[{"texts":["a"]}],"spelling":"exact"}}')),
+    ).toThrow('unexpected property "spelling"');
     expect(() =>
       call({
         operator: "hotspot-matching",

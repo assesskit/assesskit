@@ -702,7 +702,7 @@ describe("compileScoring", () => {
     );
     refused(
       { kind: "text", answers: [{ texts: ["a"] }], spelling: "variants" },
-      /responses\[0\].*key\.spelling.*each accepted variant/,
+      /responses\[0\].*unexpected property "spelling"/,
     );
     refused({ kind: "expression", expression: "\\frac{" }, /The response R at responses\[0\]/);
     refused({ kind: "unknown" }, "kind");
