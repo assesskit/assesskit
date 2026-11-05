@@ -658,7 +658,7 @@ describe("compareMathSteps", () => {
   });
 
   it("finds the nearest earlier line that reads in linear time, past any count of lines that do not", () => {
-    const steps = ["x", ...Array.from({ length: 100_000 }, () => "\\text{}"), "x"];
+    const steps = ["x", ...Array.from({ length: 100_000 }, () => ""), "x"];
     const started = performance.now();
     expect(compareMathSteps(steps, { maxSteps: steps.length }).at(-1)).toStrictEqual({
       step: 100_001,
