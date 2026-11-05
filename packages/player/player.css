@@ -2319,11 +2319,25 @@ qti-simple-associable-choice.ak-target {
 
 .ak-media-bar,
 .ak-upload,
+.ak-upload-result,
 .ak-stored {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
+}
+
+/* STANDARDS 10: what the player writes after an action keeps its room whether or not it has text, so that what follows does
+   not move under a pointer. The notice of a media interaction whose rules can hold its playback has a line of its own, and
+   the line of an upload holds its status, its clock and the stored file in the height of a button. */
+
+.ak-media-notice {
+  flex-basis: 100%;
+  min-block-size: calc(var(--ak-leading) * 1em);
+}
+
+.ak-upload-result {
+  min-block-size: max(var(--ak-target-size), calc(var(--ak-leading) * 1em + 0.5em + 2 * var(--ak-border-width)));
 }
 
 .ak-media-status,
@@ -2335,7 +2349,6 @@ qti-simple-associable-choice.ak-target {
   color: var(--ak-muted);
 }
 
-.ak-media-notice:empty,
 .ak-upload-status:empty,
 .ak-stored:empty {
   display: none;

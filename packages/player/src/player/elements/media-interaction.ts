@@ -91,13 +91,19 @@ export class MediaInteractionElement extends InteractionElement {
     appendAll(this, [...(prompt === undefined ? [] : [prompt.element]), ...rendered, this.notes.element]);
   }
 
-  protected override configure(_descriptor: InteractionDescriptor, messages: Messages): void {
+  protected override configure(descriptor: InteractionDescriptor, messages: Messages): void {
     const media = this.#media;
     const settings = this.#settings;
     const node = this.#node;
     if (media === undefined || settings === undefined || node === undefined) return;
     this.#bar?.element.remove();
     const bar = this.#makeBar(media, settings, messages);
+    // The notice keeps its line whether or not it has text, so that a notice that comes and goes moves nothing; an
+    // interaction whose rules never hold the playback has nothing to tell, and no line for it.
+    const { pauseDelay, pauseDuration, pauseCount } = settings;
+    bar.notice.hidden = [descriptor.constraints.maxPlays, pauseDelay, pauseDuration, pauseCount].every(
+      (rule) => rule === undefined,
+    );
     this.#bar = bar;
     this.notes?.element.before(bar.element);
     this.#playback ??= new Playback(media, this.#rules(settings, node), {

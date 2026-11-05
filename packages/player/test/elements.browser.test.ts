@@ -30,6 +30,7 @@ import {
 import { PLAYER_CSS, stylesheet } from "./css-fixture.js";
 import { NO_RECORDING } from "./files-fixture.js";
 import { mountScene, type Scene } from "./interactions-fixture.js";
+import { boxOf } from "./layout-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
 import { waitFor } from "./wait.js";
 
@@ -1138,6 +1139,30 @@ describe("upload", () => {
     });
     expect(scene.find(".ak-file-name").textContent).toBe("notes.txt");
     expect(await axeViolations(scene.host)).toEqual([]);
+  });
+
+  it("keeps the room of its status and of the stored file, so that what follows does not move as a file uploads", async () => {
+    let finish = (): void => undefined;
+    const files = fakeFiles();
+    const upload = files.upload;
+    files.upload = async (bytes, mimeType, options) => {
+      await new Promise<void>((done) => {
+        finish = done;
+      });
+      return upload(bytes, mimeType, options);
+    };
+    const scene = mountScene(Declaration, `${Body('type="text/plain"')}<p class="after">After</p>`, {
+      options: { files },
+    });
+    const after = scene.find("p.after");
+    const before = boxOf(after);
+    await userEvent.upload(scene.find("input[type=file]"), new File(["abc"], "notes.txt", { type: "text/plain" }));
+    await waitFor(() => expect(scene.find(".ak-upload-status").textContent).toBe(EN_MESSAGES.uploadUploading));
+    expect(boxOf(after)).toEqual(before);
+    // The upload ends at a moment the candidate does not choose, such as while a button that follows is pressed.
+    finish();
+    await waitFor(() => expect(scene.find(".ak-file-name").textContent).toBe("notes.txt"));
+    expect(boxOf(after)).toEqual(before);
   });
 
   it("takes the file away without sending anything", async () => {

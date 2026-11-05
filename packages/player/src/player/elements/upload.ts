@@ -108,6 +108,11 @@ export class UploadInteractionElement extends InteractionElement {
   readonly #clockTime = html("time", { class: "ak-time" });
   readonly #clock = html("div", { class: "ak-upload-clock" }, this.#clockLabel, " ", this.#clockTime);
   readonly #stored = html("div", { class: "ak-stored" });
+  /**
+   * The line of the status, the clock and the stored file, which keeps the height of a button whether or not it holds
+   * anything, so that what the upload writes after an action moves nothing that follows it (STANDARDS section 10).
+   */
+  readonly #result = html("div", { class: "ak-upload-result" }, this.#status, this.#clock, this.#stored);
   #services: UploadServices | undefined;
   #prompt: RenderedPrompt | undefined;
   #controls: HTMLElement | undefined;
@@ -150,13 +155,7 @@ export class UploadInteractionElement extends InteractionElement {
     this.#clock.hidden = true;
     this.setAttribute("role", "group");
     nameByPrompt(this, this.#prompt);
-    this.append(
-      ...(this.#prompt === undefined ? [] : [this.#prompt.element]),
-      this.#status,
-      this.#clock,
-      this.#stored,
-      this.notes.element,
-    );
+    this.append(...(this.#prompt === undefined ? [] : [this.#prompt.element]), this.#result, this.notes.element);
   }
 
   protected override configure(descriptor: InteractionDescriptor, messages: Messages): void {
@@ -193,7 +192,7 @@ export class UploadInteractionElement extends InteractionElement {
       input,
       ...buttons,
     );
-    this.#status.before(this.#controls);
+    this.#result.before(this.#controls);
   }
 
   protected override sync(_descriptor: InteractionDescriptor, messages: Messages): void {

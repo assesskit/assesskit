@@ -4,6 +4,7 @@ import { userEvent } from "vitest/browser";
 import { followPlayback, Playback, type PlaybackNotice } from "../src/player/media/index.js";
 import { audioPlaysToEnd, needsAudio } from "./audio.js";
 import { ASSETS, mountScene, type Scene } from "./interactions-fixture.js";
+import { boxOf } from "./layout-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
 import { waitFor } from "./wait.js";
 
@@ -180,6 +181,32 @@ describe("media", () => {
       audio.pause();
       scene.host.remove();
     }
+  });
+
+  it("keeps the line of its notice, so that what follows does not move when a notice comes and goes", async () => {
+    holdTimers();
+    const scene = mountScene(
+      DECLARATION,
+      `${BODY('data-qti-media-player-pause-delay="1.5"')}<p class="after">After</p>`,
+    );
+    // A narrow page, where a notice at the end of the controls would take a line of its own.
+    scene.host.style.width = "240px";
+    const after = scene.find("p.after");
+    const before = boxOf(after);
+    await userEvent.click(button(scene, "Play"));
+    expect(scene.find(".ak-media-notice").textContent).toBe("Playback starts in a moment.");
+    expect(boxOf(after)).toEqual(before);
+    const started = next(audioOf(scene), "playing");
+    vi.advanceTimersByTime(1500);
+    await started;
+    expect(scene.find(".ak-media-notice").textContent).toBe("");
+    expect(boxOf(after)).toEqual(before);
+    audioOf(scene).pause();
+  });
+
+  it("has no line for a notice when its rules never hold the playback", () => {
+    const scene = mountScene(DECLARATION, BODY(""));
+    expect(scene.find(".ak-media-notice").hidden).toBe(true);
   });
 
   it("waits for a pause delay longer than a timer takes, where the timer of the browser would fire at once", async () => {
