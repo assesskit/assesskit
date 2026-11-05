@@ -29,6 +29,7 @@ import {
 import {
   type CandidateAction,
   type CandidateView,
+  checkActionLimits,
   readCandidateAction,
   writeCandidateAction,
   writeView,
@@ -100,8 +101,10 @@ const hostOptionsSchema = v.strictObject({
 });
 
 function checkHostOptions(options: unknown): asserts options is SessionHostOptions {
-  const { engine } = parseWith(hostOptionsSchema, options, "The options object");
+  const { engine, limits } = parseWith(hostOptionsSchema, options, "The options object");
   checkBoolean(engine.hasMaximumTime, "The property hasMaximumTime of the option engine");
+  // Checked here, so that a misspelled limit fails as the host is made, not as each action of a candidate is read.
+  if (limits !== undefined) checkActionLimits(limits, "The option limits");
 }
 
 /** Returns the action as the log of a session keeps it: candidate actions in the runtime's JSON form, host actions without their payloads. */

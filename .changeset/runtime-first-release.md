@@ -17,8 +17,8 @@ fetch` downloads the official schemas, with a stall timeout of 30 seconds and th
 Each name is exported by the subpath of its module and by no other entry. The root `@assesskit/runtime` holds what no
 module owns, the seeded random number generator (`createRandom`, `restoreRandom`, `Random`, `RandomState` and
 `SeededRandom`). `@assesskit/runtime/delivery/wire` holds the wire forms of the candidate side (`readView`, `writeView`,
-`readCandidateAction`, `writeCandidateAction`, `DEFAULT_ACTION_LIMITS`, `CANDIDATE_ACTION_TYPES`, `REFUSAL_REASONS` and the
-types of the candidate view) and reaches no file of the engine, so that a client in a browser keeps the engine out of its
+`readCandidateAction`, `writeCandidateAction`, `DEFAULT_ACTION_LIMITS`, `checkActionLimits`, which checks the limits of a
+server or a client as it is made, `CANDIDATE_ACTION_TYPES`, `REFUSAL_REASONS` and the types of the candidate view) and reaches no file of the engine, so that a client in a browser keeps the engine out of its
 first load in a bundler that splits code by file. A host reaches the item session, the plan of a test and its times through
 `createEngine`, and an item delivered alone is `createEngine({ kind: "item" })`.
 

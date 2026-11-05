@@ -70,6 +70,7 @@ import {
   CANDIDATE_ACTION_TYPES,
   type CandidateAction,
   type CandidateView,
+  checkActionLimits,
   DEFAULT_ACTION_LIMITS,
   readCandidateAction,
   readView,
@@ -4999,6 +5000,19 @@ describe("candidate actions", () => {
       expect(read.type === "set-responses" && [...read.responses.keys()]).toEqual([name]);
     },
   );
+
+  it("checks limits as readCandidateAction reads them, so that a server and a client refuse a misspelled one when made", () => {
+    expect(() => checkActionLimits({ maxActionSize: 10, maxSettingListLength: 3 }, "The option limits")).not.toThrow();
+    expect(() => checkActionLimits({}, "The option limits")).not.toThrow();
+    expect(() => checkActionLimits(JSON.parse('{"maxActionBytes":10}'), "The option limits")).toThrow(
+      new DataError('The option limits is invalid: unexpected property "maxActionBytes".'),
+    );
+    expect(() => checkActionLimits(JSON.parse('{"maxPciStateLength":1.5}'), "The option limits")).toThrow(
+      "The option limits is invalid at maxPciStateLength: expected a safe integer, found 1.5.",
+    );
+    expect(() => checkActionLimits(JSON.parse("[]"), "The option limits")).toThrow(DataError);
+    expect(() => checkActionLimits(JSON.parse("null"), "The option limits")).toThrow(DataError);
+  });
 
   it("refuses an action larger than the limit maxActionSize, and a PCI state longer than maxPciStateLength", () => {
     const comment = (text: string): unknown => writeCandidateAction({ type: "comment", item, text });

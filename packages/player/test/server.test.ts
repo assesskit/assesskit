@@ -1459,6 +1459,13 @@ describe("createSessionHost", () => {
     );
     expect(() => make({ clientActions: "move" })).toThrow("The option clientActions must be an array");
     expect(() => make({ limits: 5 })).toThrow("The options object is invalid at limits: expected an object, found 5.");
+    // A misspelled limit fails as the host is made, not as each action of a candidate is read.
+    expect(() => make({ limits: { maxActionBytes: 10 } })).toThrow(
+      'The option limits is invalid: unexpected property "maxActionBytes".',
+    );
+    expect(() => make({ limits: { maxActionSize: 0 } })).toThrow(
+      "The option limits is invalid at maxActionSize: expected a value of at least 1, found 0.",
+    );
     expect(() => make({ other: 1 })).toThrow('The options object is invalid: unexpected property "other".');
     await expect(good.host.start(JSON.parse('{"session":"s"}'), { seed: 1 })).rejects.toThrow(
       'The caller is invalid: missing the property "principal".',

@@ -56,9 +56,24 @@ export const DEFAULT_ACTION_LIMITS: ActionLimits = {
   maxSettingListLength: 256,
 };
 
-const readCandidateActionOptionsSchema = strictRecord({
-  limits: v.optional(limitsSchema(DEFAULT_ACTION_LIMITS)),
-});
+/** The schema of the limits that a caller sets in place of {@link DEFAULT_ACTION_LIMITS}. */
+const actionLimitsSchema = limitsSchema(DEFAULT_ACTION_LIMITS);
+
+const readCandidateActionOptionsSchema = strictRecord({ limits: v.optional(actionLimitsSchema) });
+
+/**
+ * Checks limits on the size of an action, as a server that reads the actions of its clients, and a client that sends them,
+ * take them when they are created: each a positive integer, and no name but those of {@link ActionLimits}, so that a
+ * misspelled limit fails where it is set, not at each action that {@link readCandidateAction} reads with it.
+ *
+ * @param limits - The limits, which replace those of {@link DEFAULT_ACTION_LIMITS} field by field.
+ * @param label - Names the value in the error message, such as `The option limits`.
+ * @throws `DataError` when `limits` is not an object, has a name that is not a limit, or a limit that is not a positive
+ * integer.
+ */
+export function checkActionLimits(limits: unknown, label: string): asserts limits is Partial<ActionLimits> {
+  parseWith(actionLimitsSchema, limits, label);
+}
 
 const actionSchema: Schema<CandidateAction> = v.variant(
   "type",

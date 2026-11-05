@@ -45,36 +45,36 @@ sequenceDiagram
   Host-->>Client: writeView(view)
 ```
 
-| Function or type                                                      | Does                                                                                                       |
-| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `createEngine(definition, options?)`                                  | The `Engine`: `hasMaximumTime`, `start`, `apply`, `deadlines`, `view`, `pending`, `scorerView`, `results`. |
-| `stamp(state, action, now)`                                           | The action with `at` = max(`now`, the time of the latest step).                                            |
-| `writeView(view)`, `readView(json)`                                   | The JSON form of a `CandidateView`, and the view of a JSON form.                                           |
-| `writeCandidateAction(action)`, `readCandidateAction(json, options?)` | The JSON form of a candidate action, and the action of a JSON form, within limits.                         |
-| `CandidateView`, `CandidateItem`, `NavigationEntry`, …                | What the candidate sees: the item, the navigation map, timers, actions and supports.                       |
-| `DEFAULT_ACTION_LIMITS`, `ActionLimits`                               | The limits of `readCandidateAction`.                                                                       |
-| `serializeState(state)`, `deserializeState(text)`                     | The JSON text of a state, and the state of a text, with the version of the format.                         |
-| `DeliveryState`, `Step`, `Deadline`                                   | A candidate session as plain data, the result of a step, a time limit as an absolute time.                 |
-| `CandidateAction`, `HostAction`, `Action`                             | The actions of the candidate and the host, with their time.                                                |
-| `DeliveryDefinition`, `EngineOptions`, `StartOptions`                 | What the engine delivers, its options, and the options of a session.                                       |
-| `drainCat(engine, state, port, now, options?)`                        | Makes the waiting requests of CAT engines through a `CatSessionPort` and applies each answer.              |
-| `sendCatRequest(port, request, options?)`                             | Makes one CAT request through a `CatSessionPort` and returns the answer for a `cat-response` action.       |
-| `PendingWork`, `ScoringRequest`, `CatRequest`                         | What the engine waits on the host for: scores and answers of CAT engines.                                  |
-| `ScorerView`, `ScorerItem`                                            | What a scorer needs to rate a request, correct responses included.                                         |
-| `CatSession`, `CatSectionRef`                                         | The session of an adaptive section in a state, and where its CAT engine is.                                |
-| `resolveStructure(test, base, resolvers)`                             | The `TestStructure`: parts, sections and item references, section references replaced.                     |
-| `ItemKey`                                                             | An item instance: the identifier of the item reference and the instance, from 1.                           |
-| `TestPlan`, `PlannedPart`, `PlannedSection`, …                        | The plan: plain data, identifiers and numbers only.                                                        |
-| `TestNode`, `PartNode`, `SectionNode`, …                              | The nodes of the structure, with their models and the path of the document that holds them.                |
-| `DEFAULT_PLAN_LIMITS`, `PlanLimits`                                   | The limit on the size of a plan, the option `limits` of `createEngine`.                                    |
-| `readItemVariables(item, result)`                                     | The variables that response processing starts from, read from a stored result of one instance.             |
-| `readTestInputs(structure, result, items, options?)`                  | The outcomes and the scope that outcome processing takes, read from a stored report.                       |
-| `TestInputs`, `ReadTestInputsOptions`                                 | What `readTestInputs` returns, and its option `variables`.                                                 |
-| `ItemSession`, `ItemSessionStatus`                                    | The state of an item session: plain data with its variables, drafts and attempts.                          |
-| `ItemAction`                                                          | The actions of the candidate on an item session.                                                           |
-| `Refusal`, `RefusalReason`, `DeliveryEvent`, …                        | Why a step is refused, and what an accepted step reports.                                                  |
+| Function or type                                                            | Does                                                                                                       |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `createEngine(definition, options?)`                                        | The `Engine`: `hasMaximumTime`, `start`, `apply`, `deadlines`, `view`, `pending`, `scorerView`, `results`. |
+| `stamp(state, action, now)`                                                 | The action with `at` = max(`now`, the time of the latest step).                                            |
+| `writeView(view)`, `readView(json)`                                         | The JSON form of a `CandidateView`, and the view of a JSON form.                                           |
+| `writeCandidateAction(action)`, `readCandidateAction(json, options?)`       | The JSON form of a candidate action, and the action of a JSON form, within limits.                         |
+| `CandidateView`, `CandidateItem`, `NavigationEntry`, …                      | What the candidate sees: the item, the navigation map, timers, actions and supports.                       |
+| `DEFAULT_ACTION_LIMITS`, `ActionLimits`, `checkActionLimits(limits, label)` | The limits of `readCandidateAction`, and their check where a server or a client is made.                   |
+| `serializeState(state)`, `deserializeState(text)`                           | The JSON text of a state, and the state of a text, with the version of the format.                         |
+| `DeliveryState`, `Step`, `Deadline`                                         | A candidate session as plain data, the result of a step, a time limit as an absolute time.                 |
+| `CandidateAction`, `HostAction`, `Action`                                   | The actions of the candidate and the host, with their time.                                                |
+| `DeliveryDefinition`, `EngineOptions`, `StartOptions`                       | What the engine delivers, its options, and the options of a session.                                       |
+| `drainCat(engine, state, port, now, options?)`                              | Makes the waiting requests of CAT engines through a `CatSessionPort` and applies each answer.              |
+| `sendCatRequest(port, request, options?)`                                   | Makes one CAT request through a `CatSessionPort` and returns the answer for a `cat-response` action.       |
+| `PendingWork`, `ScoringRequest`, `CatRequest`                               | What the engine waits on the host for: scores and answers of CAT engines.                                  |
+| `ScorerView`, `ScorerItem`                                                  | What a scorer needs to rate a request, correct responses included.                                         |
+| `CatSession`, `CatSectionRef`                                               | The session of an adaptive section in a state, and where its CAT engine is.                                |
+| `resolveStructure(test, base, resolvers)`                                   | The `TestStructure`: parts, sections and item references, section references replaced.                     |
+| `ItemKey`                                                                   | An item instance: the identifier of the item reference and the instance, from 1.                           |
+| `TestPlan`, `PlannedPart`, `PlannedSection`, …                              | The plan: plain data, identifiers and numbers only.                                                        |
+| `TestNode`, `PartNode`, `SectionNode`, …                                    | The nodes of the structure, with their models and the path of the document that holds them.                |
+| `DEFAULT_PLAN_LIMITS`, `PlanLimits`                                         | The limit on the size of a plan, the option `limits` of `createEngine`.                                    |
+| `readItemVariables(item, result)`                                           | The variables that response processing starts from, read from a stored result of one instance.             |
+| `readTestInputs(structure, result, items, options?)`                        | The outcomes and the scope that outcome processing takes, read from a stored report.                       |
+| `TestInputs`, `ReadTestInputsOptions`                                       | What `readTestInputs` returns, and its option `variables`.                                                 |
+| `ItemSession`, `ItemSessionStatus`                                          | The state of an item session: plain data with its variables, drafts and attempts.                          |
+| `ItemAction`                                                                | The actions of the candidate on an item session.                                                           |
+| `Refusal`, `RefusalReason`, `DeliveryEvent`, …                              | Why a step is refused, and what an accepted step reports.                                                  |
 
-`writeView`, `readView`, `writeCandidateAction`, `readCandidateAction`, `DEFAULT_ACTION_LIMITS`, `ActionLimits`, `CandidateAction`,
+`writeView`, `readView`, `writeCandidateAction`, `readCandidateAction`, `DEFAULT_ACTION_LIMITS`, `ActionLimits`, `checkActionLimits`, `CandidateAction`,
 `CANDIDATE_ACTION_TYPES`, `REFUSAL_REASONS` and the types of the candidate's view are exported by
 `@assesskit/runtime/delivery/wire` and by no other entry
 ([Wire forms](#wire-forms)); every other name of this guide is exported by `@assesskit/runtime/delivery`. The session of an item
@@ -620,6 +620,7 @@ from `ordered`, and the NULL of one type from that of another.
 | `readView(json)`                      | Checks every property of the form and no other, the type of each field, the values, and the content as plain JSON of at most 256 levels with finite numbers. It reads the view of the host's server and sets no limit of size ([SECURITY.md](../../SECURITY.md)). |
 | `writeCandidateAction(action)`        | Writes the properties of the action's type and refuses any other; the time `at` is not written.                                                                                                                                                                   |
 | `readCandidateAction(json, options?)` | Reads an action of the candidate, checks its type, its properties and its limits, and refuses an action of the host and any property `at`.                                                                                                                        |
+| `checkActionLimits(limits, label)`    | Checks the limits that a server or a client takes as it is made, as `readCandidateAction` reads them, so that a misspelled limit fails there and not at each action.                                                                                              |
 
 | Limit                  | Default   | Bounds                                                                                                     |
 | ---------------------- | --------- | ---------------------------------------------------------------------------------------------------------- |
@@ -628,7 +629,7 @@ from `ordered`, and the NULL of one type from that of another.
 | `maxSettingListLength` | `256`     | The entries of one list in the settings of a `support-settings` action, nested lists included.             |
 
 Host actions (`time`, `supply-scores`, `cat-response`) never come from a client, and the time of an action is the server's
-`stamp`. The four functions, `DEFAULT_ACTION_LIMITS` and the types of a view and an action are exported by the subpath
+`stamp`. The five functions, `DEFAULT_ACTION_LIMITS` and the types of a view and an action are exported by the subpath
 `@assesskit/runtime/delivery/wire` only, which reaches no file of the engine. A client in a browser imports them from there: a
 bundler that splits code by file, such as esbuild, puts in the first load every file that the page reaches through an import
 and that any of its chunks uses, and `@assesskit/runtime/delivery` reaches the engine, which a practice session on the same
@@ -770,9 +771,9 @@ host deployed the section. The host answers the engine's requests: `sendCatReque
   because the requests of a CAT engine are not idempotent: a host that must resume reads `pending(state).cat`, calls
   `sendCatRequest` and applies the `cat-response` itself, one request at a time.
 
-| Option | Type | Default | Meaning |
-| -------- | ------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -------------------------------------------------------------------------------|
-| `signal` | `AbortSignal` | none | Ends the wait of the caller, of `sendCatRequest` and of `drainCat`: the call rejects with the reason of the signal, at once if it has aborted. The port gets the signal with the request, so that it can stop the request; one that it does not stop runs to the timeout of the port, and its answer is lost. |
+| Option   | Type          | Default | Meaning                                                                                                                                                                                                                                                                                                       |
+| -------- | ------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `signal` | `AbortSignal` | none    | Ends the wait of the caller, of `sendCatRequest` and of `drainCat`: the call rejects with the reason of the signal, at once if it has aborted. The port gets the signal with the request, so that it can stop the request; one that it does not stop runs to the timeout of the port, and its answer is lost. |
 
 A test part that holds an adaptive section should be linear; the engine waits for the first stage where the walk
 reaches the section, in a nonlinear part too.

@@ -66,7 +66,8 @@ client.close();
 
 ## Remote session
 
-`createRemoteSession(transport, initial, options)` throws `DataError` when an argument is not of its type.
+`createRemoteSession(transport, initial, options)` throws `DataError` when an argument is not of its type, a limit of `limits`
+among them, so that a misspelled limit fails as the client is made.
 
 | Argument    | Type                       | Meaning                                                                                                                                                                                                          |
 | ----------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

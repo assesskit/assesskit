@@ -111,7 +111,8 @@ records.get("s1").version; // => 1
 
 ## Session host
 
-`createSessionHost(options)` throws `DataError` when an option is not of its type.
+`createSessionHost(options)` throws `DataError` when an option is not of its type, a limit of `limits` among them, so that a
+misspelled limit fails as the host is made.
 
 | Option          | Type                                         | Meaning                                                                                                                                                                        |
 | --------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

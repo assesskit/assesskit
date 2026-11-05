@@ -24,7 +24,8 @@ leaves out: without one it refuses an engine whose test has a maximum time anywh
 `DataError`, so that no candidate meets the refusal halfway through a sitting. A candidate whose profile has breaks (the
 support `environment` with `breaks` on) may send `suspend` and `resume` to a session host beside its `clientActions`, and
 comes back to every response with the clocks stopped meanwhile; a program whose breaks all go through the proctor leaves
-`breaks` out of the profile. `LocalStore.save` takes `{ state, events }`: the state and the events of the step that made
+`breaks` out of the profile. `createSessionHost` and `createRemoteSession` check their `limits` as they are made, so that a misspelled limit fails
+there and not at each action. `LocalStore.save` takes `{ state, events }`: the state and the events of the step that made
 it, in one write. Every call that waits on a store, a service or the host takes the `CallOptions` of
 `@assesskit/runtime/checks`, with its `signal`, and every options object is read by a strict reader that refuses an option
 the function does not take, whatever its type.

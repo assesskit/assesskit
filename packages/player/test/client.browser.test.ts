@@ -362,6 +362,13 @@ describe("createRemoteSession", () => {
     expect(() => createRemoteSession(transport, initial, options('{"clock":{}}'))).toThrow(
       "The options object is invalid at clock: expected an object with the function now, found an object.",
     );
+    // A misspelled limit fails as the client is made, not as each action is sent.
+    expect(() => createRemoteSession(transport, initial, options('{"limits":{"maxActionBytes":10}}'))).toThrow(
+      'The option limits is invalid: unexpected property "maxActionBytes".',
+    );
+    expect(() => createRemoteSession(transport, initial, options('{"limits":{"maxPciStateLength":0}}'))).toThrow(
+      "The option limits is invalid at maxPciStateLength: expected a value of at least 1, found 0.",
+    );
     const client = createRemoteSession(transport, initial);
     expect(() => client.subscribe(JSON.parse("5"))).toThrow("The listener must be a function");
     await expect(client.dispatch(JSON.parse('{"type":"nope"}'))).rejects.toThrow("The type of the action");

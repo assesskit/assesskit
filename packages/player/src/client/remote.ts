@@ -11,6 +11,7 @@ import {
   type ActionLimits,
   type CandidateAction,
   type CandidateView,
+  checkActionLimits,
   readCandidateAction,
   readView,
   writeCandidateAction,
@@ -138,6 +139,8 @@ export function createRemoteSession(
   checkViewEnvelope(initial);
   parseWith(remoteOptionsSchema, options, "The options object");
   const { clock = SYSTEM_CLOCK, limits = {}, onError = (error: unknown) => reportError(error) } = options;
+  // Checked here, so that a misspelled limit fails as the client is made, not as each action is sent.
+  checkActionLimits(limits, "The option limits");
 
   const listeners = new Set<(view: CandidateView) => void>();
   let sequence = initial.seq;

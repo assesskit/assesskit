@@ -11,6 +11,7 @@
 export { CANDIDATE_ACTION_TYPES, type CandidateAction } from "./action.js";
 export {
   type ActionLimits,
+  checkActionLimits,
   DEFAULT_ACTION_LIMITS,
   type ReadCandidateActionOptions,
   readCandidateAction,
