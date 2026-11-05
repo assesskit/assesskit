@@ -38,7 +38,7 @@ export function fnv1a32(text: string): number {
  */
 export class Sample {
   private readonly ranges: Ranges;
-  private readonly drawn = new Map<string, readonly number[]>();
+  private readonly drawn = new Map<string, readonly Measured[]>();
 
   constructor(ranges: Ranges) {
     this.ranges = ranges;
@@ -50,10 +50,10 @@ export class Sample {
     if (values === undefined) {
       const { min, max } = this.ranges.get(name) ?? DEFAULT_RANGE;
       const random = createRandom(fnv1a32(SEED_PREFIX + name));
-      values = Array.from({ length: POINT_COUNT }, () => min + (max - min) * random.uniform());
+      values = Array.from({ length: POINT_COUNT }, () => measured(complex(min + (max - min) * random.uniform())));
       this.drawn.set(name, values);
     }
-    return measured(complex(values[index] ?? Number.NaN));
+    return values[index] ?? measured(complex(Number.NaN));
   }
 
   /**

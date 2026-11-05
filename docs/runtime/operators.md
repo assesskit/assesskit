@@ -390,7 +390,7 @@ means absent is the empty list or object (`units`, `credit`, `variables`, `patte
 | Points of a hotspot response                                                             | the count of the key's areas                    | none    | none   | Unreadable: NULL                                                                      |
 
 The reader is linear in the text, and the comparator evaluates 24 points; the worst expression of 2,000 characters reads and
-compares in a few milliseconds (2.4 ms for a sum of 1,000 terms on a laptop). A text credit tier measures a banded edit distance, at most 2,000 × 129 cells an accepted
+compares in a few milliseconds (1.4 ms for a sum of 1,000 terms on a laptop). A text credit tier measures a banded edit distance, at most 2,000 × 129 cells an accepted
 text; a hotspot response tests at most 1,000 points against areas of 4,000 coordinates, then matches them by Hopcroft and Karp.
 
 ## Differences from the references
