@@ -155,7 +155,9 @@ line breaks as `<br />`; plain text escaped. That HTML is parsed as a browser pa
 content keeps the attributes that QTI gives it with a valid value and its `data-*` attributes. Another element gives its
 content to its parent, code (`script`, `style`, `iframe` and forms) is left out with what it holds, and text where QTI takes
 blocks alone is held by a `div`. Each of these is a loss, as is Markdown, which Moodle formats and a reader keeps as plain text.
-Content that still does not form a valid item keeps its texts as plain text, with a loss.
+Content that still does not form a valid item keeps its texts as plain text, with a loss. A character that XML does not allow,
+which a GIFT file may hold (a control character, U+FFFE, U+FFFF), is U+FFFD in the item, with a loss; a text given as a string
+is read as its UTF-8 would be, so a lone surrogate is U+FFFD.
 
 A writer writes the item's body as the question's text, in HTML: QTI's elements as HTML, MathML with its namespace, the
 interaction's prompt in its place, and an inline interaction as GIFT's missing word when text follows it. The content of a
@@ -164,13 +166,13 @@ variable, are left out with a loss. A choice's content is its answer's HTML; the
 
 ## Losses
 
-| Reason     | What does not convert                                                                                                                  |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `item`     | The whole item, left out: an interaction without a question type, several interactions, template variables, a question Moodle refuses  |
-| `scoring`  | Credit the other side cannot express: a rule that is not a sum of credits, a credit outside Moodle's grades, case in GIFT, open bounds |
-| `feedback` | Feedback that has no place on the other side                                                                                           |
-| `content`  | Content without a place: elements and attributes outside QTI's content, Markdown, content after a block interaction                    |
-| `setting`  | A setting without a place: the mark in GIFT, shuffling, limits of choices, an essay's options, the hints of Moodle's interactive modes |
+| Reason     | What does not convert                                                                                                                                      |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `item`     | The whole item, left out: an interaction without a question type, several interactions, template variables, a question Moodle refuses or QTI does not hold |
+| `scoring`  | Credit the other side cannot express: a rule that is not a sum of credits, a credit outside Moodle's grades, case in GIFT, open bounds                     |
+| `feedback` | Feedback that has no place on the other side                                                                                                               |
+| `content`  | Content without a place: elements and attributes outside QTI's content, characters outside XML, Markdown, content after a block interaction                |
+| `setting`  | A setting without a place: the mark in GIFT, shuffling, limits of choices, an essay's options, the hints of Moodle's interactive modes                     |
 
 A loss gives `index`, the position of the item in the list a writer takes or of the question in the file, `item`, its
 identifier or name, `omitted`, and a `message` that says what the result holds instead.
