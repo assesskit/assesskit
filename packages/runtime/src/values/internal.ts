@@ -8,7 +8,7 @@ export { CARDINALITIES, cardinalitySchema, isCardinality } from "./cardinality.j
 export { parseDuration } from "./duration.js";
 export { readJsonValue } from "./json-read.js";
 export { writeJsonValue } from "./json-write.js";
-export { optionalText, parsePrimitive } from "./lexical.js";
+export { formatDouble, optionalText, parsePrimitive } from "./lexical.js";
 export { formatIdentifierList, parseIdentifierList } from "./lists.js";
 export { primitiveKey } from "./primitive-key.js";
 export { wireValueSchema } from "./wire.js";

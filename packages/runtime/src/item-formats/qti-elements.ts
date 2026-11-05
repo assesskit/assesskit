@@ -1,4 +1,5 @@
 import { ASI_NAMESPACE } from "../asi/index.js";
+import { formatDouble } from "../values/internal.js";
 import type { XmlElement } from "../xml/index.js";
 import { elementBuilder } from "../xml/internal.js";
 
@@ -7,9 +8,9 @@ import { elementBuilder } from "../xml/internal.js";
 /** An element of the ASI namespace with its attributes, in order, and its children; an attribute without value is left out. */
 export const qti = elementBuilder(ASI_NAMESPACE);
 
-/** A number as an attribute or a value of the base type `float` writes it. */
+/** A number as an attribute or a value of the base type `float` writes it: `INF`, `-INF` and `NaN` included, and -0 as 0. */
 export function formatFloat(value: number): string {
-  return Object.is(value, -0) ? "0" : String(value);
+  return Object.is(value, -0) ? "0" : formatDouble(value);
 }
 
 /** `qti-variable`. */

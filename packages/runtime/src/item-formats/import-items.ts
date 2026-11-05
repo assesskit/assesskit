@@ -4,10 +4,10 @@ import { DataError, ReadError, SecurityError } from "../errors.js";
 import { isIdentifier } from "../values/index.js";
 import { exceedsBytes } from "../xml/internal.js";
 import { createContentState } from "./html-content.js";
-import { buildItem } from "./item-build.js";
+import { type BuildContext, type BuiltItem, buildItem } from "./item-build.js";
 import { DEFAULT_ITEM_FORMAT_LIMITS, type ItemFormatLimits, readLimitsSchema } from "./limits.js";
 import type { BankItem, ConversionLoss, ImportedItems, ReadItemsOptions, TrueFalseLabels } from "./model.js";
-import type { ReadEntry } from "./question.js";
+import type { Question, ReadEntry } from "./question.js";
 
 const DEFAULT_LABELS: TrueFalseLabels = Object.freeze({ true: "True", false: "False" });
 
@@ -74,18 +74,66 @@ function identifierFor(idNumber: string, position: number, used: Set<string>): s
   return identifier;
 }
 
+/** What the items of a file share while a reader converts them. */
+interface ImportContext extends BuildContext {
+  /** The identifiers of the items so far. */
+  readonly used: Set<string>;
+}
+
+/** The item of an entry, if it has one, with its losses. */
+interface Imported {
+  readonly item?: BankItem;
+  readonly losses: readonly ConversionLoss[];
+}
+
+/** A question left out, with the reason. */
+function omission(index: number, item: string, message: string): Imported {
+  return { losses: [{ index, item, omitted: true, reason: "item", message }] };
+}
+
+/** The item of a question with its losses, and the files of its texts added to the file's; left out when it does not read. */
+function importQuestion(
+  question: Question,
+  index: number,
+  category: string | undefined,
+  context: ImportContext,
+): Imported {
+  const identifier = identifierFor(question.idNumber, index, context.used);
+  const files = new Map<string, Uint8Array>();
+  let built: BuiltItem;
+  try {
+    built = buildItem(question, identifier, { ...context, files });
+  } catch (error) {
+    if (!(error instanceof ReadError)) throw error;
+    return omission(index, question.name || identifier, `The question does not form a QTI item: ${error.message}`);
+  }
+  for (const [reference, bytes] of files) context.files.set(reference, bytes);
+  return {
+    item: {
+      item: built.item,
+      ...(category === undefined ? {} : { category }),
+      ...(question.tags.length === 0 ? {} : { tags: question.tags }),
+    },
+    losses: built.losses.map((loss) => ({ index, item: identifier, omitted: false, ...loss })),
+  };
+}
+
 /**
  * Converts what a reader found into items, in order, each under the category that the file last named, with the losses
- * of each and an omitted entry for each question that Moodle refuses.
+ * of each and an omitted entry for each question that Moodle refuses or whose item does not read, such as one whose essay
+ * has a number of lines that is not a whole number.
  *
  * @throws `SecurityError` when the texts of the file pass the limits.
  */
 export function importEntries(entries: readonly ReadEntry[], options: ResolvedReadOptions): ImportedItems {
-  const state = createContentState(options.limits);
+  const context: ImportContext = {
+    state: createContentState(options.limits),
+    labels: options.labels,
+    files: new Map(),
+    used: new Set(),
+  };
   const items: BankItem[] = [];
   const losses: ConversionLoss[] = [];
-  const used = new Set<string>();
-  const files = new Map<string, Uint8Array>();
   let category: string | undefined;
   let index = 0;
   for (const entry of entries) {
@@ -93,22 +141,17 @@ export function importEntries(entries: readonly ReadEntry[], options: ResolvedRe
       category = entry.category;
       continue;
     }
-    if (entry.kind !== "question") {
-      const message = entry.kind === "error" ? `Moodle refuses the question: ${entry.message}` : entry.message;
-      losses.push({ index, item: entry.name, omitted: true, reason: "item", message });
-      index += 1;
-      continue;
-    }
-    const { question } = entry;
-    const identifier = identifierFor(question.idNumber, index, used);
-    const built = buildItem(question, identifier, { state, labels: options.labels, files });
-    items.push({
-      item: built.item,
-      ...(category === undefined ? {} : { category }),
-      ...(question.tags.length === 0 ? {} : { tags: question.tags }),
-    });
-    for (const loss of built.losses) losses.push({ index, item: identifier, omitted: false, ...loss });
+    const imported =
+      entry.kind === "question"
+        ? importQuestion(entry.question, index, category, context)
+        : omission(
+            index,
+            entry.name,
+            entry.kind === "error" ? `Moodle refuses the question: ${entry.message}` : entry.message,
+          );
+    if (imported.item !== undefined) items.push(imported.item);
+    for (const loss of imported.losses) losses.push(loss);
     index += 1;
   }
-  return { items, files, losses };
+  return { items, files: context.files, losses };
 }

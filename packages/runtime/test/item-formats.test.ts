@@ -359,6 +359,25 @@ describe("readGift and readMoodleXml", () => {
     expect(body(control)).toContain("<div>Bell \uFFFD and \uFFFD\uFFFD</div>");
     expect(control.losses.map(({ message }) => message)).toStrictEqual([replaced]);
   });
+
+  it("writes an infinite number in QTI's form, and leaves out a question whose item does not read", () => {
+    const [infinite] = readGift("Big {#1e400}").items;
+    if (infinite === undefined) throw new Error("The question reads.");
+    expect(writeAsi({ kind: "item", item: infinite.item })).toContain(
+      '<qti-base-value base-type="float">INF</qti-base-value>',
+    );
+    expect(scoreOf(infinite.item, { text: "1" })).toBe(0);
+    const question = (type: string, inner: string) =>
+      `<question type="${type}"><name><text>${type}</text></name><questiontext format="html"><text>Q</text></questiontext>${inner}</question>`;
+    const { items, losses } = readMoodleXml(
+      `<quiz>${question("description", "<defaultgrade>1e400</defaultgrade>")}${question("essay", "<responsefieldlines>1.5</responsefieldlines>")}${question("essay", "")}</quiz>`,
+    );
+    expect(items.map(({ item }) => item.title)).toStrictEqual(["description", "essay"]);
+    expect(losses.map(({ index, item, omitted, reason }) => [index, item, omitted, reason])).toStrictEqual([
+      [1, "essay", true, "item"],
+    ]);
+    expect(losses[0]?.message).toMatch(/^The question does not form a QTI item: The attribute expected-lines/);
+  });
 });
 
 describe("writeGift", () => {

@@ -216,6 +216,7 @@ at most `maxAnswers` squared.
 | Moodle XML with a DOCTYPE                                                                                                                | `SecurityError` with `limit` `doctype`                   |
 | A file past a limit                                                                                                                      | `SecurityError` with `limit` and `maximum`               |
 | A question that Moodle refuses: braces that do not match, too few answers, a pair without `->`, a weight or a bound that is not a number | A loss `item`, the question left out; the reader goes on |
+| A question whose item QTI does not hold, such as an essay of 1.5 lines                                                                   | A loss `item`, the question left out; the reader goes on |
 | Items that are not an array of objects with an item of the model                                                                         | `DataError`                                              |
 | An item whose response processing fails on the runtime, such as one that calls an operator not registered                                | A loss `item`, the item left out                         |
 
