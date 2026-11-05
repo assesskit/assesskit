@@ -1,19 +1,24 @@
 import * as v from "valibot";
-import { finiteSchema, isRecord, mapSchema, positiveIntegerSchema, recordSchema, strictRecord } from "../checks.js";
+import { finiteSchema, mapSchema, positiveIntegerSchema, recordSchema, strictRecord } from "../checks.js";
 import { nonNegativeSchema } from "../checks-internal.js";
 import { SecurityError } from "../errors.js";
 import { DEFAULT_KEY_LIMITS } from "../keys/index.js";
 
-// The schemas of the keys that the operators score, with every field present: a key that an item carries has its defaults
-// resolved, so that a later change of a default never changes a published score.
+// The schemas of the keys that the operators score. A field that a key may leave out has its default here, and both a call
+// and an item read a key through them; `buildOperatorCall` writes every field, so that an item's key holds its defaults
+// and a later change of a default takes a new definition URI rather than changing a published score.
 
 /** A share of points, from 0 to 1. */
 const shareSchema = v.pipe(v.number(), v.finite(), v.minValue(0), v.maxValue(1));
-const separatorSchema = v.picklist([".", ","]);
-const toleranceSchema = strictRecord({
-  absolute: v.nullable(nonNegativeSchema),
-  relative: v.nullable(nonNegativeSchema),
-});
+const separatorSchema = v.optional(v.picklist([".", ","]), ".");
+const toleranceSchema = v.optional(
+  strictRecord({
+    absolute: v.optional(v.nullable(nonNegativeSchema), null),
+    relative: v.optional(v.nullable(nonNegativeSchema), null),
+  }),
+  {},
+);
+const creditSchema = v.optional(v.array(strictRecord({ tolerance: toleranceSchema, share: shareSchema })), []);
 
 const rangeSchema = v.pipe(
   strictRecord({ min: finiteSchema, max: finiteSchema }),
@@ -23,8 +28,8 @@ const rangeSchema = v.pipe(
 const expressionKeyObject = v.strictObject({
   kind: v.literal("expression"),
   expression: v.string(),
-  form: v.picklist(["expression", "equation", "solution-set"]),
-  variables: mapSchema(rangeSchema),
+  form: v.optional(v.picklist(["expression", "equation", "solution-set"]), "expression"),
+  variables: v.optional(mapSchema(rangeSchema), {}),
   decimalSeparator: separatorSchema,
 });
 
@@ -32,8 +37,8 @@ const intervalSchema = v.pipe(
   strictRecord({
     min: v.nullable(finiteSchema),
     max: v.nullable(finiteSchema),
-    minIncluded: v.boolean(),
-    maxIncluded: v.boolean(),
+    minIncluded: v.optional(v.boolean(), true),
+    maxIncluded: v.optional(v.boolean(), true),
   }),
   v.check(({ min, max }) => min === null || max === null || min <= max, "an interval has its min at most its max"),
 );
@@ -43,45 +48,57 @@ const numberKeyObject = v.strictObject({
   value: finiteSchema,
   tolerance: toleranceSchema,
   decimalSeparator: separatorSchema,
-  units: mapSchema(v.pipe(v.number(), v.finite(), v.gtValue(0, "a unit's factor is above 0"))),
-  fractions: v.boolean(),
-  significantFigures: v.nullable(positiveIntegerSchema),
-  credit: v.array(strictRecord({ tolerance: toleranceSchema, share: shareSchema })),
-  intervals: v.nullable(v.pipe(v.array(intervalSchema), v.minLength(1))),
-  components: v.nullable(v.pipe(v.array(finiteSchema), v.minLength(1))),
+  units: v.optional(mapSchema(v.pipe(v.number(), v.finite(), v.gtValue(0, "a unit's factor is above 0"))), {}),
+  fractions: v.optional(v.boolean(), false),
+  significantFigures: v.optional(v.nullable(positiveIntegerSchema), null),
+  credit: creditSchema,
+  intervals: v.optional(v.nullable(v.pipe(v.array(intervalSchema), v.minLength(1))), null),
+  components: v.optional(v.nullable(v.pipe(v.array(finiteSchema), v.minLength(1))), null),
 });
 
 const lengthEffectSchema = strictRecord({
   when: v.picklist(["below", "above"]),
-  share: nonNegativeSchema,
+  share: v.optional(nonNegativeSchema, 1),
   effect: v.union([v.literal("zero"), strictRecord({ deduct: shareSchema })]),
 });
 
 const textKeyObject = v.strictObject({
   kind: v.literal("text"),
   answers: v.pipe(
-    v.array(strictRecord({ texts: v.array(v.string()), points: nonNegativeSchema, patterns: v.array(v.string()) })),
+    v.array(
+      strictRecord({
+        texts: v.array(v.string()),
+        points: v.optional(nonNegativeSchema, 1),
+        patterns: v.optional(v.array(v.string()), []),
+      }),
+    ),
     v.minLength(1),
   ),
-  count: positiveIntegerSchema,
-  scheme: v.picklist(["forms", "words"]),
-  normalization: strictRecord({
-    form: v.picklist(["NFC", "NFD", "NFKC", "NFKD"]),
-    foldWidth: v.boolean(),
-    ignoreMarks: v.boolean(),
-    caseSensitive: v.boolean(),
-    collapseWhitespace: v.boolean(),
-  }),
-  spelling: v.picklist(["exact", "variants"]),
-  numericEquivalence: v.boolean(),
-  credit: v.array(strictRecord({ tolerance: toleranceSchema, share: shareSchema })),
-  length: v.nullable(
+  count: v.optional(positiveIntegerSchema, 1),
+  scheme: v.optional(v.picklist(["forms", "words"]), "forms"),
+  normalization: v.optional(
     strictRecord({
-      unit: v.picklist(["words", "characters", "characters-without-spaces", "manuscript-squares"]),
-      min: v.nullable(nonNegativeSchema),
-      max: v.nullable(nonNegativeSchema),
-      effects: v.array(lengthEffectSchema),
+      form: v.optional(v.picklist(["NFC", "NFD", "NFKC", "NFKD"]), "NFKC"),
+      foldWidth: v.optional(v.boolean(), true),
+      ignoreMarks: v.optional(v.boolean(), false),
+      caseSensitive: v.optional(v.boolean(), false),
+      collapseWhitespace: v.optional(v.boolean(), true),
     }),
+    {},
+  ),
+  spelling: v.optional(v.picklist(["exact", "variants"]), "exact"),
+  numericEquivalence: v.optional(v.boolean(), false),
+  credit: creditSchema,
+  length: v.optional(
+    v.nullable(
+      strictRecord({
+        unit: v.picklist(["words", "characters", "characters-without-spaces", "manuscript-squares"]),
+        min: v.optional(v.nullable(nonNegativeSchema), null),
+        max: v.optional(v.nullable(nonNegativeSchema), null),
+        effects: v.optional(v.array(lengthEffectSchema), []),
+      }),
+    ),
+    null,
   ),
 });
 
@@ -90,15 +107,19 @@ export const areaSchema = strictRecord({
   id: v.pipe(v.string(), v.nonEmpty()),
   shape: v.picklist(["rect", "circle", "poly"]),
   coords: v.array(nonNegativeSchema),
-  points: nonNegativeSchema,
+  points: v.optional(nonNegativeSchema, 1),
 });
 
-const areasKeyObject = v.strictObject({
-  kind: v.literal("areas"),
-  areas: v.pipe(v.array(areaSchema), v.minLength(1)),
-  scheme: v.literal("keyed", 'expected the scheme "keyed", which hotspot-matching scores'),
-  select: positiveIntegerSchema,
-});
+/** An `areas` key, whose `select` is by default the number of its areas. */
+const areasKeyObject = v.pipe(
+  v.strictObject({
+    kind: v.literal("areas"),
+    areas: v.pipe(v.array(areaSchema), v.minLength(1)),
+    scheme: v.literal("keyed", 'expected the scheme "keyed", which hotspot-matching scores'),
+    select: v.optional(positiveIntegerSchema),
+  }),
+  v.transform(({ select, ...key }) => ({ ...key, select: select ?? key.areas.length })),
+);
 
 export const expressionKeySchema = v.pipe(recordSchema, expressionKeyObject);
 export const numberKeySchema = v.pipe(recordSchema, numberKeyObject);
@@ -185,99 +206,4 @@ function checkTextLimits(key: TextKeyData, path: string): void {
         );
     }
   }
-}
-
-/** The value, or its default when it is absent. */
-function orDefault(value: unknown, fallback: unknown): unknown {
-  return value === undefined ? fallback : value;
-}
-
-/** A copy of an object with each absent field filled from its default; anything else is the schema's to judge. */
-function withDefaults(value: unknown, defaults: Readonly<Record<string, unknown>>): unknown {
-  if (!isRecord(value)) return value;
-  const filled: Record<string, unknown> = { ...value };
-  for (const [name, fallback] of Object.entries(defaults)) if (filled[name] === undefined) filled[name] = fallback;
-  return filled;
-}
-
-/** Each element of an array with its defaults filled; anything that is not an array is left for the schema. */
-function eachWithDefaults(value: unknown, defaults: (item: unknown) => unknown): unknown {
-  return Array.isArray(value) ? value.map(defaults) : value;
-}
-
-function toleranceDefaults(value: unknown): unknown {
-  return withDefaults(orDefault(value, {}), { absolute: null, relative: null });
-}
-
-function tiersDefaults(value: unknown): unknown {
-  return eachWithDefaults(orDefault(value, []), (tier) =>
-    isRecord(tier) ? { ...tier, tolerance: toleranceDefaults(tier.tolerance) } : tier,
-  );
-}
-
-/**
- * Fills the defaults of a key that an operator scores, as `buildOperatorCall` writes it: the default of a field that means
- * "none" is `null`, and that of a field where empty means the same as absent, the empty list or object.
- */
-export function resolveKeyDefaults(key: unknown): unknown {
-  if (!isRecord(key)) return key;
-  switch (key.kind) {
-    case "expression":
-      return withDefaults(key, { form: "expression", variables: {}, decimalSeparator: "." });
-    case "number":
-      return withDefaults(
-        {
-          ...key,
-          tolerance: toleranceDefaults(key.tolerance),
-          credit: tiersDefaults(key.credit),
-          intervals: eachWithDefaults(key.intervals, (interval) =>
-            withDefaults(interval, { minIncluded: true, maxIncluded: true }),
-          ),
-        },
-        {
-          decimalSeparator: ".",
-          units: {},
-          fractions: false,
-          significantFigures: null,
-          intervals: null,
-          components: null,
-        },
-      );
-    case "text":
-      return resolveTextDefaults(key);
-    case "areas": {
-      const areas = eachWithDefaults(key.areas, (area) => withDefaults(area, { points: 1 }));
-      return withDefaults({ ...key, areas }, { select: Array.isArray(areas) ? areas.length : undefined });
-    }
-    default:
-      return key;
-  }
-}
-
-function resolveTextDefaults(key: Readonly<Record<string, unknown>>): unknown {
-  const length = isRecord(key.length)
-    ? withDefaults(
-        {
-          ...key.length,
-          effects: eachWithDefaults(orDefault(key.length.effects, []), (effect) => withDefaults(effect, { share: 1 })),
-        },
-        { min: null, max: null },
-      )
-    : orDefault(key.length, null);
-  return withDefaults(
-    {
-      ...key,
-      answers: eachWithDefaults(key.answers, (answer) => withDefaults(answer, { points: 1, patterns: [] })),
-      normalization: withDefaults(orDefault(key.normalization, {}), {
-        form: "NFKC",
-        foldWidth: true,
-        ignoreMarks: false,
-        caseSensitive: false,
-        collapseWhitespace: true,
-      }),
-      credit: tiersDefaults(key.credit),
-      length,
-    },
-    { count: 1, scheme: "forms", spelling: "exact", numericEquivalence: false },
-  );
 }

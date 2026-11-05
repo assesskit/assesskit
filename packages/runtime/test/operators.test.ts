@@ -508,6 +508,21 @@ describe("expression-equivalent", () => {
     expect(() => score(missing, text("x"))).toThrow("has no attribute options");
   });
 
+  it("reads an attribute that leaves fields out at their defaults, as buildOperatorCall writes them", () => {
+    const built = expression({ expression: "x" });
+    const short = {
+      ...built,
+      extensions: [
+        { ...built.extensions[0], value: '{"followThrough":null,"key":{"expression":"x","kind":"expression"}}' },
+      ],
+    } as CustomOperatorExpression;
+    expect(built.extensions[0]?.value).toBe(
+      '{"followThrough":null,"key":{"decimalSeparator":".","expression":"x","form":"expression","kind":"expression","variables":{}}}',
+    );
+    expect(share(score(short, text("x")))).toBe(1);
+    expect(score(short, text("x+1"))).toEqual(score(built, text("x+1")));
+  });
+
   it("is reported by processing as a ProcessingError of the item when it throws", () => {
     const document =
       readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="i" title="i"

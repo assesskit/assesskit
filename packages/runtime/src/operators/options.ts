@@ -15,7 +15,7 @@ import {
 /** A follow-through as the options carry it: its `from` is the second operand. */
 const followThroughSchema = v.nullable(strictRecord({ expression: v.string(), variable: v.string() }));
 
-/** The schema of each operator's options, every field present, as `buildOperatorCall` writes them. */
+/** The schema of each operator's options, as `buildOperatorCall` writes them and an item carries them, absent fields at their defaults. */
 const OPTION_SCHEMAS = {
   "expression-equivalent": strictRecord({ key: expressionKeySchema, followThrough: followThroughSchema }),
   "number-equivalent": strictRecord({ key: numberKeySchema, followThrough: followThroughSchema }),
@@ -62,7 +62,7 @@ export function parseOptions<TName extends OperatorName>(
 
 /**
  * Reads the options of an operator from its `qti-custom-operator`: the attribute `options` in `OPERATOR_NAMESPACE`, whatever
- * its prefix, as JSON with every field present.
+ * its prefix, as JSON; an absent field takes its default, though `buildOperatorCall` writes every one.
  *
  * @throws `DataError` or `SecurityError` whose message names the path under `options`: a defect of the item, never of a
  *   response.

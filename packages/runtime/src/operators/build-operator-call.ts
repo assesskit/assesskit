@@ -20,7 +20,6 @@ import { prepareNumber } from "./number-equivalent.js";
 import { parseOptions } from "./options.js";
 import { prepareReadable } from "./readable.js";
 import type { AreasKeyData, NumberKeyData } from "./schemas.js";
-import { resolveKeyDefaults } from "./schemas.js";
 import { type PreparedText, prepareText } from "./text-equivalent.js";
 
 /**
@@ -94,12 +93,11 @@ function checkResponseIdentifier(identifier: unknown, label: string): string {
   return identifier;
 }
 
-/** The options of a call with every default resolved, and the identifier of its earlier response, if any. */
+/** The options of a call, whose schema resolves every default, and the identifier of its earlier response, if any. */
 function resolveCall(
   name: OperatorName,
-  { key: given, followThrough }: { readonly key: unknown; readonly followThrough?: unknown },
+  { key, followThrough }: { readonly key: unknown; readonly followThrough?: unknown },
 ): { options: unknown; from?: string } {
-  const key = resolveKeyDefaults(given);
   if (name !== "expression-equivalent" && name !== "number-equivalent") {
     if (followThrough !== undefined)
       throw new DataError("The option followThrough is for expression-equivalent and number-equivalent alone.");
