@@ -95,14 +95,16 @@ below set, a test that needs audio fails when the output is missing; without it 
 Linux, whose Playwright build has no `MediaRecorder`: the two of the browser's recorder and the one of a recording in a type
 that the interaction accepts run in Chromium and Firefox, and the WAV recording through the worklet runs in all three. WebKit
 keeps an audio context suspended without a recent gesture, so the fake microphone presses a button of its own before it makes
-its context.
+its context when the page has no user activation.
 
 The smoke test of the pinned old browsers (`pnpm compat:engines`) also runs a portable custom interaction in its frame and
 operates the tools by keyboard ([baseline](baseline.md#the-pinned-browsers)).
 
 In the Firefox of Playwright the mouse of a page can reach another page of the same browser that runs at once, so that pages
 take each other's presses, moves and drags. The Firefox instances of `vitest.config.ts` therefore run one test file at a
-time; Chromium and WebKit run files at once.
+time; Chromium and WebKit run files at once. A press that overlaps another press of the same page can be lost in Firefox and in
+WebKit, as when the fake microphone presses its button while a test presses Record, so a test presses only when no other
+press can be under way.
 
 Where the Firefox of Playwright does not start, such as on macOS 27, run the suite in a Linux container from the root of the
 repository. The container needs network access to install the dependencies and the browsers. The examples in

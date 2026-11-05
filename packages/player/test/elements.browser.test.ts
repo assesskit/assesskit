@@ -23,6 +23,7 @@ import {
   audioContextRuns,
   fakeMicrophone,
   heardFor,
+  microphonesMade,
   needsAudio,
   suspendedAudioContext,
   trackAudioContexts,
@@ -1369,7 +1370,9 @@ describe("a recording that starts by itself and is kept", () => {
   const Body = (attributes: string): string =>
     `<qti-upload-interaction response-identifier="R" type="${Types}" ${attributes}><qti-prompt>Say it.</qti-prompt></qti-upload-interaction>`;
 
-  afterEach(() => {
+  // A test can end before its microphone is made, and the press that the microphone still makes must not overlap one of the next test.
+  afterEach(async () => {
+    await microphonesMade();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
     vi.useRealTimers();
@@ -1411,7 +1414,23 @@ describe("a recording that starts by itself and is kept", () => {
     const stop = (): HTMLButtonElement => first(scene.findAll<HTMLButtonElement>(".ak-upload button"), 1);
     const recording = (): Promise<void> =>
       waitFor(() => expect(scene.root.querySelector(".ak-recording")).not.toBeNull());
-    return { ...intervals, scene, files, microphone, streams, errors, clock, status, record, stop, recording };
+    // The fake microphone presses a button of its own before it gives its stream, and Firefox and WebKit can lose a press that
+    // overlaps another press of the page. A test that presses waits for the stream, so that its press is the only one under way.
+    const prepared = (): Promise<void> => waitFor(() => expect(streams).toHaveLength(1));
+    return {
+      ...intervals,
+      scene,
+      files,
+      microphone,
+      streams,
+      errors,
+      clock,
+      status,
+      record,
+      stop,
+      recording,
+      prepared,
+    };
   }
 
   it("reads whole seconds, caps the limit, and counts a value that is not whole as absent", () => {
@@ -1478,8 +1497,8 @@ describe("a recording that starts by itself and is kept", () => {
 
   it("starts early at a press of Record, and the countdown stops", async (context) => {
     await needsAudio(context, audioContextRuns());
-    const { scene, files, microphone, tick, clock, record, recording } = open('data-ak-record-start="30"');
-    await waitFor(() => expect(microphone).toHaveBeenCalledOnce());
+    const { scene, files, microphone, tick, clock, record, prepared, recording } = open('data-ak-record-start="30"');
+    await prepared();
     expect(record().disabled).toBe(false);
     await userEvent.click(record());
     await recording();
@@ -1488,6 +1507,17 @@ describe("a recording that starts by itself and is kept", () => {
     expect(microphone).toHaveBeenCalledOnce();
     tick(10);
     expect(clock()).toBe("Time left 9:50");
+  });
+
+  it("waits for a microphone that a test left behind, so that its press cannot meet the press of the next test", async (context) => {
+    await needsAudio(context, audioContextRuns());
+    let given = false;
+    void fakeMicrophone().then(() => {
+      given = true;
+    });
+    expect(given).toBe(false);
+    await microphonesMade();
+    expect(given).toBe(true);
   });
 
   it("ends the recording at its limit, as Stop does, and stores the bytes", async (context) => {

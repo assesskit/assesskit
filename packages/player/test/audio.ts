@@ -135,11 +135,13 @@ export function suspendedAudioContext(): SuspendedContexts {
 }
 
 /**
- * Gives the page a user activation by pressing a button that it adds and removes. WebKit keeps an audio context suspended
- * unless a gesture of the person came a few seconds before, as a microphone that is not capturing does not excuse, and the
- * oscillator that stands for the microphone does not capture.
+ * Gives the page a user activation by pressing a button that it adds and removes, unless the page has one. WebKit keeps an
+ * audio context suspended unless a gesture of the person came a few seconds before, which is what `isActive` says, as a
+ * microphone that is not capturing does not excuse, and the oscillator that stands for the microphone does not capture. A
+ * press of a test that made the code ask for the microphone is such a gesture, and a second press would overlap it.
  */
 async function activate(): Promise<void> {
+  if (navigator.userActivation.isActive) return;
   const button = document.createElement("button");
   button.style.cssText = "position: fixed; top: 0; left: 0; width: 8px; height: 8px; z-index: 2147483647;";
   document.body.append(button);
@@ -150,12 +152,40 @@ async function activate(): Promise<void> {
   }
 }
 
+/** The fake microphones that are being made, each of which may press a button of its own before it gives its stream. */
+const MAKING = new Set<Promise<void>>();
+
 /**
  * A stream of an oscillator, which a test gives in place of the microphone. It needs an audio context that runs, so a test
  * that uses it waits for {@link audioContextRuns} first. It returns once sound reaches the end of the context: a device that
  * has just been opened takes a while to start, and a recording made before that holds a header and no sound.
+ *
+ * It presses a button of its own first when the page has no user activation, and Firefox and WebKit can lose a press that
+ * overlaps another press of the page. A test that presses a button of the code under test waits for the stream, so that its
+ * press is the only one under way, and a suite whose tests can end before the stream waits for {@link microphonesMade} after
+ * each test.
  */
-export async function fakeMicrophone(): Promise<MediaStream> {
+export function fakeMicrophone(): Promise<MediaStream> {
+  const made = makeMicrophone();
+  const settled = made.then(
+    () => undefined,
+    () => undefined,
+  );
+  MAKING.add(settled);
+  void settled.then(() => MAKING.delete(settled));
+  return made;
+}
+
+/**
+ * Resolves when no fake microphone is being made, so that none of them presses its button during a later test, however the
+ * test that asked for it ended.
+ */
+export async function microphonesMade(): Promise<void> {
+  while (MAKING.size > 0) await Promise.all(MAKING);
+}
+
+/** Presses the button when the page has no user activation, runs a context and waits for sound to reach its end. */
+async function makeMicrophone(): Promise<MediaStream> {
   await activate();
   const context = new AudioContext();
   await context.resume();
