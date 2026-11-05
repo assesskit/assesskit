@@ -593,7 +593,7 @@
     "packages/runtime/src/operators/unicode-graphemes.ts",
     "packages/runtime/test/fixtures/**"
   ],
-  "ignoreRegExpList": ["[A-Za-z0-9_-]+\\.xsd\\b"],
+  "ignoreRegExpList": ["[A-Za-z0-9_-]+\\.xsd\\b", "GHSA(?:-[0-9a-z]{4}){3}"],
   "overrides": [
     {
       "filename": [

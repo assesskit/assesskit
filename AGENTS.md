@@ -148,6 +148,12 @@ that the player needs and the runtime lacks is a change in the runtime, with its
 - Dependencies are pinned to exact versions, development ones too; a runtime dependency has its row in
   [SECURITY.md](SECURITY.md#runtime-dependencies). A version is installed only when it is at least 3 days old:
   `pnpm-workspace.yaml` sets `minimumReleaseAge: 4320`, which pnpm checks against the lock file on every install.
+- `pnpm check:audit` lets four advisories below high pass, all of development dependencies that read no untrusted input
+  (2026-11-05): quill 1.3.7 (GHSA-4943-9vgg-gr5r) and vue 2.7.16 (GHSA-5j4c-8p2g-v4jx), which the Amp-up player carries, a
+  reference that the tests run on the repository's own items, and which no release of it replaces; minimatch 10.2.6
+  (GHSA-g3hv-75wg-m249), which TypeDoc and ESLint run on the patterns of the configuration, and whose repair, minimatch 11,
+  lacks the `matchOne` that TypeDoc calls; and katex 0.16.47 (GHSA-238p-pmpm-9mq7), which Mermaid bundles into the copy that
+  the docs site serves, where it draws only the repository's diagrams.
 - The player gets `AssesskitError` and `DataError` from `@assesskit/runtime/errors` and its checks from
   `@assesskit/runtime/checks`, never from the root of the runtime, which holds only the random number generator. Its browser folders take the wire
   forms of views and actions from `@assesskit/runtime/delivery/wire` and only types from `@assesskit/runtime/delivery`, whose
