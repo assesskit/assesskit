@@ -204,7 +204,7 @@ that the player needs and the runtime lacks is a change in the runtime, with its
   with methods `methodsSchema`, any other object `objectSchema`, a DOM object `guardSchema`; the limits of a module are
   `limitsSchema(DEFAULTS, caps)` of `checks-internal.ts`. A schema takes three to five times as long as the key list, so a
   function that every item, node or element goes through (`startItemSession`, `createItemVariables`, `listPlanItems`,
-  `timeLimits`, `resolveStandaloneSessionControl`, `buildElement`) reads its options with `checkOptionNames`, over the key
+  `timeLimits`, `resolveStandaloneSessionControl`, `buildElement`, `findAttribute`) reads its options with `checkOptionNames`, over the key
   list, to keep the work of one item within the budgets of the benchmarks. The options of a call that waits (`CallOptions`, `HostApplyOptions`)
   are read by `checkCallOptions` and `checkHostApplyOptions`, which are over the key list: every port call reads them, and one
   sentence serves them all. The options of `mountDelivery` and `mountItem` are read over the key list too, by

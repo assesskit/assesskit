@@ -1,5 +1,5 @@
-import * as v from "valibot";
-import { parseWith, strictRecord } from "../checks.js";
+import { checkString } from "../checks.js";
+import { checkOptionNames } from "../checks-internal.js";
 import type { XmlElement } from "./tree.js";
 
 /**
@@ -12,8 +12,6 @@ export function listChildElements(element: XmlElement): readonly XmlElement[] {
   return element.children.filter((child): child is XmlElement => child.kind === "element");
 }
 
-const findAttributeOptionsSchema = strictRecord({ namespace: v.optional(v.string(), "") });
-
 /** The options of {@link findAttribute}. */
 export interface FindAttributeOptions {
   /**
@@ -23,6 +21,9 @@ export interface FindAttributeOptions {
    */
   readonly namespace?: string;
 }
+
+/** The options of {@link findAttribute}, which a reader or a writer reads for every attribute it looks up. */
+const FIND_ATTRIBUTE_OPTIONS = ["namespace"] as const;
 
 /**
  * Returns the value of an attribute of an element, or `undefined` when it has none.
@@ -37,7 +38,9 @@ export function findAttribute(
   name: string,
   options: FindAttributeOptions = {},
 ): string | undefined {
-  const { namespace } = parseWith(findAttributeOptionsSchema, options, "The options object");
+  checkOptionNames(options, FIND_ATTRIBUTE_OPTIONS);
+  const { namespace = "" } = options;
+  checkString(namespace, "The option namespace");
   return element.attributes.find((attribute) => attribute.namespace === namespace && attribute.name === name)?.value;
 }
 

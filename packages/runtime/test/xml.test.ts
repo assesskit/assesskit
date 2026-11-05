@@ -1124,7 +1124,12 @@ describe("reading a tree without mapping it", () => {
     expect(findAttribute(root, "lang", { namespace: XML_NAMESPACE })).toBe("en");
     expect(findAttribute(root, "y")).toBeUndefined();
     expect(findAttribute(root, "lang")).toBeUndefined();
-    expect(() => findAttribute(root, "x", JSON.parse('{"bogus":1}'))).toThrow('unexpected property "bogus"');
+    expect(() => findAttribute(root, "x", JSON.parse('{"bogus":1}'))).toThrow(
+      'The options has the property "namespace", found "bogus".',
+    );
+    expect(() => findAttribute(root, "x", JSON.parse('{"namespace":null}'))).toThrow(
+      "The option namespace must be a string, found null.",
+    );
   });
 
   it("joins the text and CDATA children of an element, and leaves out comments, instructions and child elements", () => {
