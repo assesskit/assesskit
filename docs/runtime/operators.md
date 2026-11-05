@@ -429,9 +429,10 @@ text; a hotspot response tests at most 1,000 points against areas of 4,000 coord
 
 ## Build or adopt
 
-The trusted libraries for two generic parts of these operators, each measured in place of the code it would replace, at its best
-setting: `leven` with `maxDistance`, and `decimal.js` at 20 digits and at 900. Times are the fastest samples on a laptop with
-Node.js 22, on 2026-11-04; sizes are esbuild's for the browser baseline, after gzip. Both parts stay built.
+The trusted libraries for three generic parts of these operators, each measured in place of the code it would replace, at its best
+setting: `leven` with `maxDistance`, `decimal.js` at 20 digits and at 900, and `complex.js`. Times are the fastest samples on a
+laptop with Node.js 22, on 2026-11-04 and 2026-11-05; sizes are esbuild's for the browser baseline, after gzip. All three parts
+stay built.
 
 | The edit distance of a credit tier                                      | `leven` 4.1.0 (MIT) | Built: a band, in code points |
 | ----------------------------------------------------------------------- | ------------------- | ----------------------------- |
@@ -486,6 +487,17 @@ const length = buildOperatorCall(
 );
 operators.get(OPERATOR_DEFINITIONS["number-equivalent"])(of("4/3 yd"), length).value; // => 1
 ```
+
+| The complex arithmetic of the comparator (`complex.ts`)              | `complex.js` 2.4.3 (MIT)                                                                        | Built: SymPy's branches |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------- |
+| The subpath `operators`                                              | 36,411 B                                                                                        | 34,392 B                |
+| The expression benchmark                                             | 0.04 ms                                                                                         | 0.02 ms                 |
+| A sum of 1,000 terms against a key of as many                        | 6.59 ms                                                                                         | 3.57 ms                 |
+| The 738 values of the reference, to SymPy's at 30 digits within 1e-6 | 734: `tanh(e^{5x})` at x = 9.4 is NaN, and the cube root of a negative sine takes the conjugate | All 738                 |
+
+`complex.js` was measured as a thin adapter in place of `complex.ts`, with no case of its own. It is slower and larger, and it
+leaves SymPy's principal branches at four values of the reference: it overflows in `tanh` where the value is 1, and it reads the
+imaginary part −0 that the sine of a real gives as below the cut, where SymPy reads a real. The verdicts of the reference agree.
 
 ## Files
 

@@ -277,6 +277,25 @@ argument and what was found.
 | A namespace declaration with white space at its start or end                            | A `ReadError`: the parser strips it from the namespace of the elements and keeps it in the declaration                                              |
 | XInclude with `parse="text"`, an `xpointer`, and the fixup of `xml:base` and `xml:lang` | Refused or not done, as QTI forbids them or XInclude makes them optional                                                                            |
 
+## Build or adopt
+
+The reader is adopted: `saxes` 6.0.0 (ISC) parses, with the character and name tables of `xmlchars` 2.2.0 (MIT). Neither project is
+active in the last year, which the trust rule asks: their last releases are of May 2022, and both repositories have been archived
+since 2025-12-31. They stay, recorded as a deviation in `AGENTS.md`, because:
+
+- They implement XML 1.0 (Fifth Edition, 2008) and Namespaces in XML 1.0 (Third Edition, 2009), standards that have not changed
+  since, so a complete parser of them needs no new release.
+- The GitHub Advisory Database lists no advisory for either (checked 2026-11-05), and the runtime reads no DTD and expands no
+  entity but the five predefined ones in front of them ([Security](#security)).
+- `saxes` is namespace-aware, gives the line and column of each tag, and sends events as it reads, so that `tree-builder.ts` holds
+  each limit as the tree grows and stops a reading at the first one passed.
+
+| Alternative               | License                                     | Why not                                                                                  |
+| ------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `sax` 1.6.1               | BlueOak-1.0.0, outside the licenses allowed | `check:licenses` refuses it                                                              |
+| `@rgrove/parse-xml` 5.1.0 | ISC, active                                 | Builds the whole tree, by design not streaming, so the limits apply only once it is read |
+| `fast-xml-parser` 5.12.0  | MIT, active                                 | Parses a whole document into objects; reading by events is a separate package            |
+
 ## Files
 
 Each file of `src/xml/` holds one concept.
