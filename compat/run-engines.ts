@@ -38,19 +38,34 @@ if (unknown.length > 0) {
 
 // The root, the player and the protocol import the runtime by package name, which a browser cannot resolve, so the pages of the
 // smoke test load each as one bundle. The containers cannot make them: they run on the node_modules of this machine, and esbuild is a native
-// program.
-await build({
-  entryPoints: {
-    index: resolve(root, "packages/player/dist/index.js"),
-    player: resolve(root, "packages/player/dist/player/index.js"),
-    protocol: resolve(root, "packages/player/dist/protocol/index.js"),
-  },
-  outdir: resolve(root, "compat/.smoke"),
-  bundle: true,
-  format: "esm",
-  target: ["chrome111", "firefox115", "safari16.4"],
-  logLevel: "warning",
-});
+// program. The player's and the protocol's bundles also export the names that the package keeps private and the scenarios drive
+// (the frame of a portable custom interaction, the reading of a range, the renderers of content and of the interactions, the check
+// of an envelope), from the same bundle as the public names, so that the elements are defined once.
+const dist = resolve(root, "packages/player/dist");
+const BUNDLES = {
+  index: 'export * from "./index.js";',
+  player: [
+    'export * from "./player/index.js";',
+    'export { mountPciFrame } from "./player/pci/index.js";',
+    'export { buildSpeechRequest } from "./player/speech/internal.js";',
+    'export { createBodyRenderer } from "./player/content/index.js";',
+    'export { createInteractionRenderers, defineElements } from "./player/elements/index.js";',
+  ].join("\n"),
+  protocol: [
+    'export * from "./protocol/index.js";',
+    'export { checkActionEnvelope } from "./protocol/internal.js";',
+  ].join("\n"),
+};
+for (const [name, contents] of Object.entries(BUNDLES)) {
+  await build({
+    stdin: { contents, resolveDir: dist, sourcefile: `${name}.ts` },
+    outfile: resolve(root, `compat/.smoke/${name}.js`),
+    bundle: true,
+    format: "esm",
+    target: ["chrome111", "firefox115", "safari16.4"],
+    logLevel: "warning",
+  });
+}
 
 let failed = false;
 for (const pair of ENGINE_PAIRS.filter(({ name }) => requested.length === 0 || requested.includes(name))) {

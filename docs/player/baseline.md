@@ -74,7 +74,7 @@ is removed when it ends. The CI job `engines` runs it too.
 
 The player and the protocol import the runtime by package name, which a browser cannot resolve, so before the containers start
 `pnpm compat:engines` bundles `dist/player/index.js` and `dist/protocol/index.js` with their dependencies into
-`compat/.smoke/player.js` and `compat/.smoke/protocol.js`, which the smoke server serves in their place. The containers run on the `node_modules` of the machine, so esbuild, a native program, runs outside them. The smoke
+`compat/.smoke/player.js` and `compat/.smoke/protocol.js`, which the smoke server serves in their place. Each bundle also exports the names that the package keeps private and the cases drive: the frame of a portable custom interaction, the reading of a range, the renderers of content and of the interactions, and the check of an envelope. The containers run on the `node_modules` of the machine, so esbuild, a native program, runs outside them. The smoke
 server also serves MathJax and its fonts from the `mathjax` package that the tests use.
 
 The cases are: the engine is the baseline; the shared modules

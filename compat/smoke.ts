@@ -150,7 +150,7 @@ async function serve(): Promise<{ readonly url: string; readonly stop: () => Pro
 const SHARED_MODULES = `(async () => {
   const { selectMessages } = await import("/dist/index.js");
   const { ID_MESSAGES } = await import("/dist/messages/id/index.js");
-  const { checkActionEnvelope } = await import("/dist/protocol/internal.js");
+  const { checkActionEnvelope } = await import("/dist/protocol/index.js");
   checkActionEnvelope({ seq: 1, action: {} });
   let refused = "";
   try {
