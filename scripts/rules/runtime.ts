@@ -233,8 +233,8 @@ export const RUNTIME_RULES: readonly Rule[] = [
   {
     rule: "A pattern that needs more states than maxStates is refused.",
     file: "packages/runtime/src/values/xsd-regex.ts",
-    find: "if (countStates(tree, maxStates) > maxStates) {",
-    replace: "if (false) {",
+    find: "return states > maxStates ? undefined : { pattern: buildMatcher(tree), states };",
+    replace: "return { pattern: buildMatcher(tree), states };",
     test: "packages/runtime/test/values.test.ts",
   },
   {
