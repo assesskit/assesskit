@@ -36,8 +36,12 @@ export function resolveReadOptions(options: ReadItemsOptions): ResolvedReadOptio
   return { labels: trueFalseLabels, limits };
 }
 
+/** A surrogate that is not half of a pair, which no UTF-8 file holds. */
+const LONE_SURROGATE = /\p{Cs}/gu;
+
 /**
- * Returns the text of a file within `maxBytes`, decoding bytes as UTF-8, as Moodle demands of an import.
+ * Returns the text of a file within `maxBytes`, decoding bytes as UTF-8, as Moodle demands of an import. A text is read as its
+ * UTF-8 would be: a lone surrogate, which the parser of HTML fails on, is U+FFFD, as `TextEncoder` writes it.
  *
  * @throws `DataError` when the input is neither a string nor bytes.
  * @throws `ReadError` when the bytes are not UTF-8.
@@ -49,7 +53,7 @@ export function readFileText(input: unknown, limits: ItemFormatLimits, label: st
     new SecurityError(`${label} is longer than ${maxBytes} bytes, the limit maxBytes.`, "maxBytes", maxBytes);
   if (typeof input === "string") {
     if (exceedsBytes(input, maxBytes)) throw tooLong();
-    return input;
+    return input.replaceAll(LONE_SURROGATE, "\uFFFD");
   }
   if (!(input instanceof Uint8Array)) {
     throw new DataError(`${label} must be a string or bytes, found ${describe(input)}.`);

@@ -666,7 +666,14 @@ function assemble(question: Question, identifier: string, context: BuildContext,
     ],
   );
   countElements(treeSize(element), context.state);
-  const document = readAsi(element);
+  const written = withXmlCharacters(element);
+  if (written !== element) {
+    losses.push({
+      reason: "content",
+      message: "The question holds characters that XML does not allow, such as control characters: each is U+FFFD.",
+    });
+  }
+  const document = readAsi(written);
   if (document.kind !== "item") throw new ReadError("The built document is not an item.", []);
   return { item: document.item, losses };
 }
@@ -676,6 +683,37 @@ function treeSize(element: XmlElement): number {
   let size = 1;
   for (const child of element.children) if (child.kind === "element") size += treeSize(child);
   return size;
+}
+
+/** A character that XML 1.0 does not allow, which a GIFT file may hold: a control character, U+FFFE or U+FFFF. */
+const NOT_XML = /[^\t\n\r\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu;
+
+/**
+ * Returns the tree with U+FFFD in place of each character of its texts and attributes that XML does not allow, so that the
+ * item can be written; the same tree when it has none.
+ */
+function withXmlCharacters(element: XmlElement): XmlElement {
+  const clean = (text: string) => text.replaceAll(NOT_XML, "\uFFFD");
+  let changed = false;
+  const attributes = element.attributes.map((attribute) => {
+    const value = clean(attribute.value);
+    if (value === attribute.value) return attribute;
+    changed = true;
+    return { ...attribute, value };
+  });
+  const children = element.children.map((child): XmlNode => {
+    if (child.kind === "element") {
+      const written = withXmlCharacters(child);
+      if (written !== child) changed = true;
+      return written;
+    }
+    if (child.kind !== "text") return child;
+    const value = clean(child.value);
+    if (value === child.value) return child;
+    changed = true;
+    return { ...child, value };
+  });
+  return changed ? { ...element, attributes, children } : element;
 }
 
 /** The prefix by which Moodle's texts name the files of their area. */

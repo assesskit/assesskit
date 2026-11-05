@@ -105,13 +105,6 @@ function defaultName(text: string): string {
   return phpTrim(name) || "Question name";
 }
 
-/** Returns a character that the text does not hold, to mark the missing word while the importer trims the text around it. */
-function unusedCharacter(text: string): string {
-  let code = 0xe000;
-  while (text.includes(String.fromCharCode(code))) code += 1;
-  return String.fromCharCode(code);
-}
-
 /** Takes the comment lines out of a question, as the importer does, leaving a space in their place. */
 function separateComments(lines: readonly string[]): { readonly text: string; readonly comments: string } {
   let comments = "";
@@ -139,31 +132,44 @@ interface Split {
   readonly answerText: string;
   readonly generalFeedback: string;
   readonly description: boolean;
-  readonly missingWord: boolean;
+  /** The offset in `questionText` of the `_____` that stands for a missing word's answers, or -1. */
+  readonly blank: number;
 }
 
-/** Splits a question at its braces, as the importer does, with the marker in place of a missing word's answers. */
-function splitBraces(text: string, marker: string): Split | undefined {
+/** Splits a question at its braces, as the importer does, with `_____` in place of a missing word's answers. */
+function splitBraces(text: string): Split | undefined {
   const start = text.indexOf("{");
   const finish = text.indexOf("}");
   if (start < 0 && finish < 0) {
-    return { questionText: text, answerText: "", generalFeedback: "", description: true, missingWord: false };
+    return { questionText: text, answerText: "", generalFeedback: "", description: true, blank: -1 };
   }
   if (start < 0 || finish < 0) return undefined;
   const length = finish - start;
   const answers = phpTrim(phpSubstr(text, start + 1, length - 1));
   const missingWord = !text.endsWith("}");
-  const questionText = phpSubstrReplace(text, missingWord ? marker : "", start, length + 1);
+  const questionText = phpSubstrReplace(text, missingWord ? BLANK : "", start, length + 1);
+  const blank = missingWord ? start : -1;
   const separator = answers.lastIndexOf("####");
   return separator < 0
-    ? { questionText, answerText: answers, generalFeedback: "", description: false, missingWord }
+    ? { questionText, answerText: answers, generalFeedback: "", description: false, blank }
     : {
         questionText,
         answerText: phpTrim(answers.slice(0, separator)),
         generalFeedback: answers.slice(separator + 4),
         description: false,
-        missingWord,
+        blank,
       };
+}
+
+/**
+ * Returns where the blank of a missing word stands in the text that `withFormat` reads from the question's text. No escape,
+ * format name or trimmed space reaches across the blank's underscores, so the text up to the blank reads to the same
+ * characters as it does in the whole text.
+ */
+function blankOffset(split: Split): number | null {
+  if (split.blank < 0) return null;
+  const head = withFormat(split.questionText.slice(0, split.blank + BLANK.length), "moodle").text;
+  return head.length - BLANK.length;
 }
 
 /** Reads the lines of one question, as `readquestion` does. */
@@ -173,23 +179,20 @@ function readQuestion(lines: readonly string[], limits: ItemFormatLimits): ReadE
   const escaped = escapePre(joined);
   if (escaped.startsWith("$CATEGORY:")) return { kind: "category", category: phpTrim(escaped.slice(10)) };
   const { text, name } = separateName(escaped);
-  const marker = unusedCharacter(text);
-  const split = splitBraces(text, marker);
+  const split = splitBraces(text);
   if (split === undefined) {
     return { kind: "error", name: name ?? defaultName(text), message: "The braces of the answers do not match." };
   }
   const parsed = withFormat(split.questionText, "moodle");
-  const blank = split.missingWord ? parsed.text.indexOf(marker) : -1;
-  const bodyText = parsed.text.replaceAll(marker, BLANK);
   const common: QuestionCommon = {
-    name: name ?? defaultName(bodyText),
-    text: { text: bodyText, format: parsed.format },
+    name: name ?? defaultName(parsed.text),
+    text: parsed,
     generalFeedback: withFormat(split.generalFeedback, parsed.format),
     defaultMark: 1,
     penalty: 0.3333333,
     idNumber: bracketValues(comments, "[id:", isControl, false)[0] ?? "",
     tags: bracketValues(comments, "[tag:", (character) => isControl(character) || "<>`".includes(character), true),
-    blank: blank < 0 ? null : blank,
+    blank: blankOffset(split),
     hints: [],
   };
   if (split.description) return { kind: "question", question: { ...common, qtype: "description", defaultMark: 0 } };

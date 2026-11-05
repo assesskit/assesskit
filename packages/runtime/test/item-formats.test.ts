@@ -340,6 +340,25 @@ describe("readGift and readMoodleXml", () => {
     expect(writeMoodleXml(essay.items).text).toContain("<responseformat>editor</responseformat>");
     expect(caseNamed("xml-essay-format").moodle.questions[1]?.xml).toContain("<responseformat>canvas</responseformat>");
   });
+
+  it("finds the missing word in a text of any characters, and keeps a text's characters within XML", () => {
+    const body = (imported: ImportedItems) => {
+      const item = imported.items[0]?.item;
+      const xml = item === undefined ? "" : writeAsi({ kind: "item", item });
+      return xml.slice(xml.indexOf("<qti-item-body>"), xml.indexOf("</qti-item-body>"));
+    };
+    // The text holds every character from U+E000, where the reader once looked for one that it did not hold.
+    const late = Array.from({ length: 0x2000 }, (_, offset) => String.fromCharCode(0xe000 + offset)).join("");
+    const missing = readGift(`{=cat} sat.${late}`);
+    expect(body(missing)).toMatch(/^<qti-item-body><div><qti-text-entry-interaction [^>]*\/> sat\./);
+    const replaced =
+      "The question holds characters that XML does not allow, such as control characters: each is U+FFFD.";
+    expect(missing.losses.map(({ message }) => message)).toStrictEqual([replaced]);
+    // A control character, which XML does not allow, and two low surrogates, which no UTF-8 holds.
+    const control = readGift("Bell \u0007 and \uDC01\uDC02{=a}");
+    expect(body(control)).toContain("<div>Bell \uFFFD and \uFFFD\uFFFD</div>");
+    expect(control.losses.map(({ message }) => message)).toStrictEqual([replaced]);
+  });
 });
 
 describe("writeGift", () => {
