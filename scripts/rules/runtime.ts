@@ -576,8 +576,15 @@ export const RUNTIME_RULES: readonly Rule[] = [
   {
     rule: "A credit tier measures its edit distance within maxEditBand.",
     file: `${OPERATORS}/text-equivalent.ts`,
-    find: "boundedEditDistance(text, accepted, Math.min(band, Math.floor(allowed)))",
-    replace: "boundedEditDistance(text, accepted, Math.floor(allowed))",
+    find: "boundedEditDistance(text, accepted, Math.min(band, widest))",
+    replace: "boundedEditDistance(text, accepted, widest)",
+    test: OPERATORS_TEST,
+  },
+  {
+    rule: "The patterns of a text key share the states of one pattern, so that a key of many patterns keeps no more.",
+    file: `${OPERATORS}/text-equivalent.ts`,
+    find: "compiled = compileCountedXsdRegex(pattern, KEY_PATTERN_STATES - states);",
+    replace: "compiled = compileCountedXsdRegex(pattern, KEY_PATTERN_STATES);",
     test: OPERATORS_TEST,
   },
   {

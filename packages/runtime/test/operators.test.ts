@@ -799,6 +799,26 @@ describe("text-equivalent", () => {
     expect(score(built, text("a".repeat(2001)))).toBeNull();
   });
 
+  it("measures each distance once, whatever the count of tiers, so that the most tiers score in linear time", () => {
+    // Each accepted text is 65 edits from the response at its end, one past the band, so every row of the band is computed.
+    const accepted = "a".repeat(935).concat("b".repeat(65));
+    const tiers = DEFAULT_KEY_LIMITS.entries / 2;
+    const built = call({
+      operator: "text-equivalent",
+      key: {
+        kind: "text",
+        answers: [{ texts: Array.from({ length: 20 }, (_, index) => `${accepted}${index}`) }],
+        credit: Array.from({ length: tiers }, (_, index) => ({
+          tolerance: { absolute: 64 + index },
+          share: 1 - index / tiers,
+        })),
+      },
+    });
+    const started = performance.now();
+    expect(share(score(built, text("a".repeat(1000))))).toBe(0);
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
   it("applies the effects of a length rule after the share", () => {
     const built = call({
       operator: "text-equivalent",

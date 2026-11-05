@@ -172,22 +172,28 @@ function matches(answer: PreparedAnswer, text: string, number: string | undefine
   );
 }
 
+/** The most edits that a tier's tolerance allows from an accepted text of a length, or -1 when it allows none. */
+function allowedEdits({ absolute, relative }: PreparedText["tiers"][number]["tolerance"], length: number): number {
+  return Math.floor(Math.max(absolute ?? -1, relative === null ? -1 : relative * length));
+}
+
 /**
  * The share of an answer's points that a string earns by the credit tiers: the first tier, highest share first, whose
- * tolerance holds for the edit distance to one of the answer's texts, measured within `maxEditBand`.
+ * tolerance holds for the edit distance to one of the answer's texts, measured within `maxEditBand`. Each distance is measured
+ * once, as far as the widest tier reaches, whatever the count of tiers.
  */
 function creditOf(tiers: PreparedText["tiers"], answer: PreparedAnswer, text: readonly number[], band: number): number {
-  for (const tier of tiers) {
-    const holds = answer.codePoints.some((accepted) => {
-      const { absolute, relative } = tier.tolerance;
-      const allowed = Math.max(absolute ?? -1, relative === null ? -1 : relative * accepted.length);
-      if (allowed < 0) return false;
-      const distance = boundedEditDistance(text, accepted, Math.min(band, Math.floor(allowed)));
-      return distance !== undefined;
-    });
-    if (holds) return tier.share;
-  }
-  return 0;
+  const distances = answer.codePoints.map((accepted) => {
+    const widest = tiers.reduce((most, tier) => Math.max(most, allowedEdits(tier.tolerance, accepted.length)), -1);
+    return widest < 0 ? undefined : boundedEditDistance(text, accepted, Math.min(band, widest));
+  });
+  const tier = tiers.find(({ tolerance }) =>
+    answer.codePoints.some((accepted, at) => {
+      const distance = distances[at];
+      return distance !== undefined && distance <= allowedEdits(tolerance, accepted.length);
+    }),
+  );
+  return tier?.share ?? 0;
 }
 
 /**
