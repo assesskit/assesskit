@@ -134,7 +134,6 @@ export function timeLimits(node: StructureNode, options: TimeLimitsOptions = {})
   checkOptionNames(options, TIME_LIMITS_OPTIONS);
   const { extra } = options;
   if (extra !== undefined) checkTestingTime(extra);
-  if (extra !== undefined) checkTestingTime(extra);
   if (node.kind === "section" && node.dissolved) return { allowLateSubmission: false };
   const declared = node.model.timeLimits;
   const nonlinear =
