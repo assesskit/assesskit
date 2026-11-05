@@ -106,20 +106,21 @@ or writes its own against the ports; neither family imports the other.
 
 ## Errors
 
-| Situation                                                                                                                               | Result                                                                                             | What to do                                                                                                         |
-| --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| There is no `ltiLogin`, the hook fails, its answer is not a frame, or a URL of the frame is on the origin of the page or of `staticUrl` | The alert "The tool for this question could not be started."; a failure also goes to `reportError` | Pass `ltiLogin` that answers an `LtiFrame` from the host's authenticated route ([delivery](delivery.md#lti-items)) |
-| The link cannot be read, or names only a vendor                                                                                         | `ReadError` of `readLtiLink`, or `DataError` of `resolveLaunchUrl`                                 | Fix the link ([package](../runtime/package.md#lti-links))                                                          |
-| A score of the tool that is not final                                                                                                   | It is kept and not supplied                                                                        | Wait for the final score of the tool ([server](server.md#the-scores-of-tool-items))                                |
-| A score that is earlier than the one kept                                                                                               | It is ignored                                                                                      | Send the scores with the time at which the tool gave them                                                          |
+| Situation                                                                                                                               | Result                                                                                         | What to do                                                                                                         |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| There is no `ltiLogin`, the hook fails, its answer is not a frame, or a URL of the frame is on the origin of the page or of `staticUrl` | The alert "The tool for this question could not be started."; a failure also goes to `onError` | Pass `ltiLogin` that answers an `LtiFrame` from the host's authenticated route ([delivery](delivery.md#lti-items)) |
+| The link cannot be read, or names only a vendor                                                                                         | `ReadError` of `readLtiLink`, or `DataError` of `resolveLaunchUrl`                             | Fix the link ([package](../runtime/package.md#lti-links))                                                          |
+| A score of the tool that is not final                                                                                                   | It is kept and not supplied                                                                    | Wait for the final score of the tool ([server](server.md#the-scores-of-tool-items))                                |
+| A score that is earlier than the one kept                                                                                               | It is ignored                                                                                  | Send the scores with the time at which the tool gave them                                                          |
 
 ## Not included
 
 | Not included                                        | Why                                                                                      |
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | The launch, the grade services, the roster, Caliper | They are protocols between learning platforms: interopkit implements them                |
-| A score sink or an event sink beside `onStep`       | `onStep` and a job do both; a field can be added later without breaking a host           |
+| A score sink or an event sink beside `onStep`       | `onStep` and a job do both                                                               |
 | A launch of an item with no `ltiLogin`              | The player shows "The tool for this question could not be started." and the test goes on |
+
 ## Differences from the references
 
 None for the player: the specifications leave the launch to the host. One question is open, which QTI outcomes an LTI item has: `SCORE` and `MAXSCORE`, both scored by the tool, and the host supplies them from the score that the tool gave ([G42](../runtime/spec-gaps.md)).

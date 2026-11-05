@@ -18,9 +18,10 @@ sequenceDiagram
   H-->>C: ViewEnvelope {seq, view, assets, documents?, refusal?}
 ```
 
-The runtime writes and reads the JSON inside an envelope: `writeCandidateAction` and `readCandidateAction` for actions, `writeView`
-and `readView` for views. The session host and the clients check every envelope they receive, and the checks look at the envelope only. The one form that the player defines is the
-submission, because the server writes it and the browser shows it.
+The runtime writes and reads the JSON inside an envelope: `writeCandidateAction` and `readCandidateAction` for actions,
+`writeView` and `readView` for views. The session host and the clients check every envelope they receive, and the checks look at
+the envelope only. The one form that the player defines is the submission, because the server writes it and the browser shows
+it.
 
 | Export                                        | Purpose                                                                                                |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -213,14 +214,14 @@ runtime's `ScoringRubric`, which `mountRatingForm` ([rating](rating.md)) turns i
 Every refusal is a `DataError` with a sentence that names the path of the first problem. The session host, the remote client, the
 local session, `mountSubmission` and the LTI slot run the checks on what they receive; none is exported.
 
-| What is refused              | When                                                                                                                                                                                                                                                                     |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| A `Caller`                   | `value` is not an object with a non-empty `session` and `principal`                                                                                                                                                                                                      |
-| An action or a view envelope | `value` is not an object, has a property outside the table, or has a `seq` that is not a non-negative safe integer                                                                                                                                                       |
-| An action envelope           | `action` is missing                                                                                                                                                                                                                                                      |
-| A view envelope              | `view` is missing, `assets` is not an object of strings by directories, `documents` or `refusal` is malformed (a refusal is an object with a `reason` of the runtime's `REFUSAL_REASONS` and a string `message`)                                                         |
-| An `LtiFrame`                | `value` is not an object of `url`, `storageUrl` and `allow` only, a URL is not absolute `http` or `https`, or `allow` is empty or has a character outside an allow list                                                                                                  |
-| A `Submission`               | a property outside the form, a field of another type, a time outside the years 1 to 9999, content that is not a list of nodes with a string `kind`, a scoring rubric that `checkScoringRubric` refuses, a part that names an item the submission lacks, or an item twice |
+| What is refused              | When                                                                                                                                                                                                                                                                     | What to do                                                                                                      |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| A `Caller`                   | `value` is not an object with a non-empty `session` and `principal`                                                                                                                                                                                                      | Have the authentication give a non-empty `session` and `principal`                                              |
+| An action or a view envelope | `value` is not an object, has a property outside the table, or has a `seq` that is not a non-negative safe integer                                                                                                                                                       | Send the envelope as the client or the host wrote it; no proxy may change it                                    |
+| An action envelope           | `action` is missing                                                                                                                                                                                                                                                      | The same                                                                                                        |
+| A view envelope              | `view` is missing, `assets` is not an object of strings by directories, `documents` or `refusal` is malformed (a refusal is an object with a `reason` of the runtime's `REFUSAL_REASONS` and a string `message`)                                                         | Answer with the envelope that the session host gives                                                            |
+| An `LtiFrame`                | `value` is not an object of `url`, `storageUrl` and `allow` only, a URL is not absolute `http` or `https`, or `allow` is empty or has a character outside an allow list                                                                                                  | Build the frame with the LTI library: absolute `http` or `https` URLs, and the `allow` list of the registration |
+| A `Submission`               | a property outside the form, a field of another type, a time outside the years 1 to 9999, content that is not a list of nodes with a string `kind`, a scoring rubric that `checkScoringRubric` refuses, a part that names an item the submission lacks, or an item twice | Pass what `buildSubmission` wrote, unchanged                                                                    |
 
 ## Not included
 

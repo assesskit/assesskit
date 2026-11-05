@@ -40,6 +40,7 @@ tests in Node ran on Node.js 22.23.4, and the tests in a browser in Chromium; Fi
 | Fixtures                              | 32 files                                            | `packages/player/test/fixtures/`                                                                                                        |
 | The oldest browsers                   | Chromium 111, Firefox 115 and WebKit 16.4           | `compat/engines`, `pnpm compat:engines`; [baseline](baseline.md)                                                                        |
 | Entry points held to a budget         | one budget for each                                 | `packages/player/test/size-budgets.ts`; [size](size.md)                                                                                 |
+
 ## Completeness
 
 What must be covered is derived from the specifications and from the runtime, not from a list that the repository keeps.
@@ -54,90 +55,50 @@ What must be covered is derived from the specifications and from the runtime, no
 
 ## Tests in a browser
 
-The browser tests use fixtures in `test/fixtures/`. The global setup `global-setup.ts` builds the files of the frame and
-starts three servers on free ports: the asset origin, a second origin that a test may allow, and a stranger that nothing
-may reach. A test asks a server for the paths it was requested for at `/__hits`, and the browsers of a run share the
-servers, so each test names its paths with a token of its own. The asset origin also serves MathJax and its fonts from
-the `mathjax` package under `/mathjax/`, and validates SSML: a test posts a document to `/validate/ssml` and gets the
-issues that the SSML 1.1 schema finds, as JSON. That needs the schemas, so run `pnpm schemas` and `pnpm corpus` before
-`pnpm test:browser`. Without them the tests that validate SSML fail with the reason that the server gave (status 500). A
-server of the fixtures that fails answers with the reason and never throws, because Vitest cannot print an error that
-escapes it. The browser commands in `commands.ts` give a test what a page cannot do: run axe-core inside a frame of an
-opaque origin, click in it, read the accessibility tree with its frames, and read the XML and CSS files of the 1EdTech
-examples (`corpusFiles`, which needs `pnpm corpus`). The asset origin also serves the package files of the content
-renderer from `test/fixtures/content/` under `/content/<token>/`. `test/content-fixture.ts` mounts content written as
-XML, with SSML and MathML in their namespaces, in a content root.
+The global setup `global-setup.ts` builds the files of the frame and starts three servers on free ports: the asset origin, a
+second origin that a test may allow, and a stranger that nothing may reach. A test reads the paths a server was asked for at
+`/__hits`; the browsers of a run share the servers, so each test names its paths with a token of its own. A server of the
+fixtures that fails answers with the reason and never throws, because Vitest cannot print an error that escapes it.
 
-The browser tests of the interactions ([interactions](interactions.md)) render items written as XML with the renderers
-of the interactions in a content root and give the interactions the descriptors of the runtime's `describeInteractions`
-(`interactions-fixture.ts`). The asset origin also serves the worklet of the WAV recording under
-`/static/recorder-worklet.js`, and among the package files three recordings and a caption file, for the rules of media: a
-blip of a quarter of a second that a test plays to its end, a tone of two seconds, and twenty seconds of silence that
-outlast a test which acts while it plays. The tests of the pause attributes hold the timers of the page with fake timers
-and move them by hand, and the tests that play wait for the events of the recording, never for a time.
-The tests answer with the mouse, with real key presses and with a stream of an oscillator in place of the microphone;
-Safari on macOS leaves form controls out of the tab order unless the person turns that on, so the keyboard tests focus a
-control and press its keys. `elements.browser.corpus.test.ts` renders every item of the examples that has one of these
-interactions, answers each, and runs axe on it.
+| The asset origin serves                                                                                                                                            | Under                         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
+| The package files of the content renderer, from `test/fixtures/content/`                                                                                           | `/content/<token>/`           |
+| The package of a 1EdTech example, as the asset gate would                                                                                                          | `/c/<token>/<example>/`       |
+| The whole examples directory, for the images of graphic items                                                                                                      | `/c/<token>/corpus/`          |
+| MathJax and its fonts, from the `mathjax` package                                                                                                                  | `/mathjax/`                   |
+| The worklet of the WAV recording                                                                                                                                   | `/static/recorder-worklet.js` |
+| The issues that the SSML 1.1 schema finds in a posted document, as JSON; this needs `pnpm schemas` and `pnpm corpus`, and answers 500 with the reason without them | `/validate/ssml`              |
+
+The commands of `commands.ts` give a test what a page cannot do: run axe-core inside a frame of an opaque origin, click in it,
+read the accessibility tree with its frames, read what applies inside such a frame (`frameTheme`), press and release a pointer
+(`pressPointer`, `releasePointer`), and read the XML and CSS files of the examples (`corpusFiles`, which needs `pnpm corpus`).
+A suite that checks accessibility runs axe-core with the rules of WCAG 2.2 A and AA, and the suites press real keys and pointer
+buttons; Safari leaves form controls and buttons out of the tab order unless the person turns that on, so a keyboard test
+focuses a control and presses its keys.
+
+| Area                         | Fixtures                                                                   | What the tests do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Content renderer             | `renderer-fixture.ts`, `css-fixture.ts`, `content-fixture.ts`              | Read items with the runtime's `readAsi` and render their nodes, SSML and MathML in their namespaces, in a content root. `content.corpus.browser.test.ts` renders every item and stimulus of the examples, adopts their stylesheets, opens every modal feedback and compares the HTML elements with the XML. Hostile cases: markup the reader accepts, nodes only a forged view carries, stylesheets with every way to load a resource; the record of requests shows that the browser asked no other origin                                                                                                            |
+| Interactions                 | `interactions-fixture.ts`                                                  | Render items with the interaction renderers and the runtime's `describeInteractions`, and answer with the mouse, real keys and an oscillator in place of the microphone. Media use three recordings and a caption file: a blip of a quarter second played to its end, a tone of two seconds, and twenty seconds of silence that outlast a test. Pause attributes run on fake timers moved by hand; playback is followed by its events, never by a time. `elements.browser.corpus.test.ts` draws, answers and checks every item of the examples that has an interaction                                                |
+| Graphic interactions         | `graphic-fixture.ts`                                                       | Wait for the pictures, keep what a drawing uploads in memory, and give the interactions their pictures as `data:` URLs drawn on a canvas. `graphic.browser.corpus.test.ts` renders the graphic items of the examples with their images                                                                                                                                                                                                                                                                                                                                                                                |
+| Portable custom interactions | `pci-fixture.ts`                                                           | Mount an interaction as the player does. `*.browser.corpus.test.ts` runs the examples that use the frame, in the three engines with `pnpm test:corpus`                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Status lines                 | `layout-fixture.ts`                                                        | `mount-item.browser.test.ts` and `delivery.browser.test.ts` hold the position of a button after the player across "Answers saved." and a refusal, and of the actions across a timer warning, and press a button, write the message while the press lasts and release: the button gets its click                                                                                                                                                                                                                                                                                                                       |
+| MathJax                      | `math-failure`, `math-wrong-script`                                        | MathJax is a global of the page and a failure to load it is final, so a page without MathJax, or with a failure, is a test file of its own; each file runs in a page of its own                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Tools                        | `tools-fixture.ts`                                                         | Build the toolbar in the document and the item in a shadow root, as the player lays them out, with the companion materials of BPIG section 3.7.8 read by `readAsi`; axe also runs `label-content-name-mismatch`, which it leaves off by default                                                                                                                                                                                                                                                                                                                                                                       |
+| Supports                     | `supports.browser.test.ts`                                                 | Read the catalogs of an item, mount each part on a content root and drive it with the runtime's engine, so that the `support` action, its refusals and the next view are the runtime's. `pci.browser.test.ts` gives a running frame a new look                                                                                                                                                                                                                                                                                                                                                                        |
+| LTI frame                    | `lti-setup.ts`, `lti/storage.html`, `lti/tool.html`, `lti-exam-fixture.ts` | A platform serves a storage page written from LTI postMessage Storage, and two tool origins serve a tool page that runs the scenario the query names, talks to the storage frame and the player as LTI Client Side postMessages describes, and reports each step at `/report/<token>/<step>`. `lti-frame.browser.test.ts` mounts the frames alone and with `mountDelivery` over an essay and a link to a tool. The launch, the grade services and Caliper are tested in [interopkit](https://github.com/interopkit/interopkit), and the exchange between a session host and a platform in [the example](lti-items.md) |
 
 **Audio.** The tests that play a recording to its end, follow its playback with a companion, count its plays and record a
 stream need an audio output. A Linux host with no sound card has none, so `scripts/linux-audio.sh` starts PulseAudio with a
-sink that plays to nowhere, and all three engines then play and record. With `REQUIRE_AUDIO=1` a test that needs audio fails
-when the output is missing, and does not skip; without it the test skips, so that a laptop with no device still runs the rest.
-CI and the container below set it. Three tests skip in WebKit on Linux, for a reason that is not the device: the WebKit of
-Playwright there has no `MediaRecorder`, so the two tests of the recorder of the browser and the test of a recording in a type
-that the interaction accepts run in Chromium and Firefox, and the WAV recording through the worklet runs in all three.
-WebKit also keeps an audio context suspended unless a gesture of the person came a few seconds before, and the oscillator that stands for
-the microphone does not capture, so the fake microphone presses a button of its own before it makes its context.
+sink that plays to nowhere, and all three engines then play and record. With `REQUIRE_AUDIO=1`, which CI and the container
+below set, a test that needs audio fails when the output is missing; without it the test skips. Three tests skip in WebKit on
+Linux, whose Playwright build has no `MediaRecorder`: the two of the browser's recorder and the one of a recording in a type
+that the interaction accepts run in Chromium and Firefox, and the WAV recording through the worklet runs in all three. WebKit
+keeps an audio context suspended without a recent gesture, so the fake microphone presses a button of its own before it makes
+its context.
 
-The tests of the graphic interactions ([graphics](graphics.md)) show items through `graphic-fixture.ts`, which waits for the
-pictures, keeps what a drawing uploads in memory and gives the interactions of `interactions-fixture.ts` their pictures as
-`data:` URLs that the test draws on a canvas. `graphic.browser.corpus.test.ts` renders the graphic items of the 1EdTech
-examples with their images, which the asset origin serves from the whole examples directory under `/c/<token>/corpus/`.
-
-The 1EdTech examples that run in the frame are tests of their own, `*.browser.corpus.test.ts`: `pnpm corpus` downloads
-the examples, and `pnpm test:corpus` runs them in the three engines. The global setup serves the package of an example
-under `/c/<token>/<example>/`, as the asset gate would, and the `pci-fixture.ts` helpers mount an interaction as the
-player does.
-
-The tests of the status lines (`mount-item.browser.test.ts` and `delivery.browser.test.ts`) hold the position of a button after the
-player across the write of "Answers saved." and of a refusal, and of the actions across a timer warning. They also press a
-button with the pointer, write the message while the press lasts, and release: the button must get its click (`layout-fixture.ts`,
-with the commands `pressPointer` and `releasePointer`).
-
-MathJax is a global of the page and a failure to load it is final, so a test that needs a page without MathJax, or with a
-failure, has a file of its own (`math-failure` and `math-wrong-script`). A test file runs in a page of its own.
-
-The tests of the content renderer read items with the runtime's `readAsi` and render their nodes in a content root of `css-fixture.ts`
-(`renderer-fixture.ts`), so that the nodes are the ones the engine gives. `content.corpus.browser.test.ts` renders every item and
-stimulus of the examples, adopts every stylesheet they reference and opens every modal feedback, and compares the HTML elements
-of each body with the XML it came from. The hostile cases are markup that the runtime's reader accepts, nodes that only a forged view
-could carry, and stylesheets with every way to load a resource; the asset server's record of requests shows that the
-browser asked no other origin.
-
-The browser tests of the tools build their page in the test: the toolbar in the document and the item in a shadow root, as
-the player lays them out. `tools-fixture.ts` reads the companion materials of BPIG section 3.7.8 with the runtime's `readAsi`, so that the
-tools get what the player gets. The tests run axe-core with the rules of WCAG 2.2 A and AA and `label-content-name-mismatch`,
-which axe leaves off by default, and press real keys and pointer buttons.
-
-The browser tests of the supports (`supports.browser.test.ts`) read the catalogs of an item with the runtime's `readAsi`, show it in a
-content root and mount each part on it. They run axe-core with the same rules, press real keys and pointer buttons (a
-test sets the focus and presses the key, because Safari does not Tab to a button), and drive the parts with the runtime's engine,
-so that the `support` action, its refusals and the next view are the runtime's. A running frame of a portable custom interaction
-takes a new look in `pci.browser.test.ts`; the command `frameTheme` reads what applies inside a frame of an opaque
-origin.
-
-The tests of the LTI frame run against a second set of servers, which `fixtures/lti-setup.ts` starts: a platform that serves a
-storage page written from LTI postMessage Storage (`fixtures/lti/storage.html`), and two tool origins that serve
-`fixtures/lti/tool.html`. The tool page runs a scenario, which the test names in the query: it talks to the storage frame and to
-the player the way LTI Client Side postMessages and LTI postMessage Storage describe, and each step it takes is a request to its
-own server (`/report/<token>/<step>`), which the test reads at `/__hits`. `lti-frame.browser.test.ts` mounts the frames alone and
-with `mountDelivery`, over the exam server's package of an essay and a link to a tool (`lti-exam-fixture.ts`). The launch, the
-grade services and the events of Caliper are tested in [interopkit](https://github.com/interopkit/interopkit), and the whole
-exchange between a session host and a learning platform in [the example](lti-items.md), which runs in Node.
-
-The smoke test of the pinned old browsers (`pnpm compat:engines`) also runs a portable custom interaction in its frame, and
-operates the tools by keyboard.
+The smoke test of the pinned old browsers (`pnpm compat:engines`) also runs a portable custom interaction in its frame and
+operates the tools by keyboard ([baseline](baseline.md#the-pinned-browsers)).
 
 In the Firefox of Playwright the mouse of a page can reach another page of the same browser that runs at once, so that pages
 take each other's presses, moves and drags. The Firefox instances of `vitest.config.ts` therefore run one test file at a

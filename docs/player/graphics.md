@@ -1,14 +1,11 @@
 # Graphic interactions
 
-`mountItem` and `mountDelivery` of `@assesskit/player/player` draw the seven interactions that work on an image with the
-others: hotspot, select point, graphic order, graphic associate, graphic gap match, position object and drawing. The element,
-its properties and events, the hints, the board that carries the choices in places, and the options (`files`, `staticUrl`) are
-in [interactions](interactions.md). This guide holds what is particular to an image. The renderers draw what
-the runtime describes and decide nothing of QTI: the descriptor of the runtime's `interactions` says which choices stand where, and the runtime's
-`validateResponse` says whether a response is valid.
-
-The drawing is the one kind that needs `files`: `files.upload` stores a picture and returns its file
-value, and `files.url(file)` returns where the picture of a file value loads from. The other six never call it.
+`mountItem` and `mountDelivery` of `@assesskit/player/player` draw the seven interactions that work on an image: hotspot,
+select point, graphic order, graphic associate, graphic gap match, position object and drawing. This guide holds what is
+particular to an image; the element, its events, the hints, the board and the options are in
+[interactions](interactions.md). The renderers decide nothing of QTI: the runtime's descriptor says which choices stand where,
+and its `validateResponse` whether a response is valid. The drawing is the one kind that needs `files`: `files.upload` stores
+a picture and returns its file value, and `files.url(file)` says where the picture of a file value loads from.
 
 ```mermaid
 flowchart LR
@@ -128,7 +125,7 @@ which scales the `width` of the element, leaves the coordinates alone. An image 
 A coordinate may be a percentage: of the width for x and the horizontal radius, of the height for y and the vertical radius,
 and for the radius of a circle of the smaller side. A rectangle, circle, ellipse or the whole image is the element with a
 border, and the border is round for a circle and an ellipse. A polygon draws its outline as SVG in its box, because a
-border cannot follow it. The rendering of a node throws `DataError` for coordinates that do not fit the shape.
+border cannot follow it. Coordinates that do not fit the shape are a `DataError` ([Errors](#errors)).
 
 An area that the candidate selects is a native checkbox or radio button, hidden, with a `label` as its face; an area that
 joins is a native button with the same face; a gap is a box that holds the chips and a button to put a choice in. The name of
@@ -233,12 +230,12 @@ Each file of `src/player/elements/graphic/` holds one concept.
 
 ## References
 
-| Specification                                                                  | Topics                                           |
-| ------------------------------------------------------------------------------ | ------------------------------------------------ |
-| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#target-size-minimum)                  | target size                                      |
-| [QTI 3.0 ASI Information Model](https://www.imsglobal.org/spec/qti/v3p0/info/) | geometry                                         |
-| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#keyboard)                             | keyboard, keyboard, which exempts such functions |
-| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#dragging-movements)                   | dragging movements                               |
-| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#pointer-cancellation)                 | pointer cancellation                             |
-| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#non-text-contrast)                    | non-text contrast                                |
-| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#pointer-gestures)                     | pointer gestures                                 |
+| Specification                                                                  | Topics                                                                           |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#target-size-minimum)                  | target size                                                                      |
+| [QTI 3.0 ASI Information Model](https://www.imsglobal.org/spec/qti/v3p0/info/) | geometry                                                                         |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#keyboard)                             | keyboard, and its exemption of a function that depends on the path of a movement |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#dragging-movements)                   | dragging movements                                                               |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#pointer-cancellation)                 | pointer cancellation                                                             |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#non-text-contrast)                    | non-text contrast                                                                |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#pointer-gestures)                     | pointer gestures                                                                 |

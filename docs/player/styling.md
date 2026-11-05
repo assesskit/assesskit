@@ -37,11 +37,9 @@ sheet.cssRules.length > 100; // => true
 ```
 
 A content root has `contain: layout paint` and `isolation: isolate`, so fixed-position item CSS cannot cover the chrome.
-Paint containment clips at the border box, so the root has padding of the width of a focus ring.
-
-WebKit applies a change of the viewport to the media queries of an adopted sheet only for the roots that hold it at that
-time. A root that appears after a resize can lay out for the old width. Keep the sheet adopted by one root that lives as
-long as the player does.
+Paint containment clips at the border box, so the root has padding of the width of a focus ring. Keep the sheet adopted by
+one root that lives as long as the player does: WebKit applies a resize to the media queries of an adopted sheet only for the
+roots that hold it then ([Errors](#errors)).
 
 ## Themes
 
@@ -112,6 +110,12 @@ These values are not PNP and complete the markup:
 | `--ak-sticky-top`, `--ak-sticky-bottom` | The heights of the sticky chrome, so that a focused element scrolls clear of it (WCAG 2.4.11)      | `0px`   |
 | `data-ak-placing`                       | On a graphic gap match or a position object while the candidate holds a choice or the object       | absent  |
 
+### Folding
+
+Below 48rem, about the 767px of the mobile breakpoint of the vocabulary's sample, and for a candidate who wants a single column,
+rows, stacks and containers become one column. A horizontal stack folds the same way, since the best practices guide advises
+vertical choices where a row would leave the viewport.
+
 ## Parts
 
 The vocabulary classes sit on QTI elements, such as `qti-choice-interaction`. The stylesheet needs these parts of an
@@ -169,6 +173,9 @@ and the stylesheet reads the state from attributes:
 | `ak-slider`, `-track`, `-thumb`, `-end`, `-ticks`, `-tick` | The slider. `data-orientation`, `data-ak-unset` (no value yet), `data-ak-disabled` and `ak-slider-stepped` (steps are labelled) are on `ak-slider`. |
 | `ak-fields`, `ak-editor`, `ak-editable`, `ak-counter`      | The fields of an extended text, the editor of XHTML, its editable area, and the counter of characters.                                              |
 | `ak-preformatted`                                          | A text area that keeps its spaces.                                                                                                                  |
+| `ak-media-bar`, `-status`, `-time`, `-notice`              | The controls of a media interaction, the plays, the time, and what the candidate waits for.                                                         |
+| `ak-upload`, `-upload-status`, `ak-stored`, `ak-recording` | The picker and the buttons of an upload, what it says, the file that the response holds, and the indicator of a recording.                          |
+| `ak-custom`                                                | Where a host's hook draws a custom interaction.                                                                                                     |
 
 The graphic interactions ([graphics](graphics.md)) put an image in a stage, with a layer over it that has the drawn size of the
 image. The stylesheet needs these parts and attributes:
@@ -189,13 +196,14 @@ image. The stylesheet needs these parts and attributes:
 | `ak-usage`                                                       | How to operate the interaction, in text beside it.                                                                                |
 | `aria-disabled="true"` on a `ak-control`                         | A hotspot of a graphic associate that the runtime's rules leave no pair for.                                                      |
 
-The player sets these custom properties as inline styles: `--ak-image-width` and `--ak-image-height` on a layer, the
-size of the image in the units of its coordinates; `--ak-scale` on a layer, the drawn pixels for one unit; `--ak-x`,
-`--ak-y`, `--ak-w` and `--ak-h` on a hotspot, object, marker or crosshair, its box or position in those units; and
-`--ak-swatch` on a color of the drawing.
-| `ak-media-bar`, `-status`, `-time`, `-notice` | The controls of a media interaction, the plays, the time, and what the candidate waits for. |
-| `ak-upload`, `-upload-status`, `ak-stored`, `ak-recording` | The picker and the buttons of an upload, what it says, the file that the response holds, and the indicator of a recording. |
-| `ak-custom` | Where a host's hook draws a custom interaction. |
+The player sets these custom properties as inline styles:
+
+| Property                                | On                                              | Value                                                 |
+| --------------------------------------- | ----------------------------------------------- | ----------------------------------------------------- |
+| `--ak-image-width`, `--ak-image-height` | A layer                                         | The size of the image in the units of its coordinates |
+| `--ak-scale`                            | A layer                                         | The drawn pixels for one unit                         |
+| `--ak-x`, `--ak-y`, `--ak-w`, `--ak-h`  | A hotspot, an object, a marker or the crosshair | Its box or position, in those units                   |
+| `--ak-swatch`                           | A color of the drawing                          | The color                                             |
 
 A hidden control is visually hidden, stays in the tab order, and shows its focus and its state on its face. The choices
 come first in the markup, for a screen reader, and `qti-choices-bottom` and `qti-choices-right` move them only for the
@@ -258,9 +266,6 @@ The stylesheet throws nothing. What a host meets:
 | Hidden selections show on focus; a graphic gap match also while placing                                                                                                                        | `:focus-visible`, `:checked` and `data-ak-placing`                                 |
 | `qti-labels-*` without a class                                                                                                                                                                 | No label: the best practices guide leaves the default to the platform              |
 
-Below 48rem, about the 767px of the sample's mobile breakpoint, and for a candidate who wants a single column, rows, stacks and containers become
-one column. A horizontal stack folds the same way, for the best practices guide advises vertical choices where a row would leave the
-viewport.
 
 ## Evidence
 

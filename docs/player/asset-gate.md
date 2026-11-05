@@ -102,16 +102,15 @@ The token is in the path, and not the query, so that relative URLs inherit it: R
 `define(["./renderer"], …)` against `baseUrl`, and a stylesheet loaded as text resolves `url(../fonts/x.woff)` against its own
 URL. Both stay under the prefix and need no signature of their own.
 
-`sign(session, prefixes, options?)` throws `DataError` when a prefix is not a directory in normal form: empty, or segments that
-each end in `/`, without `.`, `..`, empty segments, backslashes or control characters. The tokens last `ttlSeconds`, and the
-session host renews them with every envelope. A client sends an envelope only when the candidate acts, so a candidate who sends
-nothing for longer than `ttlSeconds` gets `403` for what the page loads afterwards, such as a range of a long recording, a card
-of a catalog or a module that loads late. Choose `ttlSeconds` above the longest idle that a test allows, or have the page call
-`SessionClient.refresh` at an interval below it, which renews the tokens ([client](client.md)).
+`sign(session, prefixes, { signal? })` signs a token for each prefix, which lasts `ttlSeconds`; the session host renews them
+with every envelope. A client sends an envelope only when the candidate acts, so a candidate idle for longer than `ttlSeconds`
+gets `403` for what the page loads afterwards, such as a range of a long recording, a card of a catalog or a module that loads
+late. Choose `ttlSeconds` above the longest idle that a test allows, or have the page call `SessionClient.refresh` at an
+interval below it ([client](client.md)).
 
-`sign`, `signFile` and `serve` take `options.signal` last. A signal that has aborted rejects the call with its reason before
-anything is asked; `serve` passes the signal to the `packages` function and to `FileStore.read`, and its wait ends at the abort
-though the store never answers. `FileStore.put` takes its `fileName` and `signal` in one options object after its arguments, and `read` takes the `signal`.
+`sign`, `signFile` and `serve` take `{ signal }` last. A signal that has aborted rejects the call with its reason before
+anything is asked; `serve` passes it to `packages` and to `FileStore.read`, and its wait ends at the abort though the store never
+answers. `FileStore.put` takes `{ fileName, signal }` after its arguments, and `read` takes `{ signal }`.
 
 ## Prefixes
 
@@ -129,17 +128,14 @@ the package path.
 
 ## What the gate serves
 
-| Status | When                                                                                                                                                                                   |
-| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `403`  | The MAC is wrong, the token is for another purpose, it expired (after `ttlSeconds`), or the path is outside the prefix of the token after `.`, `..` and percent-encoding are resolved. |
-| `404`  | The path is not a gate URL, the file does not exist, or the file is never served.                                                                                                      |
-| `200`  | Otherwise, with `Content-Type` from the extension.                                                                                                                                     |
-
-A token proves what the host signed: another session's token has another MAC, and a token with a changed payload fails it.
+A token proves what the host signed: another session's token has another MAC, and a token with a changed payload fails it. The
+path is resolved for `.`, `..` and percent-encoding before it is held to the token's prefix; [Errors](#errors) lists the `403`
+and `404` answers.
 
 A package holds answer keys, response processing and templates in XML, in documents that the view of a candidate never
 loads. Relative URLs resolve against the prefix, so the gate cannot list the files a view loads. It decides by what a file
-is, and serves a file only when all of these hold. Anything else is `404`, whatever the token.
+is, and serves a file, `200` with `Content-Type` from the extension, only when all of these hold; anything else is `404`,
+whatever the token.
 
 1. **The extension is a web asset.** The gate serves HTML, CSS, JavaScript and JSON, text, captions and subtitles, SVG, PLS,
    raster images, audio, video, fonts and PDF, with the media types of `content-type.ts`. `.xml`, a path without an
@@ -165,33 +161,29 @@ is, and serves a file only when all of these hold. Anything else is `404`, whate
 A file under a prefix that no view references is served when it passes these rules, such as another item's image in a shared
 folder: that is the price of relative resolution. Keep one folder for each item and its media, which makes prefixes tight.
 
-Files that hold data other than XML, such as a JSON file with the key of an item, are not told apart by their content. Keep
-keys in response processing.
+Files that hold data other than XML, such as a JSON file with the key of an item, are not told apart by their content, and the
+code of a portable custom interaction is visible to the candidate: keep keys in response processing, which the gate never
+serves.
 
 ## Headers
 
-Every response, whatever its status, carries `Referrer-Policy: no-referrer`, since the token is in the URL, and
-`X-Content-Type-Options: nosniff`. A `200` for a package file carries `Content-Security-Policy: sandbox`, except for a PDF,
-whose viewer in Chromium refuses to show a sandboxed document.
+| Header                             | On                                                                    | Why                                                                                                                                                                                               |
+| ---------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Referrer-Policy: no-referrer`     | Every response, whatever its status                                   | The token is in the URL                                                                                                                                                                           |
+| `X-Content-Type-Options: nosniff`  | Every response, whatever its status                                   | The browser keeps the media type of the extension                                                                                                                                                 |
+| `Content-Security-Policy: sandbox` | A `200` for a package file but a PDF, and every file of the candidate | A link of the content opens its page in a tab; sandboxed, the page has an opaque origin and runs no script, frame or form on the asset origin. Chromium's PDF viewer refuses a sandboxed document |
 
-A package is untrusted content: a link of the content opens its page in a tab, and without the header a script of that page
-would run on the asset origin. Under `sandbox` the page has an opaque origin and runs no script, no frame and no form. A page
-of a package is therefore static content, and an interaction that needs script is a portable custom interaction. A page or a
-drawing that loads a font needs `Access-Control-Allow-Origin`, since an opaque origin sends `Origin: null`.
-
-The gate sets no CORS headers: the host's HTTP layer adds the headers its deployment needs, such as
-`Access-Control-Allow-Origin` for the origin of the player when stylesheets are fetched. Serve `pci-frame/*` and `player.css`
-from the same origin, outside the gate; they hold no package data.
-
-The code of a portable custom interaction is visible to the candidate: keep answer keys in response processing, which the gate
-never serves.
+A page of a package is therefore static content, and an interaction that needs script is a portable custom interaction. A page
+or a drawing that loads a font needs `Access-Control-Allow-Origin`, since an opaque origin sends `Origin: null`. The gate sets no
+CORS headers: the host's HTTP layer adds those its deployment needs, such as `Access-Control-Allow-Origin` for the origin of the
+player when stylesheets are fetched.
 
 ## Files of the candidate
 
 An upload, a recording or a drawing is stored through `FileStore.put`, and the runtime's `FileValue` refers to it. `signFile(session,
 file)` gives `https://<origin>/f/<token>/<reference>`, a token for one file of one session that lasts
-`uploadTtlSeconds`. A request for another reference, or with a token for a prefix, is `403`. The response carries
-`Content-Security-Policy: sandbox` besides the headers above, since the bytes are the candidate's.
+`uploadTtlSeconds`. A request for another reference, or with a token for a prefix, is `403`; the response is sandboxed, since the
+bytes are the candidate's.
 
 ## Errors
 
@@ -215,7 +207,8 @@ The gate throws `DataError` for a call that is wrong and answers a request with 
 | CORS headers                                   | The host's HTTP layer adds the ones its deployment needs                                                  |
 | Telling answer keys in a file by their content | The gate decides by what a file is; a JSON file with a key is served, so keep keys in response processing |
 | A file store                                   | `FileStore` is the port: the host chooses S3-compatible storage or a disk                                 |
-| Serving the static files of the player         | `pci-frame/*` and `player.css` come from the same origin, outside the gate                                |
+| Serving the static files of the player         | `pci-frame/*` and `player.css` come from the same origin, outside the gate; they hold no package data     |
+
 ## Differences from the references
 
 None. No specification defines the gate: a token for a prefix, the files it serves and the headers follow from the security model ([SECURITY.md](../../SECURITY.md)), and [Evidence](evidence.md) lists the tests that hold them.

@@ -1,13 +1,13 @@
 # @assesskit/player
 
-QTI 3.0 player for JavaScript and TypeScript, built on @assesskit/runtime: renders the 20 standard interactions in the browser, hosts portable custom interactions, and serves test sessions and adaptive tests from a server. It applies accessibility in the interface, and its server-side session host has the ports that LTI, a gradebook and an analytics sink plug into. The runtime, [`@assesskit/runtime`](https://assesskit.wakan.dev/_assesskit/runtime/), owns the QTI semantics and the player owns the interface and the network, so the player never evaluates an expression, decides what is visible or valid, chooses a variant, or holds an answer key outside the runtime's solution view.
+QTI 3.0 player for JavaScript and TypeScript, built on @assesskit/runtime: renders the 20 standard interactions in the browser, hosts portable custom interactions, and serves test sessions and adaptive tests from a server. Its session host has the ports that LTI, a gradebook and an analytics sink plug into. [`@assesskit/runtime`](https://assesskit.wakan.dev/_assesskit/runtime/) owns the QTI semantics and the player the interface and the network.
 
 ```bash
 npm install @assesskit/player
 ```
 
-The player depends on [`@assesskit/runtime`](https://assesskit.wakan.dev/_assesskit/runtime/), which npm installs with it, and on two other packages, pinned to
-exact versions: `jose` signs the tokens of the asset gate, and `valibot` reads untrusted JSON
+npm installs `@assesskit/runtime` with it and two packages pinned to exact versions: `jose`, which signs the tokens of the asset
+gate, and `valibot`, which reads untrusted JSON
 ([SECURITY](https://github.com/assesskit/assesskit/blob/main/SECURITY.md#runtime-dependencies)).
 
 ## Quick start
@@ -25,8 +25,6 @@ LTI_TOOL_FRAME; // => "lti-tool"
 [Server](https://assesskit.wakan.dev/_assesskit/player/server/) have the samples that mount a session.
 
 ## Architecture
-
-The browser draws a session and sends its actions; the server hosts the engine of the runtime and the ports of the integrations.
 
 ```mermaid
 flowchart LR
@@ -81,7 +79,7 @@ flowchart LR
 
 The player holds no 1EdTech certification. [Supported](https://assesskit.wakan.dev/_assesskit/player/supported/)
 says what it draws and operates, how WCAG 2.2 levels A and AA are checked, and what it does not support. The browser code runs
-in Chromium 111, Firefox 115 and Safari 16.4, and later versions; [Baseline](https://assesskit.wakan.dev/_assesskit/player/baseline/)
+in Chromium 111, Firefox 115, Safari 16.4 and later; [Baseline](https://assesskit.wakan.dev/_assesskit/player/baseline/)
 lists what that allows and how it is tested.
 
 ## Documentation
@@ -109,6 +107,7 @@ lists what that allows and how it is tested.
 | [Styling](https://assesskit.wakan.dev/_assesskit/player/styling/)                  | `player.css`, its themes, the PNP properties, the parts and the vocabulary                                            |
 | [Supports](https://assesskit.wakan.dev/_assesskit/player/supports/)                | The look of the PNP, the panel of options, cards and popups, captions, reading aloud and the variant                  |
 | [Tools](https://assesskit.wakan.dev/_assesskit/player/tools/)                      | The tools of an item, how they are shown and operated                                                                 |
+| [Size](https://assesskit.wakan.dev/_assesskit/player/size/)                        | The bytes that each page loads, by bundler, and the budgets that hold them                                            |
 | [Supported](https://assesskit.wakan.dev/_assesskit/player/supported/)              | What the player supports and what it does not, the browsers and WCAG 2.2                                              |
 | [Choosing](https://assesskit.wakan.dev/_assesskit/player/choosing/)                | When the player fits, and what Amp-up, Citolab, Longsight, TAO, Learnosity and Inspera have that it lacks, with dates |
 | [Evidence](https://assesskit.wakan.dev/_assesskit/player/evidence/)                | How the player is tested                                                                                              |

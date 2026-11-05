@@ -1,12 +1,10 @@
 # The session client
 
-The player mounts against one of two session clients, each a subpath of its own: the remote session of an exam in
-`@assesskit/player/client`, and the local session of practice in `@assesskit/player/client/local`. Both implement
-`SessionClient` of the [protocol](protocol.md#the-session-client), so the player never knows the mode, and a page imports
-only the client it runs. The browser code holds no answer key in an exam: the remote session imports `readView`,
-`writeCandidateAction` and `readCandidateAction` from `@assesskit/runtime/delivery/wire`, which reaches no file of the engine, and a
-test bundles the player and the remote session and fails if any file of the engine has code in the first load. Only
-`createLocalSession` loads the engine, with `import()` at its first call on a page ([size](size.md#the-first-load-of-a-client)).
+The player mounts against one of two session clients, each a subpath of its own, and both implement `SessionClient` of the
+[protocol](protocol.md#the-session-client), so the player never knows the mode and a page imports only the client it runs. In
+an exam the browser holds no answer key: the remote session imports only the wire functions of
+`@assesskit/runtime/delivery/wire`, and a test fails if any file of the engine has code in its first load. Only
+`createLocalSession` loads the engine, with `import()` at its first call ([size](size.md#the-first-load-of-a-client)).
 
 | Client                | Subpath                          | Mode     | Where the engine runs | Keys on the device | Host side of the session |
 | --------------------- | -------------------------------- | -------- | --------------------- | ------------------ | ------------------------ |
@@ -149,13 +147,9 @@ An item alone is a session of `{ kind: "item", item, base }`; `documents.item` i
 lesson page whose items each have a session of their own, which [`mountItem`](delivery.md#items-in-a-page) shows without the chrome.
 
 The session has the engine and the definition but not the package, so a host that wants reading aloud to use the lexicons of
-the items names them with `lexicons`, from the manifest of the package it made the definition from:
-
-A lexicon is a resource of type `pls` among the dependencies of the item's resource, so a host reads it with `listDependencies` of
-`@assesskit/runtime/package` and `resolveResourcePath`: find the resource whose path is the item's, filter its closure for `pls`, and
-return the paths.
-
-The server's session host finds them the same way for an exam.
+the items names them with `lexicons`. A lexicon is a resource of type `pls` among the dependencies of the item's resource: find
+the resource whose path is the item's with `resolveResourcePath` of `@assesskit/runtime/package`, filter the closure that
+`listDependencies` gives for `pls`, and return the paths. The server's session host finds them the same way for an exam.
 
 ### A learner who is away
 
@@ -279,16 +273,16 @@ no step. `dispatch` and every method of `host` run one after the other, in the o
 calls before it left. Each call takes the options `{ signal }` of the [protocol](protocol.md#the-host-session): an action or a
 read whose signal aborted before its turn rejects with `signal.reason` and is dropped.
 
-| Case                                                          | Behavior                                                                                                                                                                                           |
-| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A session resumed from the store has pending scoring requests | No step announces them. The host checks `pending()` once after `createLocalSession` resolves, for a new and for a resumed session.                                                                 |
-| The start of a new session makes a scoring request            | Its events come before any listener can subscribe, so the same check covers it.                                                                                                                    |
-| The store rejects a save                                      | The call rejects with the error of the store. The state, the view, the timer and the listeners stay as they were, because a step takes effect only after its save.                                 |
-| The save of a `time` action of the timer fails                | The error goes to `reportError`. No timer is armed again, because a delay of 0 would loop against a failing store. The next action applies the passed deadlines first, so no expiry slips through. |
-| A score arrives after the page closed the client              | `apply` throws. The host opens a new `createLocalSession` from the store and applies the score there.                                                                                              |
-| Two sessions on one store key                                 | They overwrite each other, because `LocalStore.save` has no version. One live session per key is the host's duty.                                                                                  |
-| A listener throws                                             | The error goes to `reportError`, and the other listeners still run.                                                                                                                                |
-| After `close()`                                               | `dispatch`, `apply` and `subscribeSteps` throw `DataError`. The reads still answer, because the state is in memory and in the store.                                                               |
+| Case                                                          | Behavior                                                                                                                                                                                       |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A session resumed from the store has pending scoring requests | No step announces them. The host checks `pending()` once after `createLocalSession` resolves, for a new and for a resumed session.                                                             |
+| The start of a new session makes a scoring request            | Its events come before any listener can subscribe, so the same check covers it.                                                                                                                |
+| The store rejects a save                                      | The call rejects with the error of the store. The state, the view, the timer and the listeners stay as they were, because a step takes effect only after its save.                             |
+| The save of a `time` action of the timer fails                | The error goes to `onError`. No timer is armed again, because a delay of 0 would loop against a failing store. The next action applies the passed deadlines first, so no expiry slips through. |
+| A score arrives after the page closed the client              | `apply` throws. The host opens a new `createLocalSession` from the store and applies the score there.                                                                                          |
+| Two sessions on one store key                                 | They overwrite each other, because `LocalStore.save` has no version. One live session per key is the host's duty.                                                                              |
+| A listener throws                                             | The error goes to `onError`, and the other listeners still run.                                                                                                                                |
+| After `close()`                                               | `dispatch`, `apply` and `subscribeSteps` throw `DataError`. The reads still answer, because the state is in memory and in the store.                                                           |
 
 ## Errors
 
@@ -308,7 +302,8 @@ Both clients throw the runtime's `DataError` for what the caller did wrong and p
 | The error of the store                        | A `load` or a `save` rejected (local)                                                                                                | The state stays as it was; fix the store and call again                                                                                                       |
 | `signal.reason`                               | The signal of the call aborted before the call ran, or while it waited                                                               | Nothing was sent when it aborted first; a request in flight is in doubt, except a view request                                                                |
 
-A listener that throws, and a send of an autosave or a deadline that failed, go to `onError` (default `reportError` of the page), because no call waits for them.
+A listener that throws, a send of an autosave or a deadline that failed, and a failure of a local session's timer go to
+`onError`, because no call waits for them.
 
 ## Not included
 
@@ -319,6 +314,7 @@ A listener that throws, and a send of an autosave or a deadline that failed, go 
 | Exam mode on a device                              | The engine and the answer keys are on the device in a local session, so it is for practice; an exam runs on the server                     |
 | Two live sessions on one store key                 | `LocalStore.save` has no version, so they overwrite each other; the host keeps one live session per key                                    |
 | Rating, scoring and CAT in the browser for an exam | The session host does them on the server ([server](server.md)); a local session gives `host` for practice                                  |
+
 ## Differences from the references
 
 None. No specification defines the session client: it speaks the envelopes of [protocol](protocol.md), and [Evidence](evidence.md) lists the tests of the clients.

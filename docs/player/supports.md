@@ -260,20 +260,20 @@ cards of the supports that are on, with `ContentRoot.card`; the card is chosen b
 `update(supports)` replaces what an earlier call applied. Call it after `show` of the root settles, and again when the
 supports change. `destroy()` gives the content back as the root drew it.
 
-| Support                                                               | The card shows                                                                                         |     |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | --- |
-| `glossary-on-screen`                                                  | in a popup, on request                                                                                 |     |
-| `keyword-translation`                                                 | in a popup, on request, in the language of the support                                                 |     |
-| `linguistic-guidance`, `additional-directions`, `keyboard-directions` | in a popup, on request                                                                                 |     |
-| A custom support (`ext:`)                                             | in a popup, on request                                                                                 |     |
-| `high-contrast`                                                       | in place of the content                                                                                |     |
-| `simplified-graphics`, `simplified-language-portions`                 | in place of the content                                                                                |     |
-| `sign-language`                                                       | beside the content, the entry of the language of the support                                           |     |
-| `audio-description`, `transcript`                                     | beside the content                                                                                     |     |
-| `long-description`                                                    | beside the content; visually hidden unless `hideVisually` is `false`                                   |     |
-| `braille`                                                             | beside the content; the text is visually hidden unless the delivery is `embossed`, the files are links |     |
-| `tactile`                                                             | beside the content; its files are links                                                                |     |
-| `spoken`                                                              | not shown: a card for the voice of a host                                                              |     |
+| Support                                                               | The card shows                                                                                         |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `glossary-on-screen`                                                  | in a popup, on request                                                                                 |
+| `keyword-translation`                                                 | in a popup, on request, in the language of the support                                                 |
+| `linguistic-guidance`, `additional-directions`, `keyboard-directions` | in a popup, on request                                                                                 |
+| A custom support (`ext:`)                                             | in a popup, on request                                                                                 |
+| `high-contrast`                                                       | in place of the content                                                                                |
+| `simplified-graphics`, `simplified-language-portions`                 | in place of the content                                                                                |
+| `sign-language`                                                       | beside the content, the entry of the language of the support                                           |
+| `audio-description`, `transcript`                                     | beside the content                                                                                     |
+| `long-description`                                                    | beside the content; visually hidden unless `hideVisually` is `false`                                   |
+| `braille`                                                             | beside the content; the text is visually hidden unless the delivery is `embossed`, the files are links |
+| `tactile`                                                             | beside the content; its files are links                                                                |
+| `spoken`                                                              | not shown: a card for the voice of a host                                                              |
 
 The language of a card is that of `keyword-translation` or `sign-language` for their own cards, else that of the
 `item-translation` support when it is on, else none, which gives the default entry of the card (the runtime's `selectCard`).
@@ -288,7 +288,7 @@ In place of the content means the children of the element are replaced, and come
 choice (`.ak-face`) is replaced and its control stays. A picture or media is hidden and the card stands after it. An
 element that holds a control and has no face keeps its content, and its card comes beside it.
 
-Two supports without a card also change the content:
+These supports change the content without a card, or besides their card:
 
 | Support             | Effect                                                                                                          |
 | ------------------- | --------------------------------------------------------------------------------------------------------------- |
@@ -401,7 +401,6 @@ A support that is wrong for the candidate is not an error of the player: the run
 
 | Case                                                                                             | Resolution                                                                                  |
 | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| The design lists `captions` and `alternative-text` with the cards                                | The schema gives a `qti-card` no such `support`; they act on text tracks and on `alt`       |
 | The best practices guide leaves the presentation of a card to the platform                       | The table above                                                                             |
 | `item-translation` has a language but no card                                                    | Its language chooses the entry of the cards of supports that have none of their own         |
 | The PNP schema gives no unit for sizes and spacing                                               | Points over 12 for the font size, ems for the spacing                                       |

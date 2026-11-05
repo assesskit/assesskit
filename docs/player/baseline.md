@@ -40,20 +40,18 @@ browsers and untested in the others.
 The `browserslist` of `packages/player/package.json` names the three browsers for the tools that read it, and the bundles of
 `packages/player/scripts/build-static.ts` and `compat/run-engines.ts` have them as esbuild targets.
 
-| Check                                     | Command                | Catches                                                                                                                                                                                                                                                                                      |
-| ----------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tsconfig.browser.json`                   | `pnpm typecheck`       | Built-ins newer than ES2023, because `lib` is `ES2023`, `DOM` and `DOM.Iterable`                                                                                                                                                                                                             |
-| esbuild targets                           | `pnpm build`           | Syntax that a baseline browser cannot parse, in the bundles of the PCI frame and the recording worklet                                                                                                                                                                                       |
-| eslint-plugin-compat                      | `pnpm compat:baseline` | Any API of the built JavaScript that a baseline browser lacks, from caniuse and MDN data                                                                                                                                                                                                     |
-| stylelint-no-unsupported-browser-features | `pnpm compat:baseline` | Any CSS feature that a baseline browser lacks                                                                                                                                                                                                                                                |
-| The pinned browsers                       | `pnpm compat:engines`  | The shared modules, `player.css` styling a content root, a portable custom interaction in its frame, the tools of the player, and a choice, an order, a slider and a text entry answered by keyboard with the recording worklet loaded, running in Chromium 111, Firefox 115 and WebKit 16.4 |
+| Check                                     | Command                | Catches                                                                                                |
+| ----------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| `tsconfig.browser.json`                   | `pnpm typecheck`       | Built-ins newer than ES2023, because `lib` is `ES2023`, `DOM` and `DOM.Iterable`                       |
+| esbuild targets                           | `pnpm build`           | Syntax that a baseline browser cannot parse, in the bundles of the PCI frame and the recording worklet |
+| eslint-plugin-compat                      | `pnpm compat:baseline` | Any API of the built JavaScript that a baseline browser lacks, from caniuse and MDN data               |
+| stylelint-no-unsupported-browser-features | `pnpm compat:baseline` | Any CSS feature that a baseline browser lacks                                                          |
+| The pinned browsers                       | `pnpm compat:engines`  | The [smoke cases](#the-pinned-browsers), in Chromium 111, Firefox 115 and WebKit 16.4                  |
 
-The static checks of `pnpm compat:baseline` stay because the smoke test runs only the code paths that its cases reach, and the
-linters read every line of the built JavaScript and every stylesheet.
-
-`pnpm compat:baseline` builds, then lints `dist/`. It checks the shared and browser folders only, and every
-stylesheet of the package. The stylelint plugin reports `text-indent` as partial for its `each-line` and `hanging`
-keywords, which the stylesheet does not use, so `compat/lint.ts` ignores that one feature.
+The smoke test runs only the code paths that its cases reach, so the linters, which read every line of the built JavaScript
+and every stylesheet, stay. `pnpm compat:baseline` builds, then lints `dist/` of the shared and browser folders. The stylelint
+plugin reports `text-indent` as partial for its `each-line` and `hanging` keywords, which the stylesheet does not use, so
+`compat/lint.ts` ignores that one feature.
 
 ## The pinned browsers
 
@@ -67,21 +65,28 @@ Playwright ships the browsers of its release, and no release has all three at th
 Each release is pinned exactly in a package of its own under `compat/engines/` and runs in the container image of the
 same version, `mcr.microsoft.com/playwright:v1.31.2-jammy` and `v1.36.2-jammy`, because old browser builds need the
 system libraries of their time. `pnpm compat:engines` runs the smoke cases of `compat/smoke.ts` in both images, with
-Docker; pass a pair name (`chromium-webkit` or `firefox`) to run one. Each container takes 2 CPUs and is named
-`<name>-<pair>`, where the name is `CONTAINER_NAME` when it is set, so that a run on a shared machine names its own
-(`CONTAINER_NAME=my-unit pnpm compat:engines`), and else `assesskit-engines-` and 8 random hexadecimal digits; the container
-is removed when it ends. The CI job `engines` runs it too.
+Docker, and so does the CI job `engines`; pass a pair name (`chromium-webkit` or `firefox`) to run one. Each container takes 2
+CPUs, is removed when it ends and is named `<name>-<pair>`, where the name is `CONTAINER_NAME` when it is set, so that a run on a
+shared machine names its own (`CONTAINER_NAME=my-unit pnpm compat:engines`), and else `assesskit-engines-` and 8 random
+hexadecimal digits.
 
 The player and the protocol import the runtime by package name, which a browser cannot resolve, so before the containers start
 `pnpm compat:engines` bundles `dist/player/index.js` and `dist/protocol/index.js` with their dependencies into
 `compat/.smoke/player.js` and `compat/.smoke/protocol.js`, which the smoke server serves in their place. Each bundle also exports the names that the package keeps private and the cases drive: the frame of a portable custom interaction, the reading of a range, the renderers of content and of the interactions, and the check of an envelope. The containers run on the `node_modules` of the machine, so esbuild, a native program, runs outside them. The smoke
 server also serves MathJax and its fonts from the `mathjax` package that the tests use.
 
-The cases are: the engine is the baseline; the shared modules
-run; `player.css` styles a content root; a portable custom interaction runs in its frame and reaches no network; a speech
-request is built from a content root; the supports of a candidate set the look, put a card in place of the content, open a
-popup that stays inside the root and is dismissed by Escape, and turn a button of the panel into a request; MathJax typesets MathML in a shadow root, gives braille and leaves elementary
-math to the browser; a content root renders nodes with the URLs of the package, sanitizes a hostile stylesheet and opens
-modal feedback in the top layer; and the graphic interactions are answered by keyboard and the drawing stores its picture.
+| Smoke case                           | Checks                                                                                                                                                |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The engine                           | The browser is the baseline version                                                                                                                   |
+| Shared modules                       | They load and run                                                                                                                                     |
+| `player.css`                         | It styles a content root                                                                                                                              |
+| Portable custom interaction          | It runs in its sandboxed frame and reaches no network                                                                                                 |
+| Tools                                | The rule, the calculator, the line reader and answer masking are operated by keyboard                                                                 |
+| Speech                               | A speech request is built from a content root                                                                                                         |
+| Supports                             | The look, a card in place of the content, a popup that stays inside the root and is dismissed by Escape, a button of the panel that becomes a request |
+| MathJax                              | MathML is typeset in a shadow root, with braille, and elementary math is left to the browser                                                          |
+| Content root                         | Nodes render with the URLs of the package, a hostile stylesheet is sanitized, modal feedback opens in the top layer                                   |
+| Choice, order, slider and text entry | They are answered by keyboard, with the recording worklet loaded                                                                                      |
+| Graphic interactions                 | They are answered by keyboard, and a drawing is stored in the type of its image                                                                       |
 
 Playwright's WebKit is not Safari. A person checks the player in Safari 16.4 before the first release.

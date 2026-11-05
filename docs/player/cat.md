@@ -1,10 +1,10 @@
 # Adaptive testing (CAT)
 
 The runtime defines `CatPort`, the six requests of a CAT 1.0 engine, and makes no network request and runs no CAT algorithm.
-The player has two subpaths for it. `@assesskit/player/cat` deploys the adaptive sections of a package through any port, on a
-server or in a page. `@assesskit/player/cat-rest` speaks the REST binding of CAT 1.0 on a server, on both sides of the wire:
-`createRestCatPort` is the client of a remote engine, and `createCatRestHandler` is the engine side, which answers the binding's requests
-for any `CatPort`. Any other engine, such as one in process over a psychometrics library, plugs in behind the same port.
+`@assesskit/player/cat` deploys the adaptive sections of a package through any port, on a server or in a page.
+`@assesskit/player/cat-rest` speaks the REST binding of CAT 1.0 on a server, on both sides of the wire: `createRestCatPort` is
+the client of a remote engine, and `createCatRestHandler` answers the binding's requests for any `CatPort`. Any other engine,
+such as one in process over a psychometrics library, plugs in behind the same port.
 
 ```mermaid
 flowchart LR
@@ -72,31 +72,13 @@ requests; // => ["POST https://auth.example/token", "POST https://gateway.intern
 
 ## Why the REST subpath stays on servers
 
-`createRestCatPort` holds an OAuth client secret and sends the candidate's results to a remote engine, so it must never reach a
-browser bundle. The subpath `cat-rest` is for that reason separate from `cat`, and no shared or browser folder of the package
-imports it (lint); the bundle tests check that the bundles of the candidate and of practice hold none of its files.
-`createCatRestHandler` holds no secret, but it serves answer keys of the engine and candidate results, so it too belongs on a server.
-A page that runs practice with an adaptive section brings its own `CatPort`, such as an engine over a psychometrics library in
-the page, and deploys with `deployCatSections(pkg, () => port)` from `@assesskit/player/cat`. Nothing in the library can see a
-host's page: a host that imports `@assesskit/player/cat-rest` there puts the secret in the page, and
-[SECURITY.md](../../SECURITY.md) says to keep it on the server.
-
-## Why the binding is in assesskit
-
-CAT 1.0 exists to carry the adaptive sections of QTI 3: the package names the engine in `qti-adaptive-engine-ref` and the
-files in `qti-adaptive-settings-ref`, and the requests carry QTI assessment results, item identifiers and usage data. Nobody
-uses the binding without QTI, so a library that is complete for QTI 3 serves both ends of it. LTI and Caliper are different:
-they carry launches, grades and learning events of any learning tool, and nothing in them names a QTI construct, so they
-belong to the interoperability family ([interopkit](https://github.com/interopkit/interopkit)), which the player reaches
-through ports.
-
-```mermaid
-flowchart TD
-  q{"Does the standard carry QTI constructs,<br/>and nobody uses it without QTI?"}
-  q -->|yes| a["assesskit: CAT 1.0 REST binding, in cat-rest"]
-  q -->|"no: it serves any learning tool"| i["interopkit: LTI 1.3, Caliper 1.2"]
-  i -->|"plugs in through ports"| p["the player: LtiLogin, onStep,<br/>buildSessionScore, createToolScoreIntake"]
-```
+`createRestCatPort` holds an OAuth client secret and sends the candidate's results to a remote engine, and
+`createCatRestHandler` serves the engine's answer keys and candidate results, so `cat-rest` is a subpath of its own that no
+shared or browser folder imports (lint), and the bundle tests check that the bundles of the candidate and of practice hold none
+of its files. A page that runs practice with an adaptive section brings its own `CatPort` and deploys with
+`deployCatSections(pkg, () => port)` from `@assesskit/player/cat`; [SECURITY.md](../../SECURITY.md#the-player-cat-engines) says
+how to keep the secret on the server. [Architecture](architecture.md#why-the-cat-rest-binding-is-in-the-player) says why the binding is in
+assesskit and LTI and Caliper are not.
 
 ## Why the token request is written here
 
@@ -191,7 +173,7 @@ means that another call answered first, and the loop reads again. A port never c
 | After `proctor`, `session(id).apply` or `host.apply`                  | The step returns with `catFailure` (`request`, `message`) as a value; a time job throws on it for its queue to retry     |
 | After `handle`, `dispatch`, `start`, `createLocalSession` or a replay | Rejects with `ServiceError` only when no item is presented and the session is in progress; otherwise it answers as usual |
 | In `view`                                                             | It answers with the view as it is                                                                                        |
-| In the timer of a local session                                       | The error goes to `reportError`, and the next call retries                                                               |
+| In the timer of a local session                                       | The error goes to `onError`, and the next call retries                                                                   |
 
 A port's own `ServiceError` passes through, and any other error is wrapped with status 0. The request stays pending and the
 next call tries it again; saved answers stay saved. A process that crashes after the port answered and before the save loses
@@ -246,11 +228,9 @@ flowchart LR
   engines. It never builds an `endpoint` or a `tokenUrl` from the reference, and never returns shared credentials for any
   reference, because the port sends the client secret and the candidate's data to the engine it returns.
 - **One port, many engines.** The port keeps a token for each token URL, client and scope, so engines with their own
-  credentials never share a token. A gateway maps its public reference to the upstream endpoint, as the sample does.
+  credentials never share a token. A gateway maps its public reference to the upstream endpoint, as the Quick start does.
 - **Identifiers in the path.** A section or session identifier is percent-encoded into the path. One that is `.` or `..` is
   a `DataError` and nothing is sent, since a URL takes it as a step to another path: `sections/..` is the endpoint itself.
-- **An expired token.** An engine that answers `401` gets the request once more with a new token. The requests under way
-  when a token expires ask for one new token together, so the token endpoint sees one request and not one per candidate.
 
 | Request        | HTTP                                                       | Body                                                       |
 | -------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
@@ -266,8 +246,9 @@ flowchart LR
   section 4.4). The binding recommends the scope `https://purl.imsglobal.org/cat/v1p0/scope/api` for every endpoint, or
   `.../scope/configure` for sections and `.../scope/deliver` for sessions; an engine may define others.
 - **Token.** The port keeps the token. It reads no clock, so it learns that the token expired from a `401`: it asks for a new
-  token with the credentials that `engines` gives for the request, and repeats the request once. The port calls `engines` for
-  every request, so a secret that rotates is read as it changes. A `403` is a failure and is not repeated.
+  token with the credentials that `engines` gives for the request, and repeats the request once. The requests under way when a
+  token expires ask for one new token together, so the token endpoint sees one request and not one per candidate. The port
+  calls `engines` for every request, so a secret that rotates is read as it changes. A `403` is a failure and is not repeated.
 - **Transport.** Every URL is `https` (binding section 4.1). Redirects are errors, because a redirect would send the token to
   another address. The error of `fetch`, such as a timeout, is passed on unchanged.
 - **Signals.** The `signal` of a call aborts its request and ends its wait, also for the lookup of `engines`, which gets the
@@ -344,14 +325,14 @@ flowchart LR
   auth -.->|"checks the token and its scope"| as
 ```
 
-| Option         | Default                              | Meaning                                                                                                                                                                                                                                                                                                    |
-| -------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `authorize`    | required                             | `(request, operation) => CatAuthorization`, sync or async: the decision, below. The handler holds no credentials of its own. The request has its body unread, and the step must not read it.                                                                                                               |
-| `root`         | `"/ims/cat/v1p0"`                    | The path that the handler receives, with no trailing slash, or `""` where a proxy strips the path. The binding asks the public paths to begin with `/ims/cat/v1p0` (section 2.2).                                                                                                                          |
-| `prefix`       | the origin and `root` of the request | The reference that every call of the port gets as its `prefix`: the address of the engine as the `qti-adaptive-engine-ref` of its sections names it, an `https` URL. Set it for a public deployment.                                                                                                       |
-| `maxBodyBytes` | `33554432`                           | The most bytes of a request body, counted as the stream is read (32 MiB). It holds a base64 field of about 24 MiB of file. A larger body answers 413.                                                                                                                                                      |
-| `maxTokens`    | `1000000`                            | The most tokens of the JSON of a request body, counted before it is parsed: each structural character, string, number and literal counts one. The memory of a parse follows the tokens: 32 MiB of empty objects would take more than a gigabyte. A base64 file is one token. A body with more answers 413. |
-| `onError`      | none                                 | `(error, request, operation) => void`: called once for every answer of 500, with the error behind it. Never for a refusal of the caller, for `server_busy`, or after an abort. It is not awaited, and its own failure is ignored.                                                                          |
+| Option         | Default                              | Meaning                                                                                                                                                                                                                                                                                                                     |
+| -------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `authorize`    | required                             | `(request, operation) => CatAuthorization`, sync or async: the decision, below. The handler holds no credentials of its own. The request has its body unread, and the step must not read it.                                                                                                                                |
+| `root`         | `"/ims/cat/v1p0"`                    | The path that the handler receives, with no trailing slash, or `""` where a proxy strips the path. The binding asks the public paths to begin with `/ims/cat/v1p0` (section 2.2).                                                                                                                                           |
+| `prefix`       | the origin and `root` of the request | The reference that every call of the port gets as its `prefix`: the address of the engine as the `qti-adaptive-engine-ref` of its sections names it, an `https` URL. Set it for a public deployment.                                                                                                                        |
+| `maxBodyBytes` | `33554432`                           | The most bytes of a request body, counted as the stream is read (32 MiB). It holds a base64 field of about 24 MiB of file. A larger body answers 413.                                                                                                                                                                       |
+| `maxTokens`    | `1000000`                            | The most tokens of the JSON of a request body, counted before it is parsed: each structural character, string, number and literal counts one. The memory of a parse follows the tokens: 32 MiB of empty objects would take more than a gigabyte. A base64 file is one token. A body with more answers 413.                  |
+| `onError`      | none                                 | `(error, request, operation) => void`: called once for every answer of 500, with the error behind it, which may hold addresses, tokens or candidate data; the handler logs nothing else. Never called for a refusal of the caller, for `server_busy`, or after an abort. It is not awaited, and its own failure is ignored. |
 
 ```ts
 import { CAT_SCOPES, createCatRestHandler, listScopes } from "@assesskit/player/cat-rest";
@@ -513,21 +494,16 @@ that the round trip through both gives the same error back.
 
 - **What the caller reads.** A 400 for a body names the path of the caller's own value. Every failure of the port, of `authorize`
   and of the encoding has a fixed text, because the message of a gateway names the address of the upstream engine and the
-  message of an engine its own state. The operator reads the error in `onError`.
+  message of an engine its own state; the operator reads the error in `onError`.
 - **An engine tells the caller's fault with a `ServiceError`.** An engine that finds the data of a request invalid throws
   `ServiceError` with the status 400, and one that does not have an object throws it with 404 (or 429 and 503 when it is busy).
   A `DataError` of the engine is a 500: it does not say whose fault it is.
-- **A 403 is not an expired token.** `createRestCatPort` reads a 401 as an expired token, asks for a new one and repeats the call
-  once. It reads a 403 as a failure, `ServiceError` with the status 403, and repeats nothing.
 - **Authorization.** The authorization server issues the tokens of the OAuth 2.0 client credentials grant, and `authorize`
   checks the bearer token and the scope that `operation` needs. The handler neither reads the `Authorization` header nor keeps a
   token. `authorize` runs once for each request, and requests run at once, so it must be safe to call at once.
 - **Abort.** A request whose signal aborts ends the wait: the promise rejects with the reason and nothing is sent. The read of
   the body is cancelled, and the port is not called when the abort came first. A call of the port gets the signal of the
   request, so that the port can stop its own work. `onError` does not run after an abort.
-- **Prefix.** The port gets the `prefix` option, or the origin and `root` of the request.
-- **Logging.** The handler logs nothing. `onError` gets the error of every 500, which may hold addresses, tokens or candidate
-  data: the host decides where it goes.
 - **Session end.** A stage without items is sent as no `nextItems`, which is how the binding ends a session. The item set of
   Get Section has no stage length, and an empty pool leaves `items` out; `createRestCatPort` reads both back.
 - **Metadata.** A `qtiMetadata` object of Create Section reaches the port as `qtiMetadataRecord`, and Get Section returns it, for
@@ -559,9 +535,11 @@ over an engine of measurekit, with a port for each client, and the Node adapter.
 
 The result maps the identifier of each adaptive section to `{ prefix, sectionIdentifier }`, which is
 `DeliveryDefinition.catSections`. Create Section is not idempotent at a remote engine, so deploy once. When a check fails,
-the sections made so far stay, and the `DataError` names the section at the engine, so that the host can end it. The `signal`
-of `options` ends the wait before the next request or while one waits, and the port gets it with each request; the sections
-made before stay, as after a failure.
+the sections made so far stay, and the `DataError` names the section at the engine, so that the host can end it.
+
+| Option   | Default | Meaning                                                                                                                                          |
+| -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `signal` | none    | Ends the wait before the next request or while one waits; the port gets it with each request. The sections made before stay, as after a failure. |
 
 ## Errors
 
@@ -584,6 +562,7 @@ has the error ([status table](#createcatresthandler)).
 | Another transport than the REST/JSON binding | Implement `CatPort` over it                                                                                                                                   |
 | The authorization server                     | The token endpoint is an OAuth 2.0 service, and a library or a hosted service issues the tokens; `authorize` only checks them (the example has a minimal one) |
 | TLS and the listener                         | The host terminates TLS and mounts the handler on its runtime                                                                                                 |
+
 ## Differences from the references
 
 | Case                                                                                                                                                     | Resolution                                                                                                                      |

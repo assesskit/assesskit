@@ -111,8 +111,8 @@ records.get("s1").version; // => 1
 
 ## Session host
 
-`createSessionHost(options)` throws `DataError` when an option is not of its type, a limit of `limits` among them, so that a
-misspelled limit fails as the host is made.
+`createSessionHost(options)` checks every option as the host is made, a limit of `limits` among them, so that a misspelled
+limit fails at once ([Errors](#errors)).
 
 | Option          | Type                                         | Meaning                                                                                                                                                                        |
 | --------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -206,8 +206,8 @@ first.
 
 ### Client-action policy
 
-The exam default lists every action of the candidate but `suspend` and `resume`, because the runtime counts suspended time nowhere
-a candidate who could suspend would stop the clock. The host filters `view.actions` through the policy, so the chrome
+The exam default lists every action of the candidate but `suspend` and `resume`, because the runtime counts suspended time
+nowhere: a candidate who could suspend would stop the clock. The host filters `view.actions` through the policy, so the chrome
 never offers such an action. Practice allows every action, and so does a host that passes `CANDIDATE_ACTION_TYPES` of
 `@assesskit/runtime/delivery/wire`.
 
@@ -554,7 +554,7 @@ play({ type: "move", to: "previous" }); // => "linear-backward"
 
 The first `move` is refused because `a1` is not submitted; after the last item of the first section is submitted the review is open, and
 the first change is spent when `a1` opens its second attempt. The second section starts closed, with a cap of its own. The wrapper lives
-in the host, so another host of the same exam has no such rule: the compile of the form names it as the rule of that exam.
+in the host, so another host of the same exam applies the rule only if it wraps its engine the same way.
 
 | Failure                                | Result                                                                                        |
 | -------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -593,6 +593,7 @@ The host throws the runtime's `DataError` for a request it refuses and the playe
 | Who may proctor, and the proctor's page            | The host calls `proctor` for the people it trusts; the player has no proctor interface                                                            |
 | LTI, Caliper and the other protocols of a platform | [interopkit](https://github.com/interopkit/interopkit) implements them; the host has the ports `onStep` and `buildSessionScore` to plug them into |
 | Logging and metrics                                | The player never logs; the host wraps the stores and the log                                                                                      |
+
 ## Differences from the references
 
 None. No specification defines a session host: it applies the runtime's engine to the actions that a client sends, and [spec gaps](../runtime/spec-gaps.md) gives the resolutions of the specifications that the engine applies.

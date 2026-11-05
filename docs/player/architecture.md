@@ -87,24 +87,27 @@ flowchart LR
   host --- lib
 ```
 
-| Port                                      | Direction                                       | Where                                                                        |
-| ----------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------- |
-| `LtiLogin`, `LtiFrame`                    | The player asks the host to start a tool        | `player/lti-frame`, `protocol/lti-frame` ([delivery](delivery.md#lti-items)) |
-| `onStep`, `StepSink`                      | The session host gives each step to the host    | `server` ([server](server.md#forwarding-the-steps))                          |
-| `buildSessionScore`                       | The host reads the score of a session           | `scoring` ([scoring](scoring.md#the-score-of-a-session))                     |
-| `createToolScoreIntake`, `ToolScoreStore` | The score of a tool comes in as `supply-scores` | `server` ([server](server.md#the-scores-of-tool-items))                      |
+[LTI items](lti-items.md) lists the four ports with their guides and shows the three steps that wire them.
 
-[LTI items](lti-items.md) shows the three steps that wire them.
+## Why the CAT REST binding is in the player
 
-## Why `cat-rest` is in the player
+`cat-rest` holds the two sides of the 1EdTech CAT 1.0 REST binding: `createRestCatPort`, which implements the runtime's
+`CatPort` over a remote engine, and `createCatRestHandler`, which serves the binding in front of any `CatPort`. CAT 1.0 carries
+the adaptive sections of QTI 3: the package names the engine in `qti-adaptive-engine-ref` and its files in
+`qti-adaptive-settings-ref`, and the requests carry QTI results, item identifiers and usage data, so nobody uses the binding
+without QTI. LTI and Caliper carry launches, grades and events of any learning tool and name no QTI construct.
 
-`cat-rest` holds the two sides of the 1EdTech CAT 1.0 REST binding: `createRestCatPort`, which implements `CatPort`, the port of the
-runtime, over a remote engine, and `createCatRestHandler`, which serves the binding in front of any `CatPort`. QTI 3.0 defines the
-adaptive sections that use them: `qti-adaptive-selection` names a CAT engine, and the binding is the service of that engine. It
-is part of QTI, the domain of this family. LTI and Caliper are other standards, which interopkit implements. The subpath stays
-on servers because `createRestCatPort` holds the OAuth client secret and `createCatRestHandler` serves answer keys, and a host that wants a
-CAT engine or its client without the rest of the player imports only `@assesskit/player/cat-rest`, which loads the runtime and
-no code that draws a page. A package of its own would add a release and a boundary for one subpath.
+```mermaid
+flowchart TD
+  q{"Does the standard carry QTI constructs,<br/>and nobody uses it without QTI?"}
+  q -->|yes| a["assesskit: CAT 1.0 REST binding, in cat-rest"]
+  q -->|"no: it serves any learning tool"| i["interopkit: LTI 1.3, Caliper 1.2"]
+  i -->|"plugs in through ports"| p["the player: LtiLogin, onStep,<br/>buildSessionScore, createToolScoreIntake"]
+```
+
+The subpath stays on servers because `createRestCatPort` holds the OAuth client secret and `createCatRestHandler` serves answer
+keys. A host that wants a CAT engine or its client without the rest of the player imports only `@assesskit/player/cat-rest`,
+which loads the runtime and no code that draws a page; a package of its own would add a release and a boundary for one subpath.
 
 ## Subpaths
 
@@ -149,16 +152,15 @@ Four configurations check the package, each with the libraries of its side:
 
 ## Errors
 
-The error of the player extends `AssesskitError` of the runtime, and the player throws the runtime's `DataError` and `ServiceError`:
-all three come from `@assesskit/runtime/errors`, which loads no other module, so that browser folders can import it, and so that a
-CAT engine refuses a request without the player. The messages are full sentences that say what is wrong and what is expected. The
-runtime's errors pass through the player unchanged. Every class takes `ErrorOptions` last, and an error that reports another holds
-it as `cause`, such as the `ServiceError` of a CAT request whose port failed.
+`AccessError` is the player's own and extends `AssesskitError` of the runtime; the others come from
+`@assesskit/runtime/errors`, which loads no other module, so that browser folders import it and a CAT engine refuses a request
+without the player. The runtime's errors pass through unchanged. A message is a full sentence that says what is wrong and what
+is expected; every class takes `ErrorOptions` last, and an error that reports another holds it as `cause`, such as the
+`ServiceError` of a CAT request whose port failed.
 
-| Class         | Thrown when                                                                    | Carries  |
-| ------------- | ------------------------------------------------------------------------------ | -------- |
-| `AccessError` | A caller acts on a session it is not bound to, or starts a session that exists | `reason` |
-
-The runtime throws `DataError` when an argument has the wrong type or is out of range, or untrusted input is not what it should be, such as an
-envelope, and `ServiceError` when a call to a CAT engine fails or a store conflict outlasts its retries; its `status` is `0` when a service did
-not answer. `reason` is one of the exported union `AccessErrorReason`: `not-bound` or `session-exists`. A host maps `AccessError` to 403.
+| Class           | Thrown when                                                                                              | Carries                                                           | What to do                                                                    |
+| --------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `AccessError`   | A caller acts on a session it is not bound to, or that does not exist, or starts a session that exists   | `reason`, of `AccessErrorReason`: `not-bound` or `session-exists` | Answer 403 and tell nothing else                                              |
+| `DataError`     | An argument has the wrong type or is out of range, or untrusted input, such as an envelope, is malformed | The path of the value in the message                              | Fix the call; answer a client's input with 400                                |
+| `SecurityError` | Input is above a limit, such as the body of a CAT request                                                | `limit` and `maximum`                                             | Answer 413, or raise the limit ([SECURITY](../../SECURITY.md#default-limits)) |
+| `ServiceError`  | A call to a CAT engine fails, or a store conflict outlasts its retries                                   | `status`, `0` when the service did not answer                     | Retry, or report the service as down                                          |

@@ -2,10 +2,9 @@
 
 `mountItem` and `mountDelivery` of `@assesskit/player/player` draw the interactions of an item: choice, order, associate,
 match, gap match, inline choice, text entry, extended text, hot text, slider, end attempt, media, upload and custom, and the
-seven that work on an image: hotspot, select point, graphic order, graphic associate, graphic gap match, position object and
-drawing ([graphics](graphics.md)). The portable custom interaction is drawn in a frame ([PCI](pci.md)). The
-renderers draw the content and the controls. They decide nothing of QTI: the runtime's `interactions` gives the descriptors and the
-validity of a response, and the mount gives each element its descriptor, its value and whether it is disabled, from the view.
+seven that work on an image ([graphics](graphics.md)); the portable custom interaction is drawn in a frame ([PCI](pci.md)).
+The renderers decide nothing of QTI: the runtime's `interactions` gives the descriptors and the validity of a response, and the
+mount gives each element its descriptor, its value and whether it is disabled, from the view.
 
 ```mermaid
 sequenceDiagram
@@ -88,17 +87,18 @@ mounted.destroy();
 
 ## Options
 
-The interactions take their options from the mount: `files`, `staticUrl` and `language` with `catalogs` for the text of the
-interface ([delivery](delivery.md#options)), and these. An upload of audio offers a recording when `files` has `reserve` and `fill`,
-which come together; a host that offers none leaves both out.
+The interactions take their options from the mount ([delivery](delivery.md#options)): `files`, `staticUrl`, `language` and
+`catalogs`, and these two. Of `files`, `upload` gives the `FileValue` that the response holds and `url(file)` plays it;
+`reserve` names the file of a recording before its bytes come and `fill` stores them, and the two come together, for an upload
+of audio to offer a recording.
 
 | Option              | Type                    | Meaning                                                                                                                                        |
 | ------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `customInteraction` | `CustomInteractionHook` | Draws custom interactions. Default: none, so that a custom interaction says it is not supported.                                               |
 | `onError`           | `(error) => void`       | Receives the errors that a recording can only report: the host could not name the file or store the bytes. Default: `reportError` of the page. |
 
-The mount defines the custom elements first (it does nothing the second time and throws `AssesskitError` when another class holds the
-name of an interaction). `files.upload`, `files.reserve` and `files.url` are those of the mount's `files`: `upload` gives the `FileValue` that the response holds, `url(file)` plays it, and `reserve` names the file of a recording before its bytes come and `fill` stores them.
+The mount defines the custom elements first; it does nothing the second time, and throws `AssesskitError` when another class
+holds the name of an interaction.
 
 ## The element
 
@@ -311,16 +311,12 @@ A value that is not a whole number of seconds counts as absent. A blueprint's pr
 | The WAV recorder does not start within 5 s              | The message that the recording could not start; `onError` with an `AssesskitError`; no response; the context and the microphone are let go of, the reservation stays unfilled for the host to expire, and Record stays |
 
 The WAV recording starts only when the audio context runs and its worklet loads, and a browser with no audio output holds the
-context suspended and never answers `resume()`. The recorder therefore gives up after `RECORDER_START_LIMIT_MS`, 5 seconds, which is
-many times the tens of milliseconds that a start takes and leaves a candidate most of a speaking turn: a recording that cannot start
-says so then, and does not wait with a countdown that has ended. The start of a recording with `MediaRecorder` has no such wait. An item that
-lists a type that the browser records, such as `audio/webm`, before `audio/wav` uses that recorder where it exists, so that a browser with
-no audio output records where it can.
+context suspended and never answers `resume()`, so the recorder gives up after 5 seconds (`RECORDER_START_LIMIT_MS`), many times
+the tens of milliseconds a start takes. A recording with `MediaRecorder` has no such wait, so an item that lists a type that
+the browser records, such as `audio/webm`, before `audio/wav` records where a browser has no audio output.
 
 A host that scores holds its request until `fill` ends or times out, since the response exists before its bytes do. A new
-recording takes a new reservation, and the host expires the old one. Not included: a beep at the start, which is the item's media or
-the host's; a start tied to the end of a prompt, since `data-ak-record-start` is a time; and notes during preparation, which are
-`note-taking-on-screen`.
+recording takes a new reservation, and the host expires the old one.
 
 ### Custom interaction
 
@@ -403,17 +399,17 @@ path (WCAG 2.5.1, 2.5.7).
 
 An interaction never throws at the candidate: it says in words what is wrong and why ([Hints and limits](#hints-and-limits)). What a host can meet:
 
-| Error                                     | When                                                                                                                                                                                                               | What to do                                                                                        |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| `DataError`                               | A descriptor is not that of the kind and the response variable of the element, or is malformed                                                                                                                     | Give each element the descriptor that the runtime's `interactions` made for it                    |
-| `DataError`                               | `files.upload` or `files.reserve` gives something that is not a file value, `reserve` or `fill` is missing while `record` is not `false`, or `staticUrl` is not an absolute `http` or `https` URL that ends in `/` | Return the `FileValue` of the store; fix `staticUrl`                                              |
-| `DataError`                               | A renderer is given a node of another kind                                                                                                                                                                         | Register each renderer under the kind it draws                                                    |
-| A message under the control               | The response breaks a rule: a limit, a pattern, a type, a missing answer                                                                                                                                           | The candidate follows the hint; the texts are in the table above                                  |
-| "This file type is not accepted"          | The file's type is not in `accept`                                                                                                                                                                                 | Offer the types the item lists, or change the item                                                |
-| A message that the file could not be sent | `files.upload` rejected                                                                                                                                                                                            | The host's store failed: check it; no response is given, so nothing wrong is saved                |
-| A recording that does not start           | The browser has no microphone, no `MediaRecorder` for an accepted type, the page's content security policy blocks the worklet, or the audio context of a WAV recording does not run within 5 seconds               | Allow the origin of `staticUrl` in `script-src`, or accept an audio type that the browser records |
-| A custom interaction that did not start   | The page's policy, a module that did not load, no registration or a factory that threw ([pci](pci.md#events))                                                                                                      | The `failed` event gives the reason; the guide's table says what each one means                   |
-| The error of `onError`                    | Something failed after the mount, with no call to carry the error                                                                                                                                                  | Log it; the default is `reportError` of the page                                                  |
+| Error                                     | When                                                                                                                                                                                                                   | What to do                                                                                        |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `DataError`                               | A descriptor is not that of the kind and the response variable of the element, or is malformed                                                                                                                         | Give each element the descriptor that the runtime's `interactions` made for it                    |
+| `DataError`                               | `files.upload` or `files.reserve` gives something that is not a file value, `files` has `reserve` without `fill` or `fill` without `reserve`, or `staticUrl` is not an absolute `http` or `https` URL that ends in `/` | Return the `FileValue` of the store; give `reserve` and `fill` together; fix `staticUrl`          |
+| `DataError`                               | A renderer is given a node of another kind                                                                                                                                                                             | Register each renderer under the kind it draws                                                    |
+| A message under the control               | The response breaks a rule: a limit, a pattern, a type, a missing answer                                                                                                                                               | The candidate follows the hint; the texts are in the table above                                  |
+| "This file type is not accepted"          | The file's type is not in `accept`                                                                                                                                                                                     | Offer the types the item lists, or change the item                                                |
+| A message that the file could not be sent | `files.upload` rejected                                                                                                                                                                                                | The host's store failed: check it; no response is given, so nothing wrong is saved                |
+| A recording that does not start           | The browser has no microphone, no `MediaRecorder` for an accepted type, the page's content security policy blocks the worklet, or the audio context of a WAV recording does not run within 5 seconds                   | Allow the origin of `staticUrl` in `script-src`, or accept an audio type that the browser records |
+| A custom interaction that did not start   | The page's policy, a module that did not load, no registration or a factory that threw ([pci](pci.md#events))                                                                                                          | The `failed` event gives the reason; the guide's table says what each one means                   |
+| The error of `onError`                    | Something failed after the mount, with no call to carry the error                                                                                                                                                      | Log it; the default is `reportError` of the page                                                  |
 
 ## Not included
 
@@ -425,18 +421,20 @@ An interaction never throws at the candidate: it says in words what is wrong and
 | An MP3 or other encoder for recordings                                                                  | An encoder would be a dependency; the player records what the browser encodes, or WAV  |
 | Storing uploads                                                                                         | `files.upload` is the host's: the player holds the reference, never the bytes          |
 | A server render                                                                                         | The elements need a DOM; importing the module in Node is safe, defining them is not    |
+| A beep at the start of a recording                                                                      | It is the item's media or the host's                                                   |
+| A recording that starts at the end of a prompt                                                          | `data-ak-record-start` is a time                                                       |
+| Notes during the preparation of a recording                                                             | They are the support `note-taking-on-screen`                                           |
 
 ## Differences from the references
 
-| Case                                                                                              | Resolution                                                                                                                                                                                                    |
-| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The design has the descriptor, the value, `disabled` and the messages as the element's properties | They are. The element builds its controls when the descriptor is set, from the node and the descriptor, so a view that carries the same data again changes nothing.                                           |
-| A radio button cannot be cleared                                                                  | A choice with `max-choices` 1 is a radio group, as in any form. A candidate who does not answer leaves it NULL; once chosen, a choice can be changed, not cleared. A hotspot can be chosen again to clear it. |
-| A limit is not enforced by the controls                                                           | A response over `max-choices` is given and said to be invalid, as QTI's `attempted` is; the engine refuses to submit it where the item validates responses.                                                   |
-| `data-qti-media-player-controls` has no value for the play button                                 | Play and pause are always there. A recording that cannot be started breaks the item, and one that cannot be stopped breaks WCAG 1.4.2.                                                                        |
-| The pause count is "during playback"                                                              | It counts the pauses of one play.                                                                                                                                                                             |
-| The custom interaction hook has no value in the specification                                     | The hook is given `state` as a fourth argument, so that a reload can restore what the candidate gave.                                                                                                         |
-| `qti-gap-match-interaction` gaps and hot texts lose their identifiers in the renderer of content  | The element pairs the drawn elements with the nodes of the model in document order, which the renderer keeps.                                                                                                 |
+| Case                                                                                             | Resolution                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A radio button cannot be cleared                                                                 | A choice with `max-choices` 1 is a radio group, as in any form. A candidate who does not answer leaves it NULL; once chosen, a choice can be changed, not cleared. A hotspot can be chosen again to clear it. |
+| A limit is not enforced by the controls                                                          | A response over `max-choices` is given and said to be invalid, as QTI's `attempted` is; the engine refuses to submit it where the item validates responses.                                                   |
+| `data-qti-media-player-controls` has no value for the play button                                | Play and pause are always there. A recording that cannot be started breaks the item, and one that cannot be stopped breaks WCAG 1.4.2.                                                                        |
+| The pause count is "during playback"                                                             | It counts the pauses of one play.                                                                                                                                                                             |
+| The custom interaction hook has no value in the specification                                    | The hook is given `state` as a fourth argument, so that a reload can restore what the candidate gave.                                                                                                         |
+| `qti-gap-match-interaction` gaps and hot texts lose their identifiers in the renderer of content | The element pairs the drawn elements with the nodes of the model in document order, which the renderer keeps.                                                                                                 |
 
 ## Evidence
 
@@ -452,35 +450,35 @@ the recording worklet (`pnpm compat:engines`).
 
 Each file of `src/player/elements/`, `src/player/media/`, `src/player/recording/` holds one concept.
 
-| File                             | Concept                                                                                                              |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `elements/board-element.ts`      | The element of an interaction on a board                                                                             |
-| `elements/define.ts`             | The registration of the custom elements                                                                              |
-| `elements/editor.ts`             | The XHTML field of an extended text                                                                                  |
-| `elements/element.ts`            | The base of every interaction element                                                                                |
-| `elements/end-attempt.ts`        | The end attempt element and its event                                                                                |
-| `elements/hints.ts`              | The hints and limits in words                                                                                        |
-| `elements/index.ts`              | The elements and their renderers, for the mounts; the package exports the hook and the state of a custom interaction |
-| `elements/internal.ts`           | Helpers that other folders and tests share, which the package does not export                                        |
-| `elements/notes.ts`              | The limits, hints and announcements of an interaction                                                                |
-| `elements/options.ts`            | The options of the renderers, checked                                                                                |
-| `elements/parts.ts`              | The parts that interactions share: prompt, choices, orientation                                                      |
-| `elements/pointer.ts`            | The distance of a drag                                                                                               |
-| `elements/renderers.ts`          | The renderers of the kinds                                                                                           |
-| `elements/selection.ts`          | The element of a choice-based interaction                                                                            |
-| `elements/text.ts`               | The text fields of the text interactions                                                                             |
-| `elements/upload.ts`             | The upload element and its recording                                                                                 |
-| `elements/values.ts`             | Reading and building responses                                                                                       |
-| `media/companion.ts`             | A recording that follows another                                                                                     |
-| `media/index.ts`                 | The public API                                                                                                       |
-| `media/playback.ts`              | The rules of playing a recording                                                                                     |
-| `media/settings.ts`              | What an item asks of the player                                                                                      |
-| `media/tracks.ts`                | Text tracks                                                                                                          |
-| `recording/index.ts`             | The public API                                                                                                       |
-| `recording/names.ts`             | The name of the recorder processor                                                                                   |
-| `recording/recorder.ts`          | Recording the microphone                                                                                             |
-| `recording/wav.ts`               | The WAV encoder                                                                                                      |
-| `the other files of `elements/`` | The element of each kind of interaction, with its renderer                                                           |
+| File                           | Concept                                                                                                              |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `elements/board-element.ts`    | The element of an interaction on a board                                                                             |
+| `elements/define.ts`           | The registration of the custom elements                                                                              |
+| `elements/editor.ts`           | The XHTML field of an extended text                                                                                  |
+| `elements/element.ts`          | The base of every interaction element                                                                                |
+| `elements/end-attempt.ts`      | The end attempt element and its event                                                                                |
+| `elements/hints.ts`            | The hints and limits in words                                                                                        |
+| `elements/index.ts`            | The elements and their renderers, for the mounts; the package exports the hook and the state of a custom interaction |
+| `elements/internal.ts`         | Helpers that other folders and tests share, which the package does not export                                        |
+| `elements/notes.ts`            | The limits, hints and announcements of an interaction                                                                |
+| `elements/options.ts`          | The options of the renderers, checked                                                                                |
+| `elements/parts.ts`            | The parts that interactions share: prompt, choices, orientation                                                      |
+| `elements/pointer.ts`          | The distance of a drag                                                                                               |
+| `elements/renderers.ts`        | The renderers of the kinds                                                                                           |
+| `elements/selection.ts`        | The element of a choice-based interaction                                                                            |
+| `elements/text.ts`             | The text fields of the text interactions                                                                             |
+| `elements/upload.ts`           | The upload element and its recording                                                                                 |
+| `elements/values.ts`           | Reading and building responses                                                                                       |
+| `media/companion.ts`           | A recording that follows another                                                                                     |
+| `media/index.ts`               | The public API                                                                                                       |
+| `media/playback.ts`            | The rules of playing a recording                                                                                     |
+| `media/settings.ts`            | What an item asks of the player                                                                                      |
+| `media/tracks.ts`              | Text tracks                                                                                                          |
+| `recording/index.ts`           | The public API                                                                                                       |
+| `recording/names.ts`           | The name of the recorder processor                                                                                   |
+| `recording/recorder.ts`        | Recording the microphone                                                                                             |
+| `recording/wav.ts`             | The WAV encoder                                                                                                      |
+| The other files of `elements/` | The element of each kind of interaction, with its renderer                                                           |
 
 ## References
 
@@ -493,7 +491,7 @@ Each file of `src/player/elements/`, `src/player/media/`, `src/player/recording/
 | [WCAG 2.2](https://www.w3.org/TR/WCAG22/#name-role-value)                                                                | name, role, value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | [WCAG 2.2](https://www.w3.org/TR/WCAG22/#error-identification)                                                           | error identification                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | [WCAG 2.2](https://www.w3.org/TR/WCAG22/#pointer-gestures)                                                               | pointer gestures                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#keyboard)                                                                       | keyboard, keyboard, which exempts such functions                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#keyboard)                                                                       | keyboard, and its exemption of a function that depends on the path of a movement                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | [WCAG 2.2](https://www.w3.org/TR/WCAG22/#target-size-minimum)                                                            | target size                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | [WCAG 2.2](https://www.w3.org/TR/WCAG22/#dragging-movements)                                                             | dragging movements                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | [WCAG 2.2](https://www.w3.org/TR/WCAG22/#pointer-cancellation)                                                           | pointer cancellation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |

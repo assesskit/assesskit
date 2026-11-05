@@ -1,4 +1,4 @@
-# Tools of the host
+# Tools of an item
 
 The tools of an item are what the item's companion materials ask the player to provide and what the candidate's profile
 puts on the screen: a rule, a protractor, calculators, digital and physical materials, a line reader, answer masking, a
@@ -107,10 +107,6 @@ on `destroy`.
 stays open, where the candidate put it; the others go, and the focus goes to the button of a tool that took it down.
 `tools.destroy()` takes everything down and leaves the item as it was.
 
-`mountTools` and `update` throw `DataError` for a `host`, an option or an input of the wrong type. A function of `slots` that
-throws, or that returns something other than a function, makes `update` throw after it has shown the other tools; its
-panel is taken down.
-
 ### Input
 
 `update` takes the companion materials of the item, or `null`, the supports of the view: the `supports` of the runtime's
@@ -136,8 +132,7 @@ reads it as a number.
 | `qti-digital-material`  | `fileHref`, `label`, `mimeType` and `resourceIcon`                                            |
 | `qti-physical-material` | the text                                                                                      |
 
-`update` checks the parts it reads, and throws `DataError` for a model of another shape, such as one that a plain JavaScript
-or JSON caller builds by hand. Units of length are `Millimeter`, `Centimeter`, `Meter`, `Kilometer`, `Inch`, `Foot`, `Yard`
+`update` checks the parts it reads ([Errors](#errors)). Units of length are `Millimeter`, `Centimeter`, `Meter`, `Kilometer`, `Inch`, `Foot`, `Yard`
 and `Mile`; units of angle are `Radian`, `Degree`, `Minute` and `Second`.
 
 ## Tools in force

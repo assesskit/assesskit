@@ -88,9 +88,8 @@ the item's stylesheets are adopted and the expressions are typeset.
 | `language`     | `string`                      | The language of the content, such as that of the delivered variant; it becomes `lang` of the content. Default: that of the host. |
 | `variables`    | `ContentVariables`            | The variables that printed variables still in the content read. Default: none.                                                   |
 
-`show` throws `DataError` for content of another type. It rejects with `AssesskitError` when a stylesheet cannot be fetched or
-MathJax cannot be loaded; the content is on the screen by then, the stylesheets that loaded are adopted and the
-expressions stay MathML. A stylesheet that failed is fetched again by the next `show`.
+When a stylesheet cannot be fetched or MathJax cannot be loaded, the content is on the screen, the stylesheets that loaded
+are adopted and the expressions stay MathML; the next `show` fetches a failed stylesheet again ([Errors](#errors)).
 
 | Member                                        | Meaning                                                                                                                              |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -117,8 +116,7 @@ The magnification of non-text content multiplies the pixel sizes that the author
 and other elements with a `width` or `height` in pixels. The renderer keeps the size of the author in `data-ak-width` and
 `data-ak-height`, and `root.setMediaScale(scale)` sets the attributes again from it: two changes do not compound, and
 `1` gives the author's size back. The content is not drawn again, so the focus, the caret and the responses stay. A card drawn
-after the change has the new scale. `setMediaScale` throws `DataError` unless `scale` is a positive number. Sizes that are not
-pixels, such as `50%`, stay.
+after the change has the new scale. Sizes that are not pixels, such as `50%`, stay.
 
 ## Where it appears
 
@@ -283,10 +281,10 @@ assistive technology: `aria-sort` says the state). The selected tab differs by w
 
 ## Interactions
 
-An interaction is drawn by the renderer registered for its kind, and as a placeholder when there is none: `qti-` and its kind
-with `data-ak-placeholder`, around its content. A content root alone registers none. `mountItem` and `mountDelivery` register the
-renderers of twenty-one kinds ([interactions](interactions.md)). A renderer gets the interaction and the renderer of content, and
-returns the element, so an interaction needs no code of its own for URLs, languages or media.
+A content root alone registers no renderer of an interaction, so it draws each as a placeholder
+([What a node becomes](#what-a-node-becomes)); `mountItem` and `mountDelivery` register the renderers of twenty-one kinds
+([interactions](interactions.md)). A renderer gets the interaction and the renderer of content and returns the element, so an
+interaction needs no code of its own for URLs, languages or media.
 
 ## Stylesheets
 
@@ -304,9 +302,8 @@ item's own come after them and win where both set a property.
 | A declaration with `image-set()`, `image()`, `cross-fade()`, `src()`, `element()` or `paint()`       | They load a resource by another name.                                                                                                                                                                                                                   |
 | A declaration with a backslash in a value that the browser keeps as written, or a `var()` with one   | `u\72l(` is `url(` in a custom property or a fallback, so the block goes.                                                                                                                                                                               |
 
-A relative `url()` that stays is written as an absolute URL resolved against the stylesheet's URL. A constructed sheet's
-`baseURL` option does that in Firefox and WebKit but not in Chromium, which resolves against the page, so the sanitizer
-does not rely on it.
+A relative `url()` that stays is written as an absolute URL resolved against the stylesheet's URL, since Chromium ignores a
+constructed sheet's `baseURL` ([Differences](#differences-from-the-references)).
 
 ## Catalogs and cards
 
@@ -332,14 +329,16 @@ Test feedback is a field of `show`: the entries from the runtime's `selectTestFe
 
 `createContentRoot` throws the runtime's `DataError` for a call that is wrong. Content that is hostile or broken is not an error: the renderer leaves out what it refuses and the page stays whole.
 
-| Error                                                            | When                                                                                                                           | What to do                                                                                                |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| `DataError`                                                      | The host is not an element, or has a shadow root that the player did not attach, or one that an earlier root left with content | Pass an element with no shadow root, or destroy the earlier root first                                    |
-| `DataError`                                                      | `stylesheet` is not a `CSSStyleSheet`, or `origins` has an entry that is not an absolute `http` or `https` URL                 | Fix the option; the message names it                                                                      |
-| `DataError`                                                      | A node is not an object whose `kind` names an element, or a text node's value is not a string                                  | Pass the nodes that `readAsi` of the runtime returns                                                      |
-| A notice in the root                                             | An item stylesheet failed to load, or a hazard of the profile remains and the media is withheld                                | Check the stylesheet's URL and that its origin is in `origins`; the notice says what was withheld         |
-| An element left out, an attribute dropped, a link without `href` | The attribute is not on the allowlist, the URL is outside `origins`, or a stylesheet rule is on the removal list               | Serve the file from an origin in `origins`; see [Attributes](#attributes) and [Stylesheets](#stylesheets) |
-| The error of `onError`                                           | A stylesheet's fetch failed, with no call to carry the error                                                                   | Log it; the default is `reportError` of the page                                                          |
+| Error                                                            | When                                                                                                                           | What to do                                                                                                    |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `DataError`                                                      | The host is not an element, or has a shadow root that the player did not attach, or one that an earlier root left with content | Pass an element with no shadow root, or destroy the earlier root first                                        |
+| `DataError`                                                      | `stylesheet` is not a `CSSStyleSheet`, or `origins` has an entry that is not an absolute `http` or `https` URL                 | Fix the option; the message names it                                                                          |
+| `DataError`                                                      | A node is not an object whose `kind` names an element, or a text node's value is not a string                                  | Pass the nodes that `readAsi` of the runtime returns                                                          |
+| `DataError`                                                      | `show` gets content of another type, or `setMediaScale` a scale that is not a positive number                                  | Pass the content of `show`'s fields; a scale above 0                                                          |
+| `AssesskitError`, from `show`                                    | A stylesheet cannot be fetched, or MathJax cannot be loaded; the content is shown all the same                                 | Check the stylesheet's URL and origin, or the URL of MathJax; the next `show` tries a failed stylesheet again |
+| A notice in the root                                             | An item stylesheet failed to load, or a hazard of the profile remains and the media is withheld                                | Check the stylesheet's URL and that its origin is in `origins`; the notice says what was withheld             |
+| An element left out, an attribute dropped, a link without `href` | The attribute is not on the allowlist, the URL is outside `origins`, or a stylesheet rule is on the removal list               | Serve the file from an origin in `origins`; see [Attributes](#attributes) and [Stylesheets](#stylesheets)     |
+| The error of `onError`                                           | A stylesheet's fetch failed, with no call to carry the error                                                                   | Log it; the default is `reportError` of the page                                                              |
 
 ## Not included
 

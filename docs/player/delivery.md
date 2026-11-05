@@ -106,13 +106,11 @@ mounted.destroy();
 | `tools`             | `ToolSlots`                         | The tools that the host provides, by name ([tools](tools.md#tools-of-the-host)). Default: none.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `ltiLogin`          | `LtiLogin`                          | Starts the tool of an LTI item ([LTI items](#lti-items)). Default: none, so that an LTI item says its tool is not available.                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
-`mountDelivery(host, options)` throws `DataError` when `host` is not an element that can have a shadow root and has none, or has one that an earlier mount of the player left empty, or an
-option is not of its type. It attaches an open shadow root to `host` and draws in it, so the page's styles do not reach the
-chrome. The chrome uses the system colors and `rem` sizes, so it follows the color scheme, forced colors and the text size.
-`destroy` empties the shadow root, so a page that switches sessions, or a React `StrictMode` that mounts, destroys and mounts again, mounts on the same element. A second mount on an element that a mount still draws in throws `DataError`.
-
-It returns a `Mounted`. The player follows the client by itself: a host that has views of its own shows them through a
-`SessionClient` of its own.
+`mountDelivery(host, options)` attaches an open shadow root to `host` and draws in it, so the page's styles do not reach the
+chrome; the chrome uses the system colors and `rem` sizes, so it follows the color scheme, forced colors and the text size.
+`destroy` empties the shadow root, so a page that switches sessions, or a React `StrictMode` that mounts, destroys and mounts
+again, mounts on the same element ([Errors](#errors) lists what a mount refuses). It returns a `Mounted` and follows the
+client by itself: a host that has views of its own shows them through a `SessionClient` of its own.
 
 | Member      | Meaning                                                                                                                                                                                        |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -159,7 +157,7 @@ once, through `ltiLogin(item, { signal })`, where `item` is the `ItemKey` and th
 | A later view of the same item                                                                                                 | Leaves the frames as they are, and does not ask the host again                                                                          |
 | The candidate leaves the item                                                                                                 | Removes both frames. Coming back asks the host again and launches the tool again                                                        |
 | The item is closed, in review or in solution                                                                                  | Shows the note `ltiClosed` of the catalog in place of the tool                                                                          |
-| There is no `ltiLogin`, the hook fails, or its answer is not a frame, or a URL is on the origin of the page or of `staticUrl` | Shows "The tool for this question could not be started." as an alert. A failure is also reported with `reportError`                     |
+| There is no `ltiLogin`, the hook fails, or its answer is not a frame, or a URL is on the origin of the page or of `staticUrl` | Shows "The tool for this question could not be started." as an alert. A failure also goes to `onError`                                  |
 
 The frame of the tool has `sandbox="allow-scripts allow-forms allow-same-origin"`, `referrerpolicy="no-referrer"`, the `allow`
 list of the answer and no other permission, and the title of the link. `allow-same-origin` keeps the tool's own origin, so the
@@ -243,10 +241,9 @@ host.shadowRoot.querySelector(".ak-actions"); // => null
 mounted.destroy();
 ```
 
-`mountItem(host, options)` throws `DataError` when `host` is not an element that can have a shadow root and has none, or has one that an earlier mount of the player left empty, an option
-is not of its type (`chrome`, `marking`, `landmark`, `headingLevel`, `tools` and `ltiLogin` are not options of it, in its type as at run time), or the view presents an LTI item. The
-last also holds for a view that the client brings later. `destroy()` is the one of `mountDelivery`: a second call
-does nothing, and the session client stays open.
+`mountItem` refuses `chrome`, `marking`, `landmark`, `headingLevel`, `tools` and `ltiLogin`, in its type as at run time, and an
+LTI item in any view the client brings ([Errors](#errors)). `destroy()` is the one of `mountDelivery`: a second call does
+nothing, and the session client stays open.
 
 ### Focus in a page
 
@@ -322,7 +319,36 @@ The frame loads the modules from the package through `client.assets`, and its po
 `staticUrl`, as in the samples, or from an origin in `origins`. A relative URL from `assets`, such as `/package/q1/main.js`,
 is resolved against the base URL of the page, which is the origin of `staticUrl` only when the page itself serves both. A
 module on any other origin is refused when the frame is mounted, with an error that names the URL and the origin, and the
-item shows "This interactive question could not start" with the error in `reportError`.
+item shows "This interactive question could not start" with the error in `onError`.
+
+## Errors
+
+`mountDelivery` and `mountItem` throw the runtime's `DataError` for a call that cannot mount, and report the rest through `onError`. The answers to actions are the [status messages](#refusals-and-status-messages), not errors.
+
+| Error                  | When                                                                                                                                                         | What to do                                                                               |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `DataError`            | The host is not an element that can have a shadow root, has one that the player did not attach, or has one that a mount still draws in                       | Pass an element with no shadow root, or the host of an earlier mount after its `destroy` |
+| `DataError`            | `staticUrl` does not end in `/`, `stylesheet` is not a `CSSStyleSheet`, or another option or hook is of the wrong type                                       | Fix the option; the message names it                                                     |
+| `DataError`            | `headingLevel` is not 1 to 6, `landmark` is neither `main` nor `region`, `marking` or `chrome` is not a boolean, or `mountItem` gets an option of the chrome | Use a value in range; leave the options of the chrome out of `mountItem`                 |
+| `DataError`            | `mountItem` finds that the current item, now or in a later view, is a link to an LTI tool                                                                    | Use `mountDelivery`, which starts the login ([LTI items](#lti-items))                    |
+| The error of `onError` | A stylesheet, a module, a file or a voice failed after the mount, with no call to carry the error                                                            | Log it; the default is `reportError` of the page. None arrives after `destroy`           |
+| A status message       | The engine refused an action, or the host could not be reached                                                                                               | Read the message; the player sends held answers again by itself                          |
+
+An error of the session client, such as `ServiceError` for a host that is down, reaches the player through `dispatch`, and the player turns it into the status message "Your answers could not be sent. They will be sent again." ([client errors](client.md#errors)).
+
+## Not included
+
+| Not included                                         | Why                                                                                                       |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Deciding what the candidate may do                   | The runtime and the host's client-action policy decide; the player draws the actions the view lists       |
+| Authentication, login and the page around the player | The host's page; the player mounts in the element it is given                                             |
+| An LTI launch                                        | The host gives `ltiLogin`; [interopkit](https://github.com/interopkit/interopkit) implements the protocol |
+| A heading, a map or a timer on a page of many items  | `mountItem` draws the content and the interactions only; a lesson page keeps its own layout               |
+| A server-side render                                 | The player needs a DOM; importing it in Node is safe, mounting it is not                                  |
+
+## Differences from the references
+
+None. The player draws the view that the runtime builds and decides nothing of QTI; where the specifications differ or are silent, [spec gaps](../runtime/spec-gaps.md) gives the resolution that the engine applies. The accessibility of the chrome is held by the tests of [Evidence](evidence.md).
 
 ## Files
 
@@ -378,31 +404,3 @@ Each file of `src/player/delivery/`, `src/player/lti-frame/` holds one concept.
 | [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/) | portable custom interactions      |
 | [LTI 1.3](https://www.imsglobal.org/spec/lti/v1p3/)                                              |                                   |
 | [LTI Client Side postMessages 0.1](https://www.imsglobal.org/spec/lti-cs-pm/v0p1)                |                                   |
-
-## Errors
-
-`mountDelivery` and `mountItem` throw the runtime's `DataError` for a call that cannot mount, and report the rest through `onError`. The answers to actions are the [status messages](#refusals-and-status-messages), not errors.
-
-| Error                  | When                                                                                                                            | What to do                                                                               |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `DataError`            | The host is not an element, or has a shadow root that the player did not attach, or one that an earlier mount left with content | Pass an element with no shadow root, or the host of an earlier mount after its `destroy` |
-| `DataError`            | `staticUrl` does not end in `/`, `stylesheet` is not a `CSSStyleSheet`, or another option or hook is of the wrong type          | Fix the option; the message names it                                                     |
-| `DataError`            | `headingLevel` is above 6, `landmark` is neither `main` nor `region`, or `marking` is not a boolean                             | Use a value in range                                                                     |
-| `DataError`            | `mountItem` finds that the current item is a link to an LTI tool                                                                | Use `mountDelivery`, which starts the login ([LTI items](#lti-items))                    |
-| The error of `onError` | A stylesheet, a module, a file or a voice failed after the mount, with no call to carry the error                               | Log it; the default is `reportError` of the page. None arrives after `destroy`           |
-| A status message       | The engine refused an action, or the host could not be reached                                                                  | Read the message; the player sends held answers again by itself                          |
-
-An error of the session client, such as `ServiceError` for a host that is down, reaches the player through `dispatch`, and the player turns it into the status message "Your answers could not be sent. They will be sent again." ([client errors](client.md#errors)).
-
-## Not included
-
-| Not included                                         | Why                                                                                                       |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Deciding what the candidate may do                   | The runtime and the host's client-action policy decide; the player draws the actions the view lists       |
-| Authentication, login and the page around the player | The host's page; the player mounts in the element it is given                                             |
-| An LTI launch                                        | The host gives `ltiLogin`; [interopkit](https://github.com/interopkit/interopkit) implements the protocol |
-| A heading, a map or a timer on a page of many items  | `mountItem` draws the content and the interactions only; a lesson page keeps its own layout               |
-| A server-side render                                 | The player needs a DOM; importing it in Node is safe, mounting it is not                                  |
-## Differences from the references
-
-None. The player draws the view that the runtime builds and decides nothing of QTI; where the specifications differ or are silent, [spec gaps](../runtime/spec-gaps.md) gives the resolution that the engine applies. The accessibility of the chrome is held by the tests of [Evidence](evidence.md).

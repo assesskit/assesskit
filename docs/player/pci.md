@@ -1,7 +1,8 @@
 # Portable custom interactions
 
-A portable custom interaction (PCI) is code that an item brings with it: an AMD module that builds its own interface. The code is the package author's, so it runs where it can do no harm. `mountItem` and `mountDelivery` put each
-interaction in a frame of its own, loads its modules with RequireJS, and passes what it does to the player as events.
+A portable custom interaction (PCI) is code that an item brings with it: an AMD module that builds its own interface. The code
+is the package author's, so `mountItem` and `mountDelivery` put each interaction in a sandboxed frame of its own, which loads
+its modules with RequireJS and passes what it does to the player as events.
 The interaction, the module resolution and the JSON of its variables are the runtime's (`@assesskit/runtime/pci`); the frame is
 the player's.
 
@@ -105,10 +106,8 @@ also keeps a module from navigating its own frame to another site.
 
 ## What the frame gets
 
-The mounts build the frame from the view and the options of the mount, and no host calls the frame by hand. It throws
-`DataError` when the interaction names no module to load, a module has no location, or a module in the package is on an
-origin that the frame loads no scripts from. The mount reports it through `onError` and shows the notice that the
-interaction could not start.
+The mounts build the frame from the view and the options of the mount, and no host calls the frame by hand. These are the
+frame's options, which a mount fills:
 
 | Option              | Type                              | Meaning                                                                                                                                    |
 | ------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -149,7 +148,7 @@ of the runtime's codec are synchronous, so the host's storage, which is not, is 
 
 - **To the interaction.** Before the frame starts, the player reads the bytes of every file value among the variables
   with `files.read(file)` and writes them inline. If `read` rejects, the interaction does not start: the event `failed`
-  with the reason `files`, and the error goes to `reportError`.
+  with the reason `files`, and the error goes to `onError`.
 - **From the interaction.** The player reads the JSON of a response to find the inline files, stores each with
   `files.upload`, and reads it again so that each file value holds the reference that `upload`
   resolved with. A file that an earlier response held, byte for byte, is not stored again, since an interaction that draws
@@ -302,7 +301,7 @@ The frame loads `player.css`, which reads the attributes and custom properties o
 `frame.setPresentation(presentation)` replaces it while the interaction runs, so that a candidate who turns high contrast
 on, or whose zoom changes, sees it in the frame too. A presentation set before the frame starts is the one it starts with.
 Only the names of `resolvePresentation` are touched. The interaction is told nothing; it sees the CSS change. `setPresentation`
-throws `DataError` for a value that is not a presentation, and does nothing once the frame is gone.
+does nothing once the frame is gone.
 
 ## The name and the focus
 
@@ -313,11 +312,16 @@ prevent.
 
 ## Errors
 
-The mounts check their options once, where they read them (`staticUrl`, `origins` and `files` among them). The frame throws
-`DataError` for a variable that does not have its declared type, an interaction that names no module to load, a module
-without a location, and a module in the package on an origin that the frame loads no scripts from; the mount reports it
-through `onError`. The runtime's `DataError` passes through unchanged. A message from the frame that fails its check, and a response that is not a value of its declaration,
-are dropped, not thrown. An error of the host's storage goes to `reportError`.
+| Error                                                                              | When                                                                                                                                                                                           | What to do                                                                                                                                        |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DataError` of the mount                                                           | An option the mount reads, such as `staticUrl`, `origins` or `files`, is of the wrong type                                                                                                     | Fix the option; the message names it                                                                                                              |
+| `DataError` through `onError`, and the notice that the interaction could not start | A variable does not have its declared type, the interaction names no module to load, a module has no location, or a module in the package is on an origin that the frame loads no scripts from | Fix the item; serve the package from the origin of `staticUrl`, or list its origin in `origins`                                                   |
+| `DataError` of `setPresentation`                                                   | The value is not a presentation                                                                                                                                                                | Pass what `resolvePresentation` gives                                                                                                             |
+| The event `failed`                                                                 | The interaction did not start: `csp`, `modules`, `register`, `instance` or `files` ([Events](#events))                                                                                         | Read the reason: a browser without the policy, a module not served, a module that registers nothing, a factory that throws, or the host's storage |
+| The error of `files.read` or `files.upload`, through `onError`                     | The host's storage rejected                                                                                                                                                                    | Fix the store; a response whose file is not stored is not delivered                                                                               |
+| Nothing: the message or the response is dropped                                    | A message from the frame fails its check, or a response is not a value of its declaration                                                                                                      | Nothing to do: the frame's output is untrusted                                                                                                    |
+
+The runtime's `DataError` passes through unchanged.
 
 ## Not included
 

@@ -140,8 +140,8 @@ an element reads its text.
 
 ### Lexicons
 
-`readLexicon(source)` reads a PLS 1.0 document: the package resource of type `pls` that an item depends on. It throws `DataError` when the document is not a lexicon with `version="1.0"`, an `alphabet` and an
-`xml:lang`. The entries follow PLS 1.0: every grapheme of a lexeme gets its pronunciation, which is the first with
+`readLexicon(source)` reads a PLS 1.0 document, with `version="1.0"`, an `alphabet` and an `xml:lang`: the package resource of
+type `pls` that an item depends on. The entries follow PLS 1.0: every grapheme of a lexeme gets its pronunciation, which is the first with
 `prefer="true"`, else the first in document order, taking the lexemes of the same grapheme together. A lexeme with a
 `role` is left out, because roles select a pronunciation by part of speech, which the player does not know.
 
@@ -202,9 +202,8 @@ utterance:
 | `pitch`  | `pitch`: twice the value, because PNP runs from 0 to 1 with 0.5 as the default, and Web Speech from 0 to 2 with 1 |
 | `volume` | `volume`, as it is                                                                                                |
 
-A field that the request lacks stays the voice's own. `speak` rejects with `DataError` for a request that is not one,
-and with `AssesskitError` when the voice fails; a stop is not a failure. Phonemes, prosody, breaks, the voice of links and
-the language of parts are lost with `createWebSpeech()`; use a host voice for full fidelity.
+A field that the request lacks stays the voice's own, and a stop is not a failure ([Errors](#errors)). Phonemes, prosody,
+breaks, the voice of links and the language of parts are lost with `createWebSpeech()`.
 
 ## Typing echo
 
@@ -245,8 +244,6 @@ the support changes.
 | `AssesskitError`                           | The voice fails: the utterance of `createWebSpeech()` reports an error that is not a stop, `The voice failed: …`                                                                                                         | Read the reason in the message; check that the browser has a voice for the language, or give a host voice |
 | No sound, no error                         | The reading type is `screen-reader`, or the range holds only what the restrictions leave out                                                                                                                             | The player sends the voice no request; there is nothing to say                                            |
 | Speech without phonemes, prosody or breaks | `createWebSpeech()` ignores SSML                                                                                                                                                                                         | Use a host voice that takes `request.ssml`                                                                |
-
-A voice that fails while the typing echo speaks does not stop the typing.
 
 ## Not included
 
@@ -291,23 +288,23 @@ Each file of `src/player/speech/` holds one concept.
 
 ## References
 
-| Specification                                                                                                                                                        | Topics                                                                                                                  |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| [Pronunciation Lexicon Specification 1.0](https://www.w3.org/TR/pronunciation-lexicon/)                                                                              | matching, phoneme and alias, the lexicon element, the phoneme and alias elements                                        |
-| [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/)                                                                     | pitch and volume, reading type, speech rate, speech rate, pitch and volume, spoken support, text to speech, typing echo |
-| [HTML Standard](https://html.spec.whatwg.org/multipage/dom.html#the-lang-and-xml:lang-attributes)                                                                    | the lang attribute                                                                                                      |
-| [Web Speech API](https://webaudio.github.io/web-speech-api/#dom-speechsynthesisutterance-rate)                                                                       | rate                                                                                                                    |
-| [Web Speech API](https://webaudio.github.io/web-speech-api/#dom-speechsynthesisutterance-pitch)                                                                      | pitch                                                                                                                   |
-| [Web Speech API](https://webaudio.github.io/web-speech-api/#speechsynthesiserrorevent)                                                                               | error events                                                                                                            |
-| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_voice)                                                                                                     | voice                                                                                                                   |
-| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_audio)                                                                                                     | audio                                                                                                                   |
-| [QTI 3 Standardized Shared Vocabulary](https://www.imsglobal.org/spec/qti/v3p0/vocab/)                                                                               | text to speech suppression                                                                                              |
-| [Support for SSML using the data-ssml property](https://www.imsglobal.org/sites/default/files/spec/qti/v3/data-ssml_infobind/imsqtiv3p0_datassml_v1p0_InfoBind.html) |                                                                                                                         |
-| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_emphasis)                                                                                                  | emphasis                                                                                                                |
-| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_prosody)                                                                                                   | prosody                                                                                                                 |
-| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_phoneme)                                                                                                   | phoneme, say-as and sub                                                                                                 |
-| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_speak)                                                                                                     | the speak element                                                                                                       |
-| [QTI 3.0 ASI Information Model](https://www.imsglobal.org/spec/qti/v3p0/info/)                                                                                       | SSML in content, inline content                                                                                         |
-| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/)                                                                                                                |                                                                                                                         |
-| [XML 1.0](https://www.w3.org/TR/xml/#charsets)                                                                                                                       | characters                                                                                                              |
-| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_sub)                                                                                                       | sub                                                                                                                     |
+| Specification                                                                                                                                                        | Topics                                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| [Pronunciation Lexicon Specification 1.0](https://www.w3.org/TR/pronunciation-lexicon/)                                                                              | matching, phoneme and alias, the lexicon element, the phoneme and alias elements         |
+| [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/)                                                                     | reading type, speech rate, pitch and volume, spoken support, text to speech, typing echo |
+| [HTML Standard](https://html.spec.whatwg.org/multipage/dom.html#the-lang-and-xml:lang-attributes)                                                                    | the lang attribute                                                                       |
+| [Web Speech API](https://webaudio.github.io/web-speech-api/#dom-speechsynthesisutterance-rate)                                                                       | rate                                                                                     |
+| [Web Speech API](https://webaudio.github.io/web-speech-api/#dom-speechsynthesisutterance-pitch)                                                                      | pitch                                                                                    |
+| [Web Speech API](https://webaudio.github.io/web-speech-api/#speechsynthesiserrorevent)                                                                               | error events                                                                             |
+| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_voice)                                                                                                     | voice                                                                                    |
+| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_audio)                                                                                                     | audio                                                                                    |
+| [QTI 3 Standardized Shared Vocabulary](https://www.imsglobal.org/spec/qti/v3p0/vocab/)                                                                               | text to speech suppression                                                               |
+| [Support for SSML using the data-ssml property](https://www.imsglobal.org/sites/default/files/spec/qti/v3/data-ssml_infobind/imsqtiv3p0_datassml_v1p0_InfoBind.html) |                                                                                          |
+| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_emphasis)                                                                                                  | emphasis                                                                                 |
+| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_prosody)                                                                                                   | prosody                                                                                  |
+| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_phoneme)                                                                                                   | phoneme, say-as and sub                                                                  |
+| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_speak)                                                                                                     | the speak element                                                                        |
+| [QTI 3.0 ASI Information Model](https://www.imsglobal.org/spec/qti/v3p0/info/)                                                                                       | SSML in content, inline content                                                          |
+| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/)                                                                                                                |                                                                                          |
+| [XML 1.0](https://www.w3.org/TR/xml/#charsets)                                                                                                                       | characters                                                                               |
+| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_sub)                                                                                                       | sub                                                                                      |

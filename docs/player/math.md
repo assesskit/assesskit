@@ -72,13 +72,9 @@ them.
 | --------- | -------- | ---------------------------------------------------- |
 | `url`     | `string` | The absolute `http` or `https` URL of `mml-chtml.js` |
 
-It throws `DataError` when `url` is not such a URL. MathJax is a global of the page, so a page uses one URL: a
-typesetter for another URL rejects with `DataError` once MathJax has been requested.
-
 `typeset(root)` takes a content root, a shadow root or an element, and typesets the `math` elements below it in place.
-It rejects with `DataError` when `root` is neither. It rejects with `AssesskitError` when MathJax cannot be loaded or the
-script is not MathJax 4 with the CHTML output; the expressions then stay MathML, which the browser renders. A failure is
-final for the page: later calls reject without another request.
+MathJax is a global of the page, so a page uses one URL, and a failure to load it is final for the page: later calls reject
+without another request ([Errors](#errors)).
 
 ## What it does
 
@@ -140,10 +136,10 @@ AA reports no violation for it in a shadow root.
 
 ## Differences from the references
 
-| Case                                                                                                         | Resolution                                                                                                                                                                |
-| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| An expression of elementary math: `mstack`, `mlongdiv`, `msgroup`, `msrow`, `mscarries`, `mscarry`, `msline` | MathJax 4 does not implement them and would replace the expression by an error; it stays MathML, which the browser renders as MathML Core ([What it does](#what-it-does)) |
-| A PNP that asks for UEB math braille                                                                         | The labels are Nemeth braille, since the speech rule engine of MathJax has no UEB map; the player can remove the labels ([Braille](#braille))                             |
+| Case                                 | Resolution                                                                                                                              |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| An expression of elementary math     | It stays MathML, which the browser renders as MathML Core, since MathJax 4 would replace it by an error ([What it does](#what-it-does)) |
+| A PNP that asks for UEB math braille | The labels are Nemeth braille ([Braille](#braille))                                                                                     |
 
 ## Files
 

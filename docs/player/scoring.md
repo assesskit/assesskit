@@ -238,10 +238,7 @@ so a host passes the same values to both.
 | `update(submission)` | Shows another submission in place of the one on show, for a rater who moves to the next. When it throws, the display is as it was |
 | `destroy()`          | Takes the display and its content roots down; the shadow root stays, empty                                                        |
 
-`mountSubmission` and `update` throw `DataError` when an option or the submission is not valid, and `mountSubmission` when
-the host has a shadow root. A host stays without a shadow root when the submission is wrong. A value that is not a wire
-value throws the runtime's `DataError`. A MathJax that cannot load leaves the expressions as MathML and is not an error of the
-display.
+A host stays without a shadow root when the submission is refused ([Errors](#errors)).
 
 The themes and the PNP presentation of [styling](styling.md) apply when the host sets their attributes and properties on
 `host`; the content roots in the display take the colors from it.
@@ -250,19 +247,21 @@ Raters have their own tools. The display adds no controls: the [rating form](rat
 
 ## Errors
 
-| Call                                 | Throws `DataError` when                                                                                                                                                                                                                        |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `buildSubmission(view)`              | `view` is not a scorer view, a part of it has the wrong type, or what it holds is not a submission                                                                                                                                             |
-| `buildSupplyScores(request, ...)`    | `request` is not a scoring request, `scorer` is not `human` or `externalMachine`, or the score does not fit the declaration, such as a single string for a single float outcome: `The outcome SCORE is a single float, found a single string.` |
-| `buildSessionScore(result, pending)` | `result` is not the report of a session host, has no test result and not exactly one item result, `SCORE` or `MAXSCORE` is not a finite number, or `MAXSCORE` is not above 0                                                                   |
-| `mountSubmission`, `update`          | an option or the submission is not valid, or the host has a shadow root                                                                                                                                                                        |
+| Call                                 | Throws `DataError` when                                                                                                                                                                                                                        | What to do                                                                                                                                                |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `buildSubmission(view)`              | `view` is not a scorer view, a part of it has the wrong type, or what it holds is not a submission                                                                                                                                             | Pass what `Engine.scorerView` or `SessionHost.session(id).scorerView` returned                                                                            |
+| `buildSupplyScores(request, ...)`    | `request` is not a scoring request, `scorer` is not `human` or `externalMachine`, or the score does not fit the declaration, such as a single string for a single float outcome: `The outcome SCORE is a single float, found a single string.` | Pass a request of `pending().scoring`, and a score of the outcome's cardinality and base type                                                             |
+| `buildSessionScore(result, pending)` | `result` is not the report of a session host, has no test result and not exactly one item result, `SCORE` or `MAXSCORE` is not a finite number, or `MAXSCORE` is not above 0                                                                   | Pass the report of `session(id).results()` with its `pending()`; a practice report is never branded                                                       |
+| `mountSubmission`, `update`          | an option or the submission is not valid, or the host has a shadow root                                                                                                                                                                        | Pass the submission that `buildSubmission` wrote and the options above, on an element with no shadow root; when `update` throws, the display is as it was |
+
+A MathJax that cannot load leaves the expressions as MathML and is not an error of the display.
 
 ## Not included
 
-| Not included                                 | Why                                                                                         |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| A rating form, assignment and double scoring | They are the workflow of the host, which differs for each                                   |
-| A machine scorer                             | A scoring service reads the submission and answers with a score through `buildSupplyScores` |
+| Not included                                | Why                                                                                                                       |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Assignment, double scoring and adjudication | They are the workflow of the host, which differs for each; the [rating form](rating.md) gives the ratings and their score |
+| A machine scorer                            | A scoring service reads the submission and answers with a score through `buildSupplyScores`                               |
 
 ## Differences from the references
 

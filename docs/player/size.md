@@ -3,7 +3,7 @@
 What a browser loads from the player, and the budgets that keep it from growing. `packages/player/test/size.test.ts` bundles
 every entry point of both packages alone, as a host's bundler does: esbuild with code splitting, minified, for the browsers of
 the [baseline](baseline.md). The size of an entry point is its first load: the entry chunk and the chunks that it imports
-statically, which hold the code that it shares with a chunk that `import()` loads, and not that chunk. The test fails when an
+statically, which hold the code that it shares with a chunk that `import()` loads, but not that chunk. The test fails when an
 entry point is above its budget after gzip, or when its first load holds a module that its budget in `size-budgets.ts` does
 not list, so that an import which pulls one module into another shows in the change that makes it. The runtime's entry points
 are in [performance](../runtime/performance.md#entry-points).
@@ -43,13 +43,16 @@ player holds no `jose`.
 `mountItem` is `mountDelivery` without the chrome, the tools, the panel of the supports and the frame of an LTI item, so it
 loads the content and the interactions that every mount shares. `bundle.test.ts` fails when a file of the chrome is in a bundle
 that imports only `mountItem`, and `size.test.ts` fails when it is not smaller than a bundle of `mountDelivery`. Both hold the
-reader of a pronunciation lexicon with its XML parser (`saxes` and the runtime's `xml`, 42 kB before gzip): reading aloud is
-part of every mount, and each bundler below puts the parser in the first load of `mountItem`, which without it would be
-88,939 bytes after gzip in place of 98,730 (measured on 2026-11-05). Loading the reader with `import()` when an item names a
-lexicon takes it out in three of the four bundlers below, and puts it back in esbuild, which splits by file: the entry point
-exports `readLexicon`, and the speech of the mounts writes SSML with the runtime's `xml`, whose index reaches the parser.
-Measured on the build: esbuild 99,849 in place of 99,036, Rollup 86,265 in place of 95,659, Rolldown 87,158 in place of
-95,686 and Bun 91,687 in place of 99,085, so the reader stays in the first load, which every bundler then loads alike.
+reader of a pronunciation lexicon with its XML parser (`saxes` and the runtime's `xml`, 42 kB before gzip), because reading
+aloud is part of every mount; without it the first load of `mountItem` would be 88,939 bytes after gzip in place of 98,730
+(2026-11-05). Loading the reader with `import()` only when an item names a lexicon would help three bundlers and hurt
+esbuild, which splits by file: the entry point exports `readLexicon`, and the speech of the mounts writes SSML with the
+runtime's `xml`, whose index reaches the parser. So the reader stays in the first load, which every bundler loads alike:
+
+| `mountItem`, after gzip, on the build | esbuild | Rollup | Rolldown |    Bun |
+| ------------------------------------- | ------: | -----: | -------: | -----: |
+| The reader in the first load          |  99,036 | 95,659 |   95,686 | 99,085 |
+| The reader loaded with `import()`     |  99,849 | 86,265 |   87,158 | 91,687 |
 
 ## The first load of a client
 
@@ -74,7 +77,7 @@ No first load holds the runtime's processing, and each bundler puts the engine i
 demand. A page with both sessions loads most with esbuild, which splits by file: a file that the first load reaches through
 any import goes in a chunk of the first load with all of its code that any chunk uses, so what the wire forms share with the
 engine (the values, the interactions, the personal needs and preferences) comes whole; Rollup and Rolldown split by statement.
-A client that imports a value from `@assesskit/runtime/delivery`, which no longer exports the wire forms, loads the whole engine first, because the index
+A client that imports a value from `@assesskit/runtime/delivery` loads the whole engine first, because the index
 of `delivery` reaches every file of the engine and the `import()` of the local session keeps them in the bundle. Measured with
 both sessions in `@assesskit/player/client` and that import, an exam page loads 119,998 bytes with esbuild, and a page with
 both sessions 122,361 with esbuild, 119,022 with Rolldown and 125,931 with Bun. The lint of the browser folders refuses that
@@ -129,9 +132,7 @@ one significant digit: the rule of the other benchmarks of the repository ([perf
 whose sample is the one that the CI runner took, because the gate runs there. The runner takes 3 to 4 times as long as a
 laptop, and one run of it takes up to 1.6 times as long as another on the same code (the lesson page 30.1 to 48.9 ms), so a
 budget of five times the sample of a laptop fails on the runner with no change in the code. A mount must become several times slower on the runner before it fails
-its budget; the sizes above guard the load. The times of the laptop and of the runner are those of the build on 2026-11-05, after the
-messages of a mount are checked once for all its parts and elements (the catalog has hundreds of keys, and the check of each
-part took 88% of the time of a lesson page).
+its budget; the sizes above guard the load. The times of the laptop and of the runner are those of the build on 2026-11-05.
 
 ### Against the Amp-up player
 

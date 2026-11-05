@@ -3,8 +3,8 @@
 The interface text is a catalog of plain strings, one per function of the interface, so that the same function has the
 same name everywhere. A message that goes with a count is a label before the number, such as `Words: 1`, so that no noun
 has to agree with the count in a language that the host adds. The player carries English, which every other catalog is
-checked against. The Indonesian catalog is a module of its own, `@assesskit/player/messages-id`, and a host gives the player the
-catalog of each language it shows: a host that shows English loads no other, and a host that adds a language adds one module.
+checked against; the Indonesian catalog is the module `@assesskit/player/messages-id`, so a host that shows English loads no
+other, and a host that adds a language adds one module.
 
 ```mermaid
 flowchart LR
@@ -38,9 +38,6 @@ their option `catalogs`, with `language`, and call `selectMessages` themselves.
 | ------------------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `language`         | `string`                            | A BCP 47 tag, such as `id` or `id-ID`. Case is ignored.                                                                                                                        |
 | `options.catalogs` | `Record<string, Partial<Messages>>` | The catalogs of the host by language tag; a catalog may have only some keys, and one for a tag may change a few messages of its language. Without it the messages are English. |
-
-`selectMessages` throws `DataError` when `language` is not a string, `options` has another property than `catalogs`, `catalogs` is not an object of objects, a catalog
-has a key that is not a message key, or a message is not a string.
 
 The size of what a host loads for its language is in [size](size.md): about 5.7 kB after gzip for English, in the player, and
 6.1 kB for the Indonesian module.

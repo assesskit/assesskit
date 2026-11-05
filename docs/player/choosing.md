@@ -44,10 +44,12 @@ flowchart TD
 | [Inspera](https://support.inspera.com/hc/en-us/articles/360035249191) (archived 2021 to 2023)                                                        | Safe Exam Browser and alerts for a lost connection; private candidate notes                                                                                                             | Not included: the exam application owns the browser; notes are a slot of the host ([tools](tools.md#tools-of-the-host))                                                                            |
 | The dictionary, thesaurus, homophone checker, outliner, visual organizer, peer interaction and spell checker                                         | No open comparator ships any of them; the conformance text lists them as elective                                                                                                       | Slots of the host, and the graphing calculator is one too ([tools](tools.md#tools-of-the-host))                                                                                                    |
 
-Learnosity and Inspera document no QTI 3 support in the copies read. Amp-up's source tree has 15 interactions, without associate,
-drawing, graphic associate, graphic order, position object, slider and upload, and Citolab's web components cover every
-interaction but drawing; the player draws the 20 standard interactions and hosts portable custom ones ([supported](supported.md)).
-Amp-up has 14 standard color themes and the player has the same 14 terms of `color-theme` ([supports](supports.md#the-color-theme)).
+| Comparator               | Standard interactions                                                                          | Color themes                                                                 |
+| ------------------------ | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Amp-up, its source tree  | 15: no associate, drawing, graphic associate, graphic order, position object, slider or upload | 14                                                                           |
+| Citolab's web components | Every one but drawing                                                                          |                                                                              |
+| Learnosity, Inspera      | No QTI 3 support documented in the copies read                                                 |                                                                              |
+| The player               | The 20, and portable custom ones ([supported](supported.md))                                   | The same 14 terms of `color-theme` ([supports](supports.md#the-color-theme)) |
 
 ## Where the evidence is
 
