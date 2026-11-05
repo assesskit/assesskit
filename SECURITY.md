@@ -55,7 +55,10 @@ The points below are the runtime's; the sections that start with "The player" ho
   browser does, and keeps only QTI's elements and their attributes of a valid value, and `data-*` attributes: `script`,
   `style`, `iframe`, forms and other documents are left out with what they hold, and an attribute such as `onclick` or `style`
   is left out. It refuses a text of more tags than `maxTextTags` before it parses it, since the parser of HTML mends tags that
-  close out of order in time that grows with the square of an element's children. `writeGift` runs each item's response
+  close out of order in time that grows with the square of an element's children. An element that lacks the children of its
+  type gives its content to its parent and is tried as that type once, so nested ones cost linear time, not time that doubles
+  with each level. A lone surrogate of a string is read as U+FFFD, since parse5 throws on two low ones in a row, and a
+  character that XML does not allow is U+FFFD in the item, so that every item read can be written. `writeGift` runs each item's response
   processing on the responses that tell its credits apart, under the limits of processing, and calls only the custom
   operators that its caller registers.
 - **Printed variables.** A `format` runs on the runtime's own arithmetic, over the exact value of the number, and a width or
