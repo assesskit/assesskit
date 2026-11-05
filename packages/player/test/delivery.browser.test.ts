@@ -122,7 +122,7 @@ async function shell(
     const response =
       own !== undefined
         ? { status: bytes === undefined ? 404 : 200, body: bytes }
-        : await setup.gate.serve({ path: pathname }, setup.clock.now());
+        : await setup.gate.serve({ path: pathname });
     return {
       ok: response.status === 200,
       status: response.status,

@@ -57,6 +57,7 @@ import {
   examDefinition,
   examFiles,
   examHost,
+  fakeClock,
   gateKey,
   HIDDEN_KEY_FILE,
   lexiconFiles,
@@ -213,19 +214,20 @@ describe("the asset gate", () => {
     const pkg = packageOf(files);
     const fileStore = memoryFileStore();
     const key = await gateKey();
-    const gate = createAssetGate({ key, origin: EXAM_ORIGIN, packages: async () => pkg, files: fileStore });
-    return { gate, pkg, fileStore, key };
+    const clock = fakeClock(NOW);
+    const gate = createAssetGate({ key, origin: EXAM_ORIGIN, packages: async () => pkg, files: fileStore, clock });
+    return { gate, pkg, fileStore, key, clock };
   }
   /** The path of a file under a signed prefix, as a browser requests it. */
   const pathOf = (base: string, file: string): string => `${new URL(base).pathname}${file}`;
   const baseOf = async (gate: AssetGate, prefix: string): Promise<string> =>
-    (await gate.sign("s1", [prefix], NOW))[prefix] ?? "";
+    (await gate.sign("s1", [prefix]))[prefix] ?? "";
 
   it("signs a prefix and serves the files under it with the headers of the gate", async () => {
     const { gate } = await gateOf();
     const base = await baseOf(gate, "items/q1/");
     expect(base).toMatch(/^https:\/\/assets\.example\/g\/[\w-]+\.[\w-]+\.[\w-]+\/$/u);
-    const response = await gate.serve({ path: pathOf(base, "items/q1/images/map.png") }, NOW);
+    const response = await gate.serve({ path: pathOf(base, "items/q1/images/map.png") });
     expect(response.status).toBe(200);
     expect(response.headers).toMatchObject({
       "Referrer-Policy": "no-referrer",
@@ -248,7 +250,7 @@ describe("the asset gate", () => {
     });
     const base = await baseOf(gate, "items/q1/");
     for (const file of ["page.html", "page.htm", "drawing.svg", "pronunciation.pls", "module.js", "note.txt"]) {
-      const response = await gate.serve({ path: pathOf(base, `items/q1/${file}`) }, NOW);
+      const response = await gate.serve({ path: pathOf(base, `items/q1/${file}`) });
       expect(response.status, file).toBe(200);
       expect(response.headers["Content-Security-Policy"], file).toBe("sandbox");
     }
@@ -256,7 +258,7 @@ describe("the asset gate", () => {
 
   it("serves a PDF without the sandbox, which the viewer of Chromium refuses to show", async () => {
     const { gate } = await gateOf({ ...examFiles(), "items/q1/reading.pdf": "%PDF-1.7" });
-    const response = await gate.serve({ path: pathOf(await baseOf(gate, "items/q1/"), "items/q1/reading.pdf") }, NOW);
+    const response = await gate.serve({ path: pathOf(await baseOf(gate, "items/q1/"), "items/q1/reading.pdf") });
     expect(response.status).toBe(200);
     expect(response.headers["Content-Security-Policy"]).toBeUndefined();
   });
@@ -265,10 +267,10 @@ describe("the asset gate", () => {
     const { gate } = await gateOf();
     const base = await baseOf(gate, "items/q1/");
     const answers = [
-      await gate.serve({ path: pathOf(base, "items/q1/images/map.png") }, NOW),
-      await gate.serve({ path: pathOf(base, "items/q1/images/none.png") }, NOW),
-      await gate.serve({ path: pathOf(base, "items/q2/item.xml") }, NOW),
-      await gate.serve({ path: "/elsewhere" }, NOW),
+      await gate.serve({ path: pathOf(base, "items/q1/images/map.png") }),
+      await gate.serve({ path: pathOf(base, "items/q1/images/none.png") }),
+      await gate.serve({ path: pathOf(base, "items/q2/item.xml") }),
+      await gate.serve({ path: "/elsewhere" }),
     ];
     expect(answers.map(({ status }) => status)).toEqual([200, 404, 403, 404]);
     for (const { headers } of answers) {
@@ -290,7 +292,7 @@ describe("the asset gate", () => {
       "/items/q1/images/map.png",
       "../items/q1/images/map.png",
     ];
-    for (const path of paths) expect((await gate.serve({ path: pathOf(base, path) }, NOW)).status, path).toBe(403);
+    for (const path of paths) expect((await gate.serve({ path: pathOf(base, path) })).status, path).toBe(403);
   });
 
   it("refuses a token with a wrong MAC, another payload, or no MAC at all", async () => {
@@ -308,7 +310,7 @@ describe("the asset gate", () => {
       `${header}.${payload}.`,
     ];
     for (const token of tokens) {
-      const response = await gate.serve({ path: `/g/${token}/items/q1/images/map.png` }, NOW);
+      const response = await gate.serve({ path: `/g/${token}/items/q1/images/map.png` });
       expect(response.status, token).toBe(403);
     }
   });
@@ -317,23 +319,25 @@ describe("the asset gate", () => {
     const { gate } = await gateOf();
     const other = (await gateOf()).gate;
     const base = await baseOf(other, "items/q1/");
-    expect((await gate.serve({ path: pathOf(base, "items/q1/images/map.png") }, NOW)).status).toBe(403);
+    expect((await gate.serve({ path: pathOf(base, "items/q1/images/map.png") })).status).toBe(403);
   });
 
-  it("refuses an expired token, an hour after it was signed by default", async () => {
-    const { gate } = await gateOf();
+  it("refuses an expired token, an hour after it was signed by default, on the clock of the gate", async () => {
+    const { gate, clock } = await gateOf();
     const path = pathOf(await baseOf(gate, "items/q1/"), "items/q1/images/map.png");
-    expect((await gate.serve({ path }, NOW + DEFAULT_TTL_SECONDS * SECOND)).status).toBe(200);
-    expect((await gate.serve({ path }, NOW + DEFAULT_TTL_SECONDS * SECOND + 1)).status).toBe(403);
+    clock.advance(DEFAULT_TTL_SECONDS * SECOND);
+    expect((await gate.serve({ path })).status).toBe(200);
+    clock.advance(1);
+    expect((await gate.serve({ path })).status).toBe(403);
   });
 
   it("never serves the manifest, the test or an item, even under a token for the whole package", async () => {
     const { gate } = await gateOf();
     const base = await baseOf(gate, "");
     for (const path of ["imsmanifest.xml", "tests/exam.xml", "items/q1/item.xml", "items/q2/item.xml"]) {
-      expect((await gate.serve({ path: pathOf(base, path) }, NOW)).status, path).toBe(404);
+      expect((await gate.serve({ path: pathOf(base, path) })).status, path).toBe(404);
     }
-    expect((await gate.serve({ path: pathOf(base, "items/q1/style.css") }, NOW)).status).toBe(200);
+    expect((await gate.serve({ path: pathOf(base, "items/q1/style.css") })).status).toBe(200);
   });
 
   it("never serves an XML file of QTI data that the manifest lists as web content or does not list", async () => {
@@ -400,7 +404,7 @@ describe("the asset gate", () => {
       HIDDEN_KEY_FILE.slice("items/q1/".length),
     ];
     for (const name of names) {
-      expect((await gate.serve({ path: pathOf(base, `items/q1/${name}`) }, NOW)).status, name).toBe(404);
+      expect((await gate.serve({ path: pathOf(base, `items/q1/${name}`) })).status, name).toBe(404);
     }
   });
 
@@ -428,7 +432,7 @@ describe("the asset gate", () => {
       "font.woff2",
       "UPPER.PNG",
     ]) {
-      const response = await gate.serve({ path: pathOf(base, `items/q1/${name}`) }, NOW);
+      const response = await gate.serve({ path: pathOf(base, `items/q1/${name}`) });
       expect(response.status, name).toBe(200);
       types[name] = response.headers["Content-Type"] ?? "";
     }
@@ -457,7 +461,7 @@ describe("the asset gate", () => {
     });
     const base = await baseOf(gate, "items/q1/");
     for (const name of ["notes.dat", "other.xml", "answers.bin", "answers", ".hidden", "dir.v2/answers", "ends."]) {
-      expect((await gate.serve({ path: pathOf(base, `items/q1/${name}`) }, NOW)).status, name).toBe(404);
+      expect((await gate.serve({ path: pathOf(base, `items/q1/${name}`) })).status, name).toBe(404);
     }
   });
 
@@ -480,7 +484,7 @@ describe("the asset gate", () => {
     });
     const base = await baseOf(gate, "items/q1/");
     const statuses = await Promise.all(
-      files.map(async (file) => (await gate.serve({ path: pathOf(base, `items/q1/${file}`) }, NOW)).status),
+      files.map(async (file) => (await gate.serve({ path: pathOf(base, `items/q1/${file}`) })).status),
     );
     expect(statuses).toEqual([404, 404, 404, 200, 200]);
   });
@@ -508,8 +512,7 @@ describe("the asset gate", () => {
       "parts/fragments/rubric.css": "scorer only",
     });
     const base = await baseOf(gate, "");
-    const status = async (path: string): Promise<number> =>
-      (await gate.serve({ path: pathOf(base, path) }, NOW)).status;
+    const status = async (path: string): Promise<number> => (await gate.serve({ path: pathOf(base, path) })).status;
     expect(await status("items/q1/parts/stem.html")).toBe(404);
     expect(await status("items/q1/parts/deeper.html")).toBe(404);
     expect(await status("parts/section.html")).toBe(404);
@@ -549,7 +552,7 @@ describe("the asset gate", () => {
       "links/tool.txt",
       "control/settings.js",
     ]) {
-      expect((await gate.serve({ path: pathOf(base, path) }, NOW)).status, path).toBe(404);
+      expect((await gate.serve({ path: pathOf(base, path) })).status, path).toBe(404);
     }
   });
 
@@ -564,24 +567,24 @@ describe("the asset gate", () => {
     const { gate, pkg } = await gateOf({ ...examFiles(), "tests/exam.xml": adaptive, "cat/settings.json": '{"k":1}' });
     expect(pkg.paths).toContain("cat/settings.json");
     const base = await baseOf(gate, "");
-    expect((await gate.serve({ path: pathOf(base, "cat/settings.json") }, NOW)).status).toBe(404);
-    expect((await gate.serve({ path: pathOf(base, "items/q1/style.css") }, NOW)).status).toBe(200);
+    expect((await gate.serve({ path: pathOf(base, "cat/settings.json") })).status).toBe(404);
+    expect((await gate.serve({ path: pathOf(base, "items/q1/style.css") })).status).toBe(200);
   });
 
   it("refuses to sign a prefix that is not a directory", async () => {
     const { gate } = await gateOf();
     for (const prefix of ["imsmanifest.xml", "items/q1", "items//", "../", "items/./", "a\\b/"]) {
-      await expect(gate.sign("s1", [prefix], NOW), prefix).rejects.toThrow(DataError);
+      await expect(gate.sign("s1", [prefix]), prefix).rejects.toThrow(DataError);
     }
   });
 
   it("signs the URL of a file of the candidate, and serves it for five minutes in a sandbox", async () => {
-    const { gate, fileStore } = await gateOf();
+    const { gate, fileStore, clock } = await gateOf();
     const file = await fileStore.put(new TextEncoder().encode("RIFF"), "audio/wav", { fileName: "answer.wav" });
-    const url = await gate.signFile("s1", file, NOW);
+    const url = await gate.signFile("s1", file);
     expect(url).toMatch(/^https:\/\/assets\.example\/f\/[\w-]+\.[\w-]+\.[\w-]+\/file-1$/u);
     const path = new URL(url).pathname;
-    const response = await gate.serve({ path }, NOW);
+    const response = await gate.serve({ path });
     expect(response.status).toBe(200);
     expect(response.headers).toMatchObject({
       "Content-Type": "audio/wav",
@@ -590,20 +593,22 @@ describe("the asset gate", () => {
       "X-Content-Type-Options": "nosniff",
     });
     expect(new TextDecoder().decode(response.body)).toBe("RIFF");
-    expect((await gate.serve({ path }, NOW + DEFAULT_UPLOAD_TTL_SECONDS * SECOND)).status).toBe(200);
-    expect((await gate.serve({ path }, NOW + DEFAULT_UPLOAD_TTL_SECONDS * SECOND + 1)).status).toBe(403);
+    clock.advance(DEFAULT_UPLOAD_TTL_SECONDS * SECOND);
+    expect((await gate.serve({ path })).status).toBe(200);
+    clock.advance(1);
+    expect((await gate.serve({ path })).status).toBe(403);
   });
 
   it("refuses a file token for another file, and a token of the other kind", async () => {
     const { gate, fileStore } = await gateOf();
     const file = await fileStore.put(new Uint8Array([1]), "image/png");
-    const token = new URL(await gate.signFile("s1", file, NOW)).pathname.split("/")[2] ?? "";
-    expect((await gate.serve({ path: `/f/${token}/file-2` }, NOW)).status).toBe(403);
-    expect((await gate.serve({ path: `/f/${token}/file-1/extra` }, NOW)).status).toBe(403);
-    expect((await gate.serve({ path: `/f/${token}/%E0%A4%A` }, NOW)).status).toBe(403);
-    expect((await gate.serve({ path: `/g/${token}/items/q1/images/map.png` }, NOW)).status).toBe(403);
+    const token = new URL(await gate.signFile("s1", file)).pathname.split("/")[2] ?? "";
+    expect((await gate.serve({ path: `/f/${token}/file-2` })).status).toBe(403);
+    expect((await gate.serve({ path: `/f/${token}/file-1/extra` })).status).toBe(403);
+    expect((await gate.serve({ path: `/f/${token}/%E0%A4%A` })).status).toBe(403);
+    expect((await gate.serve({ path: `/g/${token}/items/q1/images/map.png` })).status).toBe(403);
     const packageToken = new URL(await baseOf(gate, "")).pathname.split("/")[2] ?? "";
-    expect((await gate.serve({ path: `/f/${packageToken}/file-1` }, NOW)).status).toBe(403);
+    expect((await gate.serve({ path: `/f/${packageToken}/file-1` })).status).toBe(403);
   });
 
   describe("with a signal", () => {
@@ -636,12 +641,15 @@ describe("the asset gate", () => {
       const { gate, received } = await recording();
       const controller = new AbortController();
       const base = await baseOf(gate, "items/q1/");
-      const served = await gate.serve({ path: pathOf(base, "items/q1/images/map.png") }, NOW, {
-        signal: controller.signal,
-      });
+      const served = await gate.serve(
+        { path: pathOf(base, "items/q1/images/map.png") },
+        {
+          signal: controller.signal,
+        },
+      );
       expect(served.status).toBe(200);
-      const url = await gate.signFile("s1", { reference: "file-1", mimeType: "audio/wav" }, NOW);
-      await gate.serve({ path: new URL(url).pathname }, NOW, { signal: controller.signal });
+      const url = await gate.signFile("s1", { reference: "file-1", mimeType: "audio/wav" });
+      await gate.serve({ path: new URL(url).pathname }, { signal: controller.signal });
       expect(received).toEqual([
         { where: "packages", signal: controller.signal },
         { where: "files.read", signal: controller.signal },
@@ -650,9 +658,9 @@ describe("the asset gate", () => {
 
     it("ends the wait of serve at the abort, though the file store never answers", async () => {
       const { gate } = await recording(true);
-      const url = await gate.signFile("s1", { reference: "file-1", mimeType: "audio/wav" }, NOW);
+      const url = await gate.signFile("s1", { reference: "file-1", mimeType: "audio/wav" });
       const controller = new AbortController();
-      const waiting = gate.serve({ path: new URL(url).pathname }, NOW, { signal: controller.signal });
+      const waiting = gate.serve({ path: new URL(url).pathname }, { signal: controller.signal });
       const rejected = expect(waiting).rejects.toBe(reason);
       controller.abort(reason);
       await rejected;
@@ -661,38 +669,38 @@ describe("the asset gate", () => {
     it("rejects sign, signFile and serve with the reason when the signal has aborted, and asks for nothing", async () => {
       const { gate, received } = await recording();
       const options = { signal: AbortSignal.abort(reason) };
-      await expect(gate.sign("s1", [""], NOW, options)).rejects.toBe(reason);
-      await expect(gate.signFile("s1", { reference: "f", mimeType: "x/y" }, NOW, options)).rejects.toBe(reason);
-      await expect(gate.serve({ path: "/g/t/x.png" }, NOW, options)).rejects.toBe(reason);
+      await expect(gate.sign("s1", [""], options)).rejects.toBe(reason);
+      await expect(gate.signFile("s1", { reference: "f", mimeType: "x/y" }, options)).rejects.toBe(reason);
+      await expect(gate.serve({ path: "/g/t/x.png" }, options)).rejects.toBe(reason);
       expect(received).toEqual([]);
     });
 
     it("refuses options of another type", async () => {
       const { gate } = await recording();
-      await expect(gate.sign("s1", [""], NOW, JSON.parse("5"))).rejects.toThrow(DataError);
-      await expect(gate.serve({ path: "/x" }, NOW, JSON.parse('{"signal":1}'))).rejects.toThrow(DataError);
+      await expect(gate.sign("s1", [""], JSON.parse("5"))).rejects.toThrow(DataError);
+      await expect(gate.serve({ path: "/x" }, JSON.parse('{"signal":1}'))).rejects.toThrow(DataError);
     });
   });
 
   it("refuses to sign a file whose reference is . or .., which a URL takes as a step out of the token", async () => {
     const { gate } = await gateOf();
     for (const reference of [".", ".."]) {
-      await expect(gate.signFile("s1", { reference, mimeType: "image/png" }, NOW), reference).rejects.toThrow(
+      await expect(gate.signFile("s1", { reference, mimeType: "image/png" }), reference).rejects.toThrow(
         new DataError(
           `The reference of the file cannot be "${reference}", which the path of a URL takes as a step to another path.`,
         ),
       );
     }
     for (const reference of ["...", "%2e%2e", "../x", "a/.."]) {
-      const path = new URL(await gate.signFile("s1", { reference, mimeType: "image/png" }, NOW)).pathname;
+      const path = new URL(await gate.signFile("s1", { reference, mimeType: "image/png" })).pathname;
       expect(decodeURIComponent(path.split("/")[3] ?? ""), reference).toBe(reference);
     }
   });
 
   it("answers 404 for a file that the store no longer has", async () => {
     const { gate } = await gateOf();
-    const gone = await gate.signFile("s1", { reference: "gone", mimeType: "image/png" }, NOW);
-    expect((await gate.serve({ path: new URL(gone).pathname }, NOW)).status).toBe(404);
+    const gone = await gate.signFile("s1", { reference: "gone", mimeType: "image/png" });
+    expect((await gate.serve({ path: new URL(gone).pathname })).status).toBe(404);
   });
 
   it("checks its options and arguments", async () => {
@@ -735,11 +743,13 @@ describe("the asset gate", () => {
       "The options object is invalid at files: expected an object with the functions put and read, found an object.",
     );
     expect(() => make({ extra: 1 })).toThrow('The options object is invalid: unexpected property "extra".');
-    await expect(gate.sign(JSON.parse("5"), [], NOW)).rejects.toThrow("The session must be a string");
-    await expect(gate.sign("s1", JSON.parse('["a/"]'), -1)).rejects.toThrow("The time now");
-    await expect(gate.signFile("s1", JSON.parse('{"reference":1}'), NOW)).rejects.toThrow("The reference of the file");
-    await expect(gate.serve(JSON.parse("null"), NOW)).rejects.toThrow("The request must be an object");
-    await expect(gate.serve({ path: JSON.parse("5") }, NOW)).rejects.toThrow("The path of the request");
+    await expect(gate.sign(JSON.parse("5"), [])).rejects.toThrow("The session must be a string");
+    const backward = createAssetGate({ ...good, clock: { now: () => -1 } });
+    await expect(backward.sign("s1", ["a/"])).rejects.toThrow("The time of the clock must be a non-negative integer");
+    expect(() => make({ clock: { now: 1 } })).toThrow("The options object is invalid at clock");
+    await expect(gate.signFile("s1", JSON.parse('{"reference":1}'))).rejects.toThrow("The reference of the file");
+    await expect(gate.serve(JSON.parse("null"))).rejects.toThrow("The request must be an object");
+    await expect(gate.serve({ path: JSON.parse("5") })).rejects.toThrow("The path of the request");
   });
 });
 
@@ -808,7 +818,7 @@ describe("createSessionHost", () => {
     const { host, gate } = await examHost({}, lexiconFiles());
     const started = await host.start(ALICE, { seed: 7 });
     const base = started.assets["items/q1/"] ?? "";
-    const response = await gate.serve({ path: new URL(`${base}items/q1/words.pls`).pathname }, 0);
+    const response = await gate.serve({ path: new URL(`${base}items/q1/words.pls`).pathname });
     expect(response.status).toBe(200);
     expect(response.headers["Content-Type"]).toBe("application/pls+xml");
   });
@@ -921,8 +931,8 @@ describe("createSessionHost", () => {
     expect(Object.keys(again.assets)).toEqual(Object.keys(first.assets));
     const stale = new URL(first.assets["items/q1/"] ?? "").pathname;
     const fresh = new URL(again.assets["items/q1/"] ?? "").pathname;
-    expect((await gate.serve({ path: `${stale}items/q1/images/map.png` }, clock.now())).status).toBe(403);
-    expect((await gate.serve({ path: `${fresh}items/q1/images/map.png` }, clock.now())).status).toBe(200);
+    expect((await gate.serve({ path: `${stale}items/q1/images/map.png` })).status).toBe(403);
+    expect((await gate.serve({ path: `${fresh}items/q1/images/map.png` })).status).toBe(200);
   });
 
   it("refuses a stale sequence number", async () => {
@@ -1473,7 +1483,7 @@ describe("the default clock of the session host", () => {
     vi.useRealTimers();
   });
 
-  it("stamps the steps with SYSTEM_CLOCK, the time of the machine, when the host passes no clock", async () => {
+  it("stamps the steps with the time of the machine when the host passes no clock", async () => {
     const now = Date.UTC(2026, 10, 4, 8);
     vi.useFakeTimers({ now, toFake: ["Date"] });
     const { host, store } = await examHost({ clock: undefined });

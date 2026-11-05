@@ -6,7 +6,6 @@
  * @module @assesskit/player/server
  */
 
-export { SYSTEM_CLOCK } from "./clock.js";
 export type { FileStore } from "./file-store.js";
 export type { StepEvents, StepSink, SuppliedGrade } from "./forward.js";
 export { type AssetGate, type AssetGateOptions, createAssetGate, type GateResponse } from "./gate/index.js";

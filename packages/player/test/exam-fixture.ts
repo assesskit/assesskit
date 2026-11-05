@@ -363,7 +363,13 @@ export async function examHost(
   const store = memoryStore();
   const scheduler = recordingScheduler();
   const fileStore = memoryFileStore();
-  const gate = createAssetGate({ key: await gateKey(), origin, packages: async () => pkg, files: fileStore });
+  const gate = createAssetGate({
+    key: await gateKey(),
+    origin,
+    packages: async () => pkg,
+    files: fileStore,
+    clock: extra.clock ?? clock,
+  });
   const logged: StepEvents[] = [];
   const host = createSessionHost({
     engine,

@@ -13,3 +13,7 @@ The option `resumeCheckMs` of `mountDelivery` is gone: the player checks a test 
 The step feed of `createSessionHost` is the option `onStep`, a `StepSink`: `forward: { log }` and `ForwardOptions` are gone.
 
 The option `profileBreaks` of `createSessionHost` is gone, with the behavior of its default: a candidate whose profile has breaks (`environment` with `breaks`) may send `suspend` and `resume`. A program whose breaks all go through the proctor leaves `breaks` out of the profile that it starts the session with.
+
+`BROWSER_CLOCK` (`@assesskit/player/client`) and `SYSTEM_CLOCK` (`@assesskit/player/server`) are no longer exported: they were one clock under two names, and the default of every `clock` option is the clock of the machine, `Date.now()`, as before. `Clock` is exported from `@assesskit/player/protocol` only.
+
+`createAssetGate` takes a `clock`, the session host's, and `sign`, `signFile` and `serve` no longer take `now`: `sign(session, prefixes, options?)`, `signFile(session, file, options?)` and `serve(request, options?)`.

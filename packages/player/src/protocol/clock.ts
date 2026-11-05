@@ -23,6 +23,12 @@ export interface Clock {
   now(): number;
 }
 
+/**
+ * The clock of the machine, the time of the device or the server in epoch milliseconds: the default of every `clock`
+ * option, and the one place where the player reads the time.
+ */
+export const SYSTEM_CLOCK: Clock = { now: () => Date.now() };
+
 /** The schema of a clock: an object with a function `now`. */
 export const clockSchema: Schema<Clock> = methodsSchema<Clock>("now");
 

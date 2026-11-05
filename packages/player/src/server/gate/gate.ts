@@ -1,7 +1,6 @@
 import {
   type CallOptions,
   checkCallOptions,
-  checkNonNegativeInteger,
   checkRecord,
   checkString,
   describe,
@@ -16,6 +15,8 @@ import { type QtiPackage, resolveReference } from "@assesskit/runtime/package";
 import type { FileValue } from "@assesskit/runtime/values";
 import type { CryptoKey } from "jose";
 import * as v from "valibot";
+import type { Clock } from "../../protocol/index.js";
+import { clockSchema, readClock, SYSTEM_CLOCK } from "../../protocol/internal.js";
 import type { FileStore } from "../internal.js";
 import { contentTypeOf } from "./content-type.js";
 import { deniedPaths, isQtiData } from "./deny.js";
@@ -41,6 +42,13 @@ export interface AssetGateOptions {
   readonly packages: (session: string, options?: CallOptions) => Promise<QtiPackage>;
   /** The storage of the files that candidates upload. */
   readonly files: FileStore;
+  /**
+   * The clock of the server, which dates a token as it is signed and checks its expiry as it is served; the session host's
+   * clock fits.
+   *
+   * @defaultValue The clock of the machine, `Date.now()`
+   */
+  readonly clock?: Clock;
   /**
    * The seconds a token for a prefix is valid.
    *
@@ -68,36 +76,32 @@ export interface GateResponse {
 /** The asset gate: the one place where package files and candidate files leave the server. */
 export interface AssetGate {
   /**
-   * Signs the prefixes of a session for `ttlSeconds` from `now`.
+   * Signs the prefixes of a session for `ttlSeconds` from the time of the clock.
    *
    * @param session - The identifier of the session.
    * @param prefixes - Directories of the package, each `""` or ending in `/`.
-   * @param now - The time in epoch milliseconds.
    * @param options - See {@link CallOptions}.
    * @returns The base URL of each prefix, `https://<origin>/g/<token>/`; the URL of a file is the base plus its path.
-   * @throws `DataError` when an argument has the wrong type or a prefix is not a directory.
+   * @throws `DataError` when an argument has the wrong type, a prefix is not a directory, or the clock does not answer with a
+   * non-negative integer.
    * @throws `signal.reason` when the signal has aborted.
    */
-  sign(
-    session: string,
-    prefixes: Iterable<string>,
-    now: number,
-    options?: CallOptions,
-  ): Promise<Readonly<Record<string, string>>>;
+  sign(session: string, prefixes: Iterable<string>, options?: CallOptions): Promise<Readonly<Record<string, string>>>;
   /**
-   * Signs the URL of one file of a candidate for `uploadTtlSeconds` from `now`.
+   * Signs the URL of one file of a candidate for `uploadTtlSeconds` from the time of the clock.
    *
    * @param session - The identifier of the session.
    * @param file - The file value that names the file in the host's store.
-   * @param now - The time in epoch milliseconds.
    * @param options - See {@link CallOptions}.
    * @returns The URL, `https://<origin>/f/<token>/<reference>`.
-   * @throws `DataError` when an argument has the wrong type, or the reference is `.` or `..`, which a URL takes as a step.
+   * @throws `DataError` when an argument has the wrong type, the reference is `.` or `..`, which a URL takes as a step, or
+   * the clock does not answer with a non-negative integer.
    * @throws `signal.reason` when the signal has aborted.
    */
-  signFile(session: string, file: FileValue, now: number, options?: CallOptions): Promise<string>;
+  signFile(session: string, file: FileValue, options?: CallOptions): Promise<string>;
   /**
-   * Answers a request for a path of the form `/g/<token>/<package path>` or `/f/<token>/<reference>`.
+   * Answers a request for a path of the form `/g/<token>/<package path>` or `/f/<token>/<reference>`, at the time of the
+   * clock.
    *
    * @remarks
    * | Status | When |
@@ -107,13 +111,12 @@ export interface AssetGate {
    * | 200    | Otherwise |
    *
    * @param request - The path of the request, without the origin and the query.
-   * @param now - The time of the request in epoch milliseconds.
    * @param options - Its `signal` goes to the package and the file store, and ends the wait of this call.
    * @returns The status, the headers and, for `200`, the bytes.
-   * @throws `DataError` when an argument has the wrong type.
+   * @throws `DataError` when an argument has the wrong type, or the clock does not answer with a non-negative integer.
    * @throws `signal.reason` when the signal has aborted.
    */
-  serve(request: { readonly path: string }, now: number, options?: CallOptions): Promise<GateResponse>;
+  serve(request: { readonly path: string }, options?: CallOptions): Promise<GateResponse>;
 }
 
 /** The headers of every response: the token is in the URL, so no referrer carries it, and nothing is sniffed. */
@@ -154,6 +157,7 @@ const gateOptionsSchema = v.strictObject({
   origin: v.unknown(),
   packages: functionSchema<AssetGateOptions["packages"]>(),
   files: methodsSchema<FileStore>("put", "read"),
+  clock: v.optional(clockSchema),
   ttlSeconds: v.optional(positiveIntegerSchema, DEFAULT_TTL_SECONDS),
   uploadTtlSeconds: v.optional(positiveIntegerSchema, DEFAULT_UPLOAD_TTL_SECONDS),
 });
@@ -229,7 +233,7 @@ const refused = (status: 403 | 404): GateResponse => ({ status, headers: BASE_HE
  */
 export function createAssetGate(options: AssetGateOptions): AssetGate {
   checkGateOptions(options);
-  const { key, origin, packages, files } = options;
+  const { key, origin, packages, files, clock = SYSTEM_CLOCK } = options;
   const { ttlSeconds = DEFAULT_TTL_SECONDS, uploadTtlSeconds = DEFAULT_UPLOAD_TTL_SECONDS } = options;
 
   const servePackage = async (
@@ -277,11 +281,11 @@ export function createAssetGate(options: AssetGateOptions): AssetGate {
   };
 
   return {
-    sign: async (session, prefixes, now, options) => {
+    sign: async (session, prefixes, options) => {
       checkString(session, "The session");
-      checkNonNegativeInteger(now, "The time now");
       checkCallOptions(options);
       options?.signal?.throwIfAborted();
+      const now = readClock(clock);
       const signed = new Map<string, string>();
       for (const prefix of prefixes) {
         checkPrefix(prefix);
@@ -290,12 +294,12 @@ export function createAssetGate(options: AssetGateOptions): AssetGate {
       }
       return Object.fromEntries(signed);
     },
-    signFile: async (session, file, now, options) => {
+    signFile: async (session, file, options) => {
       checkString(session, "The session");
       checkFileValue(file);
-      checkNonNegativeInteger(now, "The time now");
       checkCallOptions(options);
       options?.signal?.throwIfAborted();
+      const now = readClock(clock);
       const claims = {
         session,
         reference: file.reference,
@@ -304,12 +308,12 @@ export function createAssetGate(options: AssetGateOptions): AssetGate {
       };
       return `${origin}/f/${await sealToken(FILE_USE, claims, key)}/${encodeURIComponent(file.reference)}`;
     },
-    serve: async (request, now, options) => {
+    serve: async (request, options) => {
       checkRecord(request, "The request must be an object");
       checkString(request.path, "The path of the request");
-      checkNonNegativeInteger(now, "The time now");
       checkCallOptions(options);
       options?.signal?.throwIfAborted();
+      const now = readClock(clock);
       const match = REQUEST_PATH.exec(request.path);
       if (match === null) return refused(404);
       const [, kind = "", token = "", rest = ""] = match;

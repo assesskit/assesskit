@@ -5,6 +5,4 @@
  * @module @assesskit/player/client
  */
 
-export type { Clock } from "../protocol/index.js";
-export { BROWSER_CLOCK } from "./clock.js";
 export { createRemoteSession, type RemoteSessionOptions, type Transport } from "./remote.js";

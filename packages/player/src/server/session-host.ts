@@ -35,10 +35,10 @@ export interface SessionHostOptions {
   /**
    * The clock of the server.
    *
-   * @defaultValue `SYSTEM_CLOCK`
+   * @defaultValue The clock of the machine, `Date.now()`
    */
   readonly clock?: Clock;
-  /** The asset gate that signs the prefixes of each envelope. */
+  /** The asset gate that signs the prefixes of each envelope, on the same clock as the host. */
   readonly gate: AssetGate;
   /** Returns the package that a session delivers; the gate takes the same function. It may ignore the options. */
   readonly packages: (session: string, options?: CallOptions) => Promise<QtiPackage>;

@@ -98,7 +98,7 @@ export async function startExamServer(): Promise<ExamServer> {
   if (address === null || typeof address === "string") throw new Error("The server has no port.");
   origin = `http://127.0.0.1:${address.port}`;
 
-  const gate = createAssetGate({ key: await gateKey(), origin, packages: packageOfSession, files });
+  const gate = createAssetGate({ key: await gateKey(), origin, packages: packageOfSession, files, clock });
   const hosts = new Map<ExamName, SessionHost>(
     (Object.keys(EXAMS) as ExamName[]).map((name) => {
       const pkg = packages.get(name);
@@ -148,7 +148,7 @@ export async function startExamServer(): Promise<ExamServer> {
         };
         const path = url.pathname;
         if (path.startsWith("/g/") || path.startsWith("/f/")) {
-          const served = await gate.serve({ path }, clock.now());
+          const served = await gate.serve({ path });
           response.statusCode = served.status;
           for (const [name, value] of Object.entries(served.headers)) response.setHeader(name, value);
           response.end(served.body === undefined ? undefined : Buffer.from(served.body));
@@ -165,7 +165,7 @@ export async function startExamServer(): Promise<ExamServer> {
           send(200, {});
         } else if (path === "/exam/upload") {
           send(200, await files.put(new Uint8Array(body), header(request, "x-mime")));
-        } else if (path === "/exam/file-url") send(200, { url: await gate.signFile(session, json() as never, clock.now()) });
+        } else if (path === "/exam/file-url") send(200, { url: await gate.signFile(session, json() as never) });
         else send(404, {});
       } catch (error) {
         const name = error instanceof Error ? error.name : "Error";

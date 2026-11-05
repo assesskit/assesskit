@@ -147,7 +147,7 @@ export const PLAYER_RULES: readonly Rule[] = [
   {
     rule: "A repeated sequence number gets the answer already given.",
     file: "packages/player/src/server/host.ts",
-    find: "if (envelope.seq === stored.seq) return { result: await replay(caller.session, stored, now, signal) };",
+    find: "if (envelope.seq === stored.seq) return { result: await replay(caller.session, stored, signal) };",
     replace: "",
     test: "packages/player/test/server.test.ts",
   },

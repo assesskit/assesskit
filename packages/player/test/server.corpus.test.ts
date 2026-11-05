@@ -82,17 +82,16 @@ const isAsset = (path: string): boolean => SERVED.has(path.slice(path.lastIndexO
 
 /** Serves every file of a package under a token for the whole package, and returns the status of each. */
 async function statuses(pkg: QtiPackage): Promise<Map<string, number>> {
-  const now = 1_700_000_000_000;
   const gate = createAssetGate({
     key: await gateKey(),
     origin: "https://assets.example",
     packages: async () => pkg,
     files: memoryFileStore(),
   });
-  const base = (await gate.sign("corpus", [""], now))[""] ?? "";
+  const base = (await gate.sign("corpus", [""]))[""] ?? "";
   const result = new Map<string, number>();
   for (const path of pkg.paths) {
-    result.set(path, (await gate.serve({ path: `${new URL(base).pathname}${path}` }, now)).status);
+    result.set(path, (await gate.serve({ path: `${new URL(base).pathname}${path}` })).status);
   }
   return result;
 }

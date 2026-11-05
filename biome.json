@@ -1056,11 +1056,7 @@
       "plugins": ["./biome/error-cause.grit"]
     },
     {
-      "includes": [
-        "packages/player/src/**",
-        "!packages/player/src/client/clock.ts",
-        "!packages/player/src/server/clock.ts"
-      ],
+      "includes": ["packages/player/src/**", "!packages/player/src/protocol/clock.ts"],
       "plugins": ["./biome/no-clock.grit"]
     },
     {

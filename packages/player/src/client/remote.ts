@@ -28,9 +28,8 @@ import type {
   ViewEnvelope,
   ViewRequest,
 } from "../protocol/index.js";
-import { checkViewEnvelope, clockSchema, MAX_TIMER_DELAY_MS } from "../protocol/internal.js";
+import { checkViewEnvelope, clockSchema, MAX_TIMER_DELAY_MS, SYSTEM_CLOCK } from "../protocol/internal.js";
 import { assetResolver } from "./assets.js";
-import { BROWSER_CLOCK } from "./clock.js";
 import { notifyListeners } from "./notify.js";
 
 /** How long in milliseconds the client waits after the last change of a response before it sends the responses. */
@@ -53,7 +52,7 @@ export interface RemoteSessionOptions {
   /**
    * The clock that times a view's age.
    *
-   * @defaultValue {@link BROWSER_CLOCK}
+   * @defaultValue The clock of the device, `Date.now()`
    */
   readonly clock?: Clock;
   /**
@@ -138,7 +137,7 @@ export function createRemoteSession(
   checkFunction(transport, "The transport must be a function");
   checkViewEnvelope(initial);
   parseWith(remoteOptionsSchema, options, "The options object");
-  const { clock = BROWSER_CLOCK, limits = {}, onError = (error: unknown) => reportError(error) } = options;
+  const { clock = SYSTEM_CLOCK, limits = {}, onError = (error: unknown) => reportError(error) } = options;
 
   const listeners = new Set<(view: CandidateView) => void>();
   let sequence = initial.seq;

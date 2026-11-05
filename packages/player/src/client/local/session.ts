@@ -40,9 +40,10 @@ import {
   MAX_TIMER_DELAY_MS,
   readClock,
   resolveViewDocuments,
+  SYSTEM_CLOCK,
   stepAfterIdle,
 } from "../../protocol/internal.js";
-import { BROWSER_CLOCK, notifyListeners } from "../internal.js";
+import { notifyListeners } from "../internal.js";
 
 /** What a {@link LocalStore} saves for a step: the state, and the events of the step. */
 export interface LocalSave {
@@ -119,7 +120,7 @@ export interface LocalSessionOptions extends CallOptions {
   /**
    * The clock that stamps actions and times the deadlines.
    *
-   * @defaultValue {@link BROWSER_CLOCK}
+   * @defaultValue The clock of the device, `Date.now()`
    */
   readonly clock?: Clock;
   /**
@@ -275,7 +276,7 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
   const { signal: creating, cat, maxIdleMs } = options;
   checkOptional(creating, (value) => checkAbortSignal(value, "The option signal"));
   checkOptional(maxIdleMs, (value) => checkPositiveInteger(value, "The option maxIdleMs"));
-  const { definition, store, session, seed, assets, lexicons = () => [], clock = BROWSER_CLOCK } = options;
+  const { definition, store, session, seed, assets, lexicons = () => [], clock = SYSTEM_CLOCK } = options;
   const onError = options.onError ?? ((error: unknown) => reportError(error));
   const now = (): number => readClock(clock);
 

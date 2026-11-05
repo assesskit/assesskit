@@ -172,8 +172,9 @@ const bans = [
     path: source(`${SRC}/${folder}/ban-${i}.ts`, [`export const a = ${entry.code};`]),
   })),
 );
-const clocks = [`${SRC}/client/clock.ts`, `${SRC}/server/clock.ts`].map((path) =>
-  source(path, ["export const a = [Date.now(), new Date(), performance.now()];"]),
+const clock = source(`${SRC}/protocol/clock.ts`, ["export const a = [Date.now(), new Date(), performance.now()];"]);
+const formerClocks = [`${SRC}/client/clock.ts`, `${SRC}/server/clock.ts`].map((path) =>
+  source(path, ["export const a = Date.now();"]),
 );
 const allowedCalls = source(`${SRC}/player/allowed.ts`, [
   "export const a = [new Date(0), new Date(2024, 0), /a+/u, Math.floor(1.5)];",
@@ -416,8 +417,11 @@ describe("GritQL rules", () => {
     });
   }
 
-  it("lets the clock files read the clock", () => {
-    for (const path of clocks) expect(messagesFor(path, "assesskit never reads a clock"), path).toEqual([]);
+  it("lets the one clock file read the clock, and no other", () => {
+    expect(messagesFor(clock, "assesskit never reads a clock")).toEqual([]);
+    for (const path of formerClocks) {
+      expect(messagesFor(path, "assesskit never reads a clock"), path).toHaveLength(1);
+    }
   });
 
   it("allows a Date with arguments and a regular expression literal", () => {

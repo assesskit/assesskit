@@ -36,7 +36,6 @@ sequenceDiagram
 | `createAssetGate` and the gate's types                               | The [asset gate](asset-gate.md)                                                      |
 | `StepEvents`, `StepSink`, `SuppliedGrade`                            | What the host does with the events of each step                                      |
 | `createToolScoreIntake`, `ToolScoreIntake`, `ToolScoreIntakeOptions` | The scores of tool items                                                             |
-| `SYSTEM_CLOCK`                                                       | The clock of the machine                                                             |
 
 ## Quick start
 
@@ -119,7 +118,7 @@ records.get("s1").version; // => 1
 | `engine`        | `Engine`                                     | The delivery engine of the test. One engine serves every session.                                                                                                              |
 | `store`         | `SessionStore`                               | The storage of sessions.                                                                                                                                                       |
 | `scheduler`     | `Scheduler`                                  | The scheduler of time-outs, such as a job queue. Without one, `createSessionHost` refuses a test with a maximum time anywhere. Default: none.                                  |
-| `clock`         | `Clock`                                      | The time of the server. Default: `SYSTEM_CLOCK`, the machine's.                                                                                                                |
+| `clock`         | `Clock`                                      | The time of the server. Default: the clock of the machine, `Date.now()`.                                                                                                       |
 | `gate`          | `AssetGate`                                  | Signs the prefixes of each envelope.                                                                                                                                           |
 | `packages`      | `(session, options?) => Promise<QtiPackage>` | The package that a session delivers; the gate takes the same function. It may ignore the options.                                                                              |
 | `clientActions` | `CandidateActionType[]`                      | The types of action a client may send. Default: every type but `suspend` and `resume` (`EXAM_CLIENT_ACTIONS`).                                                                 |

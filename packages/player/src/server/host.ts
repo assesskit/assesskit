@@ -52,9 +52,9 @@ import {
   isViewRequest,
   markOfficial,
   readClock,
+  SYSTEM_CLOCK,
   stepAfterIdle,
 } from "../protocol/internal.js";
-import { SYSTEM_CLOCK } from "./clock.js";
 import type { StepSink, SuppliedGrade } from "./forward.js";
 import { type AssetGate, collectAssetPrefixes, locateDocuments } from "./gate/index.js";
 import {
@@ -197,7 +197,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     return {
       seq,
       view: writeView(view),
-      assets: await gate.sign(session, collectAssetPrefixes(view, pkg), now, { signal }),
+      assets: await gate.sign(session, collectAssetPrefixes(view, pkg), { signal }),
       documents: locateDocuments(view, pkg),
       ...(refusal === undefined ? {} : { refusal }),
     };
@@ -334,12 +334,11 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
   const replay = async (
     session: string,
     stored: StoredSession,
-    now: number,
     signal: AbortSignal | undefined,
   ): Promise<ViewEnvelope> => {
     const answer: unknown = JSON.parse(stored.envelope);
     checkViewEnvelope(answer);
-    return { ...answer, assets: await gate.sign(session, Object.keys(answer.assets), now, { signal }) };
+    return { ...answer, assets: await gate.sign(session, Object.keys(answer.assets), { signal }) };
   };
 
   /** Applies the action of a request to the stored state and builds the change and the answer. */
@@ -375,7 +374,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
   ): Promise<ViewEnvelope> =>
     transact(caller.session, signal, notBound, async (stored, now) => {
       if (stored.principal !== caller.principal) throw notBound();
-      if (envelope.seq === stored.seq) return { result: await replay(caller.session, stored, now, signal) };
+      if (envelope.seq === stored.seq) return { result: await replay(caller.session, stored, signal) };
       if (envelope.seq < stored.seq) {
         throw new DataError(
           `The sequence number ${envelope.seq} is stale: the latest request answered has ${stored.seq}.`,
@@ -426,7 +425,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     if (stored === undefined) return answer;
     const now = readClock(clock);
     if (failure !== undefined && stranded(stored, now)) throw failure.error;
-    return stored.seq === answer.seq ? replay(session, stored, now, signal) : answer;
+    return stored.seq === answer.seq ? replay(session, stored, signal) : answer;
   };
 
   const view: SessionHost["view"] = async (caller, callOptions) => {

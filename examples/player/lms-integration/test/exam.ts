@@ -121,6 +121,7 @@ export async function sessionHostOver(pkg: QtiPackage, clock: Clock, onStep: Ste
     origin: ASSET_ORIGIN,
     packages,
     files: { put: async () => ({ reference: "none", mimeType: "text/plain" }), read: async () => undefined },
+    clock,
   });
   return createSessionHost({
     engine,

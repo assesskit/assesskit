@@ -4,10 +4,9 @@ import { DataError, ServiceError } from "@assesskit/runtime/errors";
 import { buildSingle } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BROWSER_CLOCK } from "../src/client/index.js";
 import { assetResolver, UNSIGNED_URL } from "../src/client/internal.js";
 import { createLocalSession, type LocalStore } from "../src/client/local/index.js";
-import { isOfficialResult } from "../src/protocol/internal.js";
+import { isOfficialResult, SYSTEM_CLOCK } from "../src/protocol/internal.js";
 import {
   abandonedFiles,
   adaptiveDefinition,
@@ -59,10 +58,10 @@ describe("assetResolver", () => {
   });
 });
 
-describe("BROWSER_CLOCK", () => {
+describe("SYSTEM_CLOCK", () => {
   it("gives the time of the device in whole epoch milliseconds", () => {
     const before = Date.now();
-    const now = BROWSER_CLOCK.now();
+    const now = SYSTEM_CLOCK.now();
     expect(Number.isInteger(now)).toBe(true);
     expect(now).toBeGreaterThanOrEqual(before);
     expect(now).toBeLessThanOrEqual(Date.now());

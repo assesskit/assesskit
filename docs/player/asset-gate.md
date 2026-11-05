@@ -56,19 +56,24 @@ const pkg = openPackage({ paths: [...files.keys()].sort(), read: (path) => files
 
 const key = await crypto.subtle.generateKey({ name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
 const store = { put: async () => ({ reference: "none", mimeType: "text/plain" }), read: async () => undefined };
-const gate = createAssetGate({ key, origin: "https://assets.example", packages: async () => pkg, files: store });
+// The session host's clock; this one is set by hand, so that the token expires below.
+let time = 0;
+const clock = { now: () => time };
+const gate = createAssetGate({ key, origin: "https://assets.example", packages: async () => pkg, files: store, clock });
 
-const bases = await gate.sign("session-1", ["items/q1/"], 0);
+const bases = await gate.sign("session-1", ["items/q1/"]);
 const base = bases["items/q1/"];
 base.startsWith("https://assets.example/g/"); // => true
 
-// In the handler of GET /g/* and GET /f/*, with the path of the request and the time:
-const style = await gate.serve({ path: new URL(`${base}items/q1/style.css`).pathname }, 1_000);
+// In the handler of GET /g/* and GET /f/*, with the path of the request:
+time = 1_000;
+const style = await gate.serve({ path: new URL(`${base}items/q1/style.css`).pathname });
 style.status; // => 200
 style.headers["Content-Type"]; // => "text/css; charset=utf-8"
-const document = await gate.serve({ path: new URL(`${base}items/q1/item.xml`).pathname }, 1_000);
+const document = await gate.serve({ path: new URL(`${base}items/q1/item.xml`).pathname });
 document.status; // => 404
-const expired = await gate.serve({ path: new URL(`${base}items/q1/style.css`).pathname }, 4_000_000);
+time = 4_000_000;
+const expired = await gate.serve({ path: new URL(`${base}items/q1/style.css`).pathname });
 expired.status; // => 403
 ```
 
@@ -76,14 +81,15 @@ expired.status; // => 403
 
 `createAssetGate(options)` throws `DataError` when an option is not of its type.
 
-| Option             | Type                               | Meaning                                                                                                                 |
-| ------------------ | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `key`              | `CryptoKey`                        | The key that signs tokens: HMAC with SHA-256 and the usages `sign` and `verify`.                                        |
-| `origin`           | `string`                           | The origin that serves the gate: `https` and no path, or `http` on `localhost`, `127.0.0.1` or `[::1]` for development. |
-| `packages`         | `(session) => Promise<QtiPackage>` | The package that a session delivers.                                                                                    |
-| `files`            | `FileStore`                        | The storage of the files that candidates upload.                                                                        |
-| `ttlSeconds`       | `number`                           | The seconds a token for a prefix is valid. Default: `3600`.                                                             |
-| `uploadTtlSeconds` | `number`                           | The seconds a token for a file of the candidate is valid. Default: `300`.                                               |
+| Option             | Type                               | Meaning                                                                                                                                        |
+| ------------------ | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `key`              | `CryptoKey`                        | The key that signs tokens: HMAC with SHA-256 and the usages `sign` and `verify`.                                                               |
+| `origin`           | `string`                           | The origin that serves the gate: `https` and no path, or `http` on `localhost`, `127.0.0.1` or `[::1]` for development.                        |
+| `packages`         | `(session) => Promise<QtiPackage>` | The package that a session delivers.                                                                                                           |
+| `files`            | `FileStore`                        | The storage of the files that candidates upload.                                                                                               |
+| `clock`            | `Clock`                            | Dates a token as it is signed and checks its expiry as it is served; pass the session host's. Default: the clock of the machine, `Date.now()`. |
+| `ttlSeconds`       | `number`                           | The seconds a token for a prefix is valid. Default: `3600`.                                                                                    |
+| `uploadTtlSeconds` | `number`                           | The seconds a token for a file of the candidate is valid. Default: `300`.                                                                      |
 
 ## Tokens in the path
 
@@ -96,7 +102,7 @@ The token is in the path, and not the query, so that relative URLs inherit it: R
 `define(["./renderer"], …)` against `baseUrl`, and a stylesheet loaded as text resolves `url(../fonts/x.woff)` against its own
 URL. Both stay under the prefix and need no signature of their own.
 
-`sign(session, prefixes, now, options?)` throws `DataError` when a prefix is not a directory in normal form: empty, or segments that
+`sign(session, prefixes, options?)` throws `DataError` when a prefix is not a directory in normal form: empty, or segments that
 each end in `/`, without `.`, `..`, empty segments, backslashes or control characters. The tokens last `ttlSeconds`, and the
 session host renews them with every envelope. A client sends an envelope only when the candidate acts, so a candidate who sends
 nothing for longer than `ttlSeconds` gets `403` for what the page loads afterwards, such as a range of a long recording, a card
@@ -183,7 +189,7 @@ never serves.
 ## Files of the candidate
 
 An upload, a recording or a drawing is stored through `FileStore.put`, and the runtime's `FileValue` refers to it. `signFile(session,
-file, now)` gives `https://<origin>/f/<token>/<reference>`, a token for one file of one session that lasts
+file)` gives `https://<origin>/f/<token>/<reference>`, a token for one file of one session that lasts
 `uploadTtlSeconds`. A request for another reference, or with a token for a prefix, is `403`. The response carries
 `Content-Security-Policy: sandbox` besides the headers above, since the bytes are the candidate's.
 
@@ -205,12 +211,11 @@ The gate throws `DataError` for a call that is wrong and answers a request with 
 
 | Not included                                   | Why                                                                                                       |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| The HTTP route and the listener                | The host's route calls `serve` with the path and the time, and writes the answer                          |
+| The HTTP route and the listener                | The host's route calls `serve` with the path, and writes the answer                                       |
 | CORS headers                                   | The host's HTTP layer adds the ones its deployment needs                                                  |
 | Telling answer keys in a file by their content | The gate decides by what a file is; a JSON file with a key is served, so keep keys in response processing |
 | A file store                                   | `FileStore` is the port: the host chooses S3-compatible storage or a disk                                 |
 | Serving the static files of the player         | `pci-frame/*` and `player.css` come from the same origin, outside the gate                                |
-| A clock                                        | The caller passes `now` to `sign`, `signFile` and `serve`                                                 |
 ## Differences from the references
 
 None. No specification defines the gate: a token for a prefix, the files it serves and the headers follow from the security model ([SECURITY.md](../../SECURITY.md)), and [Evidence](evidence.md) lists the tests that hold them.
