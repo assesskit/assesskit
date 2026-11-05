@@ -38,7 +38,9 @@ xychart-beta
 The sizes are bytes of the minified files of the first load. The names in brackets are the modules of the runtime that an
 entry point holds; every entry point but the Indonesian catalog also holds the runtime's `checks` and `errors` and valibot,
 and `size-budgets.ts` lists every module of each. The root, the protocol and the clients hold no `jose` or XML parser, and the
-player holds no `jose`.
+player holds no `jose`. A page that imports only the types or the `LTI_*` names of the protocol loads none of the check of a
+submission, since the package declares `"sideEffects": false`: 77 bytes after gzip with esbuild 0.28 and Bun 1.4, 54 with Rolldown 1.2
+(2026-11-06), and `size.test.ts` fails when such an import holds another file of the protocol.
 
 `mountItem` is `mountDelivery` without the chrome, the tools, the panel of the supports and the frame of an LTI item, so it
 loads the content and the interactions that every mount shares. `bundle.test.ts` fails when a file of the chrome is in a bundle

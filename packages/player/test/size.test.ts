@@ -101,6 +101,15 @@ describe("the size of what a page loads", () => {
     }
   });
 
+  it("keeps the check of a submission out of a page that imports only the names and the types of the protocol", async () => {
+    const { inputs, gzip } = await bundle(
+      'export { LTI_STORAGE_FRAME, LTI_TOOL_FRAME } from "./protocol/index.ts"; export type { Submission, ViewEnvelope } from "./protocol/index.ts";',
+      { minify: true },
+    );
+    expect(inputs.map((path) => relative(PLAYER, path))).toEqual(["src/protocol/lti-frame.ts"]);
+    expect(gzip, "The gzipped bytes of the names of the protocol").toBeLessThan(500);
+  });
+
   it("holds no catalog of Indonesian in the root, the protocol, the client, the player or the first load of an item", async () => {
     const firstLoads = [
       ...[
