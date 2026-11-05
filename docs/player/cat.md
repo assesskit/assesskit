@@ -182,7 +182,7 @@ sequenceDiagram
 One loop runs for each session: it reads the pending requests again until none waits, saves each answer before the next
 request, and takes no signal. A step that returns because a loop runs marks the loop, and a loop marked since its last read
 began reads once more before it ends, so work that arrives while the loop ends is never left unanswered. An abort ends the wait of the caller that passed it, never the loop. A refusal `unknown-request`
-means that another call answered first, and the loop reads again. A port never calls the session, and a `log` calls only
+means that another call answered first, and the loop reads again. A port never calls the session, and an `onStep` calls only
 `session(id)`, whose `apply` never waits for a running loop.
 
 | Where the loop fails                                                  | Behavior                                                                                                                 |
