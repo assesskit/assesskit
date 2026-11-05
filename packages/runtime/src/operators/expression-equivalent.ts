@@ -2,8 +2,10 @@ import { DataError, SecurityError } from "../errors.js";
 import type { Value } from "../values/index.js";
 import { checkKeyShape, compareShapes, type Form, type KeySide, type Shape, shapeOf } from "./compare.js";
 import type { OperatorLimits } from "./limits.js";
+import { readNumberText } from "./number-text.js";
 import { checkOperandCount, isBlank, share, stringsOf } from "./operands.js";
-import { atPath, memberPath, type OptionsOf, optionsError, pathOf } from "./options.js";
+import { atPath, type EarlierReading, memberPath, type OptionsOf, optionsError, pathOf } from "./options.js";
+import { toNumber } from "./rational.js";
 import { isVariableName, readStatement } from "./read.js";
 import type { Ranges } from "./sample.js";
 import type { ExpressionKeyData } from "./schemas.js";
@@ -16,7 +18,11 @@ export interface PreparedExpression {
   readonly ranges: Ranges;
   readonly separator: DecimalSeparator;
   readonly key: KeySide["shape"];
-  readonly followThrough: { readonly shape: KeySide["shape"]; readonly variable: string } | null;
+  readonly followThrough: {
+    readonly shape: KeySide["shape"];
+    readonly variable: string;
+    readonly reading: EarlierReading | null;
+  } | null;
 }
 
 /**
@@ -83,6 +89,7 @@ export function prepareExpression(
     prepared = {
       shape: prepareKeyShape(followThrough.expression, key, limits, path),
       variable: followThrough.variable,
+      reading: followThrough.reading,
     };
   }
   return {
@@ -95,11 +102,14 @@ export function prepareExpression(
 }
 
 /**
- * The earlier response of a follow-through as an expression of the subset, an integer or a float as its value, or
- * `undefined` when it is NULL, blank, past a limit, or no expression: the key then stands alone.
+ * The earlier response of a follow-through, read as its own key reads it: a number with that key's decimal mark and fractions,
+ * or an expression of the subset with that key's decimal mark; with no reading, an expression with the decimal mark of the
+ * call's key. An integer or a float is its value. `undefined` when it is NULL, blank, past a limit, a number with a unit, or
+ * no expression: the key then stands alone.
  */
 export function readEarlierResponse(
   operand: Value | null | undefined,
+  reading: EarlierReading | null,
   separator: DecimalSeparator,
   limits: OperatorLimits,
 ): Node | undefined {
@@ -107,7 +117,15 @@ export function readEarlierResponse(
   if (text === undefined || text.length > limits.maxInputLength) return undefined;
   if (operand?.cardinality === "single" && typeof operand.value === "number")
     return Number.isFinite(operand.value) ? { kind: "number", value: operand.value } : undefined;
-  const shape = readResponseShape(text, separator, "expression", limits);
+  if (reading?.kind === "number") {
+    const written = isBlank(text)
+      ? undefined
+      : readNumberText(text, { separator: reading.decimalSeparator, fractions: reading.fractions });
+    return written === undefined || written.unit !== ""
+      ? undefined
+      : { kind: "number", value: toNumber(written.value) };
+  }
+  const shape = readResponseShape(text, reading?.decimalSeparator ?? separator, "expression", limits);
   return shape?.form === "expression" ? shape.node : undefined;
 }
 
@@ -127,7 +145,9 @@ export function scoreExpression(
   if (response === undefined) return null;
   const verdicts = [compareShapes(response, { shape: prepared.key }, prepared.ranges)];
   const earlier =
-    prepared.followThrough === null ? undefined : readEarlierResponse(operands[1], prepared.separator, limits);
+    prepared.followThrough === null
+      ? undefined
+      : readEarlierResponse(operands[1], prepared.followThrough.reading, prepared.separator, limits);
   if (prepared.followThrough !== null && earlier !== undefined) {
     const bindings = new Map([[prepared.followThrough.variable, earlier]]);
     verdicts.push(compareShapes(response, { shape: prepared.followThrough.shape, bindings }, prepared.ranges));

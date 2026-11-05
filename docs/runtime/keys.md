@@ -60,8 +60,9 @@ gives `maxPoints` scales the share to them.
 
 A `ScoredResponse` has an `identifier`, a QTI identifier; its `key`; `maxPoints`, its points (the key's own maximum);
 `weight`, the factor of its points in the item's score (1); and `followThrough`, on a `number` or `expression` key, the
-identifier of an earlier response (`from`), an `expression` in `variable` (`r`), which the earlier response replaces. The
-response earns the credit when it matches the key or that value.
+identifier of an earlier response (`from`), an `expression` in `variable` (`r`), which the earlier response replaces, read as
+the key of that response reads it ([operators](operators.md#the-calling-convention)). The response earns the credit when it
+matches the key or that value.
 
 ## Limits
 

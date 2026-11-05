@@ -523,6 +523,32 @@ describe("compileScoring", () => {
     expect(numberOf(outcomesOf(scoring, { R1: null, R2: one("string", "2\\cdot4") }).get("SCORE_R2"))).toBe(1);
   });
 
+  it("reads the earlier response of a follow-through as its own key reads it, 1.4e3 and a decimal comma included", () => {
+    const scoringOf = (earlier: Key, later: Key) =>
+      compileScoring([
+        { identifier: "R1", key: earlier },
+        { identifier: "R2", key: later, followThrough: { from: "R1", expression: "2r" } },
+      ]);
+    const later = (scoring: ItemScoring, first: string, second: string) =>
+      numberOf(outcomesOf(scoring, { R1: one("string", first), R2: one("string", second) }).get("SCORE_R2"));
+    const powers = scoringOf(
+      { kind: "number", value: 1500, units: {}, fractions: true },
+      { kind: "number", value: 3000 },
+    );
+    expect(later(powers, "1.4e3", "2800")).toBe(1);
+    expect(later(powers, "1 1/2", "3")).toBe(1);
+    const comma = scoringOf(
+      { kind: "number", value: 1.5, decimalSeparator: "," },
+      { kind: "expression", expression: "3" },
+    );
+    expect(later(comma, "1,4", "2.8")).toBe(1);
+    const expression = scoringOf(
+      { kind: "expression", expression: "2e" },
+      { kind: "number", value: 4 * Math.E, tolerance: { relative: 1e-9 } },
+    );
+    expect(later(expression, "1.4e3", String(2 * 1.4 * Math.E * 3))).toBe(1);
+  });
+
   it("totals several responses, with maxPoints, weight, all parts and the floor", () => {
     const responses: ScoredResponse[] = [
       { identifier: "R1", key: { kind: "choice", keys: ["A"] }, maxPoints: 2 },

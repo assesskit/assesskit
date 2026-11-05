@@ -116,7 +116,7 @@ describe("buildOperatorCall", () => {
           prefix: "operator",
           name: "options",
           value:
-            '{"followThrough":{"expression":"r^2","variable":"r"},"key":{"decimalSeparator":".","expression":"x^2","form":"expression","kind":"expression","variables":{"x":{"max":2,"min":1}}}}',
+            '{"followThrough":{"expression":"r^2","reading":null,"variable":"r"},"key":{"decimalSeparator":".","expression":"x^2","form":"expression","kind":"expression","variables":{"x":{"max":2,"min":1}}}}',
         },
       ],
       extensionElements: [],
@@ -731,6 +731,29 @@ describe("number-equivalent", () => {
     expect(share(score(built, text("2"), text("3")))).toBe(1);
     expect(share(score(built, text("2"), text("x")))).toBe(0);
     expect(share(score(built, text("2"), text("\\sqrt{-1}")))).toBe(0);
+  });
+
+  it("reads the earlier response as the reading of the options says, and as an expression with none", () => {
+    const followThrough = (reading: string) => {
+      const built = call({ operator: "number-equivalent", key: { kind: "number", value: 3000 } });
+      const value = `{"followThrough":{"expression":"2r"${reading}},"key":{"kind":"number","value":3000}}`;
+      return {
+        ...built,
+        operands: [...built.operands, { kind: "variable", identifier: "A" }],
+        extensions: [{ ...built.extensions[0], value }],
+      } as CustomOperatorExpression;
+    };
+    const number = followThrough(',"reading":{"decimalSeparator":",","fractions":true,"kind":"number"}');
+    expect(share(score(number, text("2800"), text("1,4e3")))).toBe(1);
+    expect(share(score(number, text("3"), text("1 1/2")))).toBe(1);
+    expect(share(score(number, text("2800"), text("1,4e3 m")))).toBe(0);
+    expect(share(score(number, text("2800"), text("1.4e3")))).toBe(0);
+    const none = followThrough("");
+    expect(share(score(none, text("2800"), text("1.4\\times10^3")))).toBe(1);
+    expect(share(score(none, text("2800"), text("1.4e3")))).toBe(0);
+    expect(() => score(followThrough(',"reading":{"kind":"text"}'), text("2800"), text("1400"))).toThrow(
+      "options.followThrough.reading",
+    );
   });
 
   it("refuses a follow-through beside intervals, or with another variable", () => {

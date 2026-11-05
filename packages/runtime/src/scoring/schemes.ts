@@ -3,6 +3,8 @@ import { DataError } from "../errors.js";
 import type { AreasKey, ExpressionKey, FollowThrough, NumberKey, TextKey } from "../keys/index.js";
 import { buildOperatorCall, OPERATOR_DEFINITIONS } from "../operators/index.js";
 import {
+  buildCallReading,
+  type EarlierReading,
   type NumberKeyData,
   type PreparedText,
   readAreasKey,
@@ -473,7 +475,12 @@ function numberValues(read: NumberKeyData): string[] {
  *
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-equal}
  */
-export function numberScheme(response: string, key: NumberKey, followThrough: FollowThrough | undefined): Scheme {
+export function numberScheme(
+  response: string,
+  key: NumberKey,
+  followThrough: FollowThrough | undefined,
+  reading: EarlierReading | null,
+): Scheme {
   const read = readNumberKey(key, followThrough);
   if (isPlainNumber(read, followThrough)) return plainNumberScheme(response, read);
   return {
@@ -483,9 +490,10 @@ export function numberScheme(response: string, key: NumberKey, followThrough: Fo
     minimum: 0,
     scoring: {
       kind: "share",
-      call: buildOperatorCall(
+      call: buildCallReading(
         { operator: "number-equivalent", key, ...(followThrough && { followThrough }) },
         response,
+        reading,
       ),
       definition: OPERATOR_DEFINITIONS["number-equivalent"],
     },
@@ -524,10 +532,12 @@ export function expressionScheme(
   response: string,
   key: ExpressionKey,
   followThrough: FollowThrough | undefined,
+  reading: EarlierReading | null,
 ): Scheme {
-  const call = buildOperatorCall(
+  const call = buildCallReading(
     { operator: "expression-equivalent", key, ...(followThrough && { followThrough }) },
     response,
+    reading,
   );
   return {
     declaration: declare(response, "single", "string", [key.expression]),

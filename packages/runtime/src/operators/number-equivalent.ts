@@ -6,7 +6,7 @@ import { checkVariableName, readEarlierResponse } from "./expression-equivalent.
 import type { OperatorLimits } from "./limits.js";
 import { collapseUnit, type NumberReading, readNumberText, type WrittenNumber } from "./number-text.js";
 import { checkOperandCount, isBlank, share, stringsOf } from "./operands.js";
-import { atPath, memberPath, type OptionsOf, optionsError, pathOf } from "./options.js";
+import { atPath, type EarlierReading, memberPath, type OptionsOf, optionsError, pathOf } from "./options.js";
 import { absolute, compare, fromNumber, multiply, type Rational, roundSignificant, subtract } from "./rational.js";
 import { readStatement } from "./read.js";
 import type { NumberKeyData } from "./schemas.js";
@@ -27,7 +27,11 @@ export interface PreparedNumber {
   /** The credit tiers, highest share first. */
   readonly tiers: readonly { readonly tolerance: ExactTolerance; readonly share: number }[];
   readonly components: readonly Rational[] | null;
-  readonly followThrough: { readonly node: Node; readonly variable: string } | null;
+  readonly followThrough: {
+    readonly node: Node;
+    readonly variable: string;
+    readonly reading: EarlierReading | null;
+  } | null;
 }
 
 function exactTolerance(tolerance: NumberKeyData["tolerance"]): ExactTolerance {
@@ -119,7 +123,7 @@ function prepareFollowThrough(
       path,
       `a number's follow-through is an expression of ${followThrough.variable} alone, found ${[...names].join(", ")}.`,
     );
-  return { node: shape.node, variable: followThrough.variable };
+  return { node: shape.node, variable: followThrough.variable, reading: followThrough.reading };
 }
 
 /** Whether a value lies within a tolerance of a target: within either bound when both are given; exactly with neither. */
@@ -175,7 +179,7 @@ function followThroughValue(
 ): Rational | undefined {
   const followThrough = prepared.followThrough;
   if (followThrough === null) return undefined;
-  const earlier = readEarlierResponse(operand, prepared.key.decimalSeparator, limits);
+  const earlier = readEarlierResponse(operand, followThrough.reading, prepared.key.decimalSeparator, limits);
   if (earlier === undefined) return undefined;
   const none: Measured = measured(complex(Number.NaN));
   const outside = { value: (): Measured => none, sign: (): 1 => 1 };

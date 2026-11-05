@@ -91,15 +91,15 @@ runResponseProcessing(item, answered, context).outcomes.get("SCORE"); // => { ca
 Every item that calls an operator fixes the convention, so it never changes for a published item; `buildOperatorCall`
 writes it and nothing else should.
 
-| Part     | Rule                                                                                                                                                                                                                                                                                                                                     |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Element  | `qti-custom-operator` with the operator's name as `class` and its `urn:uuid:` as `definition`, which names no brand. `createScoringOperators` registers the definitions, which processing looks up first                                                                                                                                 |
-| Operands | The first is the response, a `qti-variable`; the second, with a follow-through alone, the earlier response. The key is never an operand: QTI has no value for an area, an answer's points and patterns, or an expression's sample ranges                                                                                                 |
-| Options  | One attribute, `options`, in `OPERATOR_NAMESPACE`, read by namespace whatever its prefix: the call's `key` and `followThrough` (`expression` and `variable`) as RFC 8785 canonical JSON, with every default resolved, so that a later change of a default never changes a published score; a reader takes an absent field at its default |
-| Result   | A share of the response's points, a float from 0 to 1, or NULL for a blank, unreadable or undecided response, which processing scores 0; `readable` returns a boolean                                                                                                                                                                    |
-| Throws   | Only for the item: options that do not parse, that the operator refuses, or past a limit of a key. A candidate's input never makes an operator throw                                                                                                                                                                                     |
-| Versions | A definition names its operator's semantics: a change that alters any verdict takes a new definition, and the earlier ones stay registered                                                                                                                                                                                               |
-| Blank    | A NULL operand, an empty container, or strings of white space and the spacing commands `\,`, `\;`, `\:`, `\!`, `\quad`, `\qquad` and `~`                                                                                                                                                                                                 |
+| Part     | Rule                                                                                                                                                                                                                                                                                                                                                |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Element  | `qti-custom-operator` with the operator's name as `class` and its `urn:uuid:` as `definition`, which names no brand. `createScoringOperators` registers the definitions, which processing looks up first                                                                                                                                            |
+| Operands | The first is the response, a `qti-variable`; the second, with a follow-through alone, the earlier response. The key is never an operand: QTI has no value for an area, an answer's points and patterns, or an expression's sample ranges                                                                                                            |
+| Options  | One attribute, `options`, in `OPERATOR_NAMESPACE`, read by namespace whatever its prefix: the call's `key` and `followThrough` (`expression`, `variable` and `reading`) as RFC 8785 canonical JSON, with every default resolved, so that a later change of a default never changes a published score; a reader takes an absent field at its default |
+| Result   | A share of the response's points, a float from 0 to 1, or NULL for a blank, unreadable or undecided response, which processing scores 0; `readable` returns a boolean                                                                                                                                                                               |
+| Throws   | Only for the item: options that do not parse, that the operator refuses, or past a limit of a key. A candidate's input never makes an operator throw                                                                                                                                                                                                |
+| Versions | A definition names its operator's semantics: a change that alters any verdict takes a new definition, and the earlier ones stay registered                                                                                                                                                                                                          |
+| Blank    | A NULL operand, an empty container, or strings of white space and the spacing commands `\,`, `\;`, `\:`, `\!`, `\quad`, `\qquad` and `~`                                                                                                                                                                                                            |
 
 | Operator                | Response                                                                                                             | Options                                             | Result                                     |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------ |
@@ -109,9 +109,13 @@ writes it and nothing else should.
 | `hotspot-matching`      | `single`, `multiple` or `ordered` `point`; more points than areas is unreadable                                      | `{ key }`, an `areas` key of the scheme `keyed`     | Areas matched over `select`, at most 1     |
 | `readable`              | single `string`, or a container of strings                                                                           | `{ key }`, the `expression`, `number` or `text` key | Whether every string reads as its key does |
 
-A follow-through credits an answer that is right for an earlier response: the earlier response, read as an expression of the
-subset, replaces `variable` (default `r`) in `followThrough.expression`, and the response earns the credit when it matches
-the key or that value. A blank or unreadable earlier response leaves the key alone.
+A follow-through credits an answer that is right for an earlier response: the earlier response replaces `variable` (default
+`r`) in `followThrough.expression`, and the response earns the credit when it matches the key or that value. The earlier
+response reads as its own key reads it: `compileScoring` derives `followThrough.reading` from that key, a number with its
+decimal mark and fractions, so that `1.4e3` is 1400 and `1,4` is 1.4 under a decimal comma, or an expression with its decimal
+mark. A call that `buildOperatorCall` writes alone has no earlier key to read it from: its `reading` is `null`, and the earlier
+response reads as an expression of the subset with the decimal mark of the call's key, where `1.4e3` is 1.4 × e × 3. A blank
+or unreadable earlier response, or a number with a unit, leaves the key alone.
 
 ```ts
 import { buildOperatorCall, createScoringOperators, OPERATOR_DEFINITIONS } from "@assesskit/runtime/operators";
@@ -373,7 +377,7 @@ countLength(String.fromCodePoint(0x1f1ee, 0x1f1e9, 0x63, 0x61, 0x66, 0x65, 0x301
 | `maxSteps`                   | The most lines                                                     | 200                       |
 
 A key's fields have the defaults of the [key model](keys.md#kinds); `buildOperatorCall` writes each one resolved: a default that means none is
-`null` (`significantFigures`, `intervals`, `components`, `length`, a tolerance's bounds, `followThrough`), and one where empty
+`null` (`significantFigures`, `intervals`, `components`, `length`, a tolerance's bounds, `followThrough` and its `reading`), and one where empty
 means absent is the empty list or object (`units`, `credit`, `variables`, `patterns`, a rule's `effects`).
 
 ## Limits

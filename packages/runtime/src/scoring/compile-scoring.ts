@@ -2,6 +2,7 @@ import type { OutcomeDeclaration, ResponseDeclaration } from "../asi/index.js";
 import { checkArray, describe, parseWith } from "../checks.js";
 import { DataError, SecurityError } from "../errors.js";
 import { DEFAULT_KEY_LIMITS, type ExpressionKey, type NumberKey, type ScoredResponse } from "../keys/index.js";
+import { deriveEarlierReading } from "../operators/internal.js";
 import { BUILT_IN_CONTEXTS, BUILT_IN_OUTCOMES, BUILT_IN_RESPONSES } from "../processing/internal.js";
 import type { CompileScoringOptions, InteractionAttributes, ItemScoring } from "./item-scoring.js";
 import {
@@ -111,12 +112,22 @@ function entriesOf(key: Readonly<Record<string, unknown>>): number {
   }
 }
 
-/** Compiles the key of a response by its kind, reading it with the schema of the kind. */
-function compileKey(response: ScoredResponseData, original: ScoredResponse, label: string): Scheme {
+/**
+ * Compiles the key of a response by its kind, reading it with the schema of the kind; a follow-through reads its earlier
+ * response as the key of that response reads it.
+ */
+function compileKey(
+  response: ScoredResponseData,
+  original: ScoredResponse,
+  label: string,
+  earlier: ReadonlyMap<string, ScoredResponse["key"]>,
+): Scheme {
   const { identifier: id, key } = response;
   const followThrough = original.followThrough;
   if (followThrough !== undefined && key.kind !== "number" && key.kind !== "expression")
     throw new DataError(`${label}: followThrough is for a number or an expression key alone.`);
+  const from = followThrough === undefined ? undefined : earlier.get(followThrough.from);
+  const reading = from === undefined ? null : deriveEarlierReading(from);
   switch (key.kind) {
     case "choice":
       return choiceScheme(id, parseWith(choiceKeySchema, key, `The key of ${label}`));
@@ -135,9 +146,9 @@ function compileKey(response: ScoredResponseData, original: ScoredResponse, labe
     case "text":
       return textScheme(id, original.key as Extract<ScoredResponse["key"], { kind: "text" }>);
     case "number":
-      return numberScheme(id, original.key as NumberKey, followThrough);
+      return numberScheme(id, original.key as NumberKey, followThrough, reading);
     case "expression":
-      return expressionScheme(id, original.key as ExpressionKey, followThrough);
+      return expressionScheme(id, original.key as ExpressionKey, followThrough, reading);
   }
 }
 
@@ -290,7 +301,7 @@ export function compileScoring(responses: readonly ScoredResponse[], options?: C
     checkFollowThrough(original, named, earlier);
     let scheme: Scheme;
     try {
-      scheme = compileKey(response, original, named);
+      scheme = compileKey(response, original, named, earlier);
     } catch (error) {
       throw withResponse(error, named);
     }

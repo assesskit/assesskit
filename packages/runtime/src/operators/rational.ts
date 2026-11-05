@@ -82,6 +82,13 @@ export function roundSignificant(value: Rational, figures: number): Rational {
   return value.numerator < 0n ? { numerator: -result.numerator, denominator: result.denominator } : result;
 }
 
+/** The nearest double of a rational, or NaN when its numerator or denominator is past the doubles. */
+export function toNumber(value: Rational): number {
+  const numerator = Number(value.numerator);
+  const denominator = Number(value.denominator);
+  return Number.isFinite(numerator) && Number.isFinite(denominator) ? numerator / denominator : Number.NaN;
+}
+
 /** The text of a rational in lowest terms, `numerator/denominator`, so that equal values have equal texts. */
 export function canonicalText(value: Rational): string {
   const divisor = bigGcd(value.numerator < 0n ? -value.numerator : value.numerator, value.denominator);

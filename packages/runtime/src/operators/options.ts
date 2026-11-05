@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { parseWith, strictRecord } from "../checks.js";
+import { parseWith, recordSchema, strictRecord } from "../checks.js";
 import { DataError, SecurityError } from "../errors.js";
 import type { CustomOperatorExpression } from "../processing/index.js";
 import { OPERATOR_NAMESPACE, OPTIONS_ATTRIBUTE, type OperatorName } from "./definitions.js";
@@ -12,9 +12,37 @@ import {
   textKeySchema,
 } from "./schemas.js";
 
-/** A follow-through as the options carry it: its `from` is the second operand; none, and the variable `r`, by default. */
+const separatorSchema = v.optional(v.picklist([".", ","]), ".");
+
+/**
+ * How the earlier response of a follow-through reads, from its own key: a number with its decimal mark and fractions, or an
+ * expression with its decimal mark. `compileScoring` writes it from that key; with none, the earlier response reads as an
+ * expression with the decimal mark of the key of the call.
+ */
+const readingSchema = v.pipe(
+  recordSchema,
+  v.variant("kind", [
+    v.strictObject({
+      kind: v.literal("number"),
+      decimalSeparator: separatorSchema,
+      fractions: v.optional(v.boolean(), false),
+    }),
+    v.strictObject({ kind: v.literal("expression"), decimalSeparator: separatorSchema }),
+  ]),
+);
+
+/** How the earlier response of a follow-through reads, from its own key. */
+export type EarlierReading = v.InferOutput<typeof readingSchema>;
+
+/** A follow-through as the options carry it: its `from` is the second operand; none, the variable `r` and no reading by default. */
 const followThroughSchema = v.optional(
-  v.nullable(strictRecord({ expression: v.string(), variable: v.optional(v.string(), "r") })),
+  v.nullable(
+    strictRecord({
+      expression: v.string(),
+      variable: v.optional(v.string(), "r"),
+      reading: v.optional(v.nullable(readingSchema), null),
+    }),
+  ),
   null,
 );
 

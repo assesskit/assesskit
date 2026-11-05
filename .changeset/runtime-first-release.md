@@ -134,7 +134,10 @@ figures, credit tiers, intervals and components, in exact rationals), `text-equi
 `ガ` in every form), `hotspot-matching` (a maximum matching of points to keyed areas) and `readable`. `buildOperatorCall`
 writes the `qti-custom-operator` of a key, its options as RFC 8785 canonical JSON with every default resolved, and reads a
 call and its follow-through with strict schemas; the schemas of a key hold each field's default, and both a call and an item
-read a key through them. `compareMathSteps` checks worked steps line by line, and `countLength` counts words, grapheme
+read a key through them. A follow-through reads the earlier response as that response's own key reads it, a number with its
+decimal mark and fractions, so that `1.4e3` is 1400, or an expression with its decimal mark, which `compileScoring` derives
+from that key; a call without it reads an expression with the decimal mark of its own key. The patterns of a text key share
+the 100,000 states of one pattern. `compareMathSteps` checks worked steps line by line, and `countLength` counts words, grapheme
 clusters and the squares of a manuscript sheet; `pnpm unicode` writes the grapheme break table of Unicode 17.0.0.
 
 `@assesskit/runtime/scoring`: `compileScoring` compiles the keys of an item's responses into its response declarations, with
