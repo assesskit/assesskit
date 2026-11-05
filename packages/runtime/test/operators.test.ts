@@ -257,6 +257,64 @@ describe("buildOperatorCall", () => {
     );
   });
 
+  it("refuses a text key whose count, answers, points or length rule cannot score", () => {
+    const text = (key: Omit<Extract<Key, { kind: "text" }>, "kind">): OperatorCall => ({
+      operator: "text-equivalent",
+      key: { kind: "text", ...key },
+    });
+    expect(() => call(text({ answers: [{ texts: ["a"] }], count: 2 }))).toThrow(
+      "key.count: the count 2 is above the 1 answers.",
+    );
+    expect(() => call(text({ answers: [{ texts: [] }] }))).toThrow(
+      "key.answers[0]: an answer has a text or a pattern.",
+    );
+    expect(() => call(text({ answers: [{ texts: ["a"], points: 0 }] }))).toThrow(
+      "key.answers: the answers that the count takes earn no points.",
+    );
+    expect(() =>
+      call(
+        text({ answers: [{ texts: ["a"] }], length: { unit: "words", effects: [{ when: "above", effect: "zero" }] } }),
+      ),
+    ).toThrow("an effect above a bound needs the rule's max");
+  });
+
+  it("refuses an areas key with an id twice or coordinates that do not fit the shape", () => {
+    const areas = (...list: { id: string; shape: "rect" | "circle"; coords: number[] }[]): OperatorCall => ({
+      operator: "hotspot-matching",
+      key: { kind: "areas", scheme: "keyed", areas: list },
+    });
+    expect(() =>
+      call(areas({ id: "A", shape: "rect", coords: [0, 0, 1, 1] }, { id: "A", shape: "rect", coords: [2, 2, 3, 3] })),
+    ).toThrow('key.areas[1].id: the area id "A" is given twice.');
+    expect(() => call(areas({ id: "A", shape: "circle", coords: [0, 0] }))).toThrow(
+      "key.areas[0].coords: a circle cannot have 2 coordinates.",
+    );
+  });
+
+  it("refuses a number key whose units collapse to one, or whose significant figures exceed a response", () => {
+    expect(() => call({ operator: "number-equivalent", key: { kind: "number", value: 1, units: { " ": 1 } } })).toThrow(
+      "the unit is empty, or repeats another once white space is collapsed",
+    );
+    expect(() =>
+      call({ operator: "number-equivalent", key: { kind: "number", value: 1, units: { "m  s": 1, "m s": 2 } } }),
+    ).toThrow("repeats another once white space is collapsed");
+    expect(() =>
+      call({
+        operator: "number-equivalent",
+        key: { kind: "number", value: 1, significantFigures: DEFAULT_OPERATOR_LIMITS.maxInputLength + 1 },
+      }),
+    ).toThrow("more than a response of 2000 characters shows");
+    for (const expression of ["r=1", "r,r"]) {
+      expect(() =>
+        call({
+          operator: "number-equivalent",
+          key: { kind: "number", value: 1 },
+          followThrough: { from: "A", expression },
+        }),
+      ).toThrow("a number's follow-through is an expression, with no relation, list or \\pm");
+    }
+  });
+
   it("refuses a key past a limit of a key with a SecurityError", () => {
     const answers = Array.from({ length: DEFAULT_KEY_LIMITS.entries + 1 }, (_, index) => ({ texts: [`a${index}`] }));
     expect(() => call({ operator: "text-equivalent", key: { kind: "text", answers } })).toThrow(SecurityError);
@@ -363,6 +421,9 @@ describe("the comparator", () => {
       ["\\tanh\\sqrt{x}", "\\frac{\\sinh\\sqrt{x}}{\\cosh\\sqrt{x}}"],
       ["\\cosh\\sqrt{x}", "\\frac{e^{\\sqrt{x}}+e^{-\\sqrt{x}}}{2}"],
       ["\\arccos\\sqrt{x}", "\\frac{\\pi}{2}-\\arcsin\\sqrt{x}"],
+      ["\\arccos x", "\\frac{\\pi}{2}-\\arcsin x"],
+      ["\\left(\\sqrt{x}\\right)^{-2}", "\\frac{1}{x}"],
+      ["x+0^{\\frac{1}{2}}", "x"],
       ["\\left|\\sqrt{x}\\right|^2", "\\left|x\\right|"],
       ["\\sqrt{x}^{4}", "x^2"],
       ["\\sec^{-1}x", "\\cos x"],
@@ -375,6 +436,50 @@ describe("the comparator", () => {
   it("leaves a response undecided when fewer than 12 points are finite", () => {
     const key = expression({ expression: "x", variables: { x: { min: 1, max: 2 } } });
     expect(score(key, text("x+\\frac{1}{x-x}"))).toBeNull();
+  });
+
+  it("leaves 0 to a power that is not above 0 undefined, which no point of the key can use", () => {
+    expect(() => expression({ expression: "x+0^{-\\frac{1}{2}}" })).toThrow("fewer than 12");
+  });
+
+  it("scores a solution set as 0 when a value is an inequality, has no variable alone on its left, or the values name two variables", () => {
+    const roots = expression({ expression: "x=1,x=2", form: "solution-set" });
+    expect(share(score(roots, text("x=1,x=2")))).toBe(1);
+    for (const response of ["x<1", "x+1=2", "x=1,y=2", "1,x=2,y=3"]) {
+      expect(share(score(roots, text(response))), response).toBe(0);
+    }
+  });
+
+  it("scores a solution set as 0 when it names another variable than the key, and as NULL when its values are undefined", () => {
+    const roots = expression({ expression: "x=1,x=2", form: "solution-set" });
+    expect(share(score(roots, text("y=1,y=2")))).toBe(0);
+    expect(score(roots, text("x=\\frac{1}{x-x}"))).toBeNull();
+  });
+
+  it("scores an equation that holds at every point as 0, and leaves a follow-through that empties the key undecided", () => {
+    const equation = expression({ expression: "x=1", form: "equation" });
+    expect(share(score(equation, text("x=1")))).toBe(1);
+    expect(share(score(equation, text("x=x")))).toBe(0);
+    const emptied = call({
+      operator: "expression-equivalent",
+      key: { kind: "expression", expression: "x=1", form: "equation" },
+      followThrough: { from: "PART1", expression: "x=r" },
+    });
+    expect(score(emptied, text("x=2"), text("x"))).toBeNull();
+    expect(share(score(emptied, text("x=2"), text("2")))).toBe(1);
+  });
+
+  it("refuses a key that is a list, or not of its form", () => {
+    expect(() => expression({ expression: "x,x" })).toThrow("A list or a \\pm belongs to a solution set alone.");
+    expect(() => expression({ expression: "x=1" })).toThrow(
+      "The key is not of its form: A relation is not an expression.",
+    );
+    expect(() => expression({ expression: "x", form: "equation" })).toThrow(
+      "The key is not of its form: An equation is two sides joined by =.",
+    );
+    expect(() => expression({ expression: "x=1,y=2", form: "solution-set" })).toThrow(
+      "The key is not of its form: The solutions name more than one variable.",
+    );
   });
 
   it("draws a variable's values from its name alone, so that no call changes another", () => {
@@ -507,6 +612,17 @@ describe("expression-equivalent", () => {
       "does not read its operand 1",
     );
     expect(() => score(built, text("x"), text("y"))).toThrow("takes 1 operand");
+    const record: Value = {
+      cardinality: "record",
+      fields: new Map([["A", { cardinality: "single", baseType: "integer", value: 1 }]]),
+    };
+    expect(() => score(built, record)).toThrow("does not read its operand 1, a record");
+    const followed = call({
+      operator: "expression-equivalent",
+      key: { kind: "expression", expression: "x^2" },
+      followThrough: { from: "PART1", expression: "x^r" },
+    });
+    expect(() => score(followed, text("x^3"))).toThrow("takes 2 operands, found 1");
     const broken = { ...built, extensions: [{ ...built.extensions[0], value: "{" }] } as CustomOperatorExpression;
     expect(() => score(broken, text("x"))).toThrow("options are invalid at options: the attribute is not JSON");
     const missing = { ...built, extensions: [] } as CustomOperatorExpression;
@@ -627,6 +743,19 @@ describe("hotspot-matching", () => {
     expect(share(score(built, points([1, 1], [2, 2])))).toBe(0.5);
     expect(share(score(built, points([25, 20], [10, 10], [12, 12])))).toBe(1);
     expect(share(score(built, points([50, 50])))).toBe(0);
+  });
+
+  it("refuses an operand that is not a point or a container of points", () => {
+    const record: Value = {
+      cardinality: "record",
+      fields: new Map([["A", { cardinality: "single", baseType: "integer", value: 1 }]]),
+    };
+    expect(() => score(built, text("7 7"))).toThrow(
+      "hotspot-matching reads a point or a container of points, found single string.",
+    );
+    expect(() => score(built, record)).toThrow(
+      "hotspot-matching reads a point or a container of points, found a record.",
+    );
   });
 
   it("reads more points than areas as unreadable", () => {
