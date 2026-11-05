@@ -1,5 +1,4 @@
-import * as v from "valibot";
-import { checkRecord, describe, parseWith } from "../checks.js";
+import { parseWith } from "../checks.js";
 import { encodeBase64 } from "../values/index.js";
 import { serializeXml, type XmlElement, type XmlNode } from "../xml/index.js";
 import { elementBuilder } from "../xml/internal.js";
@@ -11,6 +10,7 @@ import {
   omitEntry,
   planExport,
   sortedLosses,
+  writeMoodleXmlOptionsSchema,
 } from "./export-items.js";
 import { isRelative, renameReferences } from "./file-references.js";
 import type { BankItem, ExportedItems, WriteMoodleXmlOptions } from "./model.js";
@@ -227,9 +227,6 @@ function category(path: string): XmlElement {
   ]);
 }
 
-/** The schema of the option `files`: a map of references to bytes. */
-const filesSchema = v.map(v.string(), v.instance(Uint8Array));
-
 /**
  * Writes items as a Moodle XML file that Moodle imports: each item that a question type holds, with its mark, the credit of
  * each answer and the feedback each shows learned by running the item's response processing, shuffling, case, the feedback by
@@ -256,9 +253,11 @@ const filesSchema = v.map(v.string(), v.instance(Uint8Array));
  * ```
  */
 export function writeMoodleXml(items: readonly BankItem[], options: WriteMoodleXmlOptions = {}): ExportedItems {
-  checkRecord(options, `The options must be an object, found ${describe(options)}`);
-  const { files: given = new Map<string, Uint8Array>(), ...writeOptions } = options;
-  const files: ReadonlyMap<string, Uint8Array> = parseWith(filesSchema, given, "The option files");
+  const { files = new Map<string, Uint8Array>(), ...writeOptions } = parseWith(
+    writeMoodleXmlOptionsSchema,
+    options,
+    "The options object",
+  );
   const plan = planExport(items, writeOptions);
   const questions: XmlElement[] = [];
   let current: string | undefined;

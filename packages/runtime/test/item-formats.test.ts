@@ -739,6 +739,12 @@ describe("errors", () => {
     expect(() => writeGift([], JSON.parse('{"limits":{"maxBytes":1}}'))).toThrow('unexpected property "maxBytes"');
     expect(() => readGift("", JSON.parse('{"bogus":1}'))).toThrow('unexpected property "bogus"');
     expect(() => readMoodleXml("", JSON.parse('{"limits":{"maxByte":1}}'))).toThrow('unexpected property "maxByte"');
+    // The writer of Moodle XML reads its options with one schema, as the writer of GIFT does.
+    for (const write of [writeGift, writeMoodleXml]) {
+      expect(() => write([], wrong.options)).toThrow("The options object is invalid: expected an object, found null.");
+    }
+    expect(() => writeMoodleXml([], JSON.parse('{"files": null}'))).toThrow("The options object is invalid at files:");
+    expect(() => writeGift([], JSON.parse('{"files": null}'))).toThrow('unexpected property "files"');
     const item = qtiItem(`<qti-item-body><p>x</p></qti-item-body>`);
     expect(() => writeGift([{ item, category: JSON.parse("5") }])).toThrow(DataError);
     expect(() => writeMoodleXml([{ item, tags: JSON.parse("[1]") }])).toThrow(DataError);

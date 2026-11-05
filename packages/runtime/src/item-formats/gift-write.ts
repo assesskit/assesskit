@@ -1,3 +1,4 @@
+import { parseWith } from "../checks.js";
 import {
   addLoss,
   type ExportEntry,
@@ -6,6 +7,7 @@ import {
   omitEntry,
   planExport,
   sortedLosses,
+  writeItemsOptionsSchema,
 } from "./export-items.js";
 import { isRelative, listReferences } from "./file-references.js";
 import type { BankItem, ExportedItems, WriteItemsOptions } from "./model.js";
@@ -272,7 +274,7 @@ function writeQuestion(entry: ExportEntry, plan: ExportPlan): string {
  * ```
  */
 export function writeGift(items: readonly BankItem[], options: WriteItemsOptions = {}): ExportedItems {
-  const plan = planExport(items, options);
+  const plan = planExport(items, parseWith(writeItemsOptionsSchema, options, "The options object"));
   let text = "";
   let category: string | undefined;
   for (const entry of plan.entries) {

@@ -1,11 +1,11 @@
 import * as v from "valibot";
-import { checkArray, checkRecord, describe, functionSchema, parseWith, strictRecord } from "../checks.js";
+import { checkArray, checkRecord, describe, functionSchema, strictRecord } from "../checks.js";
 import { DataError } from "../errors.js";
 import type { CustomOperator } from "../processing/index.js";
 import type { ItemLoss } from "./item-build.js";
 import { convertItem } from "./item-convert.js";
 import { DEFAULT_ITEM_FORMAT_LIMITS, writeLimitsSchema } from "./limits.js";
-import type { BankItem, ConversionLoss, WriteItemsOptions } from "./model.js";
+import type { BankItem, ConversionLoss, WriteItemsOptions, WriteMoodleXmlOptions } from "./model.js";
 import type { Question } from "./question.js";
 
 /** An item that a writer converted, with its place in the list, its category and tags, and what does not convert. */
@@ -22,24 +22,34 @@ export interface ExportPlan {
   readonly losses: ConversionLoss[];
 }
 
-const writeItemsOptionsSchema = strictRecord({
+/** The options that both writers take. */
+const WRITE_ITEMS_ENTRIES = {
   customOperators: v.optional(v.map(v.string(), functionSchema<CustomOperator>())),
   limits: v.optional(writeLimitsSchema),
+};
+
+/** The schema of {@link WriteItemsOptions}, the options of `writeGift`. */
+export const writeItemsOptionsSchema = strictRecord(WRITE_ITEMS_ENTRIES);
+
+/** The schema of {@link WriteMoodleXmlOptions}: those of `writeGift`, and the files that the items' content names. */
+export const writeMoodleXmlOptionsSchema = strictRecord({
+  ...WRITE_ITEMS_ENTRIES,
+  files: v.optional(v.map(v.string(), v.instance(Uint8Array))),
 });
 
 /**
  * Converts the items of a writer into questions, in order, and records what does not convert of each.
  *
- * @throws `DataError` when `items` is not an array of bank items, an item is not an object of the model of
- * `qti-assessment-item`, or an option has the wrong type.
+ * @param options - The options of the writer, which its schema has read.
+ * @throws `DataError` when `items` is not an array of bank items or an item is not an object of the model of
+ * `qti-assessment-item`.
  */
-export function planExport(items: readonly BankItem[], options: WriteItemsOptions): ExportPlan {
+export function planExport(
+  items: readonly BankItem[],
+  options: v.InferOutput<typeof writeItemsOptionsSchema>,
+): ExportPlan {
   checkArray(items, `The items must be an array, found ${describe(items)}`);
-  const { customOperators, limits = DEFAULT_ITEM_FORMAT_LIMITS } = parseWith(
-    writeItemsOptionsSchema,
-    options,
-    "The options object",
-  );
+  const { customOperators, limits = DEFAULT_ITEM_FORMAT_LIMITS } = options;
   const context = { operators: customOperators ?? new Map<string, CustomOperator>(), limits };
   const entries: ExportEntry[] = [];
   const losses: ConversionLoss[] = [];
