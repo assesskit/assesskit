@@ -13,27 +13,27 @@ xychart-beta
   title "Entry points after gzip, in kilobytes"
   x-axis ["root", "messages-id", "protocol", "client", "client/local", "player", "mountItem", "scoring", "cat", "cat-rest", "server", "engine (on demand)"]
   y-axis "kB" 0 --> 140
-  bar [9.5, 6.1, 0.1, 20.1, 9.6, 128.2, 98.7, 10.8, 21.8, 16.5, 51.3, 117.2]
+  bar [9.5, 6.1, 0.1, 20.1, 9.6, 128.7, 99.2, 10.8, 21.8, 16.5, 51.4, 117.2]
 ```
 
 | File                             | Bytes   | Gzip    | Budget  | What it holds                                                                                                                                                                                                                |
 | -------------------------------- | ------- | ------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@assesskit/player`              | 27,054  | 9,455   | 10,000  | The errors, the checks of the player and the interface messages in English                                                                                                                                                   |
-| `@assesskit/player/messages-id`  | 16,977  | 6,121   | 8,000   | The interface messages in Indonesian, which a host that shows Indonesian loads beside the player, and nothing else                                                                                                           |
+| `@assesskit/player`              | 27,118  | 9,486   | 10,000  | The errors, the checks of the player and the interface messages in English                                                                                                                                                   |
+| `@assesskit/player/messages-id`  | 16,992  | 6,132   | 8,000   | The interface messages in Indonesian, which a host that shows Indonesian loads beside the player, and nothing else                                                                                                           |
 | `@assesskit/player/protocol`     | 85      | 90      | 500     | The wire types, which compile to nothing, and the names of the two frames of an LTI item                                                                                                                                     |
-| `@assesskit/player/client`       | 62,482  | 20,062  | 25,000  | The remote session of an exam page, and the decoders of a view and of an action (`delivery/wire` with `interactions`, `pnp`, `values`, `xml`); no engine, and nothing loads on demand                                        |
-| `@assesskit/player/client/local` | 29,196  | 9,602   | 11,000  | The local session of practice (`package` for the paths of the package); the engine loads with `import()` at its first call                                                                                                   |
-| `@assesskit/player/player`       | 395,422 | 128,235 | 134,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions (`asi`, `content`, `interactions`, `package`, `pci`, `pnp`, `results`, `values`, `xml`, saxes) |
-| `mountItem`                      | 306,118 | 98,730  | 101,000 | The content, the interactions, the supports, speech with the reader of a pronunciation lexicon, and the host of portable custom interactions; no chrome and no tools                                                         |
+| `@assesskit/player/client`       | 62,639  | 20,127  | 25,000  | The remote session of an exam page, and the decoders of a view and of an action (`delivery/wire` with `interactions`, `pnp`, `values`, `xml`); no engine, and nothing loads on demand                                        |
+| `@assesskit/player/client/local` | 29,286  | 9,630   | 11,000  | The local session of practice (`package` for the paths of the package); the engine loads with `import()` at its first call                                                                                                   |
+| `@assesskit/player/player`       | 396,854 | 128,692 | 134,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions (`asi`, `content`, `interactions`, `package`, `pci`, `pnp`, `results`, `values`, `xml`, saxes) |
+| `mountItem`                      | 307,483 | 99,196  | 101,000 | The content, the interactions, the supports, speech with the reader of a pronunciation lexicon, and the host of portable custom interactions; no chrome and no tools                                                         |
 | `@assesskit/player/scoring`      | 35,051  | 10,770  | 13,000  | The actions that score and supply scores, with the protocol (`asi`, `processing`, `results`, `values`)                                                                                                                       |
 | `@assesskit/player/cat`          | 71,661  | 21,754  | 24,500  | The deployment of adaptive sections, which reads their files (`cat`, `delivery`, `metadata`, `package`, `values`, `xml`, saxes)                                                                                              |
-| `@assesskit/player/cat-rest`     | 52,145  | 16,514  | 18,000  | The client and the handler of the REST binding of a CAT engine (`cat`, `metadata`, `results`, `values`)                                                                                                                      |
-| `@assesskit/player/server`       | 161,181 | 51,261  | 62,000  | The session host, the asset gate and the stores, with the protocol, jose and the readers and JSON of the runtime; not the engine, which the host passes in                                                                   |
-| `@assesskit/runtime/delivery`    | 499,012 | 117,198 | 140,500 | The engine, which `createLocalSession` loads with `import()` for practice on a device                                                                                                                                        |
+| `@assesskit/player/cat-rest`     | 52,235  | 16,548  | 18,000  | The client and the handler of the REST binding of a CAT engine (`cat`, `metadata`, `results`, `values`)                                                                                                                      |
+| `@assesskit/player/server`       | 161,562 | 51,365  | 62,000  | The session host, the asset gate and the stores, with the protocol, jose and the readers and JSON of the runtime; not the engine, which the host passes in                                                                   |
+| `@assesskit/runtime/delivery`    | 498,950 | 117,219 | 140,500 | The engine, which `createLocalSession` loads with `import()` for practice on a device                                                                                                                                        |
 | `pci-frame/bridge.js`            | 11,151  | 4,117   | 5,000   | The script of the frame of a portable custom interaction                                                                                                                                                                     |
 | `pci-frame/require.js`           | 17,781  | 6,866   | 9,000   | RequireJS, which the frame loads                                                                                                                                                                                             |
 | `recorder-worklet.js`            | 322     | 250     | 500     | The script of the audio worklet of a WAV recording                                                                                                                                                                           |
-| `player.css`                     | 65,416  | 13,757  | 16,000  | The stylesheet of a content root                                                                                                                                                                                             |
+| `player.css`                     | 65,801  | 13,878  | 16,000  | The stylesheet of a content root                                                                                                                                                                                             |
 
 The sizes are bytes of the minified files of the first load. The names in brackets are the modules of the runtime that an
 entry point holds; every entry point but the Indonesian catalog also holds the runtime's `checks` and `errors` and valibot,
@@ -45,9 +45,11 @@ loads the content and the interactions that every mount shares. `bundle.test.ts`
 that imports only `mountItem`, and `size.test.ts` fails when it is not smaller than a bundle of `mountDelivery`. Both hold the
 reader of a pronunciation lexicon with its XML parser (`saxes` and the runtime's `xml`, 42 kB before gzip): reading aloud is
 part of every mount, and each bundler below puts the parser in the first load of `mountItem`, which without it would be
-88,939 bytes after gzip in place of 98,730 (measured on 2026-11-05). Loading the reader with `import()` does not take it out
-in esbuild, which splits by file: the entry point exports `readLexicon`, and the speech of the mounts writes SSML with the
-runtime's `xml`, whose index reaches the parser.
+88,939 bytes after gzip in place of 98,730 (measured on 2026-11-05). Loading the reader with `import()` when an item names a
+lexicon takes it out in three of the four bundlers below, and puts it back in esbuild, which splits by file: the entry point
+exports `readLexicon`, and the speech of the mounts writes SSML with the runtime's `xml`, whose index reaches the parser.
+Measured on the build: esbuild 99,849 in place of 99,036, Rollup 86,265 in place of 95,659, Rolldown 87,158 in place of
+95,686 and Bun 91,687 in place of 99,085, so the reader stays in the first load, which every bundler then loads alike.
 
 ## The first load of a client
 
@@ -63,10 +65,10 @@ The built packages, bundled in a project of their own, minified, with code split
 
 | What the page imports                 | esbuild 0.28.2 | Rollup 4.67.4 | Rolldown 1.2.15 (Vite 8) | Bun 1.4.4 |
 | ------------------------------------- | -------------- | ------------- | ------------------------ | --------- |
-| `createRemoteSession`, an exam page   | 19,923         | 18,992        | 19,179                   | 19,985    |
-| `createLocalSession`, a practice page | 9,426          | 8,347         | 8,889                    | 9,636     |
-| Both sessions                         | 39,363         | 23,760        | 24,881                   | 25,330    |
-| `mountItem`                           | 98,571         | 95,236        | 95,236                   | 98,678    |
+| `createRemoteSession`, an exam page   | 19,994         | 19,049        | 19,241                   | 20,061    |
+| `createLocalSession`, a practice page | 9,453          | 8,370         | 8,914                    | 9,668     |
+| Both sessions                         | 39,471         | 23,838        | 24,966                   | 25,402    |
+| `mountItem`                           | 99,036         | 95,659        | 95,686                   | 99,085    |
 
 No first load holds the runtime's processing, and each bundler puts the engine in a chunk that the local session loads on
 demand. A page with both sessions loads most with esbuild, which splits by file: a file that the first load reaches through
