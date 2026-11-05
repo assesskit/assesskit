@@ -76,7 +76,7 @@ describe("readModuleFiles", () => {
       };
     });
     try {
-      const { readModuleFiles: read } = await import("../src/node/read-module-files.js");
+      const { readModuleFiles: read } = await import("../src/node/index.js");
       const missing = Object.assign(new Error("ENOENT: no such file or directory"), { code: "ENOENT" });
       failures.readFile = missing;
       const notBuilt = await read("math-entry").catch((error: unknown) => error);
