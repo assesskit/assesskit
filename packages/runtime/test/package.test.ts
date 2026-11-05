@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import fc from "fast-check";
 import { unzipSync } from "fflate";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { DataError, ReadError, SecurityError } from "../src/errors.js";
 import { CP_NAMESPACE, DRD_NAMESPACE, LOM_NAMESPACE, QTI_METADATA_NAMESPACE } from "../src/metadata/index.js";
@@ -1282,6 +1282,50 @@ describe("writing packages", () => {
     expect(new TextDecoder().decode(unzipped["imsmanifest.xml"])).toBe(writeManifest(manifest));
   });
 
+  it.each([
+    ["UTC", 0],
+    ["Asia/Jakarta", -420],
+    ["America/New_York", 300],
+    ["Pacific/Kiritimati", 600],
+  ])("writes the same bytes in the time zone %s", (zone, offset) => {
+    vi.stubEnv("TZ", zone);
+    try {
+      expect(new Date(1980, 0, 1).getTimezoneOffset()).toBe(offset);
+      const files = new Map([
+        ["a.txt", bytes("x".repeat(500))],
+        ["ünï/b.bin", new Uint8Array([9, 8, 7])],
+      ]);
+      const zip = writePackage(manifest, files);
+      expect(createHash("sha256").update(zip).digest("hex")).toBe(
+        "df25a0a65037571b5d6f66190b542d70cc0953355a5b530d9ac51e4bf40d354d",
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("keeps the files in the order of the map, but for a name at the root that is a whole number, which comes first", () => {
+    const files = new Map([
+      ["b.txt", bytes("b")],
+      ["constructor", bytes("c")],
+      ["007", bytes("z")],
+      ["12", bytes("n")],
+      ["a/34", bytes("a")],
+    ]);
+    const pkg = readPackage(writePackage(manifest, files));
+    expect(pkg.paths).toEqual(["12", "imsmanifest.xml", "b.txt", "constructor", "007", "a/34"]);
+    expect(pkg.file("constructor")).toEqual(bytes("c"));
+  });
+
+  it("refuses a file named __proto__ at the root, which the library that writes the archive cannot hold", () => {
+    expect(() => writePackage(manifest, new Map([["__proto__", bytes("x")]]))).toThrow(
+      'A file at the root of a package cannot be named "__proto__"; move it to a folder or rename it.',
+    );
+    expect(readPackage(writePackage(manifest, new Map([["a/__proto__", bytes("x")]]))).file("a/__proto__")).toEqual(
+      bytes("x"),
+    );
+  });
+
   it("deflates an entry when that makes it smaller and stores it otherwise", () => {
     const text = bytes("a".repeat(1000));
     const zip = writePackage(
@@ -1635,7 +1679,9 @@ describe("properties", () => {
         // because the archive stores names, not a tree.
         const map = new Map(entries);
         const pkg = readPackage(writePackage(manifest, map));
-        expect(pkg.paths).toEqual(["imsmanifest.xml", ...map.keys()]);
+        // A name at the root that is a whole number comes first; the others keep the order of the map.
+        const others = [...map.keys()].filter((path) => path !== "1");
+        expect(pkg.paths).toEqual([...(map.has("1") ? ["1"] : []), "imsmanifest.xml", ...others]);
         for (const [path, data] of map) expect(pkg.file(path)).toEqual(data);
       }),
       { numRuns: 100 },

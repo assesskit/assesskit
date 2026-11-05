@@ -13,7 +13,7 @@ import { writeZip, type ZipEntry } from "./zip-writer.js";
  *
  * @param manifest - The manifest, written as in {@link writeManifest}.
  * @param files - The other files by path. A path must be normalized, which excludes absolute paths, `..` segments,
- * backslashes, drive letters and control characters, and must not be `imsmanifest.xml`.
+ * backslashes, drive letters and control characters, and must not be `imsmanifest.xml` or `__proto__`.
  * @returns The archive.
  * @throws `DataError` when an argument has the wrong type, the manifest is not valid, a path is not allowed, or the
  * archive would need ZIP64.
@@ -31,6 +31,10 @@ export function writePackage(manifest: Manifest, files: ReadonlyMap<string, Uint
     }
     if (path === MANIFEST_PATH)
       throw new DataError(`The files must not contain ${MANIFEST_PATH}: it is written from the manifest.`);
+    if (path === "__proto__")
+      throw new DataError(
+        'A file at the root of a package cannot be named "__proto__"; move it to a folder or rename it.',
+      );
     if (!(data instanceof Uint8Array))
       throw new DataError(`The bytes of ${describe(path)} must be a Uint8Array, found ${describe(data)}.`);
     entries.push({ name: path, data });

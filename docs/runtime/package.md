@@ -161,8 +161,10 @@ a file when `file(path)` asks for it; a package of 10,000 items costs the manife
 The reader supports stored and deflated entries, UTF-8 names, directory entries (left out of `paths`), data descriptors, archive
 comments and ZIP64 (the ZIP64 end of central directory record and locator, and the 64-bit values in the extra field). It does not
 read archives in several parts, other compression methods, or encrypted entries. `writePackage` writes the classic format only:
-it throws a `DataError` for more than 65,534 files or an archive of 4 GiB or more. It writes the manifest first, then the files in the order of the map, deflated when that makes them smaller, with one fixed
-time stamp, so that equal input gives equal bytes.
+it throws a `DataError` for more than 65,534 files or an archive of 4 GiB or more. It writes through `zipSync` of `fflate`: the manifest first, then the files in the order of the map, deflated when that makes them
+smaller, with one fixed time stamp, so that equal input gives equal bytes in every time zone. `zipSync` holds its files in a plain
+object, so a file at the root whose name is a whole number, such as `12`, comes first, and a file named `__proto__` at the root is
+refused.
 
 ### Why the reader is written here
 
