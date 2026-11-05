@@ -27,10 +27,8 @@ const PLAYER_SOURCES = [
 ];
 
 /**
- * The limit of a test in the projects whose tests do seconds of work on the CPU, and in the browser projects, where each
- * press of a test is a round trip between the runner and the browser. It is there to catch a hang, and not to judge speed:
- * a host that runs many test runs at once takes tens of times as long as a quiet one, and a test of a calculator that presses
- * twenty keys took more than the 15 seconds of Vitest's default in Firefox on a starved CPU.
+ * The limit of a test in the projects whose tests do seconds of work on the CPU. It is there to catch a hang, and not to
+ * judge speed: a host that runs many test runs at once takes tens of times as long as a quiet one.
  */
 const HANG_LIMIT = 60_000;
 
@@ -121,7 +119,6 @@ export default defineConfig({
           name: "player-browser",
           include: ["packages/player/test/**/*.browser.test.ts"],
           globalSetup: [...GLOBAL_SETUP, EXAM_SETUP, LTI_SETUP],
-          testTimeout: HANG_LIMIT,
           browser: browser(),
         },
       },
@@ -186,7 +183,6 @@ export default defineConfig({
           name: "custom-interactions-browser",
           include: ["packages/custom-interactions/test/**/*.browser.test.ts"],
           globalSetup: ["packages/custom-interactions/test/fixtures/browser-setup.ts"],
-          testTimeout: HANG_LIMIT,
           browser: { ...browser(), commands: { ...COMMANDS, ...CUSTOM_INTERACTION_COMMANDS } },
         },
       },
