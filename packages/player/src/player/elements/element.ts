@@ -6,7 +6,7 @@ import { matchValues, normalizeValue, type Value } from "@assesskit/runtime/valu
 import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";
 import type { BodyRenderer } from "../content/index.js";
-import { type CustomMessages, instructionText, violationText } from "./hints.js";
+import { type CustomMessages, hintCanChange, instructionText, violationText } from "./hints.js";
 import type { Notes } from "./notes.js";
 
 /** The name of the event that an interaction element dispatches when the candidate changes a response. */
@@ -281,6 +281,7 @@ export abstract class InteractionElement extends ElementBase {
       ...this.extraHints(messages),
     ]);
     notes.setInstruction(instructionText(descriptor, messages));
+    notes.keepHintRoom(!this.#disabled && hintCanChange(descriptor));
     notes.setHints([...texts]);
     const describedBy = notes.describedBy();
     for (const control of this.controls()) {

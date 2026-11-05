@@ -2098,8 +2098,16 @@ qti-choice-interaction > .ak-notes {
   content: "! ";
 }
 
+/* STANDARDS 10: the hint of an interaction whose response can break a rule keeps its line while the candidate responds, so
+   that a hint that comes or goes moves nothing that follows; the limits are set once at the render, and a hint that cannot
+   change takes no room while it is empty. */
+
+div.ak-hint-room {
+  min-block-size: calc(var(--ak-leading) * 1em);
+}
+
 .ak-instruction:empty,
-.ak-hint:empty {
+.ak-hint:empty:not(.ak-hint-room) {
   display: none;
 }
 

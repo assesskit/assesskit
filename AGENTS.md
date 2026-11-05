@@ -238,7 +238,12 @@ that the player needs and the runtime lacks is a change in the runtime, with its
 - A status or message the player writes after an action keeps its room whether or not it has text: the style gives it a
   `min-height` and never `display: none` when empty, so that what follows does not move under a pointer and a button that
   moves between press and release does not lose its click. A new live region gets a browser test that holds the position of the
-  element after it across the write (STANDARDS section 10).
+  element after it across the write (STANDARDS section 10). Room is kept only for what can appear after the render: the hint
+  of an interaction keeps its line while the candidate responds when a response given through the controls can break a rule
+  (`hintCanChange` of `elements/hints.ts`), and a note set once at the render, such as the limits, or a hint that the controls
+  rule out, takes none while it is empty. A status that can grow beyond its line stands after the controls it describes, so
+  that its growth moves nothing a pointer aims at; where a control must follow it, it keeps the room of its longest message
+  at the width it has.
 
 ## The state format
 

@@ -103,6 +103,34 @@ describe("choice", () => {
     expect(scene.interaction().classList.contains("qti-orientation-horizontal")).toBe(true);
   });
 
+  it("keeps the line of its hint while a response can break a rule, so that what follows does not move as a hint comes", async () => {
+    const scene = mountScene(declare("multiple", "identifier"), `${Body('max-choices="2"')}<p class="after">After</p>`);
+    const after = scene.find("p.after");
+    const before = boxOf(after);
+    const inputs = scene.findAll<HTMLInputElement>("input");
+    for (const input of inputs) await userEvent.click(input);
+    expect(scene.find(".ak-hint").textContent).not.toBe("");
+    expect(boxOf(after)).toEqual(before);
+    await userEvent.click(inputs[2] ?? scene.host);
+    expect(scene.find(".ak-hint").textContent).toBe("");
+    expect(boxOf(after)).toEqual(before);
+  });
+
+  it("has no line for a hint where the controls hold every rule: one choice at most, or no limit", () => {
+    for (const attributes of ["", 'max-choices="0"']) {
+      const scene = mountScene(declare(attributes === "" ? "single" : "multiple", "identifier"), Body(attributes));
+      expect(getComputedStyle(scene.find(".ak-hint")).display, attributes).toBe("none");
+      scene.host.remove();
+    }
+  });
+
+  it("gives up the line of its hint while the candidate cannot respond, since the hint does not change then", () => {
+    const scene = mountScene(declare("multiple", "identifier"), Body('max-choices="2"'));
+    expect(getComputedStyle(scene.find(".ak-hint")).display).not.toBe("none");
+    scene.interaction().disabled = true;
+    expect(getComputedStyle(scene.find(".ak-hint")).display).toBe("none");
+  });
+
   it("says in text, tied to the controls, that too many choices are selected, in the words of the item", async () => {
     const scene = mountScene(
       declare("multiple", "identifier"),

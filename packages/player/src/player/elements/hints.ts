@@ -150,3 +150,55 @@ export function instructionText(descriptor: InteractionDescriptor, messages: Mes
     ...noteworthy(messages.hintMaxStrings, maxStrings),
   ].join(" ");
 }
+
+/** The base types of a number that a text holds, whose text the element reads as a number and hints at when it is not one. */
+const NUMBER_TYPES: ReadonlySet<string> = new Set(["integer", "float"]);
+
+/**
+ * Returns whether a response that the candidate gives through the controls can break a rule of the interaction, so that a
+ * hint can come during the interaction and its line is kept: more or fewer choices, points or pairs than the limits, a text
+ * that the pattern or the number refuses, too few plays, a file of a type the interaction does not take.
+ *
+ * @remarks
+ * The controls hold some rules themselves: a group of radio buttons one choice, a list of inline choices one of them, a
+ * slider a value within its bounds on its steps, and the player of a media interaction its most plays. A drawing hints when
+ * its picture does not load, which comes after the render.
+ *
+ * @param descriptor - The descriptor of the interaction.
+ * @returns Whether the hint can change while the interaction takes input.
+ */
+export function hintCanChange(descriptor: InteractionDescriptor): boolean {
+  const {
+    minChoices = 0,
+    maxChoices = 0,
+    minStrings,
+    maxStrings,
+    patternMask,
+    minPlays = 0,
+    mimeTypes,
+  } = descriptor.constraints;
+  switch (descriptor.kind) {
+    case "choice-interaction":
+    case "hotspot-interaction":
+    case "hottext-interaction":
+      // A maximum of 0 is no limit, and one choice at most is a group of radio buttons.
+      return maxChoices >= 2 || minChoices >= 2;
+    case "inline-choice-interaction":
+    case "slider-interaction":
+      return false;
+    case "extended-text-interaction":
+    case "text-entry-interaction":
+      return (
+        patternMask !== undefined ||
+        minStrings !== undefined ||
+        maxStrings !== undefined ||
+        NUMBER_TYPES.has(descriptor.declaration?.baseType ?? "")
+      );
+    case "media-interaction":
+      return minPlays >= 2;
+    case "upload-interaction":
+      return mimeTypes !== undefined;
+    default:
+      return true;
+  }
+}
