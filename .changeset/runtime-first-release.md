@@ -130,7 +130,8 @@ processing, an engine and validation. `createScoringOperators` gives five, by `u
 seeded comparator in complex arithmetic whose verdicts equal SymPy's), `number-equivalent` (units, fractions, significant
 figures, credit tiers, intervals and components, in exact rationals), `text-equivalent` (normalization, patterns, the
 `words` scheme, credit tiers by edit distance, length rules and `numericEquivalence`, under which `.5`, `0.50`, `5e-1` and
-`1/2` are one value), `hotspot-matching` (a maximum matching of points to keyed areas) and `readable`. `buildOperatorCall`
+`1/2` are one value; `foldWidth` normalizes a text to its form again after it folds the widths, so that halfwidth `ｶﾞ` matches
+`ガ` in every form), `hotspot-matching` (a maximum matching of points to keyed areas) and `readable`. `buildOperatorCall`
 writes the `qti-custom-operator` of a key, its options as RFC 8785 canonical JSON with every default resolved, and reads a
 call and its follow-through with strict schemas; the schemas of a key hold each field's default, and both a call and an item
 read a key through them. `compareMathSteps` checks worked steps line by line, and `countLength` counts words, grapheme

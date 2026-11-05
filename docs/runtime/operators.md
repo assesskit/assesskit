@@ -242,7 +242,7 @@ score(of("3.142"), figures).value; // => 0
 ## Texts
 
 `text-equivalent` normalizes the response and each answer alike, in this order: `form` (default NFKC); `foldWidth`, the
-Halfwidth and Fullwidth Forms block by NFKC (default on); `ignoreMarks`, nonspacing marks removed after NFD and the text
+Halfwidth and Fullwidth Forms block by NFKC and the text normalized to `form` again, so that `ｶﾞ` is `ガ` (default on); `ignoreMarks`, nonspacing marks removed after NFD and the text
 normalized back to `form` (default off); lower case by `toLowerCase` unless `caseSensitive` (default off); `collapseWhitespace`,
 each run of Unicode White_Space one space and the ends trimmed (default on). A string matches an answer when it equals one of
 its `texts` or fully matches one of its `patterns`, XSD regular expressions compiled by `compileXsdRegex`, or, with

@@ -60159,6 +60159,966 @@
     "49/4"
    ],
    "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30ac\u30a4\u30c9"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFC",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\uff76\uff9e\uff72\uff84\uff9e"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff76\uff9e\uff72\uff84\uff9e"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFC",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\u30ac\u30a4\u30c9"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30ac\u30a4\u30c9"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFC",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\uff76\uff9e\uff72\uff84\uff9e"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff76\uff9e\uff72\uff84\uff9e"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFC",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\u30ac\u30a4\u30c9"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30ac\u30a4\u30c9"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFD",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\uff76\uff9e\uff72\uff84\uff9e"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff76\uff9e\uff72\uff84\uff9e"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFD",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\u30ac\u30a4\u30c9"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30ac\u30a4\u30c9"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFD",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\uff76\uff9e\uff72\uff84\uff9e"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff76\uff9e\uff72\uff84\uff9e"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFD",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\u30ac\u30a4\u30c9"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30ac\u30a4\u30c9"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKC",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\uff76\uff9e\uff72\uff84\uff9e"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff76\uff9e\uff72\uff84\uff9e"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKC",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\u30ac\u30a4\u30c9"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30ac\u30a4\u30c9"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKC",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\uff76\uff9e\uff72\uff84\uff9e"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff76\uff9e\uff72\uff84\uff9e"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKC",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\u30ac\u30a4\u30c9"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30ac\u30a4\u30c9"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKD",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\uff76\uff9e\uff72\uff84\uff9e"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff76\uff9e\uff72\uff84\uff9e"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKD",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\u30ac\u30a4\u30c9"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30ac\u30a4\u30c9"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKD",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\uff76\uff9e\uff72\uff84\uff9e"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff76\uff9e\uff72\uff84\uff9e"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKD",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\u30ac\u30a4\u30c9"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30d1\u30f3"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFC",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\uff8a\uff9f\uff9d"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff8a\uff9f\uff9d"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFC",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\u30d1\u30f3"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30d1\u30f3"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFC",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\uff8a\uff9f\uff9d"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff8a\uff9f\uff9d"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFC",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\u30d1\u30f3"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30d1\u30f3"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFD",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\uff8a\uff9f\uff9d"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff8a\uff9f\uff9d"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFD",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\u30d1\u30f3"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30d1\u30f3"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFD",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\uff8a\uff9f\uff9d"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff8a\uff9f\uff9d"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFD",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\u30d1\u30f3"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30d1\u30f3"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKC",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\uff8a\uff9f\uff9d"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff8a\uff9f\uff9d"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKC",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\u30d1\u30f3"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30d1\u30f3"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKC",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\uff8a\uff9f\uff9d"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff8a\uff9f\uff9d"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKC",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\u30d1\u30f3"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30d1\u30f3"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKD",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\uff8a\uff9f\uff9d"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff8a\uff9f\uff9d"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKD",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\u30d1\u30f3"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30d1\u30f3"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKD",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\uff8a\uff9f\uff9d"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff8a\uff9f\uff9d"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKD",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\u30d1\u30f3"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30dd\u30c6\u30c8"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFC",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\uff8e\uff9f\uff83\uff84"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff8e\uff9f\uff83\uff84"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFC",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\u30dd\u30c6\u30c8"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30dd\u30c6\u30c8"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFC",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\uff8e\uff9f\uff83\uff84"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff8e\uff9f\uff83\uff84"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFC",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\u30dd\u30c6\u30c8"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30dd\u30c6\u30c8"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFD",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\uff8e\uff9f\uff83\uff84"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff8e\uff9f\uff83\uff84"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFD",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\u30dd\u30c6\u30c8"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30dd\u30c6\u30c8"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFD",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\uff8e\uff9f\uff83\uff84"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff8e\uff9f\uff83\uff84"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFD",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\u30dd\u30c6\u30c8"
+   ],
+   "share": 0.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30dd\u30c6\u30c8"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKC",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\uff8e\uff9f\uff83\uff84"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff8e\uff9f\uff83\uff84"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKC",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\u30dd\u30c6\u30c8"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30dd\u30c6\u30c8"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKC",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\uff8e\uff9f\uff83\uff84"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff8e\uff9f\uff83\uff84"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKC",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\u30dd\u30c6\u30c8"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30dd\u30c6\u30c8"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKD",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\uff8e\uff9f\uff83\uff84"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff8e\uff9f\uff83\uff84"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKD",
+     "foldWidth": true
+    }
+   },
+   "response": [
+    "\u30dd\u30c6\u30c8"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\u30dd\u30c6\u30c8"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKD",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\uff8e\uff9f\uff83\uff84"
+   ],
+   "share": 1.0
+  },
+  {
+   "key": {
+    "kind": "text",
+    "answers": [
+     {
+      "texts": [
+       "\uff8e\uff9f\uff83\uff84"
+      ]
+     }
+    ],
+    "normalization": {
+     "form": "NFKD",
+     "foldWidth": false
+    }
+   },
+   "response": [
+    "\u30dd\u30c6\u30c8"
+   ],
+   "share": 1.0
   }
  ]
 }

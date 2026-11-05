@@ -8,7 +8,7 @@ The share is computed here: each answer's texts and each response string normali
 `str.lower`, the most points that a matching of answers to strings keeps, found by trying every matching, then the credit
 of the strings left and the effects of the length rule. With numeric equivalence a string also matches an answer's text when both read as the same number, by the
 reading of `numbers.py` with the decimal mark `.` and fractions, as exact fractions. The characters come from blocks whose normalization and case are the
-same in Node's ICU and Python's `unicodedata`, Latin, Greek, Cyrillic, the Halfwidth and Fullwidth Forms and CJK.
+same in Node's ICU and Python's `unicodedata`, Latin, Greek, Cyrillic, Katakana, the Halfwidth and Fullwidth Forms and CJK.
 
 Run from the repository root, in a venv from `validation/operators/requirements.txt`:
 
@@ -55,7 +55,8 @@ def split_white_space(text):
 def normalize(text, normalization):
     result = unicodedata.normalize(normalization["form"], text)
     if normalization["foldWidth"]:
-        result = "".join(unicodedata.normalize("NFKC", c) if 0xFF00 <= ord(c) <= 0xFFEF else c for c in result)
+        folded = "".join(unicodedata.normalize("NFKC", c) if 0xFF00 <= ord(c) <= 0xFFEF else c for c in result)
+        result = unicodedata.normalize(normalization["form"], folded)
     if normalization["ignoreMarks"]:
         stripped = "".join(c for c in unicodedata.normalize("NFD", result) if unicodedata.category(c) != "Mn")
         result = unicodedata.normalize(normalization["form"], stripped)
@@ -223,13 +224,28 @@ def number_cases():
     return cases
 
 
+# Katakana words with voiced and semi-voiced marks, in full width and in the Halfwidth and Fullwidth Forms, where the mark is a
+# character of its own: folded by NFKC and normalized to the form again, the two widths are one text.
+WIDTHS = {"ガイド": "ｶﾞｲﾄﾞ", "パン": "ﾊﾟﾝ", "ポテト": "ﾎﾟﾃﾄ"}
+
+
+def width_cases():
+    """Keys in each form, with and without foldWidth, against each word in the other width."""
+    cases = []
+    for (full, half), form, fold in itertools.product(WIDTHS.items(), ["NFC", "NFD", "NFKC", "NFKD"], [True, False]):
+        for text, response in [(full, half), (half, full)]:
+            key = {"kind": "text", "answers": [{"texts": [text]}], "normalization": {"form": form, "foldWidth": fold}}
+            cases.append({"key": key, "response": [response], "share": share_of([response], key)})
+    return cases
+
+
 def main(path):
     fixture = {
         "generator": "validation/operators/texts.py",
         "seed": SEED,
         "python": platform.python_version(),
         "unidata": unicodedata.unidata_version,
-        "cases": text_cases() + number_cases(),
+        "cases": text_cases() + number_cases() + width_cases(),
     }
     with open(path, "w", encoding="utf-8") as file:
         json.dump(fixture, file, indent=1, ensure_ascii=True)

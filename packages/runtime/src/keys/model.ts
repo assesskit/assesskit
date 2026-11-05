@@ -137,7 +137,7 @@ export interface TextNormalization {
    */
   readonly form?: "NFC" | "NFD" | "NFKC" | "NFKD";
   /**
-   * Whether the Halfwidth and Fullwidth Forms block is mapped by NFKC.
+   * Whether the Halfwidth and Fullwidth Forms block is mapped by NFKC, the text then normalized to `form` again.
    *
    * @defaultValue `true`
    */

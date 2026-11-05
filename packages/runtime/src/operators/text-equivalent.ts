@@ -24,14 +24,15 @@ const { maxStates: KEY_PATTERN_STATES } = DEFAULT_XSD_REGEX_LIMITS;
 
 /**
  * Normalizes a text as `text-equivalent` does, in this order: `form`; `foldWidth`, which maps the Halfwidth and Fullwidth
- * Forms block by NFKC; `ignoreMarks`, which removes nonspacing marks after NFD and normalizes back to `form`; lower case by
+ * Forms block by NFKC and normalizes the text to `form` again, so that `ｶﾞ` is `ガ`; `ignoreMarks`, which removes nonspacing marks after NFD and normalizes back to `form`; lower case by
  * `toLowerCase` unless `caseSensitive`; `collapseWhitespace`, which turns runs of Unicode White_Space into one space and trims.
  *
  * @see {@link https://www.unicode.org/reports/tr15/ | Unicode Standard Annex #15, Unicode Normalization Forms}
  */
 function normalizeText(text: string, normalization: TextKeyData["normalization"]): string {
   let result = text.normalize(normalization.form);
-  if (normalization.foldWidth) result = result.replace(WIDTH_FORMS, (character) => character.normalize("NFKC"));
+  if (normalization.foldWidth)
+    result = result.replace(WIDTH_FORMS, (character) => character.normalize("NFKC")).normalize(normalization.form);
   if (normalization.ignoreMarks)
     result = result.normalize("NFD").replace(NONSPACING_MARK, "").normalize(normalization.form);
   if (!normalization.caseSensitive) result = result.toLowerCase();
