@@ -593,7 +593,7 @@ describe("the content of a question", () => {
 
   it("names a question by the start of its text, skips an empty identifier, and gives up an image without its source", () => {
     const { items, losses } = readGift(
-      '// [id:] [tag:x]\n<b>Unnamed</b> question whose text is long enough to need a name cut by Moodle\'s shorten_text after eighty characters {=a}\n\n[html]<p><img alt="x">pic <math><mi mathvariant="bold">x</mi></math></p>{}',
+      '// [id:] [tag:x]\n<b>Unnamed</b> question whose text is long enough to need a name cut by Moodle\'s shorten_text after eighty characters {=a}\n\n[html]<p><img alt="x">pic <math><mi class="unit">x</mi></math></p>{}',
     );
     expect(items.map(({ item, tags = [] }) => [item.identifier, item.title, tags])).toStrictEqual([
       ["item-1", "Unnamed question whose text is long enough to need a name cut by Moodle's ...", ["x"]],
@@ -601,7 +601,7 @@ describe("the content of a question", () => {
     ]);
     const essay = items[1]?.item;
     expect(essay === undefined ? "" : writeAsi({ kind: "item", item: essay })).toContain(
-      '<p>pic <math xmlns="http://www.w3.org/1998/Math/MathML"><mi mathvariant="bold">x</mi></math></p>',
+      '<p>pic <math xmlns="http://www.w3.org/1998/Math/MathML"><mi class="unit">x</mi></math></p>',
     );
     expect(losses.map(({ item, message }) => [item, message])).toStrictEqual([
       ["item-2", "The elements img are not QTI content where they stand: their content is kept without them."],
