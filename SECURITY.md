@@ -422,7 +422,8 @@ the coordinates of the areas in fours), and `patternLength`, 1,000 characters of
 `text-equivalent` keeps while it scores; more is a `SecurityError` with `limit` `maxStates`. `compileScoring` takes `responses`, 256 responses of an item; it counts the entries of a key before it reads
 it. `compareMathSteps` takes at most `maxSteps` lines, 200 by default, and refuses more with a `SecurityError`.
 
-Item formats (`ItemFormatLimits`; option `limits` of `readGift` and `writeGift`):
+Item formats (`ItemFormatLimits`; option `limits` of `readGift` and `readMoodleXml`, and `maxAnswers` alone of `writeGift` and
+`writeMoodleXml`):
 
 | Limit          | Default    | Unit     | Largest example | Applies to                                                                                       |
 | -------------- | ---------- | -------- | --------------- | ------------------------------------------------------------------------------------------------ |
