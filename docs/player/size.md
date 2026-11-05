@@ -118,8 +118,8 @@ phone is, and fails when the fastest of 5 samples is above its budget. The files
 
 | Mount                                                      | On the CI runner | On a laptop | Budget |
 | ---------------------------------------------------------- | ---------------- | ----------- | ------ |
-| `mountDelivery` over a test, until the first item is shown | 30 ms            | 5 ms        | 200 ms |
-| 10 calls of `mountItem` on one page, until all are shown   | 73 ms            | 16 ms       | 400 ms |
+| `mountDelivery` over a test, until the first item is shown | 30 ms            | 8 ms        | 200 ms |
+| 10 calls of `mountItem` on one page, until all are shown   | 73 ms            | 8 ms        | 400 ms |
 | Turning on the highlighter over a passage of 2,000 words   | 48 ms            | 14 ms       | 300 ms |
 
 A budget is five times the fastest sample, the median over three runs, rounded up to one significant digit: the rule of the
@@ -127,7 +127,9 @@ other benchmarks of the repository ([performance](../runtime/performance.md#budg
 runner took, because the gate runs there. The runner takes 4 to 6 times as long as a laptop, and one run of it takes up to 1.4
 times as long as another on the same code (`mountDelivery` 23.9, 30.1 and 33.2 ms), so a budget of five times the sample of a
 laptop fails on the runner with no change in the code. A mount must become several times slower on the runner before it fails
-its budget; the sizes above guard the load.
+its budget; the sizes above guard the load. The times of the laptop are those of 2026-11-05, after the messages of a mount
+are checked once for all its parts and elements (the catalog has hundreds of keys, and the check of each part took 88% of the
+time of a lesson page); the times of the runner are of the run before.
 
 ### Against the Amp-up player
 
@@ -139,14 +141,14 @@ rather than at each frame, in turns over 5 samples; the gate compares the fastes
 
 | Row                                             | The player | Amp-up  | Ratio | Budget (ratio) |
 | ----------------------------------------------- | ---------- | ------- | ----- | -------------- |
-| A lesson page of ten items from their documents | 26.5 ms    | 13.8 ms | 1.92  | 3              |
+| A lesson page of ten items from their documents | 10.1 ms    | 14.6 ms | 0.69  | 3              |
 
-The times are those of the laptop, from the run whose ratio is the median of six; the ratios of the six runs were 1.4 to 2.1,
-and the budget is the median with the headroom of the [rows against Longsight](../runtime/performance.md#against-the-references).
-The player draws each item in shadow roots of its own, with the stylesheet of a content root, a status region and the controls
-of the supports, where the Amp-up player draws plain elements; with the sessions made, the player takes 21 ms for the same page
-(the lesson row above), so the drawing is most of its time, and the runtime's reading, gate and start of the ten items the
-rest. A local session loads the engine with `import()` once for a page, not once for each session.
+The times are those of the laptop, from the run whose ratio is the median of three on 2026-11-05; the ratios of the three runs
+were 0.42 to 0.73, and the budget is the median of the six runs before the check of the messages was made once, 1.4 to 2.1,
+with the headroom of the [rows against Longsight](../runtime/performance.md#against-the-references). The player draws each
+item in shadow roots of its own, with the stylesheet of a content root, a status region and the controls of the supports, where
+the Amp-up player draws plain elements; with the sessions made, the player takes 8 ms for the same page (the lesson row
+above), and the runtime's reading, gate and start of the ten items the rest. A local session loads the engine with `import()` once for a page, not once for each session.
 
 The times do not include loading and parsing the bundle, which `size.test.ts` bounds by bytes: with the CPU slowed 4 times
 the bundle of `mountDelivery` loaded, parsed and evaluated in 47 ms, and that of `mountItem` in 46 ms.

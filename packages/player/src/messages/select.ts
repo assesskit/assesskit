@@ -48,5 +48,9 @@ export function selectMessages(language: string, options: SelectMessagesOptions 
   );
   const tag = language.toLowerCase();
   const primary = tag.split("-")[0] ?? tag;
-  return { ...EN_MESSAGES, ...byTag.get(primary), ...byTag.get(tag) };
+  const ofLanguage = byTag.get(primary);
+  const ofTag = byTag.get(tag);
+  if (ofLanguage === undefined && ofTag === undefined) return EN_MESSAGES;
+  // Frozen, so that the parts of a mount check the messages once.
+  return Object.freeze({ ...EN_MESSAGES, ...ofLanguage, ...ofTag });
 }

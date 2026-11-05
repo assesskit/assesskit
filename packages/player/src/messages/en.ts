@@ -1,7 +1,7 @@
 import type { Messages } from "./messages.js";
 
 /** The messages in English, which a catalog in another language falls back to. */
-export const EN_MESSAGES: Messages = {
+export const EN_MESSAGES: Messages = Object.freeze({
   interactiveQuestion: "Interactive question",
   toolRule: "Ruler",
   toolProtractor: "Protractor",
@@ -405,4 +405,4 @@ export const EN_MESSAGES: Messages = {
   ltiUnavailable: "The tool for this question could not be started.",
   ltiClosed: "The tool for this question is no longer open.",
   ltiStorageFrame: "Storage for the tool",
-};
+});

@@ -8,7 +8,7 @@
 import type { Messages } from "../index.js";
 
 /** The messages in Indonesian. */
-export const ID_MESSAGES: Messages = {
+export const ID_MESSAGES: Messages = Object.freeze({
   interactiveQuestion: "Soal interaktif",
   toolRule: "Penggaris",
   toolProtractor: "Busur derajat",
@@ -412,4 +412,4 @@ export const ID_MESSAGES: Messages = {
   ltiUnavailable: "Alat untuk soal ini tidak dapat dijalankan.",
   ltiClosed: "Alat untuk soal ini sudah tidak terbuka.",
   ltiStorageFrame: "Penyimpanan untuk alat",
-};
+});

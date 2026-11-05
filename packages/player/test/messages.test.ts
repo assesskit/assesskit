@@ -4,6 +4,7 @@ import messagesGuide from "../../../docs/player/messages.md?raw";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { EN_MESSAGES, type Messages, selectMessages } from "../src/index.js";
 import { ID_MESSAGES } from "../src/messages/id/index.js";
+import { checkMessages } from "../src/messages/internal.js";
 import { fuzzJson } from "./fuzz.js";
 
 /** Passes catalogs to `selectMessages` as JSON delivers them, which TypeScript does not check. */
@@ -34,6 +35,43 @@ describe("the catalogs", () => {
       const texts = Object.values(catalog).map((text) => text.toLowerCase());
       expect(new Set(texts).size).toBe(texts.length);
     }
+  });
+});
+
+describe("checkMessages", () => {
+  /** A frozen copy of the English messages that counts the reads of its messages. */
+  const counted = (): { readonly messages: Messages; reads(): number } => {
+    let reads = 0;
+    const messages = new Proxy(Object.freeze({ ...EN_MESSAGES }), {
+      get: (target, key, receiver) => {
+        reads += 1;
+        return Reflect.get(target, key, receiver);
+      },
+    });
+    return { messages, reads: () => reads };
+  };
+
+  it("checks frozen messages once, since the parts of a mount check the messages that they share", () => {
+    const { messages, reads } = counted();
+    checkMessages(messages);
+    const first = reads();
+    expect(first).toBeGreaterThanOrEqual(Object.keys(EN_MESSAGES).length);
+    checkMessages(messages);
+    expect(reads()).toBe(first);
+  });
+
+  it("checks messages that can change each time, so that a message changed after a check is refused", () => {
+    const messages: Record<string, unknown> = { ...EN_MESSAGES };
+    checkMessages(messages);
+    messages.readAloud = 1;
+    expect(() => checkMessages(messages)).toThrow(DataError);
+  });
+
+  it("gives frozen messages from selectMessages, and the catalogs of the package frozen", () => {
+    expect(Object.isFrozen(EN_MESSAGES)).toBe(true);
+    expect(Object.isFrozen(ID_MESSAGES)).toBe(true);
+    expect(Object.isFrozen(selectMessages("id", { catalogs: INDONESIAN }))).toBe(true);
+    expect(selectMessages("fr")).toBe(EN_MESSAGES);
   });
 });
 
