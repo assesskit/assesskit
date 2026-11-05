@@ -3,7 +3,7 @@ import { DataError } from "@assesskit/runtime/errors";
 import { createScoringOperators } from "@assesskit/runtime/operators";
 import { readManifest, readPackage, writePackage } from "@assesskit/runtime/package";
 import { validatePackage } from "@assesskit/runtime/validate";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { writeCharacterModule } from "../src/index.js";
 import { readModuleFiles } from "../src/node/index.js";
@@ -60,6 +60,38 @@ describe("readModuleFiles", () => {
     await expect(readModuleFiles("math-entry", { signal: AbortSignal.abort() })).rejects.toThrow(
       expect.objectContaining({ name: "AbortError" }),
     );
+  });
+
+  it("says that the package lacks its built modules, and passes on a folder that it cannot list", async () => {
+    const failures: { readFile?: Error; readdir?: Error } = {};
+    vi.resetModules();
+    vi.doMock("node:fs/promises", async (importOriginal) => {
+      const fs = await importOriginal<typeof import("node:fs/promises")>();
+      return {
+        ...fs,
+        readFile: (...args: Parameters<typeof fs.readFile>) =>
+          failures.readFile === undefined ? fs.readFile(...args) : Promise.reject(failures.readFile),
+        readdir: (...args: Parameters<typeof fs.readdir>) =>
+          failures.readdir === undefined ? fs.readdir(...args) : Promise.reject(failures.readdir),
+      };
+    });
+    try {
+      const { readModuleFiles: read } = await import("../src/node/read-module-files.js");
+      const missing = Object.assign(new Error("ENOENT: no such file or directory"), { code: "ENOENT" });
+      failures.readFile = missing;
+      const notBuilt = await read("math-entry").catch((error: unknown) => error);
+      expect(notBuilt).toMatchObject({ name: "AssesskitError", cause: missing });
+      expect((notBuilt as Error).message).toMatch(
+        /^The module of math-entry is not built in .+: build the package with pnpm build\.$/u,
+      );
+      delete failures.readFile;
+      const denied = Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" });
+      failures.readdir = denied;
+      await expect(read("math-entry")).rejects.toBe(denied);
+    } finally {
+      vi.doUnmock("node:fs/promises");
+      vi.resetModules();
+    }
   });
 });
 
