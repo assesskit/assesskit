@@ -161,7 +161,7 @@ export async function rig(files: Readonly<Record<string, string>> = examFiles({ 
   const scores = toolScoreStore();
   const outbox: MemoryOutbox = memoryOutbox();
   const pkg = packageOf(files);
-  const host = await sessionHostOver(pkg, clock, { log: outboxLog(outbox) });
+  const host = await sessionHostOver(pkg, clock, outboxLog(outbox));
   const intake: ToolScoreIntake = createToolScoreIntake({ host, scores, scoredBy: async () => SCORER });
 
   // The tools of the platform role: the registrations, the ledger of single-use identifiers and the cache of key sets.

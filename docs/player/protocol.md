@@ -173,7 +173,7 @@ after the test ended while their request exists.
 | `pending`, `scorerView` | Load the session, then ask the engine                                                                      | Queued behind earlier calls, so they see the state those calls left                                                        |
 | `results`               | Branded                                                                                                    | Never branded, so `buildSessionScore` refuses it                                                                           |
 | After `close()`         | A session host has no `close`                                                                              | `apply` and `subscribeSteps` throw `DataError`; the reads still work                                                       |
-| Step feed               | `forward.log(step)` for every step with events, in every process, the start included                       | `subscribeSteps(listener)` for the steps with events that are saved after the call                                         |
+| Step feed               | `onStep(step)` for every step with events, in every process, the start included                            | `subscribeSteps(listener)` for the steps with events that are saved after the call                                         |
 | Scorer view             | Holds the correct responses: call it only from a rater's endpoint, never from a candidate's                | Holds the correct responses by design, because the device holds them already                                               |
 
 A signal reaches every call that waits on a store or a service.

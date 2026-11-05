@@ -201,7 +201,7 @@ function sourceOf(
 export interface LocalHostSession extends HostSession {
   /**
    * Calls the listener with the events of every step that the session saves after this call, the candidate's and the
-   * host's, in order, after the view listeners have run. A step with no events calls no listener, as `forward.log` is not
+   * host's, in order, after the view listeners have run. A step with no events calls no listener, as `onStep` is not
    * called for one, and a refused action makes no step.
    *
    * @param listener - The function to call.

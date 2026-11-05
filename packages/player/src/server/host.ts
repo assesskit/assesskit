@@ -93,10 +93,9 @@ const hostOptionsSchema = v.strictObject({
   gate: methodsSchema<AssetGate>("sign"),
   packages: functionSchema<(session: string, options?: CallOptions) => Promise<QtiPackage>>(),
   clientActions: v.optional(v.unknown()),
-  profileBreaks: v.optional(v.boolean()),
   maxIdleMs: v.optional(v.unknown()),
   limits: v.optional(recordSchema),
-  forward: v.optional(v.strictObject({ log: functionSchema<StepSink>() })),
+  onStep: v.optional(functionSchema<StepSink>()),
   cat: v.optional(methodsSchema<CatSessionPort>("createSession", "submitResults", "endSession")),
 });
 
@@ -137,9 +136,9 @@ function loggedAction(action: CandidateAction | HostAction, at: number): string 
  * - **Saving.** The store saves by version; a conflict reloads and handles the request again.
  * - **Signals.** A call with an aborted `signal` stops before its next load and applies nothing. The signal reaches the
  *   store, the scheduler and `packages`. After the save it is ignored, so that forwarding completes.
- * - **Events.** After the save, the events of the step go to the `log` of {@link SessionHostOptions.forward}. If it
- *   throws, the step stays saved and the error reaches the caller. Nothing repeats the step by itself, so a host that needs
- *   every event makes its `log` durable.
+ * - **Events.** After the save, the events of the step go to {@link SessionHostOptions.onStep}. If it throws, the step
+ *   stays saved and the error reaches the caller. Nothing repeats the step by itself, so a host that needs every event
+ *   makes its `onStep` durable.
  *
  * @param options - See {@link SessionHostOptions}.
  * @returns The session host.
@@ -156,14 +155,12 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     gate,
     packages,
     limits = {},
-    forward,
+    onStep,
     cat,
     maxIdleMs,
   } = options;
-  const { profileBreaks = true } = options;
   const policy = readClientActions(options.clientActions ?? EXAM_CLIENT_ACTIONS);
-  const policyOf = (state: DeliveryState): ReadonlySet<CandidateActionType> =>
-    profileBreaks ? withBreaks(policy, state) : policy;
+  const policyOf = (state: DeliveryState): ReadonlySet<CandidateActionType> => withBreaks(policy, state);
   if (maxIdleMs !== undefined && !policy.has("suspend")) {
     throw new DataError(
       'The option maxIdleMs counts a long gap as a suspension, which the option clientActions does not let a client take: it has no "suspend". Add "suspend" to clientActions for a host where candidates may pause, and leave maxIdleMs out for an exam.',
@@ -224,8 +221,8 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     step: "start" | number,
     { events, supplied }: Pick<NonNullable<Attempt<unknown>["change"]>, "events" | "supplied">,
   ): Promise<void> => {
-    if (forward === undefined || events.length === 0) return;
-    await forward.log({ session, step, events, ...(supplied === undefined ? {} : { supplied }) });
+    if (onStep === undefined || events.length === 0) return;
+    await onStep({ session, step, events, ...(supplied === undefined ? {} : { supplied }) });
   };
 
   /**

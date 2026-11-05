@@ -372,7 +372,7 @@ export async function examHost(
     clock,
     gate,
     packages: async () => pkg,
-    forward: { log: (step) => void logged.push(step) },
+    onStep: (step) => void logged.push(step),
     ...extra,
   });
   return { pkg, engine, clock, store, scheduler, gate, host, logged, fileStore };

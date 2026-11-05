@@ -11,7 +11,7 @@ sequenceDiagram
   participant H as SessionHost
   participant S as SessionStore
   participant Q as Scheduler
-  participant F as forward.log
+  participant F as onStep
   B->>R: POST ActionEnvelope
   R->>H: handle(caller, envelope)
   H->>S: load(session)
@@ -34,7 +34,7 @@ sequenceDiagram
 | `SessionStore`, `StoredSession`, `SessionSave`                       | The storage of sessions                                                              |
 | `Scheduler`, `FileStore`, `ToolScoreStore`, `ToolScore`              | The scheduler of time-outs, the storage of files, the storage of the scores of tools |
 | `createAssetGate` and the gate's types                               | The [asset gate](asset-gate.md)                                                      |
-| `StepEvents`, `StepSink`, `SuppliedGrade`, `ForwardOptions`          | What the host does with the events of each step                                      |
+| `StepEvents`, `StepSink`, `SuppliedGrade`                            | What the host does with the events of each step                                      |
 | `createToolScoreIntake`, `ToolScoreIntake`, `ToolScoreIntakeOptions` | The scores of tool items                                                             |
 | `SYSTEM_CLOCK`                                                       | The clock of the machine                                                             |
 
@@ -123,10 +123,9 @@ records.get("s1").version; // => 1
 | `gate`          | `AssetGate`                                  | Signs the prefixes of each envelope.                                                                                                                                           |
 | `packages`      | `(session, options?) => Promise<QtiPackage>` | The package that a session delivers; the gate takes the same function. It may ignore the options.                                                                              |
 | `clientActions` | `CandidateActionType[]`                      | The types of action a client may send. Default: every type but `suspend` and `resume` (`EXAM_CLIENT_ACTIONS`).                                                                 |
-| `profileBreaks` | `boolean`                                    | Whether a candidate whose profile has breaks may send `suspend` and `resume` beside `clientActions` ([the policy](#client-action-policy)). Default: `true`.                    |
 | `maxIdleMs`     | `number`                                     | The longest gap between steps, in milliseconds, that counts as time on task, as on `createLocalSession`. Needs `suspend` in `clientActions`; never for an exam. Default: none. |
 | `limits`        | `Partial<ActionLimits>`                      | The limits on the size of an action, as the runtime's `readCandidateAction` takes them; give the remote client the same ones. Default: the runtime's.                          |
-| `forward`       | `ForwardOptions`                             | Where the events of each step go: the host's `log`. Default: nowhere.                                                                                                          |
+| `onStep`        | `StepSink`                                   | The host's log: receives every saved step that has events ([forwarding the steps](#forwarding-the-steps)). Default: none, so that the events go nowhere.                       |
 | `cat`           | `CatSessionPort`                             | The port of the CAT engines: the host then answers its own CAT requests ([CAT](cat.md#the-option-cat)). Default: none.                                                         |
 
 | Method                               | What it does                                                                                                                                                                                                                                                                                          |
@@ -170,7 +169,7 @@ sequenceDiagram
 | `scorerView(request, options?)` | What a rater needs, correct responses included. Call it only from a rater's endpoint.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `results(options?)`             | The results report, branded: the one object that `buildSessionScore` accepts. A copy of it is not branded.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
-The step feed of a session host is `forward.log`, which every process calls after the save of each step with events; a
+The step feed of a session host is `onStep`, which every process calls after the save of each step with events; a
 local session has `subscribeSteps` instead ([protocol](protocol.md#the-host-session)). The host reads the score of a session
 with `results()` and `pending()` and gives them to `buildSessionScore` ([scoring](scoring.md#the-score-of-a-session)).
 
@@ -214,7 +213,8 @@ never offers such an action. Practice allows every action, and so does a host th
 A candidate whose profile has breaks (`environment` with `breaks`, on) may also send `suspend` and `resume`: CERT asks that such a
 candidate can pause the assessment to take a break and return without losing a response or incurring a penalty (`A-11`). The
 session keeps every response while it is suspended and its clocks stop, so the break costs no time; the chrome offers Pause the test
-and Resume the test. A program whose breaks go through the proctor only sets `profileBreaks: false`.
+and Resume the test. A program whose breaks all go through the proctor leaves `breaks` out of the profile that it starts the
+session with: the profile is the host's, never the client's.
 
 ### The proctor
 
@@ -300,21 +300,21 @@ ignore it. `FileStore` and the gate take none, and neither does the `log`: forwa
 
 ## Forwarding the steps
 
-`forward.log` receives each saved step that has events, as a `StepEvents`: the session, the step, the events as the runtime gave
+`onStep` receives each saved step that has events, as a `StepEvents`: the session, the step, the events as the runtime gave
 them, and `supplied` on every step of a `supply-scores` action. It is the one place where the host sees what happened, so a host
-composes its event sink and its score sink in it. Both are jobs of the host: the log only appends to an outbox, and a job outside
+composes its event sink and its score sink in it. Both are jobs of the host: `onStep` only appends to an outbox, and a job outside
 any step reads `results()` and `pending()` from `session(id)`, calls `buildSessionScore`, and publishes. [LTI items](lti-items.md)
 shows the wiring.
 
 The events carry no score unless the host builds its engine with `eventOutcomes`: `response-processed` then holds the outcomes
 of the item after each attempt, with `attempt` and `duration`, which are always present ([events](../runtime/delivery.md#events)).
-A host that feeds a learner model reads them in the `log` and so never calls `results()` after a step. The log, its outbox and its
+A host that feeds a learner model reads them in `onStep` and so never calls `results()` after a step. The log, its outbox and its
 sinks then hold scores, so they need the protection of the results ([SECURITY.md](../../SECURITY.md)). The events never reach a
 candidate: a candidate's answer is a view.
 
 ```mermaid
 flowchart LR
-  S[Step saved] --> L[forward.log]
+  S[Step saved] --> L[onStep]
   L -->|resolves| R[The call answers]
   L -->|rejects| X[The call rejects,<br/>the step stays saved]
   X --> A{Inside the<br/>answer loop?}
@@ -399,7 +399,7 @@ supplied.length; // => 2
 
 The intake and the host need each other: the host logs through the intake's `settle`, and the intake supplies through the host.
 Create the intake with `host: { session: (id) => host.session(id) }`, then the host with
-`forward: { log: (step) => intake.settle(step) }`.
+`onStep: (step) => intake.settle(step)`.
 
 A host that logs in other ways calls `settle` after its own log, or from a job. The intake does not publish the results: that is
 the job of the host, which calls `buildSessionScore` when the session is over, and again when a person or a tool supplies the rest.
@@ -584,14 +584,14 @@ The host throws the runtime's `DataError` for a request it refuses and the playe
 
 ## Not included
 
-| Not included                                       | Why                                                                                                                                                    |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Authentication and routes                          | The host authenticates and passes `caller`; the host owns the URLs, the statuses and the transport                                                     |
-| A database, a queue or a file system               | `SessionStore`, `Scheduler`, `FileStore` and `ToolScoreStore` are the ports; the host chooses PostgreSQL, S3 or others behind them                     |
-| A scoring service                                  | The host supplies scores through `supply-scores`, or through the intake of the tool scores                                                             |
-| Who may proctor, and the proctor's page            | The host calls `proctor` for the people it trusts; the player has no proctor interface                                                                 |
-| LTI, Caliper and the other protocols of a platform | [interopkit](https://github.com/interopkit/interopkit) implements them; the host has the ports `forward.log` and `buildSessionScore` to plug them into |
-| Logging and metrics                                | The player never logs; the host wraps the stores and the log                                                                                           |
+| Not included                                       | Why                                                                                                                                               |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Authentication and routes                          | The host authenticates and passes `caller`; the host owns the URLs, the statuses and the transport                                                |
+| A database, a queue or a file system               | `SessionStore`, `Scheduler`, `FileStore` and `ToolScoreStore` are the ports; the host chooses PostgreSQL, S3 or others behind them                |
+| A scoring service                                  | The host supplies scores through `supply-scores`, or through the intake of the tool scores                                                        |
+| Who may proctor, and the proctor's page            | The host calls `proctor` for the people it trusts; the player has no proctor interface                                                            |
+| LTI, Caliper and the other protocols of a platform | [interopkit](https://github.com/interopkit/interopkit) implements them; the host has the ports `onStep` and `buildSessionScore` to plug them into |
+| Logging and metrics                                | The player never logs; the host wraps the stores and the log                                                                                      |
 ## Differences from the references
 
 None. No specification defines a session host: it applies the runtime's engine to the actions that a client sends, and [spec gaps](../runtime/spec-gaps.md) gives the resolutions of the specifications that the engine applies.

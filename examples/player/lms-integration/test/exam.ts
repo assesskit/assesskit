@@ -1,9 +1,9 @@
 import {
   createAssetGate,
   createSessionHost,
-  type ForwardOptions,
   type SessionHost,
   type SessionStore,
+  type StepSink,
   type StoredSession,
 } from "@assesskit/player/server";
 import { ASI_NAMESPACE } from "@assesskit/runtime/asi";
@@ -103,9 +103,9 @@ function memoryStore(): SessionStore {
  *
  * @param pkg - The package of the exam.
  * @param clock - The time of the server.
- * @param forward - Where the events of each step go.
+ * @param onStep - The host's log, which receives the events of each step.
  */
-export async function sessionHostOver(pkg: QtiPackage, clock: Clock, forward: ForwardOptions): Promise<SessionHost> {
+export async function sessionHostOver(pkg: QtiPackage, clock: Clock, onStep: StepSink): Promise<SessionHost> {
   const document = pkg.document("tests/exam.xml");
   if (document.kind !== "test") throw new Error("The exam is not a test.");
   const engine = createEngine({
@@ -129,6 +129,6 @@ export async function sessionHostOver(pkg: QtiPackage, clock: Clock, forward: Fo
     clock,
     gate,
     packages,
-    forward,
+    onStep,
   });
 }

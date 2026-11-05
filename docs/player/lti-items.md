@@ -12,7 +12,7 @@ flowchart LR
     runtime["@assesskit/runtime<br/>readLtiLink, resolveLaunchUrl,<br/>the item with SCORE and MAXSCORE"]
     subgraph player["@assesskit/player"]
       frame["player: the frames of the tool<br/>LtiLogin"]
-      srv["server: the session host<br/>forward.log, createToolScoreIntake"]
+      srv["server: the session host<br/>onStep, createToolScoreIntake"]
       scoring["scoring: buildSessionScore"]
     end
   end
@@ -51,7 +51,7 @@ resolveLaunchUrl(link); // => "https://tool.example/launch"
 | ----------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------- |
 | `LtiLogin`, `LtiFrame`                    | The player asks the host to start the tool of an item | `ltiLogin` of `mountDelivery` ([delivery](delivery.md#lti-items))          |
 | `createToolScoreIntake`, `ToolScoreStore` | The score of the tool comes in as `supply-scores`     | `@assesskit/player/server` ([server](server.md#the-scores-of-tool-items))  |
-| `forward.log`, `StepSink`                 | The session host gives each saved step to the host    | `@assesskit/player/server` ([server](server.md#forwarding-the-steps))      |
+| `onStep`, `StepSink`                      | The session host gives each saved step to the host    | `@assesskit/player/server` ([server](server.md#forwarding-the-steps))      |
 | `buildSessionScore`                       | The host reads the score of a session as plain data   | `@assesskit/player/scoring` ([scoring](scoring.md#the-score-of-a-session)) |
 
 ## The wiring
@@ -75,7 +75,7 @@ sequenceDiagram
   K->>G: keepScore(caller, session, line item, score)
   G->>S: intake.onScore(session, item, ToolScore)
   S-->>G: supply-scores applied
-  S->>H: forward.log(step)
+  S->>H: onStep(step)
   H->>J: append to the outbox
   J->>S: results(), pending()
   J->>K: buildSessionScore, then the grade of the session
@@ -118,7 +118,7 @@ or writes its own against the ports; neither family imports the other.
 | Not included                                        | Why                                                                                      |
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | The launch, the grade services, the roster, Caliper | They are protocols between learning platforms: interopkit implements them                |
-| A `forward.scores` or an event sink in `forward`    | The host's `log` and a job do both; a field can be added later without breaking a host   |
+| A score sink or an event sink beside `onStep`       | `onStep` and a job do both; a field can be added later without breaking a host           |
 | A launch of an item with no `ltiLogin`              | The player shows "The tool for this question could not be started." and the test goes on |
 ## Differences from the references
 

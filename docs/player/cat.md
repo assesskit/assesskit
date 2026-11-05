@@ -97,7 +97,7 @@ flowchart TD
   q{"Does the standard carry QTI constructs,<br/>and nobody uses it without QTI?"}
   q -->|yes| a["assesskit: CAT 1.0 REST binding, in cat-rest"]
   q -->|"no: it serves any learning tool"| i["interopkit: LTI 1.3, Caliper 1.2"]
-  i -->|"plugs in through ports"| p["the player: LtiLogin, forward.log,<br/>buildSessionScore, createToolScoreIntake"]
+  i -->|"plugs in through ports"| p["the player: LtiLogin, onStep,<br/>buildSessionScore, createToolScoreIntake"]
 ```
 
 ## Why the token request is written here

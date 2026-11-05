@@ -134,7 +134,7 @@ The points below are the runtime's; the sections that start with "The player" ho
   that releases results, and never for a live exam. The engine then reads a state that names a content version only when it
   names the same one, so that a review cannot show content that the candidate did not sit.
 - **Scores in events.** The events of a step hold no score. With the engine option `eventOutcomes`, `response-processed`
-  carries the outcomes of the item, scores included, to `forward.log` of a session host and to the listeners of
+  carries the outcomes of the item, scores included, to `onStep` of a session host and to the listeners of
   `subscribeSteps` of a local session, and never to a candidate, who receives views. The host's log, outbox and event sinks
   then hold scores: keep them as it keeps results. `attempt` and `duration` are always present and hold no score.
 
@@ -189,7 +189,7 @@ session holds any file of the engine. Practice runs the engine on the device, so
   and tell nothing else. `start` never rebinds a session.
 - A client may not send `suspend` or `resume` in an exam, because the runtime counts suspended time nowhere. Breaks are the proctor's,
   except for a candidate whose profile has breaks (`environment` with `breaks`), who may pause as CERT asks; a program that wants
-  every break through the proctor sets `profileBreaks: false`. The profile comes from the host, never from the client.
+  every break through the proctor leaves `breaks` out of the profile. The profile comes from the host, never from the client.
   Keep the proctor's and the scheduler's endpoints away from candidates. `maxIdleMs` counts a long gap as a suspension, so
   `createSessionHost` refuses it unless `clientActions` has `suspend`; an exam never sets it.
 - The stores must make `create` and `save` atomic across processes, so that a version conflict is a conflict and a session is
@@ -325,7 +325,7 @@ another party, and its frame has `allow-same-origin`, so that the tool keeps its
 - The player checks what the hook answers: absolute `http` or `https` URLs and an allow list of letters, digits, spaces and
   `; * : / . ' -`. A `javascript:` or `data:` URL is never a frame URL.
 - The hook takes a `signal` that aborts when the candidate leaves the item, and the player drops an answer that comes late.
-- The ports `forward.log` and `createToolScoreIntake` receive data that the host's adapter already checked. The intake supplies
+- The ports `onStep` and `createToolScoreIntake` receive data that the host's adapter already checked. The intake supplies
   only a `final` score, keeps the latest by `timestampMs`, and trusts the adapter to bind a score to the session and the item of
   its launch. `buildSessionScore` reads a report only if the session host branded it as official.
 - The hints, the line item identifiers and the tokens of a library are the library's: see its security notes.

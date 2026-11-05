@@ -74,7 +74,7 @@ player, and an adapter between the two is an [example](https://github.com/assess
 flowchart LR
   subgraph player["@assesskit/player"]
     login["LtiLogin<br/>player/lti-frame"]
-    log["forward.log, a StepSink<br/>server"]
+    log["onStep, a StepSink<br/>server"]
     score["buildSessionScore<br/>scoring"]
     intake["createToolScoreIntake, ToolScoreStore<br/>server"]
   end
@@ -90,7 +90,7 @@ flowchart LR
 | Port                                      | Direction                                       | Where                                                                        |
 | ----------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------- |
 | `LtiLogin`, `LtiFrame`                    | The player asks the host to start a tool        | `player/lti-frame`, `protocol/lti-frame` ([delivery](delivery.md#lti-items)) |
-| `forward.log`, `StepSink`                 | The session host gives each step to the host    | `server` ([server](server.md#forwarding-the-steps))                          |
+| `onStep`, `StepSink`                      | The session host gives each step to the host    | `server` ([server](server.md#forwarding-the-steps))                          |
 | `buildSessionScore`                       | The host reads the score of a session           | `scoring` ([scoring](scoring.md#the-score-of-a-session))                     |
 | `createToolScoreIntake`, `ToolScoreStore` | The score of a tool comes in as `supply-scores` | `server` ([server](server.md#the-scores-of-tool-items))                      |
 

@@ -994,11 +994,6 @@ describe("createSessionHost", () => {
     const plain = await without.host.start(ALICE, { seed: 7, pnp: profile(false) });
     expect(viewOf(plain).actions).not.toContain("suspend");
     await expect(without.host.handle(ALICE, request(1, { type: "suspend" }))).rejects.toThrow(DataError);
-    const proctored = await examHost({ profileBreaks: false });
-    expect(viewOf(await proctored.host.start(ALICE, { seed: 7, pnp: profile(true) })).actions).not.toContain("suspend");
-    await expect(examHost(JSON.parse('{"profileBreaks":"yes"}'))).rejects.toThrow(
-      'The options object is invalid at profileBreaks: expected true or false, found "yes".',
-    );
   });
 
   it("lets a client mark an item for review in an exam, keeps the mark in the stored session, and shows it again after a reload", async () => {
@@ -1300,15 +1295,13 @@ describe("createSessionHost", () => {
   it("waits for the log before the call returns, and keeps the step saved when the log rejects", async () => {
     const order: string[] = [];
     let failing = false;
-    const forward = {
-      log: async ({ step }: StepEvents) => {
-        order.push(`log ${step}`);
-        await new Promise((resolve) => setTimeout(resolve, 5));
-        if (failing) throw new Error("disk full");
-        order.push(`logged ${step}`);
-      },
+    const onStep = async ({ step }: StepEvents): Promise<void> => {
+      order.push(`log ${step}`);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      if (failing) throw new Error("disk full");
+      order.push(`logged ${step}`);
     };
-    const { host } = await examHost({ forward });
+    const { host } = await examHost({ onStep });
     await host.start(ALICE, { seed: 7 });
     expect(order).toEqual(["log start", "logged start"]);
     failing = true;
@@ -1322,7 +1315,7 @@ describe("createSessionHost", () => {
     expect(viewOf(await host.view(ALICE)).current?.responses.get("RESPONSE")).toEqual(buildSingle("identifier", "A"));
   });
 
-  it("rejects a forward option without a log", async () => {
+  it("rejects an onStep that is not a function", async () => {
     const good = await examHost();
     const options = {
       engine: good.engine,
@@ -1332,11 +1325,11 @@ describe("createSessionHost", () => {
       gate: good.gate,
       packages: async () => good.pkg,
     };
-    for (const forward of [json("{}"), json('{"log":"console"}'), json("null"), json('{"log":null}')]) {
-      expect(() => createSessionHost({ ...options, forward } as never), JSON.stringify(forward)).toThrow(DataError);
+    for (const onStep of [json("{}"), json('"console"'), json("null"), json('{"log":null}')]) {
+      expect(() => createSessionHost({ ...options, onStep } as never), JSON.stringify(onStep)).toThrow(DataError);
     }
-    expect(() => createSessionHost({ ...options, forward: { log: () => undefined, other: 1 } } as never)).toThrow(
-      DataError,
+    expect(() => createSessionHost({ ...options, forward: { log: () => undefined } } as never)).toThrow(
+      'The options object is invalid: unexpected property "forward".',
     );
   });
 
@@ -1736,7 +1729,7 @@ describe("the signals of the session host", () => {
           return saved;
         },
       },
-      forward: { log: (step) => void logged.push(step) },
+      onStep: (step) => void logged.push(step),
     });
     await host.start(ALICE, { seed: 7 });
     const reply = await host.handle(ALICE, request(1, answer("A")), { signal: controller.signal });
@@ -1916,14 +1909,12 @@ describe("the option cat of the session host", () => {
     const port = scriptedPort();
     let failing = true;
     const steps: (number | "start")[] = [];
-    const forward = {
-      log: ({ step }: StepEvents) => {
-        steps.push(step);
-        // The step that the host's own action made is step 2; the loop's first cat-response is step 3.
-        if (failing && step === 3) throw new Error("disk full");
-      },
+    const onStep = ({ step }: StepEvents): void => {
+      steps.push(step);
+      // The step that the host's own action made is step 2; the loop's first cat-response is step 3.
+      if (failing && step === 3) throw new Error("disk full");
     };
-    const { host } = await adaptiveHost(port, "", { forward });
+    const { host } = await adaptiveHost(port, "", { onStep });
     await host.start(ALICE, { seed: 7 });
     const step = await host.proctor(ALICE.session, { type: "end-test" });
     expect(step.refusal).toBeUndefined();
@@ -2099,16 +2090,14 @@ describe("the option cat of the session host", () => {
     });
   });
 
-  it("finishes when forward.log calls apply from inside a step of the answer loop", async () => {
+  it("finishes when onStep calls apply from inside a step of the answer loop", async () => {
     const port = scriptedPort();
     const applied: unknown[] = [];
     const hosts: { current?: SessionHost } = {};
-    const forward = {
-      log: async (step: StepEvents) => {
-        if (step.step === 1) applied.push(await hosts.current?.session(ALICE.session).apply({ type: "time" }));
-      },
+    const onStep = async (step: StepEvents): Promise<void> => {
+      if (step.step === 1) applied.push(await hosts.current?.session(ALICE.session).apply({ type: "time" }));
     };
-    const { host } = await adaptiveHost(port, "", { forward });
+    const { host } = await adaptiveHost(port, "", { onStep });
     hosts.current = host;
     await host.start(ALICE, { seed: 7 });
     expect(port.calls).toEqual(["createSession"]);

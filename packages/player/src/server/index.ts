@@ -8,7 +8,7 @@
 
 export { SYSTEM_CLOCK } from "./clock.js";
 export type { FileStore } from "./file-store.js";
-export type { ForwardOptions, StepEvents, StepSink, SuppliedGrade } from "./forward.js";
+export type { StepEvents, StepSink, SuppliedGrade } from "./forward.js";
 export { type AssetGate, type AssetGateOptions, createAssetGate, type GateResponse } from "./gate/index.js";
 export { createSessionHost } from "./host.js";
 export { type CandidateActionType, EXAM_CLIENT_ACTIONS } from "./policy.js";

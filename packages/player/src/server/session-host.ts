@@ -4,7 +4,7 @@ import type { Engine, StartOptions } from "@assesskit/runtime/delivery";
 import type { ActionLimits } from "@assesskit/runtime/delivery/wire";
 import type { QtiPackage } from "@assesskit/runtime/package";
 import type { Caller, Clock, HostSession, HostStep, OfficialResult, ViewEnvelope } from "../protocol/index.js";
-import type { ForwardOptions } from "./forward.js";
+import type { StepSink } from "./forward.js";
 import type { AssetGate } from "./gate/index.js";
 import type { CandidateActionType } from "./policy.js";
 import type { Scheduler } from "./scheduler.js";
@@ -45,20 +45,15 @@ export interface SessionHostOptions {
   /**
    * The types of action a client may send, `suspend` and `resume` among them only if the host lets candidates pause.
    *
+   * @remarks
+   * A candidate whose profile has breaks (the support `environment` with `breaks` on) may also send `suspend` and `resume`,
+   * and comes back to every response with the clocks stopped meanwhile. A program whose breaks all go through the proctor
+   * leaves `breaks` out of the profile that it starts the session with.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/conf/ | QTI 3.0 Conformance and Certification, A-11}
    * @defaultValue `EXAM_CLIENT_ACTIONS`, every type but `suspend` and `resume`
    */
   readonly clientActions?: readonly CandidateActionType[];
-  /**
-   * Whether a candidate whose profile has breaks may send `suspend` and `resume` beside `clientActions`, so that the candidate
-   * takes a break without a proctor and comes back to every response, with the clocks stopped meanwhile.
-   *
-   * @remarks
-   * The support is `environment` with `breaks`, on. Without it the breaks of such a candidate go through the proctor too.
-   *
-   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/conf/ | QTI 3.0 Conformance and Certification, A-11}
-   * @defaultValue `true`
-   */
-  readonly profileBreaks?: boolean;
   /**
    * The longest gap between steps, in milliseconds, that counts as time on task, as on `createLocalSession`: a gap above
    * it counts as suspended, from the latest step to the next action of the candidate or of the host, while the session is in
@@ -79,11 +74,12 @@ export interface SessionHostOptions {
    */
   readonly limits?: Partial<ActionLimits>;
   /**
-   * Where the events of each step go: the host's log.
+   * The host's log: receives every step that has events, as the runtime gave them, after it is saved. A host composes its
+   * event sink and its score sink here.
    *
-   * @defaultValue nowhere
+   * @defaultValue none, so that the events go nowhere
    */
-  readonly forward?: ForwardOptions;
+  readonly onStep?: StepSink;
   /**
    * The port of the CAT engines of the adaptive sections. Each call then answers the CAT requests that wait, one at a time,
    * saving each answer before the next request.

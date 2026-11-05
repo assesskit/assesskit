@@ -42,11 +42,3 @@ export interface StepEvents {
  * made it: a candidate's retry replays the stored answer and forwards nothing.
  */
 export type StepSink = (step: StepEvents) => void | Promise<void>;
-
-/** The options of {@link SessionHostOptions.forward}. */
-export interface ForwardOptions {
-  /**
-   * The host's log: every step that has events, as the runtime gave them. A host composes its event sink and its score sink here.
-   */
-  readonly log: StepSink;
-}
