@@ -25,7 +25,7 @@ import protocolGuide from "../../../docs/player/protocol.md?raw";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import readme from "../README.md?raw";
 import { createLocalSession } from "../src/client/local/index.js";
-import { type HostStep, LTI_STORAGE_FRAME, LTI_TOOL_FRAME } from "../src/protocol/index.js";
+import { checkSubmission, type HostStep, LTI_STORAGE_FRAME, LTI_TOOL_FRAME } from "../src/protocol/index.js";
 import {
   type CatAnswerer,
   checkActionEnvelope,
@@ -34,7 +34,6 @@ import {
   checkHostAction,
   checkHostApplyOptions,
   checkLtiFrame,
-  checkSubmission,
   checkViewEnvelope,
   checkViewRequest,
   createCatLoops,
@@ -934,6 +933,81 @@ describe("checkSubmission", () => {
     expect(() => checkSubmission(changed(["items"], [SUBMISSION.items[0], SUBMISSION.items[0]]))).toThrow(
       new DataError('A submission is invalid: has the item "e" instance 1 twice.'),
     );
+  });
+
+  it("narrows the value of a scoring endpoint to a Submission, so that a field reads without a cast", () => {
+    const body: unknown = json(JSON.stringify(SUBMISSION));
+    checkSubmission(body);
+    expect(body.request).toBe(SUBMISSION.request);
+    expect(body.items.map(({ key }) => key.ref)).toEqual(["e"]);
+  });
+
+  it("rejects what a server can receive in place of an object", () => {
+    for (const value of [undefined, null, 0, "", true, [], [SUBMISSION], () => SUBMISSION, new Date(0), new Map()]) {
+      expect(() => checkSubmission(value), String(value)).toThrow(DataError);
+    }
+    expect(() => checkSubmission(undefined)).toThrow(/^A submission is invalid: expected an object, found /);
+    expect(() => checkSubmission({})).toThrow(/^A submission is invalid: missing the property "request"/);
+  });
+
+  it("rejects a top-level property named __proto__ that JSON delivers as data", () => {
+    const text = JSON.stringify(SUBMISSION).replace("{", '{"__proto__":{"polluted":true},');
+    expect(() => checkSubmission(json(text))).toThrow(DataError);
+    expect(({} as { polluted?: unknown }).polluted).toBeUndefined();
+  });
+
+  it("accepts content that nests 256 levels and rejects one more, in the rubric and in an item's body", () => {
+    /** Nodes whose `children` are `levels` arrays inside each other: the innermost is level `levels` + 2 of the content. */
+    const nested = (levels: number): unknown => {
+      let inner: unknown = [];
+      for (let level = 1; level < levels; level += 1) inner = [inner];
+      return [{ kind: "p", children: inner }];
+    };
+    for (const path of [["rubric"], ["items", 0, "body"]] as const) {
+      expect(() => checkSubmission(changed(path, nested(254))), path.join(".")).not.toThrow();
+      expect(() => checkSubmission(changed(path, nested(255))), path.join(".")).toThrow(
+        new DataError(
+          `A submission is invalid at ${path.join(".").replace(".0.", "[0].")}: nests deeper than 256 levels.`,
+        ),
+      );
+    }
+  });
+
+  it("rejects a time outside the years 1 to 9999 in every field that holds one", () => {
+    for (const path of [["requestedAt"], ["supplied", "at"]] as const) {
+      for (const instant of [-62_135_596_800_001, 253_402_300_800_000, 1e300, -1e300]) {
+        expect(() => checkSubmission(changed(path, instant)), `${path.join(".")} ${instant}`).toThrow(DataError);
+      }
+      for (const instant of [-62_135_596_800_000, 253_402_300_799_999]) {
+        expect(() => checkSubmission(changed(path, instant)), `${path.join(".")} ${instant}`).not.toThrow();
+      }
+    }
+  });
+
+  it("checks the items and the parts of a body in time that grows with its size, not with its square", () => {
+    const keys = Array.from({ length: 40_000 }, (_, index) => ({ ref: `i${index}`, instance: 1 }));
+    const [first] = SUBMISSION.items;
+    const [part] = SUBMISSION.parts;
+    const body = (items: readonly unknown[], parts: readonly unknown[]): unknown =>
+      json(JSON.stringify({ ...SUBMISSION, items, parts }));
+    const items = keys.map((key) => ({ ...first, key }));
+    const parts = keys.map((item) => ({ ...part, item }));
+    const bodies = [body(items, parts), body([...items, ...items], []), body([], parts)];
+    const started = performance.now();
+    const outcomes = bodies.map((value) => {
+      try {
+        checkSubmission(value);
+        return "accepted";
+      } catch (error) {
+        return error instanceof DataError ? error.message.replace(/ instance .*$/, "") : "failed";
+      }
+    });
+    expect(performance.now() - started).toBeLessThan(2000);
+    expect(outcomes).toEqual([
+      "accepted",
+      'A submission is invalid: has the item "i0"',
+      'A submission is invalid: A part names the item "i0"',
+    ]);
   });
 });
 

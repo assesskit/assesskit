@@ -1,7 +1,8 @@
 /**
  * The messages between the player in a browser and the session host on a server: the envelopes around the runtime's JSON
  * forms of actions and views, the caller that the host's authentication gives to a request, the session client that the
- * player mounts against, the host side of a session and the results report that only a session host marks official.
+ * player mounts against, the host side of a session, the results report that only a session host marks official and the
+ * submission to a rater, with the check that a scoring endpoint runs on one that reaches it as JSON.
  *
  * @module @assesskit/player/protocol
  */
@@ -13,13 +14,14 @@ export type { CatFailure, HostApplyOptions, HostSession, HostStep } from "./host
 export { LTI_STORAGE_FRAME, LTI_TOOL_FRAME, type LtiFrame } from "./lti-frame.js";
 export type { OfficialResult } from "./official.js";
 export type { DispatchResult, SessionClient } from "./session-client.js";
-export type {
-  Submission,
-  SubmissionItem,
-  SubmissionPart,
-  SubmissionSupplied,
-  SubmissionValue,
-  SubmissionVariable,
+export {
+  checkSubmission,
+  type Submission,
+  type SubmissionItem,
+  type SubmissionPart,
+  type SubmissionSupplied,
+  type SubmissionValue,
+  type SubmissionVariable,
 } from "./submission.js";
 export type { ViewEnvelope } from "./view-envelope.js";
 export type { ViewRequest } from "./view-request.js";

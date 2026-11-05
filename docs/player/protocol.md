@@ -2,8 +2,8 @@
 
 `@assesskit/player/protocol` holds what a browser and a session host send each other: JSON envelopes around the runtime's JSON
 forms of actions and views, the caller that the host's authentication gives to a request, the session client that the player
-mounts against, the host side of a session, the branded results report, and the submission that a rater reads. It uses no DOM,
-Node.js, timer or network API.
+mounts against, the host side of a session, the branded results report, the submission that a rater reads and the check of one that a
+scoring endpoint receives. It uses no DOM, Node.js, timer or network API.
 
 ```mermaid
 sequenceDiagram
@@ -36,6 +36,7 @@ it.
 | `Clock`                                       | The source of the time that a client, a session host and a test pass in.                               |
 | `OfficialResult`                              | A results report that the session host branded.                                                        |
 | `Submission` and its parts                    | What a rater needs to rate an externally scored outcome.                                               |
+| `checkSubmission`                             | Checks a submission that reached a scoring endpoint as JSON.                                           |
 
 ## Quick start
 
@@ -209,19 +210,54 @@ A `Submission` is what a rater or a scorer service needs to rate one externally 
 holds the correct responses of the items, so it goes only to raters. Its `scoringRubric`, when the outcome has one, is the
 runtime's `ScoringRubric`, which `mountRatingForm` ([rating](rating.md)) turns into a form.
 
+### Read a submission at a server
+
+A scoring endpoint (a rater's service or a machine scorer) receives the submission as JSON. Call `checkSubmission` on the
+parsed body before any other use of it: it accepts the form that `buildSubmission` writes and no other, and narrows the value
+to `Submission`. A form it refuses is a `DataError` that names the path of the first problem.
+
+```ts
+import { checkSubmission } from "@assesskit/player/protocol";
+
+const text = `{"request":"item:essay:1:SCORE","outcome":"SCORE","mode":"human","requestedAt":1000,
+  "declaration":{"cardinality":"single","baseType":"float"},"rubric":[],"parts":[],"items":[]}`;
+const body = JSON.parse(text);
+checkSubmission(body);
+body.request; // => "item:essay:1:SCORE"
+
+const refusal = (json) => {
+  try {
+    checkSubmission(json);
+  } catch (error) {
+    return error.message;
+  }
+};
+refusal([]);
+// => "A submission is invalid: expected an object, found an array."
+refusal({ ...body, requestedAt: "now" });
+// => 'A submission is invalid at requestedAt: expected a number, found "now".'
+refusal({ ...body, rubric: [{ kind: "p", constructor: 1 }] });
+// => 'A submission is invalid at rubric: holds a property "constructor", a name that reaches the prototype.'
+```
+
+The check looks at the form and not at the sender: whether the request is one the endpoint made, and whether the sender may
+rate it, are the endpoint's to decide. The endpoint limits the size of the body before it parses it. The check bounds the
+nesting of content (`rubric` and the `body` of an item) to 256 levels, and reads no value: the responses and the correct
+responses are read when shown, with `readWireValue` of `@assesskit/runtime/values`.
+
 ## Errors
 
 Every refusal is a `DataError` with a sentence that names the path of the first problem. The session host, the remote client, the
-local session, `mountSubmission` and the LTI slot run the checks on what they receive; none is exported.
+local session, `mountSubmission` and the LTI slot run the checks on what they receive; `checkSubmission` is the one that is exported.
 
-| What is refused              | When                                                                                                                                                                                                                                                                     | What to do                                                                                                      |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| A `Caller`                   | `value` is not an object with a non-empty `session` and `principal`                                                                                                                                                                                                      | Have the authentication give a non-empty `session` and `principal`                                              |
-| An action or a view envelope | `value` is not an object, has a property outside the table, or has a `seq` that is not a non-negative safe integer                                                                                                                                                       | Send the envelope as the client or the host wrote it; no proxy may change it                                    |
-| An action envelope           | `action` is missing                                                                                                                                                                                                                                                      | The same                                                                                                        |
-| A view envelope              | `view` is missing, `assets` is not an object of strings by directories, `documents` or `refusal` is malformed (a refusal is an object with a `reason` of the runtime's `REFUSAL_REASONS` and a string `message`)                                                         | Answer with the envelope that the session host gives                                                            |
-| An `LtiFrame`                | `value` is not an object of `url`, `storageUrl` and `allow` only, a URL is not absolute `http` or `https`, or `allow` is empty or has a character outside an allow list                                                                                                  | Build the frame with the LTI library: absolute `http` or `https` URLs, and the `allow` list of the registration |
-| A `Submission`               | a property outside the form, a field of another type, a time outside the years 1 to 9999, content that is not a list of nodes with a string `kind`, a scoring rubric that `checkScoringRubric` refuses, a part that names an item the submission lacks, or an item twice | Pass what `buildSubmission` wrote, unchanged                                                                    |
+| What is refused              | When                                                                                                                                                                                                                                                                                                                                                                       | What to do                                                                                                      |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| A `Caller`                   | `value` is not an object with a non-empty `session` and `principal`                                                                                                                                                                                                                                                                                                        | Have the authentication give a non-empty `session` and `principal`                                              |
+| An action or a view envelope | `value` is not an object, has a property outside the table, or has a `seq` that is not a non-negative safe integer                                                                                                                                                                                                                                                         | Send the envelope as the client or the host wrote it; no proxy may change it                                    |
+| An action envelope           | `action` is missing                                                                                                                                                                                                                                                                                                                                                        | The same                                                                                                        |
+| A view envelope              | `view` is missing, `assets` is not an object of strings by directories, `documents` or `refusal` is malformed (a refusal is an object with a `reason` of the runtime's `REFUSAL_REASONS` and a string `message`)                                                                                                                                                           | Answer with the envelope that the session host gives                                                            |
+| An `LtiFrame`                | `value` is not an object of `url`, `storageUrl` and `allow` only, a URL is not absolute `http` or `https`, or `allow` is empty or has a character outside an allow list                                                                                                                                                                                                    | Build the frame with the LTI library: absolute `http` or `https` URLs, and the `allow` list of the registration |
+| A `Submission`               | a property outside the form, a field of another type, a time outside the years 1 to 9999, content that is not a list of nodes with a string `kind`, nests deeper than 256 levels or holds a property named `__proto__`, `prototype` or `constructor`, a scoring rubric that `checkScoringRubric` refuses, a part that names an item the submission lacks, or an item twice | Pass what `buildSubmission` wrote, unchanged                                                                    |
 
 ## Not included
 

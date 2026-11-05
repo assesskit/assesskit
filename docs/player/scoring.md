@@ -20,19 +20,21 @@ sequenceDiagram
   E-->>H: scores-applied, or scores-replaced for a second score
 ```
 
-| Step                                  | Where                               | Function                                          |
-| ------------------------------------- | ----------------------------------- | ------------------------------------------------- |
-| Turn a request into a JSON submission | shared, `@assesskit/player/scoring` | `buildSubmission`                                 |
-| Show a submission to a rater          | browser, `@assesskit/player/player` | `mountSubmission`                                 |
-| Show a rating form                    | browser, `@assesskit/player/player` | `mountRatingForm` ([rating](rating.md))           |
-| Turn ratings into a score             | shared, `@assesskit/runtime/asi`    | `rubricScore`, which the form calls               |
-| Turn the rater's score into an action | shared, `@assesskit/player/scoring` | `buildSupplyScores`                               |
-| Give the action to the engine         | server or device, the host session  | `session(id).apply(action)`, `host.apply(action)` |
-| Read the score of a session           | shared, `@assesskit/player/scoring` | `buildSessionScore`                               |
+| Step                                  | Where                                | Function                                          |
+| ------------------------------------- | ------------------------------------ | ------------------------------------------------- |
+| Turn a request into a JSON submission | shared, `@assesskit/player/scoring`  | `buildSubmission`                                 |
+| Read a submission at an endpoint      | server, `@assesskit/player/protocol` | `checkSubmission`                                 |
+| Show a submission to a rater          | browser, `@assesskit/player/player`  | `mountSubmission`                                 |
+| Show a rating form                    | browser, `@assesskit/player/player`  | `mountRatingForm` ([rating](rating.md))           |
+| Turn ratings into a score             | shared, `@assesskit/runtime/asi`     | `rubricScore`, which the form calls               |
+| Turn the rater's score into an action | shared, `@assesskit/player/scoring`  | `buildSupplyScores`                               |
+| Give the action to the engine         | server or device, the host session   | `session(id).apply(action)`, `host.apply(action)` |
+| Read the score of a session           | shared, `@assesskit/player/scoring`  | `buildSessionScore`                               |
 
 On a device the page learns of a request from `host.subscribeSteps` on `scoring-requested`, and checks `host.pending()` once after
 `createLocalSession` ([client](client.md#the-host-side)); a server's rater endpoint calls `session(id).pending()` and
-`session(id).scorerView(request)` ([server](server.md#the-host-side)).
+`session(id).scorerView(request)` ([server](server.md#the-host-side)). An endpoint that receives a submission as JSON reads it with `checkSubmission`
+([protocol](protocol.md#read-a-submission-at-a-server)).
 
 The rating form is the player's ([rating](rating.md)): it shows the `scoringRubric` of the submission and gives the ratings and
 their score. The rating workflow, such as assignment and double scoring, is the host's. A submission holds the correct

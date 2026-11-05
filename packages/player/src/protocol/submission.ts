@@ -152,8 +152,8 @@ const itemSchema = v.strictObject({
   correctResponses: variablesSchema,
 });
 
-/** Whether two keys name the same item instance. */
-const sameKey = (a: ItemKey, b: ItemKey): boolean => a.ref === b.ref && a.instance === b.instance;
+/** The name of an item instance in a set: the text of a number has no colon, so the first colon ends the instance, whatever the ref holds. */
+const nameOf = ({ ref, instance }: ItemKey): string => `${instance}:${ref}`;
 
 const submissionShape = v.strictObject({
   request: nonEmptyStringSchema,
@@ -175,13 +175,16 @@ const submissionSchema = v.pipe(
   v.rawCheck<v.InferOutput<typeof submissionShape>>(({ dataset, addIssue }) => {
     if (!dataset.typed) return;
     const { items, parts } = dataset.value;
-    items.forEach(({ key }, index) => {
-      if (items.slice(0, index).some((other) => sameKey(other.key, key))) {
+    // A set, not a search of the list for each key, so that the time grows with the size of the body.
+    const named = new Set<string>();
+    for (const { key } of items) {
+      if (named.has(nameOf(key))) {
         addIssue({ message: `has the item ${describe(key.ref)} instance ${key.instance} twice` });
       }
-    });
+      named.add(nameOf(key));
+    }
     for (const { item } of parts) {
-      if (!items.some(({ key }) => sameKey(key, item))) {
+      if (!named.has(nameOf(item))) {
         addIssue({
           message: `A part names the item ${describe(item.ref)} instance ${item.instance}, which the submission lacks`,
         });
@@ -191,15 +194,22 @@ const submissionSchema = v.pipe(
 );
 
 /**
- * Checks a submission that arrived as JSON: every property of its form and no other, the type of every field, the content
- * as nodes without a property named `__proto__`, `prototype` or `constructor`, the scoring rubric as the runtime's `checkScoringRubric` does, and that each part names an item the submission
- * has, which it has once.
+ * Checks a submission that reached a server as JSON, so that a scoring endpoint reads it with the library's schema before it
+ * uses a field. It accepts the form that `buildSubmission` of `@assesskit/player/scoring` writes and no other: every
+ * property of the form and none besides, the type of every field, times within the years 1 to 9999, the content as nodes
+ * with a `kind` that nest at most 256 levels and hold no property named `__proto__`, `prototype` or `constructor`, the
+ * scoring rubric as the runtime's `checkScoringRubric` reads it, and that each part names an item that the submission has,
+ * and has once.
  *
  * @remarks
- * A value is read when it is shown, not here.
+ * Call it once on the parsed body of a request, before any other use of it; after it returns, the value has the type
+ * {@link Submission}. It checks the form and not the sender: whether the request is known and the sender may rate it is
+ * the endpoint's to decide. It does not limit the size of the body, which the endpoint limits before it parses. A value
+ * (the response of a part, a correct response, a template value) is read when it is shown, not here, with `readWireValue` of
+ * `@assesskit/runtime/values`. `mountSubmission` and `buildSubmission` run this check themselves.
  *
  * @param value - The parsed JSON.
- * @throws `DataError` when it is not a submission.
+ * @throws `DataError` when it is not a submission; the message names the path of the first problem.
  */
 export function checkSubmission(value: unknown): asserts value is Submission {
   parseWith(submissionSchema, value, "A submission");

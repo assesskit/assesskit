@@ -13,14 +13,14 @@ xychart-beta
   title "Entry points after gzip, in kilobytes"
   x-axis ["root", "messages-id", "protocol", "client", "client/local", "player", "mountItem", "scoring", "cat", "cat-rest", "server", "engine (on demand)"]
   y-axis "kB" 0 --> 140
-  bar [9.5, 6.1, 0.1, 20.1, 9.6, 128.7, 99.2, 10.8, 21.8, 16.5, 51.4, 117.2]
+  bar [9.5, 6.1, 6.3, 20.1, 9.6, 128.7, 99.2, 10.8, 21.8, 16.5, 51.4, 117.2]
 ```
 
 | File                             | Bytes   | Gzip    | Budget  | What it holds                                                                                                                                                                                                                |
 | -------------------------------- | ------- | ------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@assesskit/player`              | 27,118  | 9,486   | 10,000  | The errors, the checks of the player and the interface messages in English                                                                                                                                                   |
 | `@assesskit/player/messages-id`  | 16,992  | 6,132   | 8,000   | The interface messages in Indonesian, which a host that shows Indonesian loads beside the player, and nothing else                                                                                                           |
-| `@assesskit/player/protocol`     | 85      | 90      | 500     | The wire types, which compile to nothing, and the names of the two frames of an LTI item                                                                                                                                     |
+| `@assesskit/player/protocol`     | 19,235  | 6,282   | 7,000   | The wire types, which compile to nothing, the names of the two frames of an LTI item and the check of a submission (`asi`, `results`, `values`)                                                                              |
 | `@assesskit/player/client`       | 62,639  | 20,127  | 25,000  | The remote session of an exam page, and the decoders of a view and of an action (`delivery/wire` with `interactions`, `pnp`, `values`, `xml`); no engine, and nothing loads on demand                                        |
 | `@assesskit/player/client/local` | 29,286  | 9,630   | 11,000  | The local session of practice (`package` for the paths of the package); the engine loads with `import()` at its first call                                                                                                   |
 | `@assesskit/player/player`       | 396,854 | 128,692 | 134,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions (`asi`, `content`, `interactions`, `package`, `pci`, `pnp`, `results`, `values`, `xml`, saxes) |

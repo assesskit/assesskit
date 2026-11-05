@@ -114,8 +114,9 @@ sections of a package. A refused answer of a CAT engine is a `DataError` inside 
 `AccessError.reason` is the exported union `AccessErrorReason`: `not-bound` or `session-exists`. The refusal of a view
 envelope is `{ reason, message }`, with the reasons of `REFUSAL_REASONS` of `@assesskit/runtime/delivery/wire`, which also
 owns `CANDIDATE_ACTION_TYPES`; `@assesskit/player/server` has `EXAM_CLIENT_ACTIONS` and `CandidateActionType`.
-`@assesskit/player/protocol` exports the wire types and the `LTI_*` names, and `Clock`; what receives a value runs its check
-(`SessionHost.handle`, `createRemoteSession`, `mountSubmission`, the LTI slot, `buildSessionScore`). Every function is named
+`@assesskit/player/protocol` exports the wire types, the `LTI_*` names, `Clock` and `checkSubmission`, which a scoring endpoint
+calls on a submission that reaches it as JSON; what receives a value runs its check (`SessionHost.handle`,
+`createRemoteSession`, `mountSubmission`, the LTI slot, `buildSessionScore`). Every function is named
 by what it does, with one verb for one meaning: `readLexicon`, `createWebSpeech`, `resolvePresentation`, `mediaScale` and
 `listScopes`, and from `@assesskit/player/scoring` `buildSubmission`, `buildSupplyScores`, which reads only the `id`,
 `outcome` and `declaration` of its request, so that a rater's page passes the fields of a `Submission`, and
