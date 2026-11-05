@@ -10,6 +10,7 @@ import {
   type Manifest,
   type Resource,
   readPackage,
+  resolveResourcePath,
   writePackage,
 } from "../src/package/index.js";
 import { modelArbitrary } from "./arbitraries/asi.js";
@@ -88,6 +89,19 @@ test("reads the manifest of a package of 1,000 items, and an item when it is fir
     },
   ).run({ ...BENCH_OPTIONS, time: 0 });
   await expectWithin(annotate, "first use of 3 items", firstUse, BUDGETS.packageFirstUse);
+});
+
+test("resolves the path of every resource of a package of 1,000 items within its budget", async ({
+  annotate,
+  bench,
+}) => {
+  // The gate of the player and the resolvers resolve a resource for each reference they follow.
+  const { manifest } = readPackage(itemBank().zip);
+  const resolveAll = (): string[] =>
+    manifest.resources.map((resource) => resolveResourcePath(manifest, resource) ?? "");
+  expect(resolveAll()).toEqual(manifest.resources.map((_, index) => path(index)));
+  const result = await bench("resolve 1,000 resource paths", resolveAll).run(BENCH_OPTIONS);
+  await expectWithin(annotate, "resolve 1,000 resource paths", result, BUDGETS.resourcePaths);
 });
 
 test("reads a package and every item in it within its budget against Longsight", async ({ annotate, bench }) => {

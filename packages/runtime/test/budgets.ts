@@ -13,6 +13,11 @@ export const BUDGETS = {
   packageRead: 500,
   /** The first use of 3 items of a package that has parsed none. */
   packageFirstUse: 20,
+  /**
+   * Resolving the path of each of the 1,000 resources of a package: five times the fastest sample of a laptop (0.30 ms),
+   * rounded up to one significant digit, until the CI runner's samples replace it.
+   */
+  resourcePaths: 2,
   // The engine's budgets are five times the fastest sample of the build on a laptop (0.38, 6.11, 91 and 1.59 ms), rounded up
   // to one significant digit, until the CI runner's samples replace them.
   /** Starting a session of a test of 100 sections. */

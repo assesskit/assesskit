@@ -1169,10 +1169,13 @@ describe("paths of resources", () => {
     expect(() => resolveResourcePath(manifest, JSON.parse("null"))).toThrow(DataError);
     expect(() => resolveResourcePath(manifest, a as Resource, { href: JSON.parse("3") })).toThrow(DataError);
     expect(() => resolveResourcePath(manifest, a as Resource, JSON.parse("null"))).toThrow(
-      "The options object is invalid: expected an object, found null",
+      "The options must be an object, found null.",
     );
     expect(() => resolveResourcePath(manifest, a as Resource, JSON.parse('{"bogus":1}'))).toThrow(
-      'unexpected property "bogus"',
+      'The options has the property "href", found "bogus".',
+    );
+    expect(() => resolveResourcePath(manifest, a as Resource, JSON.parse('{"href":null}'))).toThrow(
+      "The option href must be a string, found null.",
     );
   });
 });
