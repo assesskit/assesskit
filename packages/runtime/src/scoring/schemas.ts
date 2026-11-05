@@ -2,7 +2,6 @@ import * as v from "valibot";
 import { fitsCoordinateCount } from "../asi/index.js";
 import {
   finiteSchema,
-  isRecord,
   mapSchema,
   positiveIntegerSchema,
   positiveSchema,
@@ -113,10 +112,8 @@ export const orderKeySchema = strictRecord({
   scheme: v.optional(v.picklist(["all-or-nothing", "per-position", "adjacent-pairs"]), "all-or-nothing"),
 });
 
-/** An area of a `mapping` key, with the points of 1 that it gives by default. */
+/** An area of a `mapping` key, whose coordinates fit its shape; its points are 1 by default, as `areaSchema` reads them. */
 const mappedAreaSchema = v.pipe(
-  v.unknown(),
-  v.transform((area): unknown => (isRecord(area) && area.points === undefined ? { ...area, points: 1 } : area)),
   areaSchema,
   v.check(
     ({ shape, coords }) => fitsCoordinateCount(shape, coords.length),
