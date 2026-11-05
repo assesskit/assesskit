@@ -18,37 +18,36 @@ export const BUDGETS = {
    * rounded up to one significant digit, until the CI runner's samples replace it.
    */
   resourcePaths: 2,
-  // The engine's budgets are five times the fastest sample of the build on a laptop (0.38, 6.11, 91 and 1.59 ms), rounded up
-  // to one significant digit, until the CI runner's samples replace them.
+  // The engine's budgets are five times the fastest sample of the build on the CI runner over five runs of main on 2026-11-05
+  // (0.530, 8.62, 99.1 and 2.44 ms), rounded up to one significant digit.
   /** Starting a session of a test of 100 sections. */
-  planStart: 2,
+  planStart: 3,
   /** A submission with the outcome processing of a test of 100 sections, halfway through its session. */
-  outcomeSubmit: 40,
+  outcomeSubmit: 50,
   /** Reading a stored state and replaying 1,000 actions. */
   replay: 500,
   /** Writing and reading the state of a session of 100 items. */
-  stateRoundTrip: 8,
+  stateRoundTrip: 20,
   /** The size of the state of a session of 100 items that has ended, in bytes. */
   stateBytes: 150_000,
-  // The operators' budgets are five times the fastest sample of the CI runner over five runs of main on 2026-11-05 (0.0273,
-  // 3.86, 0.0051, 0.544 and 1.17 ms), rounded up to one significant digit; those runs timed the sources, and the samples of
-  // the build, which the benchmarks now time, replace them at the next run of the bench job.
+  // The operators' budgets are five times the fastest sample of the build on the CI runner over the same runs (0.0177, 1.20,
+  // 0.0046, 0.508 and 0.737 ms), rounded up to one significant digit.
   /** Comparing an expression with its key by `expression-equivalent`, its options read on the call. */
-  operatorExpression: 0.2,
+  operatorExpression: 0.09,
   /** Comparing a sum of 1,000 terms with a key of as many, the most that a response holds. */
-  operatorLongest: 20,
+  operatorLongest: 6,
   /** Scoring a mixed fraction with a unit against a key with a tolerance and a tier. */
   operatorNumber: 0.03,
   /** Scoring a text of 200 words against 50 answers with credit tiers. */
   operatorText: 3,
   /** Checking 60 lines of worked steps. */
-  mathSteps: 6,
-  // The compiler's budgets are five times the fastest sample of the CI runner over the same runs (0.025 and 152 ms), rounded
-  // up to one significant digit, of the sources likewise until the samples of the build replace them.
+  mathSteps: 4,
+  // The compiler's budgets are five times the fastest sample of the build on the CI runner over the same runs (0.0202 and
+  // 119 ms), rounded up to one significant digit.
   /** Compiling the keys of an item of four responses. */
   compileItem: 0.2,
   /** Compiling 256 orders of 1,000 choices, scored per position: the limits of keys. */
-  compileLimits: 800,
+  compileLimits: 600,
   // The budgets of the item formats are five times the fastest sample of a laptop (0.32, 0.56, 87.8, 0.26 and 0.69 ms),
   // rounded up to one significant digit, until the CI runner's samples replace them.
   /** Reading the edge cases of GIFT, 18 items and two questions that Moodle refuses. */
@@ -94,11 +93,12 @@ export const LONGSIGHT_BUDGETS = {
 
 /**
  * The budget of rescoring a report of 200 items, the reading of its inputs and the outcome processing: the most that the
- * fastest sample may take, in milliseconds, five times the 0.42 ms of the build on a laptop until the CI runner's sample
- * replaces it, and the most as a multiple of the fastest sample of the outcome step of the engine on the same session. No
- * outside library rescores a stored report, so the engine is the reference.
+ * fastest sample may take, in milliseconds, five times the 0.624 ms that the build took on the CI runner (the fastest of
+ * five runs of main on 2026-11-05), rounded up to one significant digit, and the most as a multiple of the fastest sample of
+ * the outcome step of the engine on the same session, which ran 1.37 to 1.43 times in those runs. No outside library
+ * rescores a stored report, so the engine is the reference.
  */
-export const RESCORING_BUDGET = { time: 3, ratio: 2 } as const;
+export const RESCORING_BUDGET = { time: 4, ratio: 2 } as const;
 
 /**
  * The budget of parsing the 1EdTech example documents from their bytes, against libxml2 in WebAssembly

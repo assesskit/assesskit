@@ -120,18 +120,18 @@ DevTools protocol, as a mid-range phone is, and fails when the fastest of 5 samp
 
 | Mount                                                      | On the CI runner | On a laptop | Budget |
 | ---------------------------------------------------------- | ---------------- | ----------- | ------ |
-| `mountDelivery` over a test, until the first item is shown | 30 ms            | 7 ms        | 200 ms |
-| 10 calls of `mountItem` on one page, until all are shown   | 73 ms            | 7 ms        | 400 ms |
-| Turning on the highlighter over a passage of 2,000 words   | 48 ms            | 13 ms       | 300 ms |
+| `mountDelivery` over a test, until the first item is shown | 20.4 ms          | 7 ms        | 200 ms |
+| 10 calls of `mountItem` on one page, until all are shown   | 30.1 ms          | 7 ms        | 200 ms |
+| Turning on the highlighter over a passage of 2,000 words   | 33.5 ms          | 13 ms       | 200 ms |
 
-A budget is five times the fastest sample, the median over three runs, rounded up to one significant digit: the rule of the
-other benchmarks of the repository ([performance](../runtime/performance.md#budgets)), whose sample is the one that the CI
-runner took, because the gate runs there. The runner takes 4 to 6 times as long as a laptop, and one run of it takes up to 1.4
-times as long as another on the same code (`mountDelivery` 23.9, 30.1 and 33.2 ms), so a budget of five times the sample of a
-laptop fails on the runner with no change in the code. A mount must become several times slower on the runner before it fails
-its budget; the sizes above guard the load. The times of the laptop are those of the build on 2026-11-05, after the messages of a mount
-are checked once for all its parts and elements (the catalog has hundreds of keys, and the check of each part took 88% of the
-time of a lesson page); the times of the runner are of the sources before that.
+A budget is five times the fastest sample, the fastest of five runs of the build on the CI runner on 2026-11-05, rounded up to
+one significant digit: the rule of the other benchmarks of the repository ([performance](../runtime/performance.md#budgets)),
+whose sample is the one that the CI runner took, because the gate runs there. The runner takes 3 to 4 times as long as a
+laptop, and one run of it takes up to 1.6 times as long as another on the same code (the lesson page 30.1 to 48.9 ms), so a
+budget of five times the sample of a laptop fails on the runner with no change in the code. A mount must become several times slower on the runner before it fails
+its budget; the sizes above guard the load. The times of the laptop and of the runner are those of the build on 2026-11-05, after the
+messages of a mount are checked once for all its parts and elements (the catalog has hundreds of keys, and the check of each
+part took 88% of the time of a lesson page).
 
 ### Against the Amp-up player
 
@@ -141,15 +141,17 @@ reads each item, starts a local session and mounts it with `mountItem`; the Amp-
 loads its document with `loadItemFromXml`. Both are timed until the text of every item is in the page, checked at each task
 rather than at each frame, in turns over 5 samples; the gate compares the fastest of each.
 
-| Row                                             | The player | Amp-up  | Ratio | Budget (ratio) |
-| ----------------------------------------------- | ---------- | ------- | ----- | -------------- |
-| A lesson page of ten items from their documents | 14.5 ms    | 14.6 ms | 0.99  | 3              |
+| Row                                                            | The player | Amp-up  | Ratio | Budget (ratio) |
+| -------------------------------------------------------------- | ---------- | ------- | ----- | -------------- |
+| A lesson page of ten items from their documents, on the runner | 73.9 ms    | 83.1 ms | 0.89  | 1.5            |
+| The same page on a laptop                                      | 14.5 ms    | 14.6 ms | 0.99  | 1.5            |
 
-The times are those of the laptop, from the run of the build whose ratio is the median of three on 2026-11-05; the ratios of the three
-runs were 0.43 to 1.07, and the budget is the median of the six runs before the check of the messages was made once, 1.4 to 2.1,
-with the headroom of the [rows against Longsight](../runtime/performance.md#against-the-references). The player draws each
+The times are those of the run whose ratio is the median of five runs of the build on the CI runner on 2026-11-05, which gave
+0.80 to 0.98, and of the run of a laptop whose ratio is the median of three, which gave 0.43 to 1.07. The budget is 1.5 times the highest
+ratio of the runner, 0.98, rounded up to the next half: the gate runs there, and a ratio holds on any machine within the noise
+of a shared one ([performance](../runtime/performance.md#budgets)). The player draws each
 item in shadow roots of its own, with the stylesheet of a content root, a status region and the controls of the supports, where
-the Amp-up player draws plain elements; with the sessions made, the player takes 7 ms for the same page (the lesson row
+the Amp-up player draws plain elements; with the sessions made, the player takes 7 ms on a laptop for the same page (the lesson row
 above), and the runtime's reading, gate and start of the ten items the rest. A local session loads the engine with `import()` once for a page, not once for each session.
 
 The times do not include loading and parsing the bundle, which `size.test.ts` bounds by bytes: with the CPU slowed 4 times

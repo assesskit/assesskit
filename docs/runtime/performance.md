@@ -85,19 +85,19 @@ of the tests generate with a fixed seed. A benchmark fails when its fastest samp
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------- |
 | `readPackage`                           | 1,000 generated items of 7.6 MB, an archive of 2.7 MB, and the manifest with generated metadata for each resource           | 92.2 ms                  | 500 ms        |
 | First use of 3 items                    | The resolvers of `createPackageResolvers` on a package that has parsed none                                                 | 2.97 ms                  | 20 ms         |
-| `start` of a test of 100 sections       | 100 sections of 10 items, each selecting 8 and shuffling: 800 instances                                                     | 0.38 ms on a laptop      | 2 ms          |
-| `submit` with outcome processing        | The same test halfway through its session, with 101 rules that read item sessions                                           | 6.11 ms on a laptop      | 40 ms         |
-| Replay of 1,000 actions                 | `deserializeState` of a stored state, then `apply` of 250 items times 4 actions on a test of 10 sections and 11 rules       | 91.2 ms on a laptop      | 500 ms        |
-| `serializeState` and `deserializeState` | The state of a session of 100 items, all answered                                                                           | 1.59 ms on a laptop      | 8 ms          |
-| Rescoring a report                      | `readTestInputs` and `runOutcomeProcessing` on the report of 200 items, all answered, with 21 rules that read item sessions | 0.42 ms on a laptop      | 3 ms          |
+| `start` of a test of 100 sections       | 100 sections of 10 items, each selecting 8 and shuffling: 800 instances                                                     | 0.530 ms                 | 3 ms          |
+| `submit` with outcome processing        | The same test halfway through its session, with 101 rules that read item sessions                                           | 8.62 ms                  | 50 ms         |
+| Replay of 1,000 actions                 | `deserializeState` of a stored state, then `apply` of 250 items times 4 actions on a test of 10 sections and 11 rules       | 99.1 ms                  | 500 ms        |
+| `serializeState` and `deserializeState` | The state of a session of 100 items, all answered                                                                           | 2.44 ms                  | 20 ms         |
+| Rescoring a report                      | `readTestInputs` and `runOutcomeProcessing` on the report of 200 items, all answered, with 21 rules that read item sessions | 0.624 ms                 | 4 ms          |
 | Size of that state                      | The same state as JSON text                                                                                                 | 118,699 bytes            | 150,000 bytes |
-| `expression-equivalent`                 | A key and a response that are equal, `\frac{x^2-1}{x-1}` and `x+1`, the options read on the call                            | 0.0273 ms                | 0.2 ms        |
-| The longest expressions                 | A key and a response of 2,000 characters, sums of 1,000 terms                                                               | 3.86 ms                  | 20 ms         |
-| `number-equivalent`                     | `1 1/4 km` against a key with units, fractions, a tolerance and a credit tier                                               | 0.0051 ms                | 0.03 ms       |
-| `text-equivalent`                       | A response of 200 words against 50 answers with a credit tier by edit distance                                              | 0.544 ms                 | 3 ms          |
-| `compareMathSteps`                      | 60 lines of equations                                                                                                       | 1.17 ms                  | 6 ms          |
-| `compileScoring` of an item             | A choice, pairs, an order and a text                                                                                        | 0.025 ms                 | 0.2 ms        |
-| `compileScoring` at the limits          | 256 orders of 1,000 choices scored per position, a condition for each choice                                                | 152 ms                   | 800 ms        |
+| `expression-equivalent`                 | A key and a response that are equal, `\frac{x^2-1}{x-1}` and `x+1`, the options read on the call                            | 0.0177 ms                | 0.09 ms       |
+| The longest expressions                 | A key and a response of 2,000 characters, sums of 1,000 terms                                                               | 1.20 ms                  | 6 ms          |
+| `number-equivalent`                     | `1 1/4 km` against a key with units, fractions, a tolerance and a credit tier                                               | 0.0046 ms                | 0.03 ms       |
+| `text-equivalent`                       | A response of 200 words against 50 answers with a credit tier by edit distance                                              | 0.508 ms                 | 3 ms          |
+| `compareMathSteps`                      | 60 lines of equations                                                                                                       | 0.737 ms                 | 4 ms          |
+| `compileScoring` of an item             | A choice, pairs, an order and a text                                                                                        | 0.0202 ms                | 0.2 ms        |
+| `compileScoring` at the limits          | 256 orders of 1,000 choices scored per position, a condition for each choice                                                | 119 ms                   | 600 ms        |
 | `readGift`                              | The edge cases of GIFT that Moodle read: 18 items and two questions that Moodle refuses                                     | 0.32 ms on a laptop      | 2 ms          |
 | `writeGift`                             | The 14 items that Moodle read, each response processing run on the responses that tell its credits apart                    | 0.56 ms on a laptop      | 3 ms          |
 | `readGift` at the limits                | 47 essays of 4,096 tags of HTML each, to the limit of elements                                                              | 87.8 ms on a laptop      | 500 ms        |
@@ -110,8 +110,9 @@ benchmark: [SECURITY.md](../../SECURITY.md#default-limits) lists it.
 A benchmark takes at least 10 samples, and the gate is the fastest of them, which the other work of a shared machine affects
 least. The rule of the budgets is the one of measurekit and of the rest of the family: **a time is five times the fastest
 sample, rounded up to one significant digit, and a size is 1.25 times the size.** The sample is the one that the CI runner
-took, because the gate runs there. The runner took 3 to 6 times as long as a laptop with an Apple M5 and Node.js 26.8 (`parse`
-85 ms against 14 ms), so a change must make a path several times slower than it is on the runner before it fails a time. The
+took, because the gate runs there. The runner took 1 to 2 times as long as a laptop with an Apple M5 and Node.js 26.8 in its
+fastest of five runs (`parse` 19.8 ms against 13.6 ms), and a run of it up to 2.6 times as long as its fastest (`readGift`
+1.67 ms against 0.641 ms), so a change must make a path several times slower than it is on the runner before it fails a time. The
 factor allows for the noise of a shared host and for a runner that is slower on another day. It is far below the cost of the
 changes that the budgets exist to catch: a reader that parsed every item would take about ten times as long. A budget changes
 only with the reason in the commit that changes it.
@@ -142,8 +143,8 @@ instances of the plan.
 
 ## Rescoring
 
-`readTestInputs` and `runOutcomeProcessing` on the stored report of a session of 200 items take 1.3 times the outcome step of the
-engine on the same session (`apply` of the last submission), 0.42 ms against 0.32 ms on a laptop: the budget is 2. No outside library rescores a stored report, so the
+`readTestInputs` and `runOutcomeProcessing` on the stored report of a session of 200 items take 1.4 times the outcome step of the
+engine on the same session (`apply` of the last submission), 0.624 ms against 0.455 ms on the CI runner: the budget is 2. No outside library rescores a stored report, so the
 engine is the reference. Reading the report back builds the variables of each of the 200 results, which the engine keeps in its
 state, and the outcome processing is the same work over the same plan.
 
