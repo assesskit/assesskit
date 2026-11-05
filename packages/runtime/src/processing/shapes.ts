@@ -101,12 +101,13 @@ const AREA_SHAPES: readonly AreaShape[] = ["circle", "default", "ellipse", "poly
 export function isInsideShape(shape: AreaShape, coords: readonly number[], point: Point): boolean {
   checkChoice(shape, "The shape", AREA_SHAPES);
   checkArray(coords, "The coordinates must be an array of non-negative numbers");
-  const bad = coords.find(
+  // An index, since `undefined` is one of the values to refuse.
+  const bad = coords.findIndex(
     (coordinate) => !(typeof coordinate === "number" && coordinate >= 0 && Number.isFinite(coordinate)),
   );
-  if (bad !== undefined || !fitsCoordinateCount(shape, coords.length)) {
+  if (bad !== -1 || !fitsCoordinateCount(shape, coords.length)) {
     const problem =
-      bad === undefined ? `the ${coords.length} coordinates do not fit a ${shape}` : `found ${describe(bad)}`;
+      bad === -1 ? `the ${coords.length} coordinates do not fit a ${shape}` : `found ${describe(coords[bad])}`;
     throw new DataError(`The coordinates of a ${shape} must be non-negative numbers that fit it: ${problem}.`);
   }
   checkArray(point, "The point must be an array of two numbers");

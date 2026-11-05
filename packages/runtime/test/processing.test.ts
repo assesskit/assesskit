@@ -1908,6 +1908,9 @@ describe("shapes", () => {
     expect(() => test("poly", [0, 0, 1, 1], [1, 1])).toThrow(DataError);
     // biome-ignore lint/suspicious/noSparseArray: the hole is what the check refuses.
     expect(() => test("circle", [1, , 3], [1, 1])).toThrow("an array with a hole at index 1");
+    expect(() => test("circle", [1, undefined, 3], [1, 1])).toThrow(
+      "The coordinates of a circle must be non-negative numbers that fit it: found undefined.",
+    );
     for (const point of [
       json("null"),
       json('"1 1"'),
