@@ -10,7 +10,7 @@ import { expiriesOf, maximumAt, minimumAt, runningScopes } from "./deadlines.js"
 import { type DeliveryState, findDelivered } from "./delivery-state.js";
 import { partModel, submissionModeOf } from "./modes.js";
 import { type Placement, planIndex, type SectionInstance } from "./plan-index.js";
-import { SessionStep } from "./session-step.js";
+import { applyStep } from "./session-step.js";
 import { allowedActions, type ItemRules, reviewActions } from "./view-actions.js";
 import { candidateItem, packagePath } from "./view-item.js";
 import { navigationOf, reviewNavigationOf } from "./view-navigation.js";
@@ -24,10 +24,8 @@ const NO_TEMPLATES: Pick<AssessmentItem, "templateDeclarations"> = { templateDec
  * are.
  */
 function settled(course: Course, state: DeliveryState, now: number): DeliveryState {
-  const step = new SessionStep(course, state);
-  const refused = step.apply({ type: "time", at: Math.max(now, state.at) });
-  const done = step.done();
-  return refused === undefined && done.ok ? done.state : state;
+  const step = applyStep(course, state, { type: "time", at: Math.max(now, state.at) });
+  return step.ok ? step.state : state;
 }
 
 /**

@@ -1571,7 +1571,7 @@ A well-formed action that the rules do not allow is a refusal, not an error, and
 
 ## Files
 
-The reducer is one class, `SessionStep`, that holds the context of a step, and the rules are functions of the `step-*.ts` files on that context. Each file imports only the files below it.
+The reducer is two functions, `beginStep` and `applyStep`, that make the context of a step, and the rules are functions of the `step-*.ts` files on that context. Each file imports only the files below it.
 
 ```mermaid
 flowchart BT
@@ -1584,7 +1584,7 @@ flowchart BT
   host["step-host.ts<br/>scoring requests, scores and CAT answers"] --> walk
   time["step-time.ts<br/>counting time, maximum times"] --> host
   session["step-session.ts<br/>suspending, resuming, supports, marks"] --> host
-  shell["session-step.ts<br/>SessionStep: begin, apply, done"] --> moves & time & session
+  shell["session-step.ts<br/>beginStep, applyStep"] --> moves & time & session
 ```
 
 | File                                                                                                                                     | Concept                                         |

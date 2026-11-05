@@ -31,7 +31,7 @@ import { type PendingWork, pendingWork } from "./pending-work.js";
 import { drawsNothing, planTest, type TestPlan } from "./plan.js";
 import { assembleResults } from "./results-assembly.js";
 import { type ScorerView, scorerViewOf } from "./scorer-view.js";
-import { SessionStep } from "./session-step.js";
+import { applyStep, beginStep } from "./session-step.js";
 import { additionalTestingTime, hasMaximumTime } from "./time-limits.js";
 import { candidateView } from "./view.js";
 
@@ -342,9 +342,7 @@ function start(course: Course, options: StartOptions): Step {
     cat: [],
     report: checkedResultContext(resultContext),
   };
-  const step = new SessionStep(course, state);
-  const refused = step.begin(at);
-  return refused === undefined ? step.done() : { ok: false, refusal: refused };
+  return beginStep(course, state, at);
 }
 
 /**
@@ -373,9 +371,7 @@ export function createEngine(definition: DeliveryDefinition, options: EngineOpti
     apply: (state, action) => {
       checkEngineState(course, state);
       checkAction(action);
-      const step = new SessionStep(course, state);
-      const refused = step.apply(action);
-      return refused === undefined ? step.done() : { ok: false, refusal: refused };
+      return applyStep(course, state, action);
     },
     deadlines: (state) => {
       checkEngineState(course, state);
