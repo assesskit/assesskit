@@ -193,7 +193,7 @@ describe("validating documents", () => {
     const many = item(`<p>${"<qti-printed-variable/>".repeat(1005)}</p>`);
     expect(await validateXmlFiles(schemas, [many])).toHaveLength(1001);
     await expect(validateXmlFiles(schemas, [], JSON.parse('{"maxFindings":0}'))).rejects.toThrow(
-      "The option maxFindings must be a positive integer, found 0.",
+      "The options object is invalid at maxFindings: expected a value of at least 1, found 0.",
     );
   });
 
