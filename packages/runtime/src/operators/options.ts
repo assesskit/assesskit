@@ -12,8 +12,11 @@ import {
   textKeySchema,
 } from "./schemas.js";
 
-/** A follow-through as the options carry it: its `from` is the second operand. */
-const followThroughSchema = v.nullable(strictRecord({ expression: v.string(), variable: v.string() }));
+/** A follow-through as the options carry it: its `from` is the second operand; none, and the variable `r`, by default. */
+const followThroughSchema = v.optional(
+  v.nullable(strictRecord({ expression: v.string(), variable: v.optional(v.string(), "r") })),
+  null,
+);
 
 /** The schema of each operator's options, as `buildOperatorCall` writes them and an item carries them, absent fields at their defaults. */
 const OPTION_SCHEMAS = {
@@ -53,7 +56,7 @@ export function parseOptions<TName extends OperatorName>(
   prefix: string,
 ): OptionsOf<TName> {
   const schema = prefix === "" ? OPTION_SCHEMAS[name] : strictRecord({ [prefix]: OPTION_SCHEMAS[name] });
-  const parsed = parseWith(schema, input, prefix === "" ? `The call of ${name}` : `The ${prefix} of ${name}`);
+  const parsed = parseWith(schema, input, prefix === "" ? `The call of ${name}` : `The attribute ${prefix} of ${name}`);
   // The schema of the name, which `OptionsOf` names, has read the options.
   const options = (prefix === "" ? parsed : (parsed as Readonly<Record<string, unknown>>)[prefix]) as OptionsOf<TName>;
   checkKeyLimits(options.key, pathOf(prefix, "key"));

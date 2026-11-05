@@ -509,18 +509,78 @@ describe("expression-equivalent", () => {
   });
 
   it("reads an attribute that leaves fields out at their defaults, as buildOperatorCall writes them", () => {
-    const built = expression({ expression: "x" });
-    const short = {
-      ...built,
-      extensions: [
-        { ...built.extensions[0], value: '{"followThrough":null,"key":{"expression":"x","kind":"expression"}}' },
+    // Each case: a call, the attribute an item may carry for it with every field that has a default left out, and the
+    // operands it is scored on.
+    const cases: readonly [OperatorCall, string, readonly (readonly (Value | null)[])[]][] = [
+      [
+        { operator: "expression-equivalent", key: { kind: "expression", expression: "x" } },
+        '{"key":{"expression":"x","kind":"expression"}}',
+        [[text("x")], [text("x+1")], [text("x=1")]],
       ],
-    } as CustomOperatorExpression;
-    expect(built.extensions[0]?.value).toBe(
+      [
+        {
+          operator: "expression-equivalent",
+          key: { kind: "expression", expression: "x^2" },
+          followThrough: { from: "PART1", expression: "x^r" },
+        },
+        '{"followThrough":{"expression":"x^r"},"key":{"expression":"x^2","kind":"expression"}}',
+        [
+          [text("x^3"), text("3")],
+          [text("x^3"), text("2")],
+        ],
+      ],
+      [
+        { operator: "number-equivalent", key: { kind: "number", value: 2, tolerance: { absolute: 0.5 } } },
+        '{"key":{"kind":"number","tolerance":{"absolute":0.5},"value":2}}',
+        [[text("2.4")], [text("2.6")], [text("2 m")]],
+      ],
+      [
+        {
+          operator: "text-equivalent",
+          key: {
+            kind: "text",
+            answers: [{ texts: ["Ab"] }],
+            normalization: { form: "NFC" },
+            length: { unit: "words", max: 1, effects: [{ when: "above", effect: "zero" }] },
+          },
+        },
+        '{"key":{"answers":[{"texts":["Ab"]}],"kind":"text","length":{"effects":[{"effect":"zero","when":"above"}],"max":1,"unit":"words"},"normalization":{"form":"NFC"}}}',
+        [[text("ab")], [text("ab ab")], [text("b")]],
+      ],
+      [
+        {
+          operator: "hotspot-matching",
+          key: { kind: "areas", scheme: "keyed", areas: [{ id: "A", shape: "rect", coords: [0, 0, 1, 1] }] },
+        },
+        '{"key":{"areas":[{"coords":[0,0,1,1],"id":"A","shape":"rect"}],"kind":"areas","scheme":"keyed"}}',
+        [[{ cardinality: "single", baseType: "point", value: [1, 1] }]],
+      ],
+      [
+        { operator: "readable", key: { kind: "number", value: 2 } },
+        '{"key":{"kind":"number","value":2}}',
+        [[text("2")], [text("two")]],
+      ],
+    ];
+    for (const [built, value, operands] of cases) {
+      const full = call(built);
+      const short = { ...full, extensions: [{ ...full.extensions[0], value }] } as CustomOperatorExpression;
+      for (const each of operands) expect(score(short, ...each)).toStrictEqual(score(full, ...each));
+    }
+  });
+
+  it("writes the attribute of every kind of key with each default resolved, byte for byte", () => {
+    const values = [
+      call({ operator: "expression-equivalent", key: { kind: "expression", expression: "x" } }),
+      call({ operator: "number-equivalent", key: { kind: "number", value: 2 } }),
+      call({ operator: "readable", key: { kind: "number", value: 2 } }),
+    ].map((built) => built.extensions[0]?.value);
+    const number =
+      '{"components":null,"credit":[],"decimalSeparator":".","fractions":false,"intervals":null,"kind":"number","significantFigures":null,"tolerance":{"absolute":null,"relative":null},"units":{},"value":2}';
+    expect(values).toStrictEqual([
       '{"followThrough":null,"key":{"decimalSeparator":".","expression":"x","form":"expression","kind":"expression","variables":{}}}',
-    );
-    expect(share(score(short, text("x")))).toBe(1);
-    expect(score(short, text("x+1"))).toEqual(score(built, text("x+1")));
+      `{"followThrough":null,"key":${number}}`,
+      `{"key":${number}}`,
+    ]);
   });
 
   it("is reported by processing as a ProcessingError of the item when it throws", () => {
