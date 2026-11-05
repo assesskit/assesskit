@@ -123,18 +123,25 @@ function declarationOf(declaration: OutcomeDeclaration): ScoringDeclaration {
   };
 }
 
+/** An outcome declaration that says who scores the outcome. */
+type ExternalDeclaration = OutcomeDeclaration & {
+  readonly externalScored: NonNullable<OutcomeDeclaration["externalScored"]>;
+};
+
 /** Returns the externally scored outcomes an item or a test declares, in document order. */
-function externalOutcomes(declarations: readonly OutcomeDeclaration[]): OutcomeDeclaration[] {
-  return declarations.filter((declaration) => declaration.externalScored !== undefined);
+function externalOutcomes(declarations: readonly OutcomeDeclaration[]): ExternalDeclaration[] {
+  return declarations.filter(
+    (declaration): declaration is ExternalDeclaration => declaration.externalScored !== undefined,
+  );
 }
 
 /** The fields of a request that its outcome gives. */
 function requestHead(
-  declaration: OutcomeDeclaration,
+  declaration: ExternalDeclaration,
 ): Pick<ScoringRequest, "mode" | "declaration"> & Partial<Pick<ScoringRequest, "variableIdentifierRef">> {
   const { externalScored, variableIdentifierRef } = declaration;
   return {
-    mode: externalScored ?? "human",
+    mode: externalScored,
     declaration: declarationOf(declaration),
     ...(variableIdentifierRef === undefined ? {} : { variableIdentifierRef }),
   };

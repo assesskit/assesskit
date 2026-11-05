@@ -127,11 +127,57 @@ describe("scoring requests", () => {
     ]);
   });
 
+  it("carries what the declaration says of an outcome without a base type, and covers a response that no interaction binds", () => {
+    const detailed = engineOf(content, {
+      items: {
+        e1: essay("e1", {
+          scorer: "none",
+          declarations: `<qti-response-declaration identifier="NOTES" cardinality="single" base-type="string"/>
+            <qti-outcome-declaration identifier="DETAIL" cardinality="record" external-scored="human" long-interpretation="https://example.com/detail" mastery-value="3"/>`,
+        }),
+      },
+    });
+    const submitted = played(detailed, begun(detailed).state, write("e1", "Text", 1), act("submit", "e1", 2));
+    const [request] = detailed.pending(submitted.state).scoring;
+    expect(request).toMatchObject({
+      outcome: "DETAIL",
+      declaration: { cardinality: "record", longInterpretation: "https://example.com/detail", masteryValue: 3 },
+    });
+    expect(request?.declaration).not.toHaveProperty("baseType");
+    const notes = request?.covers.find(({ responseIdentifier }) => responseIdentifier === "NOTES");
+    expect(notes).toMatchObject({ item: key("e1"), presented: true, response: null });
+    expect(notes).not.toHaveProperty("interaction");
+  });
+
   it("passes the mode externalMachine and the variable-identifier-ref of the declaration", () => {
     const machine = engineOf(content, { items: { e1: essay("e1", { scorer: "externalMachine", ref: "RESPONSE" }) } });
     const submitted = played(machine, begun(machine).state, write("e1", "Text", 1), act("submit", "e1", 2));
     const [request] = machine.pending(submitted.state).scoring;
     expect(request).toMatchObject({ mode: "externalMachine", variableIdentifierRef: "RESPONSE" });
+  });
+
+  it("writes the requests of a state as JSON and reads them back: a cover with no interaction, a reference, a NULL score", () => {
+    const rich = engineOf(content, {
+      items: {
+        e1: essay("e1", {
+          scorer: "externalMachine",
+          ref: "RESPONSE",
+          declarations: '<qti-response-declaration identifier="NOTES" cardinality="single" base-type="string"/>',
+        }),
+      },
+    });
+    const submitted = played(rich, begun(rich).state, write("e1", "Text", 1), act("submit", "e1", 2));
+    expect(wire(submitted.state)).toEqual(submitted.state);
+    expect(wire(submitted.state).scoring[0]).toMatchObject({ variableIdentifierRef: "RESPONSE" });
+    const supplied = played(rich, submitted.state, {
+      type: "supply-scores",
+      request: "item:e1:1:SCORE",
+      value: null,
+      scorer: "externalMachine",
+      at: 3,
+    });
+    expect(supplied.state.scoring[0]?.supplied).toEqual({ value: null, at: 3, scorer: "externalMachine" });
+    expect(wire(supplied.state)).toEqual(supplied.state);
   });
 
   it("supplies the value of an item outcome: outcome processing runs again, response processing does not", () => {
@@ -1039,6 +1085,45 @@ describe("adaptive sections in nonlinear parts and at the end", () => {
     expect(engine.pending(over.state).cat).toEqual([]);
   });
 
+  it("refuses an answer to End Session that does not end it, and an answer to Submit Results that does", () => {
+    const engine = engineOf(test(), { cat: CAT_A });
+    const start = begun(engine);
+    const staged = played(
+      engine,
+      start.state,
+      stage(engine, start.state, 1, { itemIdentifiers: ["i1", "i2"], stageLength: 2 }),
+    );
+    const one = played(engine, staged.state, pick("i1", "B", 2), act("submit", "i1", 3));
+    const ended = played(engine, one.state, { type: "end-test", at: 4 });
+    const submit = waiting(engine, ended.state);
+    expect(submit.kind).toBe("submit-results");
+    const refused = refusalOf(engine, ended.state, {
+      type: "cat-response",
+      request: submit.id,
+      response: { ended: true },
+      at: 5,
+    });
+    expect(refused).toMatchObject({
+      reason: "invalid-response",
+      message: "The answer to Submit Results must not be { ended: true }.",
+    });
+    const aborted = played(
+      engine,
+      ended.state,
+      stage(engine, ended.state, 5, { itemIdentifiers: ["i3"], stageLength: 1 }),
+    );
+    const endRequest = waiting(engine, aborted.state);
+    expect(endRequest.kind).toBe("end-session");
+    expect(
+      refusalOf(engine, aborted.state, {
+        type: "cat-response",
+        request: endRequest.id,
+        response: { nextItems: null },
+        at: 6,
+      }),
+    ).toMatchObject({ reason: "invalid-response", message: "The answer to End Session must be { ended: true }." });
+  });
+
   it("ends a session whose answer arrives after the candidate left, and accepts the answer after the test ended", () => {
     const engine = engineOf(test(), { cat: CAT_A });
     const start = begun(engine);
@@ -1052,6 +1137,25 @@ describe("adaptive sections in nonlinear parts and at the end", () => {
     );
     expect(waiting(engine, answered.state)).toMatchObject({ kind: "end-session", sessionIdentifier: "session-1" });
     expect(answered.state.plan.parts[0]?.children[0]?.children).toEqual([]);
+  });
+
+  it("takes every item of a stage as its length when the engine gives none, or gives 0", () => {
+    const engine = engineOf(test(), { cat: CAT_A });
+    for (const length of [undefined, 0]) {
+      const start = begun(engine);
+      const staged = played(
+        engine,
+        start.state,
+        stage(engine, start.state, 1, {
+          itemIdentifiers: ["i1", "i2"],
+          ...(length === undefined ? {} : { stageLength: length }),
+        }),
+      );
+      const one = played(engine, staged.state, pick("i1", "B", 2), act("submit", "i1", 3));
+      expect(engine.pending(one.state).cat).toEqual([]);
+      const both = played(engine, one.state, next(4), pick("i2", "B", 5), act("submit", "i2", 6));
+      expect(waiting(engine, both.state).kind).toBe("submit-results");
+    }
   });
 
   it("refuses what waits for the CAT engine, and a stage with an item the section does not list", () => {
@@ -1235,13 +1339,14 @@ describe("outcomes that a CAT engine reports", () => {
   const outcomes = `${outcome("TOTAL", "float")}${outcome("LEVEL", "float", 'external-scored="externalMachine"')}${outcome("PLAIN", "float")}`;
   const test = `${outcomes}${part("P", section("A", ADAPTIVE + refs("i1", "i2", "i3")))}${processing(setOutcome("TOTAL", SUM_SCORES))}`;
   const engine = engineOf(test, { cat: CAT_A });
-  const reported = (name: string, value: number) =>
+  const reported = (name: string, value: number, variableIdentifierRef?: string) =>
     ({
       kind: "outcome",
       identifier: name,
       cardinality: "single",
       baseType: "float",
       value: buildSingle("float", value),
+      ...(variableIdentifierRef === undefined ? {} : { variableIdentifierRef }),
     }) as const;
   const report = (
     variables: ReturnType<typeof reported>[],
@@ -1311,6 +1416,127 @@ describe("outcomes that a CAT engine reports", () => {
       ["PROB", buildSingle("float", 0.25), "externalMachine"],
     ]);
     expect(results.context.sessionIdentifiers).toEqual([{ sourceId: "https://cat.example", identifier: "run-7" }]);
+  });
+
+  const itemReport = (identifier: string, variables: ReturnType<typeof reported>[]) =>
+    ({ identifier, datestamp: "2026-10-30T12:00:00Z", sessionStatus: "final", supports: [], variables }) as const;
+  const machineScored = (variables: AssessmentResult["itemResults"][number]["variables"] | undefined) =>
+    (variables ?? []).flatMap((variable) =>
+      variable.kind === "outcome" && variable.externalScored === "externalMachine"
+        ? [[variable.identifier, variable.value]]
+        : [],
+    );
+
+  it("replaces an outcome that an earlier report gave, of the test and of an item, and keeps the others", () => {
+    const first = submitted();
+    const one = played(
+      engine,
+      first.state,
+      stage(
+        engine,
+        first.state,
+        4,
+        { itemIdentifiers: ["i2"], stageLength: 1 },
+        {
+          assessmentResult: report(
+            [reported("THETA", 0.5), reported("LEVEL", 1)],
+            [itemReport("i1", [reported("PROB", 0.25), reported("FIT", 1, "RESPONSE")])],
+          ),
+        },
+      ),
+    );
+    const second = played(engine, one.state, next(5), pick("i2", "B", 6), act("submit", "i2", 7));
+    const done = played(
+      engine,
+      second.state,
+      stage(engine, second.state, 8, null, {
+        assessmentResult: report([reported("THETA", 0.75)], [itemReport("i1", [reported("PROB", 0.5)])]),
+      }),
+    );
+    expect(wire(done.state)).toEqual(done.state);
+    const results = engine.results(done.state);
+    expect(machineScored(results.testResult?.variables)).toEqual([
+      ["LEVEL", buildSingle("float", 1)],
+      ["THETA", buildSingle("float", 0.75)],
+    ]);
+    expect(machineScored(results.itemResults[0]?.variables)).toEqual([
+      ["FIT", buildSingle("float", 1)],
+      ["PROB", buildSingle("float", 0.5)],
+    ]);
+  });
+
+  it("reads the identifier of an item result as ref.n too, and leaves out a result of an item not presented", () => {
+    const first = submitted();
+    const merged = played(
+      engine,
+      first.state,
+      stage(
+        engine,
+        first.state,
+        4,
+        { itemIdentifiers: ["i2"], stageLength: 1 },
+        {
+          assessmentResult: report(
+            [],
+            [
+              itemReport("i1.1", [reported("PROB", 0.25)]),
+              itemReport("i2", [reported("NEVER", 1)]),
+              itemReport("i1.2", [reported("NEVER", 2)]),
+              itemReport("unknown", [reported("NEVER", 3)]),
+              itemReport(".1", [reported("NEVER", 4)]),
+            ],
+          ),
+        },
+      ),
+    );
+    const results = engine.results(merged.state);
+    expect(machineScored(results.itemResults[0]?.variables)).toEqual([["PROB", buildSingle("float", 0.25)]]);
+    const named = results.itemResults.flatMap(({ variables }) => variables.map(({ identifier }) => identifier));
+    expect(named).not.toContain("NEVER");
+  });
+
+  it("refuses the JSON of a state that keeps an outcome of a CAT session with the value NULL", () => {
+    const first = submitted();
+    const merged = played(
+      engine,
+      first.state,
+      stage(
+        engine,
+        first.state,
+        4,
+        { itemIdentifiers: ["i2"], stageLength: 1 },
+        { assessmentResult: report([reported("THETA", 0.5)]) },
+      ),
+    );
+    const written = JSON.parse(serializeState(merged.state));
+    expect(written.cat[0].outcomes).toHaveLength(1);
+    written.cat[0].outcomes[0].value = null;
+    expect(() => deserializeState(JSON.stringify(written))).toThrow(
+      "The value of an outcome of a CAT session must not be NULL.",
+    );
+  });
+
+  it("takes a report without a context and without a test result", () => {
+    const first = submitted();
+    const merged = played(
+      engine,
+      first.state,
+      stage(
+        engine,
+        first.state,
+        4,
+        { itemIdentifiers: ["i2"], stageLength: 1 },
+        {
+          assessmentResult: JSON.parse(
+            JSON.stringify({ itemResults: [itemReport("i1", [reported("PROB", 0.25)])] }),
+          ) as AssessmentResult,
+        },
+      ),
+    );
+    expect(merged.state.report.sessionIdentifiers).toEqual([]);
+    expect(machineScored(engine.results(merged.state).itemResults[0]?.variables)).toEqual([
+      ["PROB", buildSingle("float", 0.25)],
+    ]);
   });
 
   it("does not let the engine of a later adaptive section overwrite an outcome that another set", () => {
@@ -1624,6 +1850,48 @@ describe("drainCat", () => {
     expect(port.calls.map(({ method }) => method)).toEqual(["createSession", "submitResults", "endSession"]);
     expect(port.calls[2]).toEqual({ method: "endSession", section: "section-1", session: "session-1" });
     expect(done.cat[0]?.status).toBe("ended");
+  });
+
+  it("keeps the state that the CAT engine returns, and gives it back with the next results", async () => {
+    const received: (string | undefined)[] = [];
+    const port = {
+      ...fakePort([["i3"], null]),
+      createSession: async () => ({
+        sessionIdentifier: "session-1",
+        sessionState: "after-create",
+        nextItems: { itemIdentifiers: ["i1", "i2"], stageLength: 2 },
+      }),
+      submitResults: async (
+        _prefix: string,
+        _section: string,
+        _session: string,
+        body: { readonly sessionState?: string },
+      ) => {
+        received.push(body.sessionState);
+        return received.length === 1
+          ? { sessionState: "after-first", nextItems: { itemIdentifiers: ["i3"], stageLength: 1 } }
+          : { nextItems: null };
+      },
+    };
+    const now = clock();
+    const first = await drainCat(engine, begun(engine).state, port, now);
+    expect(first.cat[0]?.sessionState).toBe("after-create");
+    const two = played(
+      engine,
+      first,
+      pick("i1", "B", 1001),
+      act("submit", "i1", 1002),
+      next(1003),
+      pick("i2", "B", 1004),
+      act("submit", "i2", 1005),
+    );
+    const second = await drainCat(engine, two.state, port, now);
+    expect(second.cat[0]?.sessionState).toBe("after-first");
+    const three = played(engine, second, next(2001), pick("i3", "B", 2002), act("submit", "i3", 2003));
+    const third = await drainCat(engine, three.state, port, now);
+    expect(received).toEqual(["after-create", "after-first"]);
+    expect(third.cat[0]).toMatchObject({ status: "ended" });
+    expect(third.cat[0]).not.toHaveProperty("sessionState");
   });
 
   it("returns the state as it is when nothing waits", async () => {

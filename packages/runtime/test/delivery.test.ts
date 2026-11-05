@@ -1252,6 +1252,16 @@ describe("applying actions", () => {
     expect(played(free, begun(free).state, moveTo("next", 1_000)).state.current).toEqual(key("b"));
   });
 
+  it("refuses to end a test part before its minimum time, and ends it once the time is spent", () => {
+    const engine = timedEngine(testPart("P", section("S", refs("a")), "linear", "individual", limits('min-time="10"')));
+    const { state } = begun(engine);
+    expect(refusalOf(engine, state, { type: "end-part", at: 4_000 })).toEqual({
+      reason: "min-time-not-reached",
+      message: 'The test part "P" has a minimum time of 10 s, of which 4 s are spent.',
+    });
+    expect(played(engine, state, { type: "end-part", at: 10_000 }).state.status).toBe("ended");
+  });
+
   it("suspends the whole session: its item, its time and every action but resume", () => {
     const engine = engineOf(nonlinearAb);
     const paused = played(engine, begun(engine).state, answer("a", "B", 1_000), { type: "suspend", at: 2_000 });
@@ -2676,6 +2686,31 @@ describe("the view of a state", () => {
     ]);
   });
 
+  it("leaves out the skip of an item that may not be skipped, the review and solution of a closed item that allows neither", () => {
+    const controlled = (attributes: string) =>
+      engineOf(testPart("P", section("S", itemRef("a", `<qti-item-session-control ${attributes}/>`)), "nonlinear"));
+    const strict = controlled('allow-skipping="false"');
+    const actions = strict.view(begun(strict).state, 0).actions;
+    expect(actions).toContain("submit");
+    expect(actions).not.toContain("skip");
+    const sealed = controlled('allow-review="false" show-solution="false"');
+    const closed = played(sealed, begun(sealed).state, answer("a", "A", 1), on("submit", "a", 2));
+    expect(sealed.view(closed.state, 2).actions).toEqual(["mark", "move", "end-part", "end-test", "suspend"]);
+  });
+
+  it("offers the next attempt once an attempt ended and the item allows another", () => {
+    const unlimited = engineOf(
+      testPart("P", section("S", itemRef("a", '<qti-item-session-control max-attempts="0"/>')), "nonlinear"),
+    );
+    const first = begun(unlimited).state;
+    expect(unlimited.view(first, 0).actions).not.toContain("next-attempt");
+    const submitted = played(unlimited, first, answer("a", "A", 1), on("submit", "a", 2));
+    expect(unlimited.view(submitted.state, 2).actions).toContain("next-attempt");
+    const again = played(unlimited, submitted.state, { type: "next-attempt", item: key("a"), at: 3 });
+    const second = unlimited.view(again.state, 3);
+    expect([second.current?.numAttempts, second.actions.includes("next-attempt")]).toEqual([2, false]);
+  });
+
   it("lists the supports with their state and settings, and the settings of a prohibited one stay out", () => {
     const engine = leakyEngine();
     const pnp = pnpOf(
@@ -2752,6 +2787,46 @@ describe("the view of a state", () => {
       custom: new Map([["mode", "exam"]]),
     });
     expect([tool?.title, tool?.body, tool?.interactions, tool?.responses]).toEqual(["Lab", [], [], new Map()]);
+  });
+
+  it("keeps a stylesheet outside the package as written, and shows no attempts left when any number is allowed", () => {
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-stylesheet href="https://cdn.example.com/item.css" type="text/css"/><qti-stylesheet href="/root.css" type="text/css"/>
+      <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"/>
+      <qti-item-body><qti-choice-interaction response-identifier="RESPONSE" max-choices="1">${CHOICES}</qti-choice-interaction></qti-item-body>`,
+    );
+    const engine = engineOf(
+      testPart("P", section("S", itemRef("a", '<qti-item-session-control max-attempts="0"/>')), "nonlinear"),
+      { "a.xml": item },
+    );
+    const view = engine.view(begun(engine).state, 0).current;
+    expect(view?.stylesheets).toEqual(["https://cdn.example.com/item.css", "/root.css"]);
+    expect(view).not.toHaveProperty("attemptsLeft");
+    const alone = createEngine({ kind: "item", item, base: "item.xml" });
+    const started = alone.start({ seed: 1, at: 0 });
+    if (!started.ok) fail("The start was refused.");
+    expect(alone.view(started.state, 0).current?.stylesheets).toEqual([
+      "https://cdn.example.com/item.css",
+      "/root.css",
+    ]);
+  });
+
+  it("shows the companion materials and the catalogs of the item, each catalog once", () => {
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"/>
+      <qti-item-body><p data-catalog-idref="c1">Hard word</p><qti-choice-interaction response-identifier="RESPONSE" max-choices="1">${CHOICES}</qti-choice-interaction></qti-item-body>
+      <qti-catalog-info><qti-catalog id="c1"><qti-card support="spoken"><qti-html-content>read this</qti-html-content></qti-card></qti-catalog></qti-catalog-info>
+      <qti-companion-materials-info><qti-physical-material>Graph paper</qti-physical-material></qti-companion-materials-info>`,
+    );
+    const engine = engineOf(testPart("P", section("S", refs("a")), "nonlinear"), { "a.xml": item });
+    const view = engine.view(begun(engine).state, 0).current;
+    expect(view?.catalogs.map(({ id }) => id)).toEqual(["c1"]);
+    expect(view?.companionMaterials).toEqual(item.companionMaterials);
+    expect(view?.companionMaterials).toBeDefined();
+    const plain = engineOf(testPart("P", section("S", refs("a")), "nonlinear"));
+    expect(plain.view(begun(plain).state, 0).current).not.toHaveProperty("companionMaterials");
   });
 
   it("shows the stimuli of the item, and the stylesheets of both as package paths", () => {
@@ -3336,6 +3411,54 @@ describe("starting an item session", () => {
     expect(started.variables.templates.get("SEEN")).toEqual(buildSingle("string", "c-7"));
     const done = acts(accepted(presentItem(started, 1, context)).session, context, SUBMIT);
     expect(outcome(done, "WHO")).toEqual(buildSingle("string", "c-7"));
+  });
+
+  it("starts from the template defaults that the test gives in place of the declared ones, NULL included", () => {
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-template-declaration identifier="N" cardinality="single" base-type="integer"><qti-default-value><qti-value>7</qti-value></qti-default-value></qti-template-declaration>
+      <qti-template-declaration identifier="M" cardinality="single" base-type="integer"><qti-default-value><qti-value>8</qti-value></qti-default-value></qti-template-declaration>
+      <qti-item-body><p>Count.</p></qti-item-body>`,
+    );
+    const context = contextOf(item);
+    const given = new Map<string, Value | null>([
+      ["N", integer(5)],
+      ["M", null],
+    ]);
+    const { variables } = accepted(startItemSession(KEY, 0, context, { templateDefaults: given })).session;
+    expect(variables.templates).toEqual(
+      new Map([
+        ["N", integer(5)],
+        ["M", null],
+      ]),
+    );
+    expect(variables.defaults.get("N")).toEqual(integer(5));
+    expect(
+      accepted(startItemSession(KEY, 0, context, { templateDefaults: new Map() })).session.variables.templates,
+    ).toEqual(
+      new Map([
+        ["N", integer(7)],
+        ["M", integer(8)],
+      ]),
+    );
+  });
+
+  it("refuses template defaults that are not a Map, name no template variable, or do not fit its type", () => {
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-template-declaration identifier="N" cardinality="single" base-type="integer"/>
+      <qti-item-body><p>Count.</p></qti-item-body>`,
+    );
+    const context = contextOf(item);
+    const start = (templateDefaults: ReadonlyMap<string, Value | null>) => () =>
+      startItemSession(KEY, 0, context, { templateDefaults });
+    expect(start(json("{}"))).toThrow(
+      "The option templateDefaults must be a Map from identifier to value, found an object.",
+    );
+    expect(start(new Map([["X", integer(1)]]))).toThrow(
+      'The option templateDefaults gives "X", which the item declares no template variable for.',
+    );
+    expect(start(new Map([["N", text("one")]]))).toThrow("The template variable N is");
   });
 
   it("keeps the template defaults and reports processing-failed when template processing fails", () => {
@@ -4698,6 +4821,97 @@ describe("the JSON of a view", () => {
         timers: [Object.assign({}, { scope: "test", identifier: "T", late: false } as const, { key: 1 })],
       }),
     ).toThrow(/^The view is invalid at timers\[0\]: unexpected property "key"\.$/);
+  });
+
+  it("writes the values of a portable custom interaction and the link to a tool, and reads them back", () => {
+    const pciItem = itemOf(
+      'time-dependent="false"',
+      `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>
+      <qti-context-declaration identifier="LANG" cardinality="single" base-type="string"><qti-default-value><qti-value>id</qti-value></qti-default-value></qti-context-declaration>
+      <qti-template-declaration identifier="TV" cardinality="single" base-type="integer"><qti-default-value><qti-value>7</qti-value></qti-default-value></qti-template-declaration>
+      <qti-item-body><qti-portable-custom-interaction response-identifier="RESPONSE" custom-interaction-type-identifier="urn:fdc:example.com:pci:any" module="any"><qti-interaction-markup><p>Any</p></qti-interaction-markup><qti-template-variable template-identifier="TV"/><qti-context-variable identifier="LANG"/></qti-portable-custom-interaction></qti-item-body>`,
+    );
+    const link: LtiLink = {
+      title: "Lab",
+      secureLaunchUrl: "https://tool.example/launch",
+      custom: new Map([["mode", "exam"]]),
+      extensions: [],
+    };
+    const tool: ResolvedItem = {
+      resource: "lab",
+      deliverable: { kind: "lti", identifier: "lab", link },
+      hazards: [],
+      variants: [],
+    };
+    const one = engineOf(testPart("P", section("S", refs("a", "b")), "nonlinear"), { "a.xml": pciItem, "b.xml": tool });
+    const first = begun(one).state;
+    const set = played(one, first, {
+      type: "set-responses",
+      item: key("a"),
+      responses: new Map([["RESPONSE", text("draft")]]),
+      pciStates: new Map([["RESPONSE", '{"strokes":[1,2]}']]),
+      at: 1,
+    });
+    const pciView = one.view(set.state, 1);
+    const written = JSON.parse(JSON.stringify(writeView(pciView)));
+    expect(written.current.pci).toEqual([
+      [
+        "RESPONSE",
+        {
+          templateValues: [["TV", { cardinality: "single", baseType: "integer", value: { base: { integer: 7 } } }]],
+          contextValues: [["LANG", { cardinality: "single", baseType: "string", value: { base: { string: "id" } } }]],
+          state: '{"strokes":[1,2]}',
+        },
+      ],
+    ]);
+    expect(readView(throughText(writeView(pciView)))).toEqual(pciView);
+    const toolView = one.view(played(one, set.state, moveTo(key("b"), 2)).state, 2);
+    expect(toolView.current?.lti).toEqual({
+      title: "Lab",
+      secureLaunchUrl: "https://tool.example/launch",
+      custom: new Map([["mode", "exam"]]),
+    });
+    expect(readView(throughText(writeView(toolView)))).toEqual(toolView);
+  });
+
+  it("refuses a view whose maps of an item, of a portable custom interaction or of a tool are not Maps", () => {
+    const item = engine.view(state, 0).current ?? fail("No item.");
+    const view = engine.view(state, 0);
+    expect(() => writeView({ ...view, current: { ...item, pci: json("[]") } })).toThrow(
+      "The portable custom interactions of the item must be a Map, found an array.",
+    );
+    const pci = { templateValues: new Map(), contextValues: new Map() };
+    expect(() =>
+      writeView({ ...view, current: { ...item, pci: new Map([["R", { ...pci, templateValues: json("{}") }]]) } }),
+    ).toThrow("The templateValues of a portable custom interaction must be a Map, found an object.");
+    expect(() =>
+      writeView({ ...view, current: { ...item, pci: new Map([["R", { ...pci, contextValues: json("1") }]]) } }),
+    ).toThrow("The contextValues of a portable custom interaction must be a Map, found 1.");
+    expect(() => writeView({ ...view, current: { ...item, lti: { title: "Lab", custom: json("{}") } } })).toThrow(
+      "The custom properties of the link to a tool must be a Map, found an object.",
+    );
+  });
+
+  it("writes the supports of a view and of a state, the universal and the prohibited among them, and reads them back", () => {
+    const supported = leakyEngine();
+    const pnp = pnpOf(
+      "<line-reader/><braille/><activate-as-option-set><dictionary-on-screen/></activate-as-option-set><prohibit-set><braille/></prohibit-set>",
+    );
+    const started = begun(supported, { pnp, universalSupports: ["calculator-on-screen"] }).state;
+    const view = supported.view(started, 0);
+    expect(view.supports.length).toBeGreaterThan(3);
+    expect(view.supports.some((support) => !("settings" in support))).toBe(true);
+    expect(readView(throughText(writeView(view)))).toEqual(view);
+    expect(started.supports.get("calculator-on-screen")).toMatchObject({ universal: true });
+    expect(deserializeState(serializeState(started))).toEqual(started);
+  });
+
+  it("refuses the settings of a support that are not an object", () => {
+    const written = JSON.parse(JSON.stringify(writeView(engine.view(state, 0))));
+    written.supports = [{ name: "line-reader", state: "active", active: true, settings: 5 }];
+    expect(() => readView(written)).toThrow(
+      'The settings of the support "line-reader" must name a predefined support and have the name "line-reader", found 5.',
+    );
   });
 
   it("refuses JSON that is not the form of a view", () => {
@@ -6914,5 +7128,89 @@ describe("properties", () => {
         },
       ),
     );
+  });
+});
+
+describe("the results of declarations", () => {
+  const rich = itemOf(
+    'time-dependent="false"',
+    `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"/>
+    <qti-response-declaration identifier="DETAIL" cardinality="record"/>
+    <qti-template-declaration identifier="TPL" cardinality="record"/>
+    <qti-context-declaration identifier="CTX" cardinality="record"/>
+    <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float" view="candidate" long-interpretation="https://example.com/long" variable-identifier-ref="RESPONSE"/>
+    <qti-outcome-declaration identifier="ROW" cardinality="record"/>
+    <qti-item-body><qti-choice-interaction response-identifier="RESPONSE" max-choices="1">${CHOICES}</qti-choice-interaction></qti-item-body>`,
+  );
+  const engine = engineOf(testPart("P", section("S", refs("a")), "nonlinear"), { "a.xml": rich });
+  const variables = (): Map<string, unknown> =>
+    new Map(
+      (engine.results(begun(engine).state).itemResults[0]?.variables ?? []).map((each) => [each.identifier, each]),
+    );
+
+  it("reports a variable of the cardinality record without a base type", () => {
+    for (const name of ["DETAIL", "TPL", "CTX", "ROW"]) {
+      expect(variables().get(name), name).toMatchObject({ cardinality: "record" });
+      expect(variables().get(name), name).not.toHaveProperty("baseType");
+    }
+  });
+
+  it("reports the view, the long interpretation and the variable that an outcome declares", () => {
+    expect(variables().get("SCORE")).toMatchObject({
+      view: ["candidate"],
+      longInterpretation: "https://example.com/long",
+      variableIdentifierRef: "RESPONSE",
+    });
+    expect(variables().get("ROW")).not.toHaveProperty("view");
+  });
+});
+
+describe("the JSON of an action of every type", () => {
+  it("writes the actions of the candidate, which read back as the same actions", () => {
+    const actions: CandidateAction[] = [
+      { type: "submit", item: key("a") },
+      { type: "skip", item: key("a") },
+      { type: "move", to: "next" },
+      { type: "move", to: key("b") },
+      { type: "comment", item: key("a"), text: "A remark" },
+      { type: "suspend" },
+      { type: "resume" },
+    ];
+    for (const action of actions) {
+      expect(readCandidateAction(JSON.parse(JSON.stringify(writeCandidateAction(action)))), action.type).toEqual(
+        action,
+      );
+    }
+  });
+
+  it("refuses a map of responses or states on an action that has none", () => {
+    expect(() => writeCandidateAction({ type: "submit", item: key("a"), responses: new Map() } as never)).toThrow(
+      DataError,
+    );
+    expect(() => writeCandidateAction({ type: "skip", item: key("a"), pciStates: new Map() } as never)).toThrow(
+      DataError,
+    );
+  });
+});
+
+describe("a state of another test", () => {
+  const owner = engineOf(testPart("P", section("S", refs("a", "b")), "nonlinear"));
+  const started = begun(owner).state;
+  const answered = played(owner, started, answer("a", "A", 1)).state;
+
+  it("is refused with the name of what the test lacks, by every call that reads the state", () => {
+    const other = engineOf(testPart("P", section("S", refs("x", "y")), "nonlinear"));
+    for (const state of [started, answered]) {
+      for (const call of [
+        () => other.apply(state, { type: "time", at: 5 }),
+        () => other.apply(state, answer("a", "A", 5)),
+        () => other.apply(state, on("submit", "a", 5)),
+        () => other.apply(state, moveTo("next", 5)),
+        () => other.view(state, 5),
+        () => other.deadlines(state),
+      ]) {
+        expect(call).toThrow('The state names "a", which the test does not have.');
+      }
+    }
   });
 });

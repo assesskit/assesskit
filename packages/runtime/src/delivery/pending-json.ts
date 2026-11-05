@@ -119,7 +119,7 @@ function outcomeToJson(outcome: CatOutcome): unknown {
   return {
     ...(item === undefined ? {} : { item }),
     identifier: outcome.identifier,
-    value: outcome.value === null ? null : writeWireValue(outcome.value),
+    value: writeWireValue(outcome.value),
     declared: outcome.declared,
     ...(variableIdentifierRef === undefined ? {} : { variableIdentifierRef }),
   };
