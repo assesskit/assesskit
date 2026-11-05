@@ -25,24 +25,24 @@ export const BUDGETS = {
   stateRoundTrip: 8,
   /** The size of the state of a session of 100 items that has ended, in bytes. */
   stateBytes: 150_000,
-  // The operators' budgets are five times the fastest sample of a laptop (0.02, 2.68, 0.0033, 0.53 and 0.82 ms), rounded up to one
-  // significant digit, until the CI runner's samples replace them.
+  // The operators' budgets are five times the fastest sample of the CI runner over five runs of main on 2026-11-05 (0.0273,
+  // 3.86, 0.0051, 0.544 and 1.17 ms), rounded up to one significant digit.
   /** Comparing an expression with its key by `expression-equivalent`, its options read on the call. */
-  operatorExpression: 0.1,
+  operatorExpression: 0.2,
   /** Comparing a sum of 1,000 terms with a key of as many, the most that a response holds. */
   operatorLongest: 20,
   /** Scoring a mixed fraction with a unit against a key with a tolerance and a tier. */
-  operatorNumber: 0.02,
+  operatorNumber: 0.03,
   /** Scoring a text of 200 words against 50 answers with credit tiers. */
   operatorText: 3,
   /** Checking 60 lines of worked steps. */
-  mathSteps: 5,
-  // The compiler's budgets are five times the fastest sample of a laptop (0.04 and 139 ms), rounded up to one significant
-  // digit, until the CI runner's samples replace them.
+  mathSteps: 6,
+  // The compiler's budgets are five times the fastest sample of the CI runner over the same runs (0.025 and 152 ms), rounded
+  // up to one significant digit.
   /** Compiling the keys of an item of four responses. */
   compileItem: 0.2,
   /** Compiling 256 orders of 1,000 choices, scored per position: the limits of keys. */
-  compileLimits: 700,
+  compileLimits: 800,
   // The budgets of the item formats are five times the fastest sample of a laptop (0.32, 0.56, 87.8, 0.26 and 0.69 ms),
   // rounded up to one significant digit, until the CI runner's samples replace them.
   /** Reading the edge cases of GIFT, 18 items and two questions that Moodle refuses. */
