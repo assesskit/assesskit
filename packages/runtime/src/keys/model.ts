@@ -382,7 +382,7 @@ export interface ChoiceMarkingKey {
   /** The points for each other option selected, below 0 for a negative mark. */
   readonly wrong: number;
   /**
-   * The points when nothing is selected.
+   * The points when nothing is selected, at most what the right selection earns.
    *
    * @defaultValue `0`
    */

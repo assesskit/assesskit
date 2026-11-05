@@ -229,14 +229,16 @@ export function choiceMappingScheme(response: string, key: ChoiceMappingKeyData)
 }
 
 /**
- * `choice-marking`: `blank` with nothing selected, else `correct` for each key and `wrong` for each other option selected, by
- * QTI's `qti-map-response`, not floored.
+ * `choice-marking`: `blank` with nothing selected, at most what the right selection earns, else `correct` for each key and
+ * `wrong` for each other option selected, by QTI's `qti-map-response`, not floored.
  *
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-map-response}
  */
 export function choiceMarkingScheme(response: string, key: ChoiceMarkingKeyData): Scheme {
   const maxChoices = key.maxChoices ?? key.keys.length;
   const maximum = key.correct * Math.min(key.keys.length, maxChoices);
+  if (key.blank > maximum)
+    throw keyError("blank", `blank ${key.blank} is above the ${maximum} that the right selection earns.`);
   const lowest = key.wrong < 0 ? key.wrong * maxChoices : 0;
   const table = mapping(
     key.keys.map((value) => [value, key.correct]),

@@ -14136,7 +14136,7 @@
       ],
       "correct": 0.25,
       "wrong": -0.25,
-      "blank": 0.5
+      "blank": 0.25
      },
      "maxPoints": 0.5
     }
@@ -16601,7 +16601,7 @@
       ],
       "correct": 0.25,
       "wrong": -1,
-      "blank": 0.5
+      "blank": 0.25
      },
      "weight": 0.5
     }
@@ -16625,7 +16625,7 @@
    "parts": {
     "R1": 0.0,
     "R2": 0.0,
-    "R3": 0.25
+    "R3": 0.125
    },
    "feedback": [
     "R1-incorrect",
@@ -18661,7 +18661,7 @@
       ],
       "correct": 0.25,
       "wrong": 0,
-      "blank": 0.5
+      "blank": 0.25
      },
      "maxPoints": 0.5,
      "weight": 2
@@ -21194,7 +21194,7 @@
       ],
       "correct": 0.25,
       "wrong": 0,
-      "blank": 0.5
+      "blank": 0.25
      },
      "maxPoints": 2,
      "weight": 2
@@ -21277,7 +21277,7 @@
    "parts": {
     "R1": 1.5,
     "R2": 0.0,
-    "R3": 8.0,
+    "R3": 4.0,
     "R4": 0.0
    },
    "feedback": [
@@ -33102,7 +33102,7 @@
       ],
       "correct": 0.25,
       "wrong": -0.25,
-      "blank": 0.5
+      "blank": 0.25
      }
     }
    ],
@@ -34203,7 +34203,7 @@
       ],
       "correct": 0.25,
       "wrong": -0.25,
-      "blank": 0.5
+      "blank": 0.25
      }
     }
    ],

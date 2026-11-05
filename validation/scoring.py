@@ -110,7 +110,8 @@ def choice_marking_case():
     options = keys + ["E", "F", "G"]
     correct = rng.choice([1, 4, 0.25, 3])
     wrong = rng.choice([-1, -0.25, 0, -2])
-    blank = rng.choice([0, 0, 0.5])
+    # A blank earns at most what the right selection earns, which compileScoring refuses past.
+    blank = min(rng.choice([0, 0, 0.5]), correct * len(keys))
     key = {"kind": "choice-marking", "keys": keys, "correct": correct, "wrong": wrong}
     if blank != 0:
         key["blank"] = blank

@@ -660,6 +660,7 @@ describe("compileScoring", () => {
     refused({ kind: "choice-mapping", points: { A: 0, B: -1 } }, "no response earns points");
     refused({ kind: "choice-mapping", points: { "1A": 1 } }, "QTI identifier");
     refused({ kind: "choice-marking", keys: ["A"], correct: 0, wrong: 0 }, "positive number");
+    refused({ kind: "choice-marking", keys: ["A", "B"], correct: 1, wrong: -1, blank: 2.5 }, "above the 2 that");
     refused({ kind: "pairs", pairs: [["A", "A"]] }, "two choices");
     refused(
       {
