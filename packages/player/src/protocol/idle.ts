@@ -40,7 +40,9 @@ export interface IdleStep {
  * leaves all of it or none. A refusal of any of the three leaves the state as it was.
  *
  * A session that is not in progress has no gap to close. A `time` action that finds one is dropped, since the deadlines it
- * would apply move with the gap: the caller saves nothing and schedules nothing, and the next action closes the gap.
+ * would apply move with the gap: the caller saves nothing and schedules nothing, and the next action closes the gap. The close
+ * of the session does not move: once it has come, the session suspends at the latest step and the action applies to the
+ * suspended session, which the close ends at its instant, so that a `time` action ends it and any other finds the test over.
  *
  * @param runtime - See {@link IdleRuntime}.
  * @param input - See {@link IdleInput}.
@@ -56,12 +58,16 @@ export function stepAfterIdle(runtime: IdleRuntime, input: IdleInput): IdleStep 
   if (maxIdleMs === undefined || state.status !== "in-progress" || now - state.at <= maxIdleMs) {
     return { step: engine.apply(state, stamped), at };
   }
-  if (action.type === "time") return undefined;
+  const closed = state.closeAt !== undefined && state.closeAt <= now;
+  if (action.type === "time" && !closed) return undefined;
   const suspended = engine.apply(state, stamp(state, { type: "suspend" }, state.at));
   if (!suspended.ok) return { step: suspended, at };
-  const resumed = engine.apply(suspended.state, stamp(suspended.state, { type: "resume" }, now));
+  // After the close, a resumption would meet the end: the action applies to the suspended session, which the close ends.
+  const resumed: Step = closed
+    ? { ok: true, state: suspended.state, events: [] }
+    : engine.apply(suspended.state, stamp(suspended.state, { type: "resume" }, now));
   if (!resumed.ok) return { step: resumed, at };
-  // The state after the resumption is at `at`, so the stamp of the action is not before it.
+  // The state after the resumption is at `at` at the latest, so the stamp of the action is not before it.
   const acted = engine.apply(resumed.state, stamped);
   if (!acted.ok) return { step: acted, at };
   const events = [...suspended.events, ...resumed.events, ...acted.events];

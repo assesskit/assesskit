@@ -1646,6 +1646,18 @@ describe("the option maxIdleMs of the session host", () => {
     expect(scheduler.jobs.at(-1)?.[1]).toBe(clock.now() + 600 * SECOND);
   });
 
+  it("ends a session at its close with the job that finds a gap, which the close does not move", async () => {
+    const { host, clock, store } = await examHost({ ...practice, maxIdleMs: Hour }, timed());
+    const start = clock.now();
+    await host.start(ALICE, { seed: 7, closeAt: start + 2 * Hour });
+    clock.advance(3 * DAY);
+    const closed = await host.session(ALICE.session).apply({ type: "time" });
+    expect(closed.events.map(({ type }) => type).slice(0, 2)).toEqual(["suspended", "time-out"]);
+    expect(closed.events[1]?.at).toBe(start + 2 * Hour);
+    expect(store.saves).toHaveLength(1);
+    expect((await host.handle(ALICE, request(1, answer("A")))).refusal?.reason).toBe("ended");
+  });
+
   it("closes the gap once when the request is handled again after another request saved first", async () => {
     const { host, clock, store, logged } = await examHost({ ...practice, maxIdleMs: Hour }, timed());
     await host.start(ALICE, { seed: 7 });

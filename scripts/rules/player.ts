@@ -89,6 +89,13 @@ export const PLAYER_RULES: readonly Rule[] = [
     test: "packages/player/test/client.test.ts",
   },
   {
+    rule: "A time action that finds a gap above maxIdleMs after the close ends the session at the close, which the gap does not move.",
+    file: "packages/player/src/protocol/idle.ts",
+    find: 'if (action.type === "time" && !closed) return undefined;',
+    replace: 'if (action.type === "time") return undefined;',
+    test: "packages/player/test/protocol.test.ts",
+  },
+  {
     rule: "A page, a drawing or a script of a package is served in a sandbox, so that a hostile package runs no script on the asset origin.",
     file: "packages/player/src/server/gate/gate.ts",
     find: "const headers = type === PDF_TYPE ? BASE_HEADERS : SANDBOXED_HEADERS;",

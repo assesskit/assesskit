@@ -165,11 +165,13 @@ sequenceDiagram
   participant E as Engine
   C->>S: action at now
   alt now - latest step > maxIdleMs, and in progress
-    alt the action is a time action
+    alt a time action, before the close
       S-->>C: dropped, nothing saved
     end
     S->>E: suspend at the latest step
-    S->>E: resume at now
+    opt before the close
+      S->>E: resume at now
+    end
   end
   S->>E: the action at now
   alt accepted
@@ -179,15 +181,15 @@ sequenceDiagram
   end
 ```
 
-| Rule               | Behavior                                                                                                                                                                    |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Choosing a value   | Above the longest pause that a learner takes while working: a gap above it counts in full as suspended.                                                                     |
-| Limits             | A running maximum time stops with the gap, and resumes with the next action.                                                                                                |
-| Saving             | The suspension, the resumption and the action are saved once, so that a crash leaves all of them or none. The step listeners get their events in order.                     |
-| A `time` action    | One that finds a gap above `maxIdleMs` is dropped: the timer fires it and the host can send it, but nothing is saved or armed again, so an abandoned session costs nothing. |
-| Applies to         | Actions of the candidate and of the host, while the session is in progress. A session that is suspended or ended has no gap to close.                                       |
-| A refused action   | Saves nothing, so the next action still closes the gap.                                                                                                                     |
-| The view before it | A view that the session gives before the first action after the gap counts the gap, so the timers in it show the time as passed. The action's view is right.                |
+| Rule               | Behavior                                                                                                                                                                                                                                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Choosing a value   | Above the longest pause that a learner takes while working: a gap above it counts in full as suspended.                                                                                                                                                                                                                  |
+| Limits             | A running maximum time stops with the gap, and resumes with the next action.                                                                                                                                                                                                                                             |
+| Saving             | The suspension, the resumption and the action are saved once, so that a crash leaves all of them or none. The step listeners get their events in order.                                                                                                                                                                  |
+| A `time` action    | One that finds a gap above `maxIdleMs` is dropped: the timer fires it and the host can send it, but nothing is saved or armed again, so an abandoned session costs nothing. The close of the session does not move with the gap: after it, the session suspends at the latest step and the close ends it at its instant. |
+| Applies to         | Actions of the candidate and of the host, while the session is in progress. A session that is suspended or ended has no gap to close.                                                                                                                                                                                    |
+| A refused action   | Saves nothing, so the next action still closes the gap.                                                                                                                                                                                                                                                                  |
+| The view before it | A view that the session gives before the first action after the gap counts the gap, so the timers in it show the time as passed. The action's view is right.                                                                                                                                                             |
 
 ### The host side
 

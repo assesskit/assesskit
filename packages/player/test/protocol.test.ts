@@ -577,6 +577,27 @@ describe("stepAfterIdle", () => {
     expect(soon?.step.ok).toBe(true);
   });
 
+  it("ends a session at its close when a time action finds a gap after it, as it ends a suspended one", () => {
+    const time: HostAction = { type: "time" };
+    const closing = engine.start({ seed: 1, at: Start, closeAt: Start + Day });
+    if (!closing.ok) throw new Error("The fixture session must start.");
+    const idle = { state: closing.state, now: Start + 3 * Day, maxIdleMs: 3600 * 1000 };
+    // Before the close a gap moves every deadline, so the time action is dropped as before.
+    expect(stepAfterIdle(runtime, { ...idle, action: time, now: Start + Day - 1 })).toBeUndefined();
+    const taken = stepAfterIdle(runtime, { ...idle, action: time });
+    if (taken?.step.ok !== true) throw new Error("The time action must be accepted.");
+    const { events } = taken.step;
+    expect([events[0], events[1], events.at(-1)].map((event) => [event?.type, event?.at])).toEqual([
+      ["suspended", Start],
+      ["time-out", Start + Day],
+      ["test-ended", Start + Day],
+    ]);
+    expect(taken.step.state.status).toBe("ended");
+    // Any other action meets the end and leaves the state as it was, for the time action to end it.
+    const refused = stepAfterIdle(runtime, { ...idle, action: choose("A") });
+    expect(refused.step.ok === false ? refused.step.refusal.reason : "accepted").toBe("time-over");
+  });
+
   it("closes no gap of a session that is suspended or ended", () => {
     const now = Start + 3 * Day;
     const suspended = engine.apply(begin, stamp(begin, { type: "suspend" }, Start + 1000));

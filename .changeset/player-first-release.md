@@ -23,7 +23,7 @@ a `clock`, by default the clock of the machine. `createSessionHost` takes a `sch
 leaves out: without one it refuses an engine whose test has a maximum time anywhere (`Engine.hasMaximumTime`) with a
 `DataError`, so that no candidate meets the refusal halfway through a sitting, and `start` refuses a session with a `closeAt`, the
 instant a sitting closes for every candidate, in the same way. The scheduler of a session host and the timer of a local session
-fire `time` at that instant too, also while the candidate is suspended. A candidate whose profile has breaks (the
+fire `time` at that instant too, also while the candidate is suspended or away for longer than `maxIdleMs`. A candidate whose profile has breaks (the
 support `environment` with `breaks` on) may send `suspend` and `resume` to a session host beside its `clientActions`, and
 comes back to every response with the clocks stopped meanwhile; a program whose breaks all go through the proctor leaves
 `breaks` out of the profile. `createSessionHost` and `createRemoteSession` check their `limits` as they are made, so that a misspelled limit fails

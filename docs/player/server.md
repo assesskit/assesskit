@@ -262,7 +262,8 @@ With `maxIdleMs` the host closes a gap above it as [a local session does](client
 candidate or action of the host after it applies `suspend` at the latest step, `resume` now and the action, saves the three as one
 step with one version, and gives the log the events of all three in order. The `time` of the job that finds such a gap is dropped:
 nothing is saved and no deadline is scheduled again, so an abandoned session stops costing anything, and the next action
-schedules the deadlines that the gap moved. A host that wants old sessions closed sweeps them itself. `maxIdleMs` suspends on the
+schedules the deadlines that the gap moved. The close of a session does not move: the job that finds a gap after it suspends
+the session at the latest step and the close ends it at its instant. A host that wants old sessions closed sweeps them itself. `maxIdleMs` suspends on the
 candidate's behalf, which the policy of an exam does not allow, so `createSessionHost` throws `DataError` when `clientActions`
 has no `suspend`; an exam leaves `maxIdleMs` out.
 
