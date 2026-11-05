@@ -597,6 +597,20 @@ describe("writeGift and the items that do not convert", () => {
     expect(writeGift(items, WRITE_OPTIONS).text).toContain("=Paris\n");
   });
 
+  it("writes the feedback that a block of the body holds, and lists feedback that no response shows", () => {
+    const item = qtiItem(
+      `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"><qti-correct-response><qti-value>A</qti-value></qti-correct-response></qti-response-declaration>${SCORE}<qti-outcome-declaration identifier="FEEDBACK" cardinality="multiple" base-type="identifier"/><qti-outcome-declaration identifier="OTHER" cardinality="single" base-type="identifier"/><qti-item-body><qti-choice-interaction response-identifier="RESPONSE" max-choices="1"><qti-simple-choice identifier="A">a</qti-simple-choice><qti-simple-choice identifier="B">b</qti-simple-choice></qti-choice-interaction><qti-feedback-block outcome-identifier="FEEDBACK" identifier="wrong" show-hide="show"><qti-content-body><p>Not quite.</p></qti-content-body></qti-feedback-block></qti-item-body><qti-response-processing><qti-response-condition><qti-response-if><qti-match><qti-variable identifier="RESPONSE"/><qti-correct identifier="RESPONSE"/></qti-match><qti-set-outcome-value identifier="SCORE"><qti-base-value base-type="float">1</qti-base-value></qti-set-outcome-value></qti-response-if><qti-response-else><qti-set-outcome-value identifier="FEEDBACK"><qti-multiple><qti-base-value base-type="identifier">wrong</qti-base-value></qti-multiple></qti-set-outcome-value></qti-response-else></qti-response-condition></qti-response-processing><qti-modal-feedback outcome-identifier="OTHER" identifier="never" show-hide="show"><qti-content-body><p>Never.</p></qti-content-body></qti-modal-feedback>`,
+    );
+    const { text, losses } = writeMoodleXml([{ item }]);
+    // The block shows for the wrong choice alone, so it is that answer's feedback, with the content of its body.
+    expect(text).toContain(
+      '<answer fraction="0" format="html"><text>b</text><feedback format="html"><text>&lt;p&gt;Not quite.&lt;/p&gt;</text></feedback></answer>',
+    );
+    expect(losses.map(({ reason, message }) => [reason, message])).toStrictEqual([
+      ["feedback", "The feedback never shows for no response that Moodle tells apart: it is left out."],
+    ]);
+  });
+
   it("holds a writer to the limit maxAnswers, the only limit that it takes", () => {
     const item = qtiItem(
       `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"><qti-correct-response><qti-value>A</qti-value></qti-correct-response></qti-response-declaration>${SCORE}<qti-item-body><qti-choice-interaction response-identifier="RESPONSE" max-choices="1" shuffle="false"><qti-simple-choice identifier="A">a</qti-simple-choice><qti-simple-choice identifier="B">b</qti-simple-choice></qti-choice-interaction></qti-item-body><qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct.xml"/>`,

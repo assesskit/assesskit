@@ -133,11 +133,14 @@ function joinText(texts: readonly FormattedText[] = []): FormattedText {
   return { text: texts.map(({ text }) => text).join(""), format: "html" };
 }
 
-/** The content of a feedback element: the body of modal feedback, or the children of feedback in the item's body. */
+/**
+ * The content of a feedback element: the children of inline feedback, and the body of modal feedback and of a feedback block,
+ * which QTI 3 holds in `qti-content-body`.
+ */
 function feedbackContent(element: XmlElement): readonly XmlNode[] {
-  return element.name === "qti-modal-feedback"
-    ? elements(element, "qti-content-body").flatMap((body) => body.children)
-    : element.children;
+  return element.name === "qti-feedback-inline"
+    ? element.children
+    : elements(element, "qti-content-body").flatMap((body) => body.children);
 }
 
 /**
