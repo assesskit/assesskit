@@ -679,6 +679,20 @@ export const RUNTIME_RULES: readonly Rule[] = [
     test: FORMATS_TEST,
   },
   {
+    rule: "The GIFT reader reads a lone surrogate of a string as U+FFFD, as its UTF-8 holds it, which the parser of HTML fails on.",
+    file: `${FORMATS}/import-items.ts`,
+    find: 'return input.replaceAll(LONE_SURROGATE, "\\uFFFD");',
+    replace: "return input;",
+    test: FORMATS_TEST,
+  },
+  {
+    rule: "A reader writes U+FFFD in an item for each character that XML does not allow, so that the item can be written.",
+    file: `${FORMATS}/item-build.ts`,
+    find: "const written = withXmlCharacters(element);",
+    replace: "const written = element;",
+    test: FORMATS_TEST,
+  },
+  {
     rule: "The Moodle XML reader refuses a file of more questions than the limit maxQuestions, before it reads one.",
     file: `${FORMATS}/moodle-xml-read.ts`,
     find: "if (questions.length > maxQuestions) {",
