@@ -403,7 +403,7 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
     return failed === undefined ? step : { ...step, catFailure: failed.failure };
   };
 
-  /** Runs the answer loop after the timer's step; a failure goes to `reportError`, and the next call retries. */
+  /** Runs the answer loop after the timer's step; a failure goes to `onError`, and the next call retries. */
   const settleTimer = async (): Promise<void> => {
     if (answerer === undefined || loops.wake("")) return;
     const failed = await loops.join("", answerer);

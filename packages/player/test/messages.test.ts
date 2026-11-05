@@ -178,6 +178,18 @@ describe("selectMessages", () => {
 });
 
 describe("the guide", () => {
+  it("lists every message of the catalogs, in their order, with its English and Indonesian text", () => {
+    const section = messagesGuide.slice(
+      messagesGuide.indexOf("\n## The catalog\n"),
+      messagesGuide.indexOf("\n## Adding a message\n"),
+    );
+    const rows = [...section.matchAll(/^\| `([A-Za-z]+)` +\| (.*?) +\| (.*?) +\|$/gm)].map(
+      ([, key, english, indonesian]) => [key, english?.replaceAll("\\|", "|"), indonesian?.replaceAll("\\|", "|")],
+    );
+    const indonesian = new Map(Object.entries(ID_MESSAGES));
+    expect(rows).toEqual(Object.entries(EN_MESSAGES).map(([key, english]) => [key, english, indonesian.get(key)]));
+  });
+
   it("shows the results that its samples give", async () => {
     expect(
       await runGuideSamples(messagesGuide, {
