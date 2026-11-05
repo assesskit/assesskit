@@ -31,13 +31,6 @@ const DOCUMENT_KINDS: ReadonlyMap<ResourceType, AsiDocument["kind"]> = new Map([
   ["imsqti_outcomes_xmlv3p0", "outcome-declaration"],
 ]);
 
-/** Returns the path of the main file of a resource: its `href`, or its only file when it has no `href`. */
-function mainPath(pkg: QtiPackage, resource: Resource): string | undefined {
-  const [only, ...others] = resource.files;
-  const href = resource.href ?? (only !== undefined && others.length === 0 ? only.href : undefined);
-  return href === undefined ? undefined : resolveResourcePath(pkg.manifest, resource, { href });
-}
-
 /** Returns the response processing at a path of the package, as a resolver of templates gives it. */
 function packageTemplate(pkg: QtiPackage, itemPath: string, uri: string): ResponseProcessing | undefined {
   const path = pkg.resolve(itemPath, uri);
@@ -120,7 +113,7 @@ export function validatePackage(pkg: QtiPackage, options: ValidateOptions = {}):
   const seen = new Set<string>();
   for (const resource of pkg.manifest.resources) {
     const kind = DOCUMENT_KINDS.get(resource.type);
-    const path = kind === undefined ? undefined : mainPath(pkg, resource);
+    const path = kind === undefined ? undefined : resolveResourcePath(pkg.manifest, resource);
     if (kind === undefined || path === undefined || seen.has(path) || !pkg.paths.includes(path)) continue;
     seen.add(path);
     documents.add(path);

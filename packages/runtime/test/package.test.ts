@@ -1136,9 +1136,24 @@ describe("paths of resources", () => {
     expect(resolveResourcePath(manifest, c as Resource, { href: "x" })).toBe("pkg/items/x");
   });
 
-  it("returns undefined for a resource without an href and for a base outside the package", () => {
-    expect(resolveResourcePath(manifest, c as Resource)).toBeUndefined();
+  it("returns undefined for a base outside the package", () => {
+    expect(resolveResourcePath(manifest, b as Resource)).toBeUndefined();
     expect(resolveResourcePath(manifest, b as Resource, { href: "x" })).toBeUndefined();
+  });
+
+  it("takes the only file of a resource without an href as its main file, and no file of several", () => {
+    const main = readManifest(
+      manifestXml(
+        '<resources><resource identifier="one" type="imsqti_item_xmlv3p0"><file href="one.xml"/></resource><resource identifier="two" type="imsqti_item_xmlv3p0"><file href="a.xml"/><file href="b.xml"/></resource></resources>',
+      ),
+    );
+    const [one, two] = main.resources;
+    expect(resolveResourcePath(manifest, c as Resource)).toBe("pkg/items/x");
+    expect(resolveResourcePath(main, one as Resource)).toBe("one.xml");
+    expect(resolveResourcePath(main, two as Resource)).toBeUndefined();
+    expect(() => resolveResourcePath(main, JSON.parse("{}"))).toThrow(
+      "The files of a resource must be an array, found undefined.",
+    );
   });
 
   it("resolves against the root when no xml:base is given", () => {

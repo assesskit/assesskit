@@ -11,7 +11,6 @@ import {
   CPX_NAMESPACE,
   MANIFEST_PATH,
   type QtiPackage,
-  type Resource,
   type ResourceType,
   resolveResourcePath,
 } from "@assesskit/runtime/package";
@@ -108,16 +107,6 @@ function adaptiveFilesOf(pkg: QtiPackage, path: string): string[] {
   }
 }
 
-/** Returns the path of the main file of a resource: its href, or its only file when it has no href. */
-function mainPathOf(pkg: QtiPackage, resource: Resource): string | undefined {
-  const { manifest } = pkg;
-  const [only, ...others] = resource.files;
-  if (resource.href === undefined && only !== undefined && others.length === 0) {
-    return resolveResourcePath(manifest, resource, { href: only.href });
-  }
-  return resolveResourcePath(manifest, resource);
-}
-
 /** Parses an XML file; `undefined` when it is not XML, or the runtime's limits refuse it, so the engine cannot read it either. */
 function parseOrNone(path: string, bytes: Uint8Array): XmlElement | undefined {
   try {
@@ -187,7 +176,7 @@ export function deniedPaths(pkg: QtiPackage): ReadonlySet<string> {
   const denied = new Set<string>([MANIFEST_PATH]);
   for (const resource of manifest.resources) {
     if (!DENIED_TYPES.has(resource.type)) continue;
-    const main = mainPathOf(pkg, resource);
+    const main = resolveResourcePath(pkg.manifest, resource);
     if (main !== undefined) denied.add(main);
     if (ADAPTIVE_HOLDERS.has(resource.type) && main !== undefined) {
       for (const path of adaptiveFilesOf(pkg, main)) denied.add(path);

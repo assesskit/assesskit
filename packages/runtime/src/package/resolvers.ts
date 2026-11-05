@@ -3,7 +3,7 @@ import { checkRecord, describe } from "../checks.js";
 import { type AccessForAllResource, DRD_HAZARDS, type DrdHazard } from "../metadata/index.js";
 import { createReadError } from "../xml/internal.js";
 import { type LtiLink, readLtiLink } from "./lti-link.js";
-import type { Manifest, Resource } from "./manifest.js";
+import type { Resource } from "./manifest.js";
 import type { QtiPackage } from "./package.js";
 import { resolveReference } from "./paths.js";
 import { resolveResourcePath } from "./resolve-resource-path.js";
@@ -69,14 +69,6 @@ export interface Resolvers {
 /** The resource types an item reference may name: a QTI item or an LTI link. */
 const ITEM_TYPES: readonly Resource["type"][] = ["imsqti_item_xmlv3p0", "imsbasiclti_xmlv1p3"];
 
-/** Returns the path of the main file of a resource: its href, or its only file when it has no href. */
-function mainPath(manifest: Manifest, resource: Resource): string | undefined {
-  const [only, ...others] = resource.files;
-  if (resource.href === undefined && only !== undefined && others.length === 0)
-    return resolveResourcePath(manifest, resource, { href: only.href });
-  return resolveResourcePath(manifest, resource);
-}
-
 function isDrdHazard(term: string): term is DrdHazard {
   return DRD_HAZARDS.some((hazard) => hazard === term);
 }
@@ -112,7 +104,7 @@ export function createPackageResolvers(pkg: QtiPackage): Resolvers {
   const resources = indexResources(manifest.resources);
   const itemsByPath = new Map<string, Resource>();
   for (const resource of manifest.resources) {
-    const path = ITEM_TYPES.includes(resource.type) ? mainPath(manifest, resource) : undefined;
+    const path = ITEM_TYPES.includes(resource.type) ? resolveResourcePath(manifest, resource) : undefined;
     if (path !== undefined && !itemsByPath.has(path)) itemsByPath.set(path, resource);
   }
   const hazards = incomingHazards(manifest.resources);
@@ -127,7 +119,7 @@ export function createPackageResolvers(pkg: QtiPackage): Resolvers {
   };
 
   const deliverable = (resource: Resource, base: string): DeliverableItem => {
-    const path = mainPath(manifest, resource);
+    const path = resolveResourcePath(manifest, resource);
     if (path === undefined) {
       const message = `The resource ${describe(resource.identifier)} has no main file inside the package.`;
       throw createReadError("assesskit/package/resource-href", message, { location: { path: base } });

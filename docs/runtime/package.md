@@ -145,8 +145,8 @@ The result is `undefined` for a reference outside the package: one with a scheme
 `/` or `//`, one that leaves the root with `..`, and one with a backslash, a drive letter, a control character (NUL included) or an
 invalid percent-encoding in a segment. It does not say whether the file exists.
 
-`resolveResourcePath(manifest, resource, options?)` resolves the `href` of a resource, or the option `href` (such as one of its files),
-against the `xml:base` of the manifest, of `resources` and of the resource, each against the one before.
+`resolveResourcePath(manifest, resource, options?)` resolves the main file of a resource, its `href` or else its only file, or the
+option `href` (such as one of its files), against the `xml:base` of the manifest, of `resources` and of the resource, each against the one before.
 
 ## Archives
 
