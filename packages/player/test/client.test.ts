@@ -898,15 +898,17 @@ describe("input of other types", () => {
   it("checks the option maxIdleMs", async () => {
     const { options } = localOptions();
     const make = (changes: string): Promise<unknown> => createLocalSession({ ...options, ...JSON.parse(changes) });
-    await expect(make('{"maxIdleMs":0}')).rejects.toThrow("The option maxIdleMs must be a positive integer, found 0.");
+    await expect(make('{"maxIdleMs":0}')).rejects.toThrow(
+      "The options object is invalid at maxIdleMs: expected a value of at least 1, found 0.",
+    );
     await expect(make('{"maxIdleMs":1.5}')).rejects.toThrow(
-      "The option maxIdleMs must be a positive integer, found 1.5.",
+      "The options object is invalid at maxIdleMs: expected a safe integer, found 1.5.",
     );
     await expect(make('{"maxIdleMs":"5"}')).rejects.toThrow(
-      'The option maxIdleMs must be a positive integer, found "5".',
+      'The options object is invalid at maxIdleMs: expected a number, found "5".',
     );
     await expect(make('{"maxIdleMs":null}')).rejects.toThrow(
-      "The option maxIdleMs must be a positive integer, found null.",
+      "The options object is invalid at maxIdleMs: expected a number, found null.",
     );
   });
 

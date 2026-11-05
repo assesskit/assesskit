@@ -1,9 +1,10 @@
-import { checkFunction, checkProperties, checkRecord, checkString, describe } from "@assesskit/runtime/checks";
+import { describe, functionSchema, guardSchema, parseWith, strictRecord } from "@assesskit/runtime/checks";
 import type { SupportView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import type { SupportName } from "@assesskit/runtime/pnp";
+import * as v from "valibot";
 import type { Messages } from "../../messages/index.js";
-import { checkMessages } from "../../messages/internal.js";
+import { messagesSchema } from "../../messages/internal.js";
 import { deepActiveElement, html } from "../internal.js";
 import { checkToolsInput } from "./check-input.js";
 import type { OpenTool, ToolContext, ToolMemory, ToolSlots } from "./context.js";
@@ -75,28 +76,29 @@ interface Instance {
   focusNext: boolean;
 }
 
+const toolsOptionsSchema = strictRecord({
+  messages: messagesSchema,
+  language: v.string(),
+  stage: guardSchema(
+    (value): value is HTMLElement => value instanceof HTMLElement && value.isConnected,
+    "an element in a document",
+  ),
+  assets: functionSchema<(...args: never[]) => unknown>(),
+  slots: v.optional(
+    strictRecord(
+      Object.fromEntries(SLOT_TOOLS.map((name) => [name, v.optional(functionSchema<(...args: never[]) => unknown>())])),
+    ),
+  ),
+  onSupport: functionSchema<(...args: never[]) => unknown>(),
+});
+
 function checkToolsOptions(host: unknown, options: unknown): asserts options is ToolsOptions {
   if (!(host instanceof HTMLElement && host.isConnected)) {
     throw new DataError(`The host must be an element in a document, found ${describe(host)}.`);
   }
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", ["messages", "language", "stage", "assets", "slots", "onSupport"]);
-  checkMessages(options.messages);
-  checkString(options.language, "The option language");
-  const { stage } = options;
-  if (!(stage instanceof HTMLElement && stage.isConnected)) {
-    throw new DataError(`The option stage must be an element in a document, found ${describe(stage)}.`);
-  }
+  const { stage } = parseWith(toolsOptionsSchema, options, "The options object");
   if (getComputedStyle(stage).position === "static") {
     throw new DataError("The option stage must be positioned: its position must not be static.");
-  }
-  checkFunction(options.assets, "The option assets must be a function");
-  checkFunction(options.onSupport, "The option onSupport must be a function");
-  if (options.slots !== undefined) {
-    checkRecord(options.slots, "The option slots must be an object");
-    checkProperties(options.slots, "The option slots", SLOT_TOOLS);
-    for (const [name, build] of Object.entries(options.slots))
-      checkFunction(build, `The slot ${name} of the option slots must be a function`);
   }
 }
 

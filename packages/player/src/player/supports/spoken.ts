@@ -1,9 +1,18 @@
-import { checkFunction, checkNonEmptyString, checkProperties, checkRecord, describe } from "@assesskit/runtime/checks";
+import {
+  checkRecord,
+  describe,
+  functionSchema,
+  methodsSchema,
+  nonEmptyStringSchema,
+  parseWith,
+  strictRecord,
+} from "@assesskit/runtime/checks";
 import type { SupportView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import type { ReadingType, TypingEcho } from "@assesskit/runtime/pnp";
+import * as v from "valibot";
 import type { Messages } from "../../messages/index.js";
-import { checkMessages } from "../../messages/internal.js";
+import { messagesSchema } from "../../messages/internal.js";
 import { html } from "../internal.js";
 import type { ContentRoot } from "../roots/index.js";
 import type { Lexicon, SpeechHook, SpeechRequest, SpeechSettings } from "../speech/index.js";
@@ -113,6 +122,14 @@ function spokenOf(
   return settings;
 }
 
+const spokenOptionsSchema = strictRecord({
+  messages: messagesSchema,
+  language: nonEmptyStringSchema,
+  voice: methodsSchema<SpokenOptions["voice"]>("speak", "stop"),
+  lexicons: v.optional(v.unknown()),
+  onError: v.optional(functionSchema<(...args: never[]) => unknown>()),
+});
+
 function checkSpokenOptions(host: unknown, root: unknown, options: unknown): asserts options is SpokenOptions {
   if (!(host instanceof HTMLElement && host.isConnected)) {
     throw new DataError(`The host must be an element in a document, found ${describe(host)}.`);
@@ -121,15 +138,8 @@ function checkSpokenOptions(host: unknown, root: unknown, options: unknown): ass
   if (!(root.root instanceof ShadowRoot)) {
     throw new DataError(`The root of the content root must be a shadow root, found ${describe(root.root)}.`);
   }
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", ["messages", "language", "voice", "lexicons", "onError"]);
-  if (options.onError !== undefined) checkFunction(options.onError, "The option onError must be a function");
-  checkMessages(options.messages);
-  checkNonEmptyString(options.language, "The option language");
-  checkRecord(options.voice, "The option voice must be an object");
-  checkFunction(options.voice.speak, "The method speak of the option voice must be a function");
-  checkFunction(options.voice.stop, "The method stop of the option voice must be a function");
-  if (options.lexicons !== undefined) checkLexicons(options.lexicons);
+  const { lexicons } = parseWith(spokenOptionsSchema, options, "The options object");
+  if (lexicons !== undefined) checkLexicons(lexicons);
 }
 
 /**

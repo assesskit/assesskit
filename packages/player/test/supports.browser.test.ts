@@ -856,19 +856,17 @@ describe("mountSupportPanel", () => {
       new DataError(`The host must be an element in a document, found an object.`),
     );
     expect(() => mountSupportPanel(host, JSON.parse("null"))).toThrow(
-      new DataError("The options must be an object, found null."),
+      new DataError("The options object is invalid: expected an object, found null."),
     );
     expect(() => mountSupportPanel(host, { ...valid, onSupport: JSON.parse("1") })).toThrow(
-      new DataError("The option onSupport must be a function, found 1."),
+      new DataError("The options object is invalid at onSupport: expected a function, found 1."),
     );
     expect(() => mountSupportPanel(host, { ...valid, onSettings: JSON.parse("1") })).toThrow(
-      new DataError("The option onSettings must be a function, found 1."),
+      new DataError("The options object is invalid at onSettings: expected a function, found 1."),
     );
     expect(() => mountSupportPanel(host, { ...valid, language: JSON.parse('""') })).toThrow(DataError);
     expect(() => mountSupportPanel(host, { ...valid, ...JSON.parse('{"extra": 1}') })).toThrow(
-      new DataError(
-        'The options has the properties "messages", "onSupport", "onSettings" and "language", found "extra".',
-      ),
+      new DataError('The options object is invalid: unexpected property "extra".'),
     );
     const panel = mountSupportPanel(host, valid);
     expect(() => panel.update(JSON.parse("{}"))).toThrow(
@@ -1416,10 +1414,10 @@ describe("mountContentSupports", () => {
         new DataError("The root of the content root must be a shadow root, found 1."),
       );
       expect(() => mountContentSupports(root, JSON.parse("null"))).toThrow(
-        new DataError("The options must be an object, found null."),
+        new DataError("The options object is invalid: expected an object, found null."),
       );
       expect(() => mountContentSupports(root, { messages: EN_MESSAGES, ...JSON.parse('{"extra": 1}') })).toThrow(
-        new DataError('The options has the property "messages", found "extra".'),
+        new DataError('The options object is invalid: unexpected property "extra".'),
       );
     });
   });
@@ -1623,10 +1621,12 @@ describe("mountSpoken", () => {
       new DataError("The content root must be an object, found null."),
     );
     expect(() => mountSpoken(chrome, root, { ...valid, language: JSON.parse("1") })).toThrow(
-      new DataError("The option language must be a non-empty string, found 1."),
+      new DataError("The options object is invalid at language: expected a string, found 1."),
     );
     expect(() => mountSpoken(chrome, root, { ...valid, voice: JSON.parse("{}") })).toThrow(
-      new DataError("The method speak of the option voice must be a function, found undefined."),
+      new DataError(
+        "The options object is invalid at voice: expected an object with the functions speak and stop, found an object.",
+      ),
     );
     expect(() => mountSpoken(chrome, root, { ...valid, lexicons: JSON.parse("{}") })).toThrow(
       new DataError("The option lexicons must be an array, found an object."),
@@ -1706,7 +1706,7 @@ describe("mountVariantNotice", () => {
       new DataError("The host must be an element in a document, found null."),
     );
     expect(() => mountVariantNotice(host, { messages: EN_MESSAGES, language: JSON.parse("1") })).toThrow(
-      new DataError("The option language must be a non-empty string, found 1."),
+      new DataError("The options object is invalid at language: expected a string, found 1."),
     );
     const notice = mountVariantNotice(host, { messages: EN_MESSAGES, language: "en" });
     expect(() => notice.update(JSON.parse("1"))).toThrow(new DataError("The variant must be an object, found 1."));

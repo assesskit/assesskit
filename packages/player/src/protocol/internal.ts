@@ -6,7 +6,7 @@
 export { checkActionEnvelope } from "./action-envelope.js";
 export { type CatAnswerer, type CatLoopFailure, createCatLoops } from "./answer-cat-requests.js";
 export { checkCaller } from "./caller.js";
-export { checkClock, clockSchema, MAX_TIMER_DELAY_MS, readClock, SYSTEM_CLOCK } from "./clock.js";
+export { clockSchema, MAX_TIMER_DELAY_MS, readClock, SYSTEM_CLOCK } from "./clock.js";
 export { type DocumentSource, type ItemDocuments, resolveViewDocuments } from "./documents.js";
 export { checkHostAction } from "./host-action.js";
 export { checkHostApplyOptions } from "./host-session.js";

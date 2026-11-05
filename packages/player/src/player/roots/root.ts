@@ -1,14 +1,16 @@
 import type { Catalog, ModalFeedback } from "@assesskit/runtime/asi";
 import {
   checkArray,
-  checkFunction,
   checkPositive,
-  checkProperties,
-  checkRecord,
   describe,
+  functionSchema,
+  methodsSchema,
+  parseWith,
+  strictRecord,
 } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import type { Braille, SupportName } from "@assesskit/runtime/pnp";
+import * as v from "valibot";
 import { renderCard } from "../catalogs/index.js";
 import {
   type BodyRenderer,
@@ -19,9 +21,11 @@ import {
 import {
   enableSorting,
   enableTabs,
+  RENDER_OPTION_ENTRIES,
   readRenderOptions,
   type SelectedTabs,
   scaleDeclaredSizes,
+  stylesheetSchema,
 } from "../content/internal.js";
 import { showFeedbackDialog } from "../feedback/index.js";
 import { html, shadowRootOf } from "../internal.js";
@@ -117,17 +121,19 @@ export interface ContentRoot {
   destroy(): void;
 }
 
-const ROOT_OPTION_NAMES = [
-  "messages",
-  "assets",
-  "origins",
-  "view",
-  "mediaScale",
-  "fileUrl",
-  "fetch",
-  "stylesheet",
-  "typesetter",
-];
+const { messages, assets, origins, view, mediaScale, fileUrl } = RENDER_OPTION_ENTRIES;
+
+const contentRootOptionsSchema = strictRecord({
+  messages,
+  assets,
+  origins,
+  view,
+  mediaScale,
+  fileUrl,
+  fetch: functionSchema<StylesheetFetch>(),
+  stylesheet: stylesheetSchema,
+  typesetter: v.optional(methodsSchema<MathTypesetter>("typeset")),
+});
 
 /**
  * Creates a content root in a host element: one open shadow root per item together with its stimuli.
@@ -166,16 +172,13 @@ export function buildContentRoot(
   interactions: InteractionRenderers,
 ): ContentRoot {
   if (!(host instanceof HTMLElement)) throw new DataError(`The host must be an element, found ${describe(host)}.`);
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", ROOT_OPTION_NAMES);
-  checkFunction(options.fetch, "The option fetch must be a function");
-  const { stylesheet, typesetter, fetch: fetcher, ...rest } = options;
+  const {
+    stylesheet,
+    typesetter,
+    fetch: fetcher,
+    ...rest
+  } = parseWith(contentRootOptionsSchema, options, "The options object");
   const rendererOptions = { ...rest, interactions };
-  if (!(stylesheet instanceof CSSStyleSheet)) {
-    throw new DataError(`The option stylesheet must be a CSSStyleSheet, found ${describe(stylesheet)}.`);
-  }
-  if (typesetter !== undefined)
-    checkFunction(typesetter.typeset, "The typeset method of the option typesetter must be a function");
   const { assets, origins, mediaScale: initialScale } = readRenderOptions({ ...rendererOptions, base: "" });
   const shadow = shadowRootOf(host);
   shadow.adoptedStyleSheets = [stylesheet];

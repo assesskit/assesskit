@@ -6,4 +6,4 @@
  *
  * @module
  */
-export { checkMessages } from "./check.js";
+export { checkMessages, messagesSchema } from "./check.js";

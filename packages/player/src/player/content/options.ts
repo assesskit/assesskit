@@ -1,18 +1,20 @@
 import {
-  checkBoolean,
-  checkChoice,
   checkFunction,
-  checkPositive,
-  checkProperties,
   checkRecord,
   checkString,
   describe,
+  functionSchema,
+  guardSchema,
+  parseWith,
+  positiveSchema,
+  strictRecord,
 } from "@assesskit/runtime/checks";
 import { type ContentVariables, VIEWS, type View } from "@assesskit/runtime/content";
 import { DataError } from "@assesskit/runtime/errors";
 import type { FileValue } from "@assesskit/runtime/values";
+import * as v from "valibot";
 import type { Messages } from "../../messages/index.js";
-import { checkMessages } from "../../messages/internal.js";
+import { messagesSchema } from "../../messages/internal.js";
 import type { InteractionRenderers } from "./context.js";
 import { readOrigins } from "./urls.js";
 
@@ -102,18 +104,27 @@ export interface RenderSettings {
   readonly fileUrl: ((file: FileValue) => string) | undefined;
 }
 
-const OPTION_NAMES = [
-  "messages",
-  "assets",
-  "base",
-  "origins",
-  "interactions",
-  "view",
-  "withholdMedia",
-  "mediaScale",
-  "variables",
-  "fileUrl",
-];
+/** The schema of the stylesheet of the content, built from `player.css`. */
+export const stylesheetSchema = guardSchema(
+  (value): value is CSSStyleSheet => value instanceof CSSStyleSheet,
+  "a CSSStyleSheet",
+);
+
+/** The options of a renderer, by name: the entries that the options of a content root and of the delivery read as well. */
+export const RENDER_OPTION_ENTRIES = {
+  messages: messagesSchema,
+  assets: functionSchema<(path: string) => string>(),
+  base: v.optional(v.string(), ""),
+  origins: v.optional(v.array(v.string()), []),
+  interactions: v.optional(v.unknown(), () => new Map()),
+  view: v.optional(v.picklist(VIEWS), "candidate"),
+  withholdMedia: v.optional(v.boolean(), false),
+  mediaScale: v.optional(positiveSchema, 1),
+  variables: v.optional(v.unknown()),
+  fileUrl: v.optional(functionSchema<(file: FileValue) => string>()),
+};
+
+const renderOptionsSchema = strictRecord(RENDER_OPTION_ENTRIES);
 
 function checkInteractions(interactions: unknown): asserts interactions is InteractionRenderers {
   if (!(interactions instanceof Map)) {
@@ -155,19 +166,10 @@ function returningUrl<TArgs extends readonly unknown[]>(
  * @throws `DataError` when an option is not of its type.
  */
 export function readRenderOptions(options: unknown): RenderSettings {
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", OPTION_NAMES);
-  const { messages, assets, base = "", origins = [], interactions = new Map(), view = "candidate" } = options;
-  const { withholdMedia = false, mediaScale = 1, variables, fileUrl } = options;
-  checkMessages(messages);
-  checkFunction(assets, "The option assets must be a function");
-  checkString(base, "The option base");
+  const { messages, assets, base, origins, interactions, view, withholdMedia, mediaScale, variables, fileUrl } =
+    parseWith(renderOptionsSchema, options, "The options object");
   checkInteractions(interactions);
-  checkChoice(view, "The option view", VIEWS);
-  checkBoolean(withholdMedia, "The option withholdMedia");
-  checkPositive(mediaScale, "The option mediaScale");
   if (variables !== undefined) checkVariables(variables);
-  if (fileUrl !== undefined) checkFunction(fileUrl, "The option fileUrl must be a function");
   return {
     messages,
     assets: returningUrl<[path: string]>(assets, "the option assets"),

@@ -1,14 +1,8 @@
 import type { BodyNode, Catalog, TestFeedback } from "@assesskit/runtime/asi";
-import {
-  checkArray,
-  checkBoolean,
-  checkChoice,
-  checkProperties,
-  checkRecord,
-  checkString,
-} from "@assesskit/runtime/checks";
+import { looseRecord, objectSchema, parseWith, strictRecord } from "@assesskit/runtime/checks";
 import type { ContentVariables, HazardExposure } from "@assesskit/runtime/content";
 import { PNP_HAZARDS } from "@assesskit/runtime/pnp";
+import * as v from "valibot";
 
 /** Content from one document of the package, and where its references start. */
 export interface ContentPart {
@@ -84,17 +78,19 @@ export interface RootContent {
   readonly variables?: ContentVariables;
 }
 
-const CONTENT_NAMES = [
-  "rubric",
-  "stimuli",
-  "body",
-  "testFeedback",
-  "stylesheets",
-  "catalogs",
-  "hazards",
-  "language",
-  "variables",
-];
+const part = v.optional(objectSchema<object>());
+
+const rootContentSchema = strictRecord({
+  rubric: part,
+  stimuli: v.optional(v.array(objectSchema<object>())),
+  body: part,
+  testFeedback: v.optional(v.array(v.unknown())),
+  stylesheets: v.optional(v.array(v.string())),
+  catalogs: v.optional(v.array(v.unknown())),
+  hazards: v.optional(v.array(looseRecord({ hazard: v.picklist(PNP_HAZARDS), avoided: v.boolean() }))),
+  language: v.optional(v.string()),
+  variables: v.optional(v.unknown()),
+});
 
 /**
  * Checks the content of a root.
@@ -103,31 +99,5 @@ const CONTENT_NAMES = [
  * @throws `DataError` when it, a part, or a list of it is not of its type.
  */
 export function checkContent(content: unknown): asserts content is RootContent {
-  checkRecord(content, "The content must be an object");
-  checkProperties(content, "The content", CONTENT_NAMES);
-  const {
-    rubric,
-    body,
-    language,
-    stimuli = [],
-    testFeedback = [],
-    stylesheets = [],
-    catalogs = [],
-    hazards = [],
-  } = content;
-  checkArray(stimuli, "The stimuli of the content must be an array");
-  checkArray(testFeedback, "The test feedback of the content must be an array");
-  checkArray(stylesheets, "The stylesheets of the content must be an array");
-  checkArray(catalogs, "The catalogs of the content must be an array");
-  checkArray(hazards, "The hazards of the content must be an array");
-  for (const part of [rubric, body, ...stimuli]) {
-    if (part !== undefined) checkRecord(part, "A part of the content must be an object");
-  }
-  for (const path of stylesheets) checkString(path, "A stylesheet of the content");
-  for (const exposure of hazards) {
-    checkRecord(exposure, "A hazard of the content must be an object");
-    checkChoice(exposure.hazard, "The hazard of a hazard of the content", PNP_HAZARDS);
-    checkBoolean(exposure.avoided, "The property avoided of a hazard of the content");
-  }
-  if (language !== undefined) checkString(language, "The language of the content");
+  parseWith(rootContentSchema, content, "The content");
 }

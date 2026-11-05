@@ -6,11 +6,11 @@ import {
   checkCallOptions,
   checkFunction,
   checkOptional,
-  checkPositiveInteger,
   functionSchema,
   methodsSchema,
   nonEmptyStringSchema,
   parseWith,
+  positiveIntegerSchema,
   raceAbort,
   recordSchema,
 } from "@assesskit/runtime/checks";
@@ -163,7 +163,7 @@ const optionsSchema = v.strictObject({
   lexicons: v.optional(functionSchema<(item: string) => readonly string[]>()),
   clock: v.optional(clockSchema),
   onError: v.optional(functionSchema<(error: unknown) => void>()),
-  maxIdleMs: v.optional(v.unknown()),
+  maxIdleMs: v.optional(positiveIntegerSchema),
   signal: v.optional(v.unknown()),
   cat: v.optional(methodsSchema<CatSessionPort>("createSession", "submitResults", "endSession")),
 });
@@ -275,7 +275,6 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
   parseWith(optionsSchema, options, "The options object");
   const { signal: creating, cat, maxIdleMs } = options;
   checkOptional(creating, (value) => checkAbortSignal(value, "The option signal"));
-  checkOptional(maxIdleMs, (value) => checkPositiveInteger(value, "The option maxIdleMs"));
   const { definition, store, session, seed, assets, lexicons = () => [], clock = SYSTEM_CLOCK } = options;
   const onError = options.onError ?? ((error: unknown) => reportError(error));
   const now = (): number => readClock(clock);

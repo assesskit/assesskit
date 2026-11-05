@@ -1,9 +1,9 @@
-import { checkProperties, checkRecord, describe } from "@assesskit/runtime/checks";
+import { checkRecord, describe, parseWith, strictRecord } from "@assesskit/runtime/checks";
 import type { SupportView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import type { Braille } from "@assesskit/runtime/pnp";
 import type { Messages } from "../../messages/index.js";
-import { checkMessages } from "../../messages/internal.js";
+import { messagesSchema } from "../../messages/internal.js";
 import { showTracks } from "../media/index.js";
 import type { ContentRoot } from "../roots/index.js";
 import { CARD_KIND_ORDER, cardKindOf, showCard } from "./cards.js";
@@ -48,14 +48,14 @@ function brailleOf(supports: readonly SupportView[]): Braille | undefined {
   return settings?.name === "braille" ? settings : undefined;
 }
 
+const contentSupportsOptionsSchema = strictRecord({ messages: messagesSchema });
+
 function checkRoot(root: unknown, options: unknown): asserts options is ContentSupportsOptions {
   checkRecord(root, "The content root must be an object");
   if (!(root.root instanceof ShadowRoot)) {
     throw new DataError(`The root of the content root must be a shadow root, found ${describe(root.root)}.`);
   }
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", ["messages"]);
-  checkMessages(options.messages);
+  parseWith(contentSupportsOptionsSchema, options, "The options object");
 }
 
 /**

@@ -1,6 +1,7 @@
 import * as v from "valibot";
 import { describe, expect, it, vi } from "vitest";
 import {
+  abortSignalSchema,
   checkAbortSignal,
   checkArray,
   checkBoolean,
@@ -25,6 +26,7 @@ import {
   methodsSchema,
   nonEmptyStringSchema,
   nonNegativeIntegerSchema,
+  objectSchema,
   parseWith,
   plainSchema,
   positiveIntegerSchema,
@@ -406,6 +408,30 @@ describe("the schemas of functions and objects with functions", () => {
       parseWith(methodsSchema<{ load(): void; save(): void }>("load", "save"), { load: 1 }, "The store"),
     ).toThrow(
       new DataError("The store is invalid: expected an object with the functions load and save, found an object."),
+    );
+  });
+});
+
+describe("the schemas of a host's object and of an AbortSignal", () => {
+  it("pass an object on whole, a class instance included, and a signal", () => {
+    const object = new Map();
+    expect(parseWith(objectSchema<Map<string, number>>(), object, "The option")).toBe(object);
+    const { signal } = new AbortController();
+    expect(parseWith(abortSignalSchema, signal, "The option signal")).toBe(signal);
+  });
+
+  it("refuse null, an array and a value of another type", () => {
+    for (const [value, found] of [
+      [JSON.parse("null"), "null"],
+      [JSON.parse("[]"), "an array"],
+      ["x", '"x"'],
+    ] as const) {
+      expect(() => parseWith(objectSchema(), value, "The option")).toThrow(
+        new DataError(`The option is invalid: expected an object, found ${found}.`),
+      );
+    }
+    expect(() => parseWith(abortSignalSchema, {}, "The option signal")).toThrow(
+      new DataError("The option signal is invalid: expected an AbortSignal, found an object."),
     );
   });
 });

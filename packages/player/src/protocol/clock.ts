@@ -1,10 +1,4 @@
-import {
-  checkFunction,
-  checkNonNegativeInteger,
-  checkRecord,
-  methodsSchema,
-  type Schema,
-} from "@assesskit/runtime/checks";
+import { checkNonNegativeInteger, methodsSchema, type Schema } from "@assesskit/runtime/checks";
 
 /**
  * The longest delay in milliseconds that `setTimeout` and `setInterval` take, 2^31 - 1; a longer one fires at once.
@@ -31,16 +25,6 @@ export const SYSTEM_CLOCK: Clock = { now: () => Date.now() };
 
 /** The schema of a clock: an object with a function `now`. */
 export const clockSchema: Schema<Clock> = methodsSchema<Clock>("now");
-
-/**
- * Checks a clock, as a host passes it from JavaScript.
- *
- * @throws `DataError` when it is not an object with a function `now`.
- */
-export function checkClock(value: unknown): asserts value is Clock {
-  checkRecord(value, "The option clock must be an object");
-  checkFunction(value.now, "The function now of the option clock must be a function");
-}
 
 /**
  * Reads the time from a clock that has been checked.

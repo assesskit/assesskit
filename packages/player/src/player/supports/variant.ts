@@ -1,8 +1,15 @@
-import { checkNonEmptyString, checkProperties, checkRecord, describe } from "@assesskit/runtime/checks";
+import {
+  checkNonEmptyString,
+  checkRecord,
+  describe,
+  nonEmptyStringSchema,
+  parseWith,
+  strictRecord,
+} from "@assesskit/runtime/checks";
 import type { VariantView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import type { Messages } from "../../messages/index.js";
-import { checkMessages } from "../../messages/internal.js";
+import { messagesSchema } from "../../messages/internal.js";
 import { html } from "../internal.js";
 import { adoptSupportStyles } from "./styles.js";
 
@@ -47,14 +54,13 @@ function languageName(tag: string, interfaceLanguage: string): string {
   }
 }
 
+const variantOptionsSchema = strictRecord({ messages: messagesSchema, language: nonEmptyStringSchema });
+
 function checkVariantOptions(host: unknown, options: unknown): asserts options is VariantNoticeOptions {
   if (!(host instanceof HTMLElement && host.isConnected)) {
     throw new DataError(`The host must be an element in a document, found ${describe(host)}.`);
   }
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", ["messages", "language"]);
-  checkMessages(options.messages);
-  checkNonEmptyString(options.language, "The option language");
+  parseWith(variantOptionsSchema, options, "The options object");
 }
 
 /**

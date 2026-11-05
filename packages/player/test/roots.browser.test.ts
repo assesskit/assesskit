@@ -722,16 +722,18 @@ describe("options", () => {
   it("throws DataError for a host and options of other types", () => {
     const host = document.createElement("div");
     expect(() => create(JSON.parse("null"), valid())).toThrow("The host must be an element, found null.");
-    expect(() => create(host, JSON.parse("null"))).toThrow("The options must be an object, found null.");
-    expect(() => create(host, { ...valid(), extra: 1 })).toThrow(/found "extra"\.$/u);
+    expect(() => create(host, JSON.parse("null"))).toThrow(
+      "The options object is invalid: expected an object, found null.",
+    );
+    expect(() => create(host, { ...valid(), extra: 1 })).toThrow(/unexpected property "extra"\.$/u);
     expect(() => create(host, { ...valid(), fetch: JSON.parse('"fetch"') })).toThrow(
-      'The option fetch must be a function, found "fetch".',
+      'The options object is invalid at fetch: expected a function, found "fetch".',
     );
     expect(() => create(host, { ...valid(), stylesheet: JSON.parse("{}") })).toThrow(
-      "The option stylesheet must be a CSSStyleSheet, found an object.",
+      "The options object is invalid at stylesheet: expected a CSSStyleSheet, found an object.",
     );
     expect(() => create(host, { ...valid(), typesetter: JSON.parse("{}") })).toThrow(
-      "The typeset method of the option typesetter must be a function, found undefined.",
+      "The options object is invalid at typesetter: expected an object with the function typeset, found an object.",
     );
     expect(() => create(host, { ...valid(), assets: JSON.parse("1") })).toThrow(DataError);
   });
@@ -755,19 +757,19 @@ describe("options", () => {
   it("throws DataError for content of other types", async () => {
     const { root } = createRoot();
     const show = (content: unknown) => root.show(content as never);
-    await expect(show(JSON.parse("null"))).rejects.toThrow("The content must be an object, found null.");
-    await expect(show({ extra: 1 })).rejects.toThrow(/found "extra"\.$/u);
+    await expect(show(JSON.parse("null"))).rejects.toThrow("The content is invalid: expected an object, found null.");
+    await expect(show({ extra: 1 })).rejects.toThrow(/unexpected property "extra"\.$/u);
     await expect(show({ stimuli: JSON.parse('"x"') })).rejects.toThrow(
-      'The stimuli of the content must be an array, found "x".',
+      'The content is invalid at stimuli: expected an array, found "x".',
     );
     await expect(show({ body: JSON.parse('"x"') })).rejects.toThrow(
-      'A part of the content must be an object, found "x".',
+      'The content is invalid at body: expected an object, found "x".',
     );
     await expect(show({ hazards: JSON.parse("{}") })).rejects.toThrow(
-      "The hazards of the content must be an array, found an object.",
+      "The content is invalid at hazards: expected an array, found an object.",
     );
     await expect(show({ language: JSON.parse("1") })).rejects.toThrow(
-      "The language of the content must be a string, found 1.",
+      "The content is invalid at language: expected a string, found 1.",
     );
     await expect(show({ body: { nodes: JSON.parse('{"length":1}') } })).rejects.toThrow(
       "The nodes of content must be an array, found an object.",

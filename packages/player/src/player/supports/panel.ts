@@ -1,9 +1,10 @@
-import { checkFunction, checkNonEmptyString, checkProperties, checkRecord, describe } from "@assesskit/runtime/checks";
+import { describe, functionSchema, nonEmptyStringSchema, parseWith, strictRecord } from "@assesskit/runtime/checks";
 import type { SupportView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import type { SupportName, SupportSetting } from "@assesskit/runtime/pnp";
+import * as v from "valibot";
 import type { Messages } from "../../messages/index.js";
-import { checkMessages } from "../../messages/internal.js";
+import { messagesSchema } from "../../messages/internal.js";
 import { html } from "../internal.js";
 import { checkSupportViews } from "./check.js";
 import { supportLabel } from "./names.js";
@@ -71,17 +72,18 @@ interface Entry {
   active: boolean;
 }
 
+const panelOptionsSchema = strictRecord({
+  messages: messagesSchema,
+  onSupport: functionSchema<(...args: never[]) => unknown>(),
+  onSettings: v.optional(functionSchema<(...args: never[]) => unknown>()),
+  language: v.optional(nonEmptyStringSchema),
+});
+
 function checkPanelOptions(host: unknown, options: unknown): asserts options is SupportPanelOptions {
   if (!(host instanceof HTMLElement && host.isConnected)) {
     throw new DataError(`The host must be an element in a document, found ${describe(host)}.`);
   }
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", ["messages", "onSupport", "onSettings", "language"]);
-  checkMessages(options.messages);
-  checkFunction(options.onSupport, "The option onSupport must be a function");
-  const { onSettings = () => undefined, language = "en" } = options;
-  checkFunction(onSettings, "The option onSettings must be a function");
-  checkNonEmptyString(language, "The option language");
+  parseWith(panelOptionsSchema, options, "The options object");
 }
 
 /**

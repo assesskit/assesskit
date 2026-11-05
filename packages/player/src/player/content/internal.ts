@@ -9,7 +9,7 @@
 export { DECLARED_HEIGHT, DECLARED_WIDTH, scaleDeclaredSizes, scaleSize } from "./attributes.js";
 export { canAnimate, essence } from "./embed.js";
 export { elementName, HTML_ELEMENT_NAMES, isHtmlName } from "./html-elements.js";
-export { readRenderOptions } from "./options.js";
+export { RENDER_OPTION_ENTRIES, readRenderOptions, stylesheetSchema } from "./options.js";
 export { enableSorting } from "./sortable-table.js";
 export { resolveSrcset } from "./srcset.js";
 export { enableTabs, type SelectedTabs } from "./tabs.js";

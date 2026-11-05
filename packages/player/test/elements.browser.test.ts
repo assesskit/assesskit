@@ -1936,7 +1936,7 @@ describe("createInteractionRenderers", () => {
 
   it("rejects options of other types as JavaScript or JSON gives them", () => {
     expect(() => createInteractionRenderers(JSON.parse("null"))).toThrow(
-      new DataError("The options must be an object, found null."),
+      new DataError("The options object is invalid: expected an object, found null."),
     );
     expect(() => createInteractionRenderers(JSON.parse('{"messages": {}}'))).toThrow(DataError);
     expect(() => createInteractionRenderers({ messages: EN_MESSAGES, files: Files, staticUrl: "static" })).toThrow(

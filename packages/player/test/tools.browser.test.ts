@@ -2270,12 +2270,10 @@ describe("input of other types", () => {
   it("rejects options that are not an object, and properties that are not options", () => {
     const scene = createScene();
     expect(() => mountTools(scene.host, JSON.parse("null"))).toThrow(
-      new DataError("The options must be an object, found null."),
+      new DataError("The options object is invalid: expected an object, found null."),
     );
     expect(() => mountTools(scene.host, { ...options(scene), extra: 1 } as never)).toThrow(
-      new DataError(
-        'The options has the properties "messages", "language", "stage", "assets", "slots" and "onSupport", found "extra".',
-      ),
+      new DataError('The options object is invalid: unexpected property "extra".'),
     );
   });
 
@@ -2284,24 +2282,32 @@ describe("input of other types", () => {
     const mount = (overrides: Record<string, unknown>) => () =>
       mountTools(scene.host, { ...options(scene), ...overrides } as never);
     expect(mount({ messages: JSON.parse("null") })).toThrow(
-      new DataError("The option messages is invalid: expected an object, found null."),
+      new DataError(
+        "The options object is invalid at messages: The option messages is invalid: expected an object, found null.",
+      ),
     );
     expect(mount({ messages: { ...EN_MESSAGES, toolRule: 5 } })).toThrow(
-      new DataError("The option messages is invalid at toolRule: expected a string, found 5."),
+      new DataError(
+        "The options object is invalid at messages: The option messages is invalid at toolRule: expected a string, found 5.",
+      ),
     );
-    expect(mount({ language: 5 })).toThrow(new DataError("The option language must be a string, found 5."));
+    expect(mount({ language: 5 })).toThrow(
+      new DataError("The options object is invalid at language: expected a string, found 5."),
+    );
     expect(mount({ stage: JSON.parse("{}") })).toThrow(
-      new DataError("The option stage must be an element in a document, found an object."),
+      new DataError("The options object is invalid at stage: expected an element in a document, found an object."),
     );
-    expect(mount({ assets: "x" })).toThrow(new DataError('The option assets must be a function, found "x".'));
+    expect(mount({ assets: "x" })).toThrow(
+      new DataError('The options object is invalid at assets: expected a function, found "x".'),
+    );
     expect(mount({ onSupport: JSON.parse("null") })).toThrow(
-      new DataError("The option onSupport must be a function, found null."),
+      new DataError("The options object is invalid at onSupport: expected a function, found null."),
     );
     expect(mount({ slots: JSON.parse("null") })).toThrow(
-      new DataError("The option slots must be an object, found null."),
+      new DataError("The options object is invalid at slots: expected an object, found null."),
     );
     expect(mount({ slots: { dictionary: 1 } })).toThrow(
-      new DataError("The slot dictionary of the option slots must be a function, found 1."),
+      new DataError("The options object is invalid at slots.dictionary: expected a function, found 1."),
     );
     expect(mount({ slots: { lexicon: () => undefined } })).toThrow(DataError);
   });

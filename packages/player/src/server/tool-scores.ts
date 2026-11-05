@@ -1,7 +1,15 @@
-import { type CallOptions, checkCallOptions, checkFunction, checkRecord } from "@assesskit/runtime/checks";
+import {
+  type CallOptions,
+  checkCallOptions,
+  functionSchema,
+  methodsSchema,
+  parseWith,
+  strictRecord,
+} from "@assesskit/runtime/checks";
 import type { ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { buildSingle } from "@assesskit/runtime/values";
+import * as v from "valibot";
 import type { HostApplyOptions, HostSession } from "../protocol/index.js";
 import type { StepSink } from "./forward.js";
 import type { ToolScore, ToolScoreStore } from "./tool-score-store.js";
@@ -68,16 +76,11 @@ const ANSWERS: readonly (readonly [string, (score: ToolScore) => number | undefi
 
 const requestId = (item: ItemKey, outcome: string): string => `item:${item.ref}:${item.instance}:${outcome}`;
 
-function checkIntakeOptions(options: unknown): asserts options is ToolScoreIntakeOptions {
-  checkRecord(options, "The options must be an object");
-  checkRecord(options.host, "The option host must be an object");
-  checkFunction(options.host.session, "The function session of the option host must be a function");
-  checkRecord(options.scores, "The option scores must be an object");
-  for (const name of ["keep", "latest"]) {
-    checkFunction(options.scores[name], `The function ${name} of the option scores must be a function`);
-  }
-  if (options.scoredBy !== undefined) checkFunction(options.scoredBy, "The option scoredBy must be a function");
-}
+const intakeOptionsSchema = strictRecord({
+  host: methodsSchema<ToolScoreIntakeOptions["host"]>("session"),
+  scores: methodsSchema<ToolScoreStore>("keep", "latest"),
+  scoredBy: v.optional(functionSchema<NonNullable<ToolScoreIntakeOptions["scoredBy"]>>()),
+});
 
 /**
  * Creates the wiring that turns the scores which the tool of an item gives into the scores of the session: `onScore` for
@@ -95,8 +98,7 @@ function checkIntakeOptions(options: unknown): asserts options is ToolScoreIntak
  * @throws `DataError` when an option has the wrong type.
  */
 export function createToolScoreIntake(options: ToolScoreIntakeOptions): ToolScoreIntake {
-  checkIntakeOptions(options);
-  const { host, scores, scoredBy } = options;
+  const { host, scores, scoredBy } = parseWith(intakeOptionsSchema, options, "The options object");
 
   /** Gives the options of an action: the signal of the call, and who scored. */
   const applyOptionsOf = async (

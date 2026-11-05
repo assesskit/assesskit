@@ -588,6 +588,12 @@ export function functionSchema<TFunction extends (...args: never[]) => unknown>(
   return guardSchema((value): value is TFunction => typeof value === "function", "a function");
 }
 
+/** The schema of an `AbortSignal`, such as the option that ends a wait. */
+export const abortSignalSchema = guardSchema(
+  (value): value is AbortSignal => value instanceof AbortSignal,
+  "an AbortSignal",
+);
+
 /**
  * The schema of a host's object that passes on whole, such as a profile or a stylesheet: only that it is an object is
  * checked, and the fields are the host's to keep, or a check of its own follows.

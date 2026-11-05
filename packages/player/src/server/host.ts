@@ -7,12 +7,12 @@ import {
   checkChoice,
   checkNonEmptyString,
   checkOptional,
-  checkPositiveInteger,
   checkRecord,
   describe,
   functionSchema,
   methodsSchema,
   parseWith,
+  positiveIntegerSchema,
   raceAbort,
   recordSchema,
 } from "@assesskit/runtime/checks";
@@ -43,11 +43,11 @@ import {
   type CatLoopFailure,
   checkActionEnvelope,
   checkCaller,
-  checkClock,
   checkHostAction,
   checkHostApplyOptions,
   checkViewEnvelope,
   checkViewRequest,
+  clockSchema,
   createCatLoops,
   isViewRequest,
   markOfficial,
@@ -84,26 +84,24 @@ interface Attempt<T> {
 const notBound = (): AccessError =>
   new AccessError("The session does not belong to the caller, or does not exist.", "not-bound");
 
-// The clock and the client actions are checked by the functions that read them.
+// The client actions are checked by the function that reads them.
 const hostOptionsSchema = v.strictObject({
   engine: methodsSchema<Engine>("start", "apply", "view", "deadlines", "pending", "scorerView", "results"),
   store: methodsSchema<SessionStore>("create", "load", "save"),
   scheduler: v.optional(methodsSchema<Scheduler>("schedule")),
-  clock: v.optional(v.unknown()),
+  clock: v.optional(clockSchema),
   gate: methodsSchema<AssetGate>("sign"),
   packages: functionSchema<(session: string, options?: CallOptions) => Promise<QtiPackage>>(),
   clientActions: v.optional(v.unknown()),
-  maxIdleMs: v.optional(v.unknown()),
+  maxIdleMs: v.optional(positiveIntegerSchema),
   limits: v.optional(recordSchema),
   onStep: v.optional(functionSchema<StepSink>()),
   cat: v.optional(methodsSchema<CatSessionPort>("createSession", "submitResults", "endSession")),
 });
 
 function checkHostOptions(options: unknown): asserts options is SessionHostOptions {
-  const { engine, clock, maxIdleMs } = parseWith(hostOptionsSchema, options, "The options object");
+  const { engine } = parseWith(hostOptionsSchema, options, "The options object");
   checkBoolean(engine.hasMaximumTime, "The property hasMaximumTime of the option engine");
-  checkOptional(clock, checkClock);
-  checkOptional(maxIdleMs, (value) => checkPositiveInteger(value, "The option maxIdleMs"));
 }
 
 /** Returns the action as the log of a session keeps it: candidate actions in the runtime's JSON form, host actions without their payloads. */

@@ -504,18 +504,27 @@ describe("mountSubmission", () => {
   it("rejects options of other types", () => {
     const base = { assets: (path: string) => path, stylesheet: stylesheet(PLAYER_CSS) };
     const cases: readonly (readonly [unknown, string | RegExp])[] = [
-      [null, "The options must be an object, found null."],
-      [{ ...base, speed: 1 }, /^The options has the properties .*, found "speed"\.$/],
-      [{ ...base, assets: "x" }, /^The option assets must be a function/],
-      [{ ...base, stylesheet: {} }, "The option stylesheet must be a CSSStyleSheet, found an object."],
-      [{ ...base, language: 5 }, "The option language must be a string, found 5."],
-      [{ ...base, catalogs: [] }, "The option catalogs must be an object, found an array."],
-      [{ ...base, files: { url: 1 } }, "The url of the option files must be a function, found 1."],
-      [{ ...base, files: null }, "The option files must be an object with a function url, found null."],
-      [{ ...base, itemPath: "x" }, 'The option itemPath must be a function, found "x".'],
-      [{ ...base, mathjax: 5 }, "The option mathjax must be a string, found 5."],
-      [{ ...base, origins: "x" }, /^The option origins must be an array/],
-      [{ ...base, interactions: new Map() }, /^The options has the properties .*, found "interactions"\.$/],
+      [null, "The options object is invalid: expected an object, found null."],
+      [{ ...base, speed: 1 }, /^The options object is invalid: unexpected property "speed"\.$/],
+      [{ ...base, assets: "x" }, /^The options object is invalid at assets: expected a function/],
+      [
+        { ...base, stylesheet: {} },
+        "The options object is invalid at stylesheet: expected a CSSStyleSheet, found an object.",
+      ],
+      [{ ...base, language: 5 }, "The options object is invalid at language: expected a string, found 5."],
+      [{ ...base, catalogs: [] }, "The options object is invalid at catalogs: expected an object, found an array."],
+      [
+        { ...base, files: { url: 1 } },
+        "The options object is invalid at files: expected an object with the function url, found an object.",
+      ],
+      [
+        { ...base, files: null },
+        "The options object is invalid at files: expected an object with the function url, found null.",
+      ],
+      [{ ...base, itemPath: "x" }, 'The options object is invalid at itemPath: expected a function, found "x".'],
+      [{ ...base, mathjax: 5 }, "The options object is invalid at mathjax: expected a string, found 5."],
+      [{ ...base, origins: "x" }, /^The options object is invalid at origins: expected an array/],
+      [{ ...base, interactions: new Map() }, /^The options object is invalid: unexpected property "interactions"\.$/],
     ];
     for (const [options, message] of cases) {
       const host = document.createElement("div");

@@ -358,7 +358,7 @@ describe("readInteractionOptions", () => {
     readInteractionOptions(valid({ onError: (each: unknown) => heard.push(each) })).report(error);
     expect(heard).toEqual([error]);
     expect(() => readInteractionOptions(valid({ onError: JSON.parse("5") }))).toThrow(
-      new DataError("The option onError must be a function, found 5."),
+      new DataError("The options object is invalid at onError: expected a function, found 5."),
     );
     const raised: unknown[] = [];
     const original = globalThis.reportError;
@@ -383,23 +383,23 @@ describe("readInteractionOptions", () => {
   it("rejects options of other types as JavaScript or JSON gives them", () => {
     const parse = (json: string): unknown => JSON.parse(json);
     expect(() => readInteractionOptions(parse("null"))).toThrow(
-      new DataError("The options must be an object, found null."),
+      new DataError("The options object is invalid: expected an object, found null."),
     );
     expect(() => readInteractionOptions(parse("[]"))).toThrow(
-      new DataError("The options must be an object, found an array."),
+      new DataError("The options object is invalid: expected an object, found an array."),
     );
     expect(() => readInteractionOptions(valid({ messages: parse("5") }))).toThrow(DataError);
     expect(() => readInteractionOptions(valid({ files: parse("null") }))).toThrow(
-      new DataError("The option files must be an object, found null."),
+      new DataError("The options object is invalid at files: expected an object, found null."),
     );
     expect(() => readInteractionOptions(valid({ files: { ...Files, upload: 1 } }))).toThrow(
       new DataError("The method upload of the option files must be a function, found 1."),
     );
     expect(() => readInteractionOptions(valid({ record: false }))).toThrow(
-      /^The options has the properties .*, found "record"\.$/,
+      new DataError('The options object is invalid: unexpected property "record".'),
     );
     expect(() => readInteractionOptions(valid({ customInteraction: parse("5") }))).toThrow(
-      new DataError("The option customInteraction must be a function, found 5."),
+      new DataError("The options object is invalid at customInteraction: expected a function, found 5."),
     );
     expect(() => readInteractionOptions(valid({ colour: 1 }))).toThrow(DataError);
   });

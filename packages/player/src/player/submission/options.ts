@@ -1,9 +1,18 @@
-import { checkFunction, checkProperties, checkRecord, checkString, describe } from "@assesskit/runtime/checks";
+import {
+  checkString,
+  describe,
+  functionSchema,
+  methodsSchema,
+  objectSchema,
+  parseWith,
+  strictRecord,
+} from "@assesskit/runtime/checks";
 import type { ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { FileValue } from "@assesskit/runtime/values";
+import * as v from "valibot";
 import { type Messages, selectMessages } from "../../messages/index.js";
-import { readRenderOptions } from "../content/internal.js";
+import { readRenderOptions, stylesheetSchema } from "../content/internal.js";
 import type { MountFiles, MountOptions } from "../delivery/index.js";
 import { createMathTypesetter, type MathTypesetter } from "../math/index.js";
 
@@ -59,7 +68,16 @@ export interface SubmissionSettings {
   readonly itemPath: (item: ItemKey) => string;
 }
 
-const OPTION_NAMES = ["assets", "stylesheet", "language", "catalogs", "files", "origins", "mathjax", "itemPath"];
+const submissionOptionsSchema = strictRecord({
+  assets: functionSchema<(path: string) => string>(),
+  stylesheet: stylesheetSchema,
+  language: v.optional(v.string(), "en"),
+  catalogs: v.optional(objectSchema<Readonly<Record<string, Partial<Messages>>>>(), () => ({})),
+  files: v.optional(methodsSchema<SubmissionFiles>("url")),
+  origins: v.optional(v.array(v.string())),
+  mathjax: v.optional(v.string()),
+  itemPath: v.optional(functionSchema<(item: ItemKey) => unknown>(), () => () => ""),
+});
 
 /** The schemes that the page may load a file of a candidate from. */
 const FILE_PROTOCOLS: readonly string[] = ["http:", "https:"];
@@ -84,37 +102,22 @@ function returningHttpUrl(url: (file: FileValue) => unknown): (file: FileValue) 
  * @throws `DataError` when an option is not of its type.
  */
 export function readSubmissionOptions(options: unknown): SubmissionSettings {
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", OPTION_NAMES);
-  const { language = "en", catalogs = {}, files, mathjax, itemPath = () => "" } = options;
-  checkString(language, "The option language");
-  checkRecord(catalogs, "The option catalogs must be an object");
-  checkFunction(itemPath, "The option itemPath must be a function");
-  if (mathjax !== undefined) checkString(mathjax, "The option mathjax");
-  let fileUrl: SubmissionSettings["fileUrl"];
-  if (files !== undefined) {
-    checkRecord(files, "The option files must be an object with a function url");
-    const { url } = files;
-    checkFunction(url, "The url of the option files must be a function");
-    fileUrl = returningHttpUrl((file) => Reflect.apply(url, files, [file]));
-  }
+  const { assets, stylesheet, language, catalogs, files, origins, mathjax, itemPath } = parseWith(
+    submissionOptionsSchema,
+    options,
+    "The options object",
+  );
+  const fileUrl = files === undefined ? undefined : returningHttpUrl((file) => files.url(file));
   // `selectMessages` checks the catalogs, language by language, down to each message.
-  const text = selectMessages(language, { catalogs: catalogs as Readonly<Record<string, Partial<Messages>>> });
-  const { assets, origins } = readRenderOptions({
-    messages: text,
-    assets: options.assets,
-    origins: options.origins,
-  });
-  if (!(options.stylesheet instanceof CSSStyleSheet)) {
-    throw new DataError(`The option stylesheet must be a CSSStyleSheet, found ${describe(options.stylesheet)}.`);
-  }
+  const text = selectMessages(language, { catalogs });
+  const { assets: readAssets, origins: readOrigins } = readRenderOptions({ messages: text, assets, origins });
   return {
     messages: text,
     language,
-    assets,
-    stylesheet: options.stylesheet,
+    assets: readAssets,
+    stylesheet,
     fileUrl,
-    origins: [...origins],
+    origins: [...readOrigins],
     typesetter: mathjax === undefined ? undefined : createMathTypesetter(mathjax),
     itemPath: (item) => {
       const path: unknown = Reflect.apply(itemPath, undefined, [item]);

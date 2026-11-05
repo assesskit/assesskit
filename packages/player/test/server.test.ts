@@ -1438,8 +1438,12 @@ describe("createSessionHost", () => {
     expect(() => make({ scheduler: { schedule: 1 } })).toThrow(
       "The options object is invalid at scheduler: expected an object with the function schedule, found an object.",
     );
-    expect(() => make({ clock: {} })).toThrow("The function now of the option clock");
-    expect(() => make({ clock: null })).toThrow("The option clock");
+    expect(() => make({ clock: {} })).toThrow(
+      "The options object is invalid at clock: expected an object with the function now, found an object.",
+    );
+    expect(() => make({ clock: null })).toThrow(
+      "The options object is invalid at clock: expected an object with the function now, found null.",
+    );
     expect(() => make({ engine: { ...good.engine, hasMaximumTime: "yes" } })).toThrow(
       new DataError('The property hasMaximumTime of the option engine must be a boolean, found "yes".'),
     );
@@ -1510,16 +1514,16 @@ describe("the option maxIdleMs of the session host", () => {
   it("checks the option", async () => {
     const options = (text: string): Parameters<typeof examHost>[0] => JSON.parse(text);
     await expect(examHost(options('{"maxIdleMs":0}'))).rejects.toThrow(
-      "The option maxIdleMs must be a positive integer, found 0.",
+      "The options object is invalid at maxIdleMs: expected a value of at least 1, found 0.",
     );
     await expect(examHost(options('{"maxIdleMs":"5"}'))).rejects.toThrow(
-      'The option maxIdleMs must be a positive integer, found "5".',
+      'The options object is invalid at maxIdleMs: expected a number, found "5".',
     );
     await expect(examHost(options('{"maxIdleMs":null}'))).rejects.toThrow(
-      "The option maxIdleMs must be a positive integer, found null.",
+      "The options object is invalid at maxIdleMs: expected a number, found null.",
     );
     await expect(examHost(options('{"maxIdleMs":2.5}'))).rejects.toThrow(
-      "The option maxIdleMs must be a positive integer, found 2.5.",
+      "The options object is invalid at maxIdleMs: expected a safe integer, found 2.5.",
     );
   });
 
@@ -2678,19 +2682,32 @@ describe("createToolScoreIntake", () => {
       scores: { keep: async () => true, latest: async () => undefined },
     };
     const make = (change: Record<string, unknown>): unknown => createToolScoreIntake({ ...good, ...change } as never);
-    expect(() => make({ host: json("null") })).toThrow(new DataError("The option host must be an object, found null."));
-    expect(() => make({ host: {} })).toThrow(
-      new DataError("The function session of the option host must be a function, found undefined."),
+    expect(() => make({ host: json("null") })).toThrow(
+      new DataError("The options object is invalid at host: expected an object with the function session, found null."),
     );
-    expect(() => make({ scores: json("5") })).toThrow(new DataError("The option scores must be an object, found 5."));
+    expect(() => make({ host: {} })).toThrow(
+      new DataError(
+        "The options object is invalid at host: expected an object with the function session, found an object.",
+      ),
+    );
+    expect(() => make({ scores: json("5") })).toThrow(
+      new DataError(
+        "The options object is invalid at scores: expected an object with the functions keep and latest, found 5.",
+      ),
+    );
     expect(() => make({ scores: { keep: async () => true } })).toThrow(
-      new DataError("The function latest of the option scores must be a function, found undefined."),
+      new DataError(
+        "The options object is invalid at scores: expected an object with the functions keep and latest, found an object.",
+      ),
     );
     expect(() => make({ scoredBy: json("1") })).toThrow(
-      new DataError("The option scoredBy must be a function, found 1."),
+      new DataError("The options object is invalid at scoredBy: expected a function, found 1."),
     );
     expect(() => createToolScoreIntake(json("null") as never)).toThrow(
-      new DataError("The options must be an object, found null."),
+      new DataError("The options object is invalid: expected an object, found null."),
+    );
+    expect(() => make({ colour: 1 })).toThrow(
+      new DataError('The options object is invalid: unexpected property "colour".'),
     );
   });
 });

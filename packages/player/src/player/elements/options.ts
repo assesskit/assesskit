@@ -2,16 +2,19 @@ import type { CustomInteraction } from "@assesskit/runtime/asi";
 import type { CallOptions } from "@assesskit/runtime/checks";
 import {
   checkFunction,
-  checkProperties,
-  checkRecord,
   checkString,
   describe,
+  functionSchema,
   isRecord,
+  objectSchema,
+  parseWith,
+  strictRecord,
 } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import type { FileValue, Value } from "@assesskit/runtime/values";
+import * as v from "valibot";
 import type { Messages } from "../../messages/index.js";
-import { checkMessages } from "../../messages/internal.js";
+import { messagesSchema } from "../../messages/internal.js";
 
 /** Where uploads, recordings and drawings are kept: the host's storage, which values refer to. */
 export interface InteractionFiles {
@@ -114,7 +117,13 @@ export interface InteractionSettings {
   readonly report: (error: unknown) => void;
 }
 
-const OPTION_NAMES = ["messages", "files", "staticUrl", "customInteraction", "onError"];
+const interactionOptionsSchema = strictRecord({
+  messages: messagesSchema,
+  files: objectSchema<Readonly<Record<string, unknown>>>(),
+  staticUrl: v.string(),
+  customInteraction: v.optional(functionSchema<(...args: never[]) => unknown>()),
+  onError: v.optional(functionSchema<(...args: never[]) => unknown>()),
+});
 
 /** Returns whether a value is a file value: a reference, a content type and optionally a name, all strings. */
 function isFileValue(value: unknown): value is FileValue {
@@ -204,14 +213,11 @@ function checkedHook(hook: (...args: never[]) => unknown): CustomInteractionHook
  * @throws `DataError` when an option is not of its type.
  */
 export function readInteractionOptions(options: unknown): InteractionSettings {
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", OPTION_NAMES);
-  const { messages, files, staticUrl, customInteraction, onError } = options;
-  checkMessages(messages);
-  checkRecord(files, "The option files must be an object");
-  if (customInteraction !== undefined)
-    checkFunction(customInteraction, "The option customInteraction must be a function");
-  if (onError !== undefined) checkFunction(onError, "The option onError must be a function");
+  const { messages, files, staticUrl, customInteraction, onError } = parseWith(
+    interactionOptionsSchema,
+    options,
+    "The options object",
+  );
   return {
     messages,
     files: checkedFiles(files),

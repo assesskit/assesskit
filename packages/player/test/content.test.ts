@@ -80,21 +80,27 @@ describe("createBodyRenderer", () => {
   });
 
   it("throws DataError for options as JavaScript or JSON can deliver them", () => {
-    expect(() => create(json("null"))).toThrow("The options must be an object, found null.");
-    expect(() => create(json('"options"'))).toThrow('The options must be an object, found "options".');
-    expect(() => create({ ...valid, extra: 1 })).toThrow(/^The options has the properties .* found "extra"\.$/u);
+    expect(() => create(json("null"))).toThrow("The options object is invalid: expected an object, found null.");
+    expect(() => create(json('"options"'))).toThrow(
+      'The options object is invalid: expected an object, found "options".',
+    );
+    expect(() => create({ ...valid, extra: 1 })).toThrow(
+      /^The options object is invalid: unexpected property "extra"\.$/u,
+    );
     expect(() => create({ ...valid, messages: json("null") })).toThrow(
-      "The option messages is invalid: expected an object, found null.",
+      "The options object is invalid at messages: The option messages is invalid: expected an object, found null.",
     );
     expect(() => create({ ...valid, messages: { ...EN_MESSAGES, toolOpenFile: json("1") } })).toThrow(
-      "The option messages is invalid at toolOpenFile: expected a string, found 1.",
+      "The options object is invalid at messages: The option messages is invalid at toolOpenFile: expected a string, found 1.",
     );
     expect(() => create({ ...valid, assets: json('"assets"') })).toThrow(
-      'The option assets must be a function, found "assets".',
+      'The options object is invalid at assets: expected a function, found "assets".',
     );
-    expect(() => create({ ...valid, base: json("1") })).toThrow("The option base must be a string, found 1.");
+    expect(() => create({ ...valid, base: json("1") })).toThrow(
+      "The options object is invalid at base: expected a string, found 1.",
+    );
     expect(() => create({ ...valid, origins: json('"https://media.example"') })).toThrow(
-      'The option origins must be an array, found "https://media.example".',
+      'The options object is invalid at origins: expected an array, found "https://media.example".',
     );
     expect(() => create({ ...valid, interactions: json("{}") })).toThrow(
       "The option interactions must be a Map from kind to function, found an object.",
@@ -103,21 +109,23 @@ describe("createBodyRenderer", () => {
       'The renderer of the interaction "choice-interaction" must be a function, found 1.',
     );
     expect(() => create({ ...valid, view: json('"admin"') })).toThrow(
-      'The option view must be "author", "candidate", "proctor", "scorer", "testConstructor" or "tutor", found "admin".',
+      'The options object is invalid at view: expected "author", "candidate", "proctor", "scorer", "testConstructor" or "tutor", found "admin".',
     );
     expect(() => create({ ...valid, withholdMedia: json('"yes"') })).toThrow(
-      'The option withholdMedia must be a boolean, found "yes".',
+      'The options object is invalid at withholdMedia: expected true or false, found "yes".',
     );
     expect(() => create({ ...valid, mediaScale: json('"2"') })).toThrow(
-      'The option mediaScale must be a positive number, found "2".',
+      'The options object is invalid at mediaScale: expected a number, found "2".',
     );
     expect(() => create({ ...valid, mediaScale: 0 })).toThrow(
-      "The option mediaScale must be a positive number, found 0.",
+      "The options object is invalid at mediaScale: expected a positive number, found 0.",
     );
     expect(() => create({ ...valid, variables: json("{}") })).toThrow(
       "The outcomes of the option variables must be a Map, found undefined.",
     );
-    expect(() => create({ ...valid, fileUrl: json("1") })).toThrow("The option fileUrl must be a function, found 1.");
+    expect(() => create({ ...valid, fileUrl: json("1") })).toThrow(
+      "The options object is invalid at fileUrl: expected a function, found 1.",
+    );
   });
 
   it("throws DataError for a null option that has a default, as it is no way to leave one out", () => {

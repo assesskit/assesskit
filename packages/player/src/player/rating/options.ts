@@ -1,15 +1,8 @@
 import type { RubricRating } from "@assesskit/runtime/asi";
-import {
-  checkArray,
-  checkBoolean,
-  checkFunction,
-  checkProperties,
-  checkRecord,
-  checkString,
-  describe,
-} from "@assesskit/runtime/checks";
-import { DataError } from "@assesskit/runtime/errors";
+import { functionSchema, objectSchema, parseWith, strictRecord } from "@assesskit/runtime/checks";
+import * as v from "valibot";
 import { type Messages, selectMessages } from "../../messages/index.js";
+import { stylesheetSchema } from "../content/internal.js";
 import type { MountOptions } from "../delivery/index.js";
 import { numberFormatter } from "../internal.js";
 
@@ -53,7 +46,14 @@ export interface RatingSettings {
   readonly format: (value: number) => string;
 }
 
-const OPTION_NAMES = ["stylesheet", "language", "catalogs", "ratings", "readOnly", "onChange"];
+const ratingOptionsSchema = strictRecord({
+  stylesheet: stylesheetSchema,
+  language: v.optional(v.string(), "en"),
+  catalogs: v.optional(objectSchema<Readonly<Record<string, Partial<Messages>>>>(), () => ({})),
+  ratings: v.optional(v.array(v.unknown()), []),
+  readOnly: v.optional(v.boolean(), false),
+  onChange: v.optional(functionSchema<(...args: never[]) => unknown>()),
+});
 
 /**
  * Checks the options of a form and fills in their defaults.
@@ -63,21 +63,15 @@ const OPTION_NAMES = ["stylesheet", "language", "catalogs", "ratings", "readOnly
  * @throws `DataError` when an option is not of its type.
  */
 export function readRatingOptions(options: unknown): RatingSettings {
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", OPTION_NAMES);
-  const { language = "en", catalogs = {}, ratings = [], readOnly = false, onChange, stylesheet } = options;
-  checkString(language, "The option language");
-  checkRecord(catalogs, "The option catalogs must be an object");
-  checkArray(ratings, "The option ratings must be an array");
-  checkBoolean(readOnly, "The option readOnly");
-  if (onChange !== undefined) checkFunction(onChange, "The option onChange must be a function");
-  if (!(stylesheet instanceof CSSStyleSheet)) {
-    throw new DataError(`The option stylesheet must be a CSSStyleSheet, found ${describe(stylesheet)}.`);
-  }
+  const { language, catalogs, ratings, readOnly, onChange, stylesheet } = parseWith(
+    ratingOptionsSchema,
+    options,
+    "The options object",
+  );
   const format = numberFormatter(language);
   return {
     // `selectMessages` checks the catalogs, language by language, down to each message.
-    messages: selectMessages(language, { catalogs: catalogs as Readonly<Record<string, Partial<Messages>>> }),
+    messages: selectMessages(language, { catalogs }),
     language,
     stylesheet,
     ratings: ratings as readonly RubricRating[],

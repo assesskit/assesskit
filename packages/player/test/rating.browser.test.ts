@@ -521,7 +521,9 @@ describe("mounting and taking down", () => {
     const mount = (options: unknown, rubric: ScoringRubric = ESSAY) =>
       mountRatingForm(host(), rubric, options as RatingFormOptions);
     const sheet = stylesheet(PLAYER_CSS);
-    expect(() => mount(json("null"))).toThrow(new DataError("The options must be an object, found null."));
+    expect(() => mount(json("null"))).toThrow(
+      new DataError("The options object is invalid: expected an object, found null."),
+    );
     expect(() => mount({ ...(json('{"extra":1}') as object), stylesheet: sheet })).toThrow(DataError);
     expect(() => mount({ stylesheet: json("1") })).toThrow(DataError);
     expect(() => mount({ stylesheet: sheet, language: json("1") })).toThrow(DataError);
