@@ -429,6 +429,13 @@ export const RUNTIME_RULES: readonly Rule[] = [
     test: DELIVERY_TEST,
   },
   {
+    rule: "An action that the close of the session met is refused with a message that names the close, and one that a maximum time met names that time.",
+    file: `${DELIVERY}/session-step.ts`,
+    find: "if (closeAt !== undefined && end !== undefined && end.at >= closeAt) {",
+    replace: "if (closeAt !== undefined) {",
+    test: DELIVERY_TEST,
+  },
+  {
     rule: "A session that has a close lists it among its deadlines, for the host to schedule.",
     file: `${DELIVERY}/deadlines.ts`,
     find: 'if (closeAt !== undefined && state.status !== "ended") {',

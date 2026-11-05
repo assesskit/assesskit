@@ -85,6 +85,20 @@ function waitsForResume(step: StepContext, action: Action, answer: boolean): boo
 }
 
 /**
+ * Returns the refusal of an action that the end of the test met in its step: the close of the session when it ended the test,
+ * else a maximum time. The close ends the test at its instant and wins a tie, so a test that ended at or after the close
+ * ended at it.
+ */
+function timeOver(step: StepContext): Refusal {
+  const { closeAt } = step.state;
+  const end = step.events.find((event) => event.type === "test-ended");
+  if (closeAt !== undefined && end !== undefined && end.at >= closeAt) {
+    return refusal("time-over", `The test ended when the session closed at ${closeAt}.`);
+  }
+  return refusal("time-over", "The test ended when a maximum time passed.");
+}
+
+/**
  * Applies an action to a step: first the maximum times that passed before it, each at its time, then the action. The
  * refusals of a test that ended, of a time before the latest step and of a suspended session come first.
  *
@@ -109,7 +123,7 @@ function applyAction(step: StepContext, action: Action): Refusal | undefined {
   if (expired !== undefined) return expired;
   advance(step, at);
   if (ended(step) && !answer) {
-    if (action.type !== "time") return refusal("time-over", "The test ended when a maximum time passed.");
+    if (action.type !== "time") return timeOver(step);
     reconcile(step, at);
     return undefined;
   }

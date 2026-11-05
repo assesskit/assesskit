@@ -2310,7 +2310,7 @@ describe("the close of a session", () => {
     // An action after the close finds the test over, and a `time` action ends it at the close itself.
     expect(refusalOf(engine, state, answer("a", "B", 61 * Second))).toEqual({
       reason: "time-over",
-      message: "The test ended when a maximum time passed.",
+      message: "The test ended when the session closed at 60000.",
     });
     const out = played(engine, state, { type: "time", at: 65 * Second });
     expect(described(out.events)[0]).toBe("time-out T@60000");
@@ -2350,6 +2350,13 @@ describe("the close of a session", () => {
     expect(described(out.events)[0]).toBe("time-out T@30000");
     expect(out.state.status).toBe("ended");
     expect(engine.deadlines(out.state)).toEqual([]);
+    // An action that the end meets names the span that ended the test, also once the close has passed after it.
+    for (const at of [31 * Second, 110 * Second]) {
+      expect(refusalOf(engine, state, answer("a", "B", at))).toEqual({
+        reason: "time-over",
+        message: "The test ended when a maximum time passed.",
+      });
+    }
   });
 
   it("ends a test that has no maximum time at the close alone, and tells that it has none", () => {
@@ -2414,7 +2421,7 @@ describe("the close of a session", () => {
     // A resume that is the first action past the close finds the test over, and is refused with the state unchanged.
     expect(refusalOf(engine, paused.state, { type: "resume", at: 70 * Second })).toEqual({
       reason: "time-over",
-      message: "The test ended when a maximum time passed.",
+      message: "The test ended when the session closed at 60000.",
     });
     expect(refusalOf(engine, out.state, { type: "resume", at: 80 * Second }).reason).toBe("ended");
     // A move is met by the end, not by the suspension, once the close has come.
