@@ -4,7 +4,7 @@ import { XINCLUDE_NAMESPACE, XML_NAMESPACE, type XmlAttribute, type XmlElement, 
 import { formatAttributeValue } from "./attribute-value.js";
 import { isAttribute, isElement } from "./guards.js";
 import { ASI_NAMESPACE } from "./namespace.js";
-import type { AttributeDef, Wildcard } from "./table.js";
+import type { AttributeDef, AttributeType, Wildcard } from "./table.js";
 import { foreignName, kindOf, type SlotInfo, type TypeInfo, typeNamed } from "./type-index.js";
 
 type Properties = Readonly<Record<string, unknown>>;
@@ -45,23 +45,23 @@ class Writer {
     }
   }
 
+  /** Formats the value of a property as the text of its type: of an attribute, or of an element whose content is text. */
+  private format(type: AttributeType, value: unknown, property: string, name: string): string {
+    if (value === undefined) throw this.fail(`The property ${property} of ${name} is required.`);
+    try {
+      return formatAttributeValue(type, value);
+    } catch (error) {
+      if (!(error instanceof DataError)) throw error;
+      throw this.fail(`The property ${property} of ${name} is invalid: ${error.message}`, { cause: error });
+    }
+  }
+
   private writeAttributes(info: TypeInfo, name: string, model: Properties): XmlAttribute[] {
     const attributes: XmlAttribute[] = [];
     for (const definition of info.attributeList) {
       const value = model[definition.property];
-      if (value === undefined) {
-        if (definition.use === "required")
-          throw this.fail(`The property ${definition.property} of ${name} is required.`);
-        continue;
-      }
-      try {
-        attributes.push(toAttribute(definition, formatAttributeValue(definition.type, value)));
-      } catch (error) {
-        if (!(error instanceof DataError)) throw error;
-        throw this.fail(`The property ${definition.property} of ${name} is invalid: ${error.message}`, {
-          cause: error,
-        });
-      }
+      if (value === undefined && definition.use !== "required") continue;
+      attributes.push(toAttribute(definition, this.format(definition.type, value, definition.property, name)));
     }
     if (info.def.attributeWildcard !== undefined) {
       for (const attribute of this.writeExtensions(info, name, model)) attributes.push(attribute);
@@ -86,14 +86,8 @@ class Writer {
 
   private writeText(info: TypeInfo, name: string, model: Properties): XmlNode[] {
     if (info.def.content.kind !== "text") throw new AssesskitError(`The content of the type ${info.name} is not text.`);
-    if (model.value === undefined) throw this.fail(`The property value of ${name} is required.`);
-    try {
-      const text = formatAttributeValue(info.def.content.value, model.value);
-      return text === "" ? [] : [{ kind: "text", value: text }];
-    } catch (error) {
-      if (!(error instanceof DataError)) throw error;
-      throw this.fail(`The property value of ${name} is invalid: ${error.message}`, { cause: error });
-    }
+    const text = this.format(info.def.content.value, model.value, "value", name);
+    return text === "" ? [] : [{ kind: "text", value: text }];
   }
 
   private writeMember(slot: SlotInfo, name: string, member: unknown): XmlNode {
