@@ -41,9 +41,8 @@ const GOLDEN_GAMMA = 0x9e3779b9;
 export function createRandom(seed: number): SeededRandom {
   checkSeed(seed);
   const high = mix(Math.floor(seed / TWO_TO_32) >>> 0);
-  const state = new Uint32Array(4);
-  for (let i = 0; i < 4; i++) state[i] = mix((seed >>> 0) + Math.imul(i + 1, GOLDEN_GAMMA) + high);
-  return generator(state);
+  const word = (index: number): number => mix((seed >>> 0) + Math.imul(index + 1, GOLDEN_GAMMA) + high);
+  return generator([word(0), word(1), word(2), word(3)]);
 }
 
 /**
@@ -61,15 +60,31 @@ export function restoreRandom(state: RandomState): SeededRandom {
       `A random state must be four integers from 0 to 4294967295, not all 0, found ${describe(state)}.`,
     );
   }
-  return generator(Uint32Array.from(state));
+  return generator(state);
 }
 
-/** Builds the generator over a four-word state, which it advances in place. */
-function generator(words: Uint32Array): SeededRandom {
-  const bits53 = (): number => (next(words) >>> 5) * TWO_TO_26 + (next(words) >>> 6);
+/**
+ * Builds the generator over a four-word state. The words are held as 32-bit integers, signed or not, because every
+ * operation on them reads them as 32 bits; `state` gives them back unsigned.
+ */
+function generator(initial: RandomState): SeededRandom {
+  let [s0, s1, s2, s3] = initial;
+  /** Advances xoshiro128** (Blackman and Vigna) and returns its next 32-bit output. */
+  const next = (): number => {
+    const result = Math.imul(rotate(Math.imul(s1, 5), 7), 9) >>> 0;
+    const t = s1 << 9;
+    const n2 = s2 ^ s0;
+    const n3 = s3 ^ s1;
+    s0 ^= n3;
+    s1 ^= n2;
+    s2 = n2 ^ t;
+    s3 = rotate(n3, 11);
+    return result;
+  };
+  const bits53 = (): number => (next() >>> 5) * TWO_TO_26 + (next() >>> 6);
   return {
     uniform: () => bits53() / TWO_TO_53,
-    state: () => [words[0] ?? 0, words[1] ?? 0, words[2] ?? 0, words[3] ?? 0],
+    state: () => [s0 >>> 0, s1 >>> 0, s2 >>> 0, s3 >>> 0],
   };
 }
 
@@ -79,23 +94,6 @@ function mix(value: number): number {
   h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
   h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
   return (h ^ (h >>> 16)) >>> 0;
-}
-
-/** Advances xoshiro128** (Blackman and Vigna) and returns its next 32-bit output. */
-function next(s: Uint32Array): number {
-  const s0 = s[0] ?? 0;
-  const s1 = s[1] ?? 0;
-  const s2 = s[2] ?? 0;
-  const s3 = s[3] ?? 0;
-  const result = Math.imul(rotate(Math.imul(s1, 5), 7), 9) >>> 0;
-  const t = s1 << 9;
-  const n2 = s2 ^ s0;
-  const n3 = s3 ^ s1;
-  s[0] = s0 ^ n3;
-  s[1] = s1 ^ n2;
-  s[2] = n2 ^ t;
-  s[3] = rotate(n3, 11);
-  return result;
 }
 
 function rotate(x: number, k: number): number {
@@ -142,10 +140,8 @@ function swap<T>(items: T[], first: number, second: number): void {
  * @throws `DataError` when the source returns anything but a number in [0, 1).
  */
 export function shuffle<T>(items: readonly T[], isFixed: (item: T) => boolean, random: Random): T[] {
-  const places = items.flatMap((item, place) => (isFixed(item) ? [] : [place]));
-  const result = [...items];
-  for (let at = places.length - 1; at > 0; at--) {
-    swap(result, places[at] ?? 0, places[drawIndex(random, at + 1)] ?? 0);
-  }
-  return result;
+  const slots = items.map((item) => ({ item, fixed: isFixed(item) }));
+  const movable = slots.filter(({ fixed }) => !fixed).map(({ item }) => item);
+  for (let at = movable.length - 1; at > 0; at--) swap(movable, at, drawIndex(random, at + 1));
+  return slots.flatMap(({ item, fixed }) => (fixed ? [item] : movable.splice(0, 1)));
 }
