@@ -1312,21 +1312,40 @@ describe("the calculators", () => {
     expect(panel.querySelector('[aria-label="MC, clear memory"]')).toBeNull();
   });
 
-  it("adds, subtracts, multiplies and divides with the keys, and clears", async () => {
+  // Each press is a round trip between the runner and the browser, so a test presses few keys: on a starved CPU a test of
+  // twenty presses took the whole of its time.
+  /** Opens a calculator of the toolbar and returns its panel. */
+  const openCalculator = async (scene: Scene, name: string): Promise<HTMLElement> => {
+    await userEvent.click(toolbarButton(scene, name));
+    return found(panelOf(scene, name), "panel");
+  };
+  /** Opens a calculator of an item and returns its panel. */
+  const calculator = async (type: "basic" | "standard" | "scientific", name: string): Promise<HTMLElement> => {
     const scene = createScene();
-    scene.show(calculators("basic"));
-    await userEvent.click(toolbarButton(scene, "Basic calculator"));
-    const panel = found(panelOf(scene, "Basic calculator"), "panel");
+    scene.show(calculators(type));
+    return openCalculator(scene, name);
+  };
+
+  it("adds and multiplies with the keys, each operation on the result of the one before", async () => {
+    const panel = await calculator("basic", "Basic calculator");
     await press(panel, "7", "Add", "8", "Equals");
     expect(display(panel)).toBe("15");
     await press(panel, "Multiply", "3", "Equals");
     expect(display(panel)).toBe("45");
-    await press(panel, "Subtract", "5", "Equals", "Divide", "4", "Equals");
-    expect(display(panel)).toBe("10");
+  });
+
+  it("subtracts and divides with the keys", async () => {
+    const panel = await calculator("basic", "Basic calculator");
+    await press(panel, "9", "Subtract", "5", "Divide", "4", "Equals");
+    expect(display(panel)).toBe("1");
+  });
+
+  it("adds decimals without the error of binary fractions, and clears", async () => {
+    const panel = await calculator("basic", "Basic calculator");
+    await press(panel, "Decimal point", "1", "Add", "Decimal point", "2", "Equals");
+    expect(display(panel)).toBe("0.3");
     await press(panel, "C, clear");
     expect(display(panel)).toBe("0");
-    await press(panel, "0", "Decimal point", "1", "Add", "0", "Decimal point", "2", "Equals");
-    expect(display(panel)).toBe("0.3");
   });
 
   it("shows an error for a division by zero, in the language of the interface", async () => {
@@ -1348,11 +1367,8 @@ describe("the calculators", () => {
     expect(display(panelId)).toBe("Galat");
   });
 
-  it("opens the standard calculator with the memory, percent, square root and sign that the best practices guide lists", async () => {
-    const scene = createScene();
-    scene.show(calculators("standard"));
-    await userEvent.click(toolbarButton(scene, "Standard calculator"));
-    const panel = found(panelOf(scene, "Standard calculator"), "panel");
+  it("opens the standard calculator with the memory and the square root that the best practices guide lists", async () => {
+    const panel = await calculator("standard", "Standard calculator");
     expect(panel.querySelectorAll(".ak-keys button")).toHaveLength(24);
     const memory = found(panel.querySelector<HTMLElement>(".ak-memory"), "memory sign");
     expect(memory.hidden).toBe(true);
@@ -1365,10 +1381,14 @@ describe("the calculators", () => {
     expect(display(panel)).toBe("3");
     await press(panel, "M−, subtract from memory", "MC, clear memory");
     expect(memory.hidden).toBe(true);
-    await press(panel, "C, clear", "2", "0", "0", "Add", "1", "0", "Percent", "Equals");
-    expect(display(panel)).toBe("220");
-    await press(panel, "C, clear", "5", "Change sign");
-    expect(display(panel)).toBe("-5");
+  });
+
+  it("takes a percent of the left operand of an addition, and changes the sign, on the standard calculator", async () => {
+    const panel = await calculator("standard", "Standard calculator");
+    await press(panel, "8", "Add", "5", "0", "Percent", "Equals");
+    expect(display(panel)).toBe("12");
+    await press(panel, "Change sign");
+    expect(display(panel)).toBe("-12");
   });
 
   it("opens the scientific calculator that the profile names, with the keys of the best practices guide in their order", async () => {
@@ -1378,33 +1398,32 @@ describe("the calculators", () => {
     );
     const panel = found(panelOf(scene, "Scientific calculator"), "panel");
     expect(panel.querySelectorAll(".ak-keys button")).toHaveLength(46);
-    await press(
-      panel,
-      "2",
-      "Add",
-      "3",
-      "Multiply",
-      "Open parenthesis",
-      "4",
-      "Subtract",
-      "1",
-      "Close parenthesis",
-      "Equals",
-    );
-    expect(display(panel)).toBe("11");
-    await press(panel, "C, clear", "2", "xʸ, power", "1", "0", "Equals");
-    expect(display(panel)).toBe("1024");
-    await press(panel, "C, clear", "5", "nCr, combinations", "2", "Equals", "x!, factorial");
-    expect(display(panel)).toBe("3628800");
-    await press(panel, "C, clear", "1", "0", "0", "0", "log, logarithm to base 10");
-    expect(display(panel)).toBe("3");
+    await press(panel, "2", "Multiply", "Open parenthesis", "4", "Subtract", "1", "Close parenthesis", "Equals");
+    expect(display(panel)).toBe("6");
   });
 
-  it("works in degrees, radians and gradians, with the inverse and hyperbolic functions shown as pressed while they wait", async () => {
-    const scene = createScene();
-    scene.show(calculators("scientific"));
-    await userEvent.click(toolbarButton(scene, "Scientific calculator"));
-    const panel = found(panelOf(scene, "Scientific calculator"), "panel");
+  it("follows the order of operations on the scientific calculator", async () => {
+    const panel = await calculator("scientific", "Scientific calculator");
+    await press(panel, "2", "Add", "3", "Multiply", "4", "Equals");
+    expect(display(panel)).toBe("14");
+  });
+
+  it("raises to a power and takes the logarithm to base 10", async () => {
+    const panel = await calculator("scientific", "Scientific calculator");
+    await press(panel, "2", "xʸ, power", "3", "Equals");
+    expect(display(panel)).toBe("8");
+    await press(panel, "log, logarithm to base 10");
+    expect(display(panel)).toBe("0.903089986992");
+  });
+
+  it("combines and takes the factorial", async () => {
+    const panel = await calculator("scientific", "Scientific calculator");
+    await press(panel, "5", "nCr, combinations", "2", "Equals", "x!, factorial");
+    expect(display(panel)).toBe("3628800");
+  });
+
+  it("works in degrees by default, with the inverse function shown as pressed while it waits", async () => {
+    const panel = await calculator("scientific", "Scientific calculator");
     const unit = found(panel.querySelector("select"), "angle unit");
     expect(unit.labels?.[0]?.firstChild?.textContent).toBe("Angle unit");
     expect(unit.value).toBe("degree");
@@ -1412,18 +1431,34 @@ describe("the calculators", () => {
     expect(display(panel)).toBe("0.5");
     const inverse = key(panel, "Inv, inverse function");
     expect(inverse.getAttribute("aria-pressed")).toBe("false");
-    await press(panel, "C, clear", "Inv, inverse function");
+    await press(panel, "Inv, inverse function");
     expect(inverse.getAttribute("aria-pressed")).toBe("true");
-    await press(panel, "1", "tan, tangent");
-    expect(display(panel)).toBe("45");
+    await press(panel, "tan, tangent");
+    expect(display(panel)).toBe("26.5650511771");
     expect(inverse.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("works in radians, with the hyperbolic function shown as pressed while it waits, and keeps the unit when cleared", async () => {
+    const panel = await calculator("scientific", "Scientific calculator");
+    const unit = found(panel.querySelector("select"), "angle unit");
     await userEvent.selectOptions(unit, "radian");
     await press(panel, "π, pi", "cos, cosine");
     expect(display(panel)).toBe("-1");
-    await press(panel, "Hyp, hyperbolic function", "0", "cos, cosine");
-    expect(display(panel)).toBe("1");
+    const hyperbolic = key(panel, "Hyp, hyperbolic function");
+    await press(panel, "Hyp, hyperbolic function");
+    expect(hyperbolic.getAttribute("aria-pressed")).toBe("true");
+    await press(panel, "cos, cosine");
+    expect(display(panel)).toBe("1.54308063482");
+    expect(hyperbolic.getAttribute("aria-pressed")).toBe("false");
     await press(panel, "C, clear");
     expect(unit.value).toBe("radian");
+  });
+
+  it("works in gradians", async () => {
+    const panel = await calculator("scientific", "Scientific calculator");
+    await userEvent.selectOptions(found(panel.querySelector("select"), "angle unit"), "gradian");
+    await press(panel, "1", "0", "0", "sin, sine");
+    expect(display(panel)).toBe("1");
   });
 
   it("shows the operations that wait above the display", async () => {
