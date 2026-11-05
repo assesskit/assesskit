@@ -1150,6 +1150,29 @@ describe("createSessionHost", () => {
     expect(store.records.get("exam-1")?.version).toBe(3);
   });
 
+  it("schedules the close of a session that starts with one, and a job of the scheduler ends the session at it", async () => {
+    const { host, scheduler, clock } = await examHost();
+    const start = clock.now();
+    // The sitting closes at 600 s: a test with no maximum time is closed by it alone.
+    await host.start(ALICE, { seed: 7, closeAt: start + 600 * SECOND });
+    expect(scheduler.jobs).toEqual([["exam-1", start + 600 * SECOND]]);
+    clock.advance(601 * SECOND);
+    const closed = await host.session(ALICE.session).apply({ type: "time" });
+    expect(closed.refusal).toBeUndefined();
+    expect(closed.events.map(({ type }) => type)).toContain("time-out");
+    expect((await host.handle(ALICE, request(1, answer("A")))).refusal?.reason).toBe("ended");
+  });
+
+  it("starts no session with a close where the host cannot schedule it", async () => {
+    const { host, clock } = await examHost({ scheduler: undefined });
+    await expect(host.start(ALICE, { seed: 7, closeAt: clock.now() + 600 * SECOND })).rejects.toThrow(
+      new DataError(
+        "The option closeAt closes a session at its instant, which the session host cannot schedule without the option scheduler: pass a Scheduler, so that a session ends when it closes.",
+      ),
+    );
+    await expect(host.start(ALICE, { seed: 7 })).resolves.toBeDefined();
+  });
+
   it("runs a test with no maximum time without a scheduler", async () => {
     const { host, store } = await examHost({ scheduler: undefined });
     await host.start(ALICE, { seed: 7 });

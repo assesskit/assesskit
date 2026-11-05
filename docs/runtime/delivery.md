@@ -208,19 +208,20 @@ serves every session of a test, and a session does no I/O.
 
 ### Start
 
-| `StartOptions`      | Default                      | Meaning                                                                                              |
-| ------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `seed`              | —                            | The seed of the generator of the session: selection, ordering, template values, shuffles.            |
-| `at`                | —                            | The time of the start, in epoch milliseconds.                                                        |
-| `pnp`               | none                         | The candidate's profile: supports, extra time, hazards avoided, item translation.                    |
-| `universalSupports` | none                         | Supports the program gives every candidate; options unless the profile names them.                   |
-| `context`           | none                         | Values of context variables, `QTI_CONTEXT` included, for the test and every item that declares them. |
-| `resultContext`     | `{ sessionIdentifiers: [] }` | Who took the test, for the results `context`: `sourcedId` and delivery system sessions.              |
+| `StartOptions`      | Default                      | Meaning                                                                                                                             |
+| ------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `seed`              | —                            | The seed of the generator of the session: selection, ordering, template values, shuffles.                                           |
+| `at`                | —                            | The time of the start, in epoch milliseconds.                                                                                       |
+| `closeAt`           | none                         | The instant the session closes, after `at`: a sitting that ends for every candidate at one time ([close](#the-close-of-a-session)). |
+| `pnp`               | none                         | The candidate's profile: supports, extra time, hazards avoided, item translation.                                                   |
+| `universalSupports` | none                         | Supports the program gives every candidate; options unless the profile names them.                                                  |
+| `context`           | none                         | Values of context variables, `QTI_CONTEXT` included, for the test and every item that declares them.                                |
+| `resultContext`     | `{ sessionIdentifiers: [] }` | Who took the test, for the results `context`: `sourcedId` and delivery system sessions.                                             |
 
 `start` plans the session with `createRandom(seed)`, and presents the first item that the walk of
 pre-conditions and branch rules gives; a test with nothing to present ends at once. A context value must fit every
-declaration of its variable, in the test and in its items, else `start` throws a `DataError`. A time, in `at` and in every
-action, is epoch milliseconds from the year 1 to the year 9999, so that a results report can write it as a datestamp.
+declaration of its variable, in the test and in its items, else `start` throws a `DataError`, as it does for a `closeAt` that is
+not after `at`. A time, in `at`, in `closeAt` and in every action, is epoch milliseconds from the year 1 to the year 9999, so that a results report can write it as a datestamp.
 
 ### Actions
 
@@ -319,7 +320,7 @@ The cost of outcome processing is stated in [performance](performance.md#outcome
 Time runs in the test, the test part and the sections of the item presented, and in the item while its session is
 interacting; never while the session is suspended. A section selected more than once has one clock.
 `deadlines(state)` gives the maximum time of each running scope that has not passed and the minimum time not yet reached,
-as absolute times with the candidate's extra time. `hasMaximumTime` says, before any session, whether the test, a test part, a
+as absolute times with the candidate's extra time, and the close of the session, if it has one, as the kind `close`. `hasMaximumTime` says, before any session, whether the test, a test part, a
 section or an item reference has a maximum time, so that a host knows whether it must schedule time-outs; a section that
 ordering mixes into its parent has no limits, and the extra time of a candidate does not change it.
 
@@ -332,9 +333,27 @@ A refused action leaves the state as it was, the time-outs it applied included; 
 The minimum time of a scope must be reached before the candidate leaves it by `move`, `end-part` or `end-test`; a time-out
 leaves without it.
 
+### The close of a session
+
+A maximum time counts the candidate's own time from the start, so a candidate who enters late has the full span while a
+sitting ends for everyone at one time. `closeAt` at `start` is that time: an absolute instant at which the session ends, as
+a time-out of the test (`time-out` with the test's identifier, whatever `allow-late-submission` says). The timer of the test
+in the view counts to it when it comes before the end of the test's own time, and it appears in `deadlines` as the kind
+`close`, for the host to send `time` at. It is the earlier of the two that governs, so a close never extends a span that ends
+earlier, and a test with no maximum time is closed by it alone. A suspension stops the span and not the close: a `time`
+action at or after the close ends a suspended session at the close, and any other action then finds the test over
+(`time-over`).
+
+| Candidate                                     | The span would end | The close | The session ends   | The timer counts to |
+| --------------------------------------------- | ------------------ | --------- | ------------------ | ------------------- |
+| On time: starts at 0 s, span 60 s, close 60 s | 60 s               | 60 s      | 60 s, one time-out | 60 s                |
+| Late: starts at 20 s, span 60 s, close 60 s   | 80 s               | 60 s      | 60 s               | 60 s, the close     |
+| Close after the span: span 30 s, close 100 s  | 30 s               | 100 s     | 30 s               | 30 s, the span      |
+| Suspended at 50 s: span 120 s, close 60 s     | stops              | 60 s      | 60 s, suspended    | the close           |
+
 ### Suspension, supports and variants
 
-- `suspend` suspends the item presented and stops every clock; while suspended, every action but `resume` is refused.
+- `suspend` suspends the item presented and stops every clock; while suspended, every action but `resume` is refused, until the close, if there is one, comes.
   `resume` presents the item again. `resume` on a running session changes nothing.
 - Supports: a support the profile names has the state `resolveSupports` gives it, on from the start when `active`
   or `assigned`; a universal support it does not name is an option. Only an option turns on and off. The supports on while
@@ -508,13 +527,13 @@ uses the runtime without the player filters the actions of its clients before it
 
 The runtime reads no clock. Every time is epoch milliseconds, between the year 1 and the year 9999, that the caller supplies:
 
-| Where                                        | The time is                                                                                                                   |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `start({ at })` and the `at` of every action | When the step happened. An action before the latest step is refused `clock-regression`.                                       |
-| `stamp(state, action, now)`                  | Sets `at` to the greater of `now` and the time of the latest step, so a server's clock stepping back never refuses an action. |
-| `engine.view(state, now)`                    | The moment of the view. The maximum times that passed by `now` apply to the view; the state is not changed.                   |
-| `engine.deadlines(state)`                    | Absolute times at which the host sends `{ type: "time", at }`, with the candidate's extra time.                               |
-| `drainCat(engine, state, port, now)`         | A function that gives the time of each answer of a CAT engine.                                                                |
+| Where                                        | The time is                                                                                                                       |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `start({ at })` and the `at` of every action | When the step happened. An action before the latest step is refused `clock-regression`.                                           |
+| `stamp(state, action, now)`                  | Sets `at` to the greater of `now` and the time of the latest step, so a server's clock stepping back never refuses an action.     |
+| `engine.view(state, now)`                    | The moment of the view. The maximum times that passed by `now` apply to the view; the state is not changed.                       |
+| `engine.deadlines(state)`                    | Absolute times at which the host sends `{ type: "time", at }`: the maximum times, with the candidate's extra time, and the close. |
+| `drainCat(engine, state, port, now)`         | A function that gives the time of each answer of a CAT engine.                                                                    |
 
 Time runs in the test, the test part, the sections and the item presented, and stops while the session is suspended.
 Every duration and datestamp of a results report derives from these times, so replaying the actions from the seed gives the
@@ -911,6 +930,12 @@ const pnp = readPnp(`<access-for-all-pnp xmlns="http://www.imsglobal.org/xsd/qti
   <additional-testing-time><time-multiplier>1.5</time-multiplier></additional-testing-time>
 </access-for-all-pnp>`);
 engine.deadlines(engine.start({ seed: 7, at: 0, pnp }).state)[0].at; // => 5400000
+
+// A sitting that closes at one time for every candidate: one who enters at 10 minutes has until the close, not the full hour.
+const entered = engine.start({ seed: 7, at: 600_000, closeAt: 3_600_000 });
+engine.deadlines(entered.state).map(({ kind, at }) => [kind, at]); // => [["max-time", 4200000], ["close", 3600000]]
+engine.view(entered.state, 600_000).timers[0].remaining; // => 3000000
+engine.apply(entered.state, { type: "time", at: 3_600_000 }).events[0].type; // => "time-out"
 ```
 
 ## Structure
@@ -1022,7 +1047,7 @@ ordering mixes into its parent still passes its control to its items.
 ## Time limits of the plan
 
 A scope, the test, a part, a section or an item reference, has `minTime`, `maxTime` (seconds, absent when undeclared) and
-`allowLateSubmission` (default `false`). `Engine.deadlines(state)` gives each maximum time as an absolute time, and
+`allowLateSubmission` (default `false`). `Engine.deadlines(state)` gives each maximum time as an absolute time, with the close of the session when `start` was given one, and
 `Engine.hasMaximumTime` tells whether a test has any. Each scope declares its own limits; nothing is inherited. The minimum
 time of a section or item reference is absent in a nonlinear part. A section that ordering mixes into its parent has no
 limits.
@@ -1549,16 +1574,16 @@ rules, and the value to choose: above the longest pause that a learner takes whi
 
 ## Errors
 
-| Class             | Thrown when                                                                                                                                                                                                                                                                    | What to do                                                                                                                                  |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DataError`       | `readCandidateAction` meets input that is not an action of the candidate, or `readView` JSON that is not a view; `writeView` or `writeCandidateAction` is given something else                                                                                                 | Answer the client 400 and do not apply it; send what `writeView` and `writeCandidateAction` wrote                                           |
-| `DataError`       | The static checks of `createEngine` find an error; identifiers repeat; a section reference and its section differ; a multiplier is not positive                                                                                                                                | Validate the package with [validate](validate.md) and fix the test; the message names the rule                                              |
-| `DataError`       | A context value given to `start` names no context variable or does not fit its declaration; a selection cannot be made; a plan does not match its structure; an item instance is not in the plan; a response is not a value; an argument has the wrong type                    | Fix the call; the message says what is expected                                                                                             |
-| `DataError`       | A state is not one of the format, or started on another content version than the engine's                                                                                                                                                                                      | Read the state with the engine of the content that started it ([State across releases](#state-across-releases))                             |
-| `DataError`       | `readItemVariables` is given an adaptive item, or `readItemVariables` or `readTestInputs` meets a value of a report that does not fit the declaration, an item or a position that the test lacks, a report without a test result, or a datestamp that is not a date            | Pass the report of a session of this test                                                                                                   |
-| `SecurityError`   | An action is above `maxActionSize`, `maxPciStateLength` or `maxSettingListLength` at `readCandidateAction`; a plan would hold more than `maxPlanNodes` sections and items, also at `start`; an expression of a pre-condition or branch rule builds a container above its limit | Refuse the input; raise a limit only for a reason ([SECURITY](https://github.com/assesskit/assesskit/blob/main/SECURITY.md#default-limits)) |
-| `ProcessingError` | A pre-condition or branch rule fails or does not give a boolean; a declared value of an item is not in the lexical form of its base type, also in `readItemVariables`                                                                                                          | Fix the rule or the declaration that `identifier` names                                                                                     |
-| `ReadError`       | A resolver cannot find a section                                                                                                                                                                                                                                               | Give the resolvers every section the test reaches                                                                                           |
+| Class             | Thrown when                                                                                                                                                                                                                                                                                 | What to do                                                                                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DataError`       | `readCandidateAction` meets input that is not an action of the candidate, or `readView` JSON that is not a view; `writeView` or `writeCandidateAction` is given something else                                                                                                              | Answer the client 400 and do not apply it; send what `writeView` and `writeCandidateAction` wrote                                           |
+| `DataError`       | The static checks of `createEngine` find an error; identifiers repeat; a section reference and its section differ; a multiplier is not positive                                                                                                                                             | Validate the package with [validate](validate.md) and fix the test; the message names the rule                                              |
+| `DataError`       | A context value given to `start` names no context variable or does not fit its declaration, or `closeAt` is not after `at`; a selection cannot be made; a plan does not match its structure; an item instance is not in the plan; a response is not a value; an argument has the wrong type | Fix the call; the message says what is expected                                                                                             |
+| `DataError`       | A state is not one of the format, or started on another content version than the engine's                                                                                                                                                                                                   | Read the state with the engine of the content that started it ([State across releases](#state-across-releases))                             |
+| `DataError`       | `readItemVariables` is given an adaptive item, or `readItemVariables` or `readTestInputs` meets a value of a report that does not fit the declaration, an item or a position that the test lacks, a report without a test result, or a datestamp that is not a date                         | Pass the report of a session of this test                                                                                                   |
+| `SecurityError`   | An action is above `maxActionSize`, `maxPciStateLength` or `maxSettingListLength` at `readCandidateAction`; a plan would hold more than `maxPlanNodes` sections and items, also at `start`; an expression of a pre-condition or branch rule builds a container above its limit              | Refuse the input; raise a limit only for a reason ([SECURITY](https://github.com/assesskit/assesskit/blob/main/SECURITY.md#default-limits)) |
+| `ProcessingError` | A pre-condition or branch rule fails or does not give a boolean; a declared value of an item is not in the lexical form of its base type, also in `readItemVariables`                                                                                                                       | Fix the rule or the declaration that `identifier` names                                                                                     |
+| `ReadError`       | A resolver cannot find a section                                                                                                                                                                                                                                                            | Give the resolvers every section the test reaches                                                                                           |
 
 A well-formed action that the rules do not allow is a refusal, not an error, and processing failures in item sessions and in the engine are data.
 

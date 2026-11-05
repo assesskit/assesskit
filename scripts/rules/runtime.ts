@@ -21,6 +21,7 @@ const CAT_TEST = "packages/runtime/test/cat.test.ts";
 const CHECKS_TEST = "packages/runtime/test/checks.test.ts";
 const OPERATORS = "packages/runtime/src/operators";
 const OPERATORS_TEST = "packages/runtime/test/operators.test.ts";
+const DELIVERY = "packages/runtime/src/delivery";
 const SCORING = "packages/runtime/src/scoring";
 const SCORING_TEST = "packages/runtime/test/scoring.test.ts";
 const FORMATS = "packages/runtime/src/item-formats";
@@ -398,6 +399,76 @@ export const RUNTIME_RULES: readonly Rule[] = [
     find: "const callSchema = strictRecord({",
     replace: "const callSchema = v.looseObject({",
     test: OPERATORS_TEST,
+  },
+  {
+    rule: "A session starts before its close: a close at or before the start is refused.",
+    file: `${DELIVERY}/engine.ts`,
+    find: "if (closeAt !== undefined && closeAt <= at)",
+    replace: "if (false)",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "The close of a session is an instant of the engine's range.",
+    file: `${DELIVERY}/engine.ts`,
+    find: "closeAt: v.optional(instantSchema),",
+    replace: "closeAt: v.optional(v.unknown()),",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "Where the close and a maximum time come together, the close wins, so that one time-out is reported and late submission cannot keep the session open.",
+    file: `${DELIVERY}/step-time.ts`,
+    find: "(first === undefined || closeAt <= first.at)",
+    replace: "(first === undefined || closeAt < first.at)",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "A suspended session takes the close at its instant: a time action then ends it, and any other action meets the end and not the suspension.",
+    file: `${DELIVERY}/session-step.ts`,
+    find: "(closeAt === undefined || closeAt > action.at)",
+    replace: "true",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "A session that has a close lists it among its deadlines, for the host to schedule.",
+    file: `${DELIVERY}/deadlines.ts`,
+    find: 'if (closeAt !== undefined && state.status !== "ended") {',
+    replace: "if (false) {",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "A session that has ended lists no close.",
+    file: `${DELIVERY}/deadlines.ts`,
+    find: 'if (closeAt !== undefined && state.status !== "ended") {',
+    replace: "if (closeAt !== undefined) {",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "The timer of the test counts to the close when it comes before the end of the test's own time.",
+    file: `${DELIVERY}/view.ts`,
+    find: "const end = span === undefined || (close !== undefined && close < span) ? close : span;",
+    replace: "const end = span;",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "The close of a session is written into the JSON of its state.",
+    file: `${DELIVERY}/state-json.ts`,
+    find: "...(state.closeAt === undefined ? {} : { closeAt: state.closeAt }),",
+    replace: "",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "The close in the JSON of a state is a number.",
+    file: `${DELIVERY}/state-json.ts`,
+    find: "closeAt: v.optional(finiteSchema),",
+    replace: "closeAt: v.optional(v.unknown()),",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "The close of a state is a finite number.",
+    file: `${DELIVERY}/delivery-state.ts`,
+    find: 'if (state.closeAt !== undefined) checkFinite(state.closeAt, "The closeAt of the state");',
+    replace: "",
+    test: DELIVERY_TEST,
   },
   {
     rule: "A follow-through of a call of an operator has its properties and no other.",

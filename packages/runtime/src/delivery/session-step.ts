@@ -74,6 +74,17 @@ function perform(step: StepContext, action: Action): Refusal | undefined {
 }
 
 /**
+ * Whether a suspended session refuses an action until it is resumed: all but `resume` and the host's answers. Once the close
+ * has come, none: the close ends the session at its instant, whether it runs or not, and the action then meets the end.
+ */
+function waitsForResume(step: StepContext, action: Action, answer: boolean): boolean {
+  const { status, closeAt } = step.state;
+  return (
+    status === "suspended" && action.type !== "resume" && !answer && (closeAt === undefined || closeAt > action.at)
+  );
+}
+
+/**
  * Applies an action to a step: first the maximum times that passed before it, each at its time, then the action. The
  * refusals of a test that ended, of a time before the latest step and of a suspended session come first.
  *
@@ -90,7 +101,7 @@ function applyAction(step: StepContext, action: Action): Refusal | undefined {
     const message = `The action at ${at} is earlier than the latest step of the session at ${step.state.at}.`;
     return refusal("clock-regression", message);
   }
-  if (step.state.status === "suspended" && action.type !== "resume" && !answer) {
+  if (waitsForResume(step, action, answer)) {
     return refusal("suspended", "The candidate session is suspended; it goes on when it is resumed.");
   }
   if (reviewing && isReview(action)) return reviewEnded(step, action);

@@ -132,7 +132,7 @@ function loggedAction(action: CandidateAction | HostAction, at: number): string 
  * - **Time.** An action is stamped with the server's clock (the runtime's `stamp` never goes back), the deadlines of the new
  *   state are scheduled before it is saved so that a failure of the scheduler loses no time-out, and the scheduler's job
  *   calls `session(id).apply` with `time`. A host without a scheduler serves only a test that has no maximum time, which
- *   `Engine.hasMaximumTime` tells. With {@link SessionHostOptions.maxIdleMs}, a gap above it counts as suspended, and
+ *   `Engine.hasMaximumTime` tells, and starts no session with a `closeAt`, the instant it closes. With {@link SessionHostOptions.maxIdleMs}, a gap above it counts as suspended, and
  *   the job's `time` action that finds one is dropped.
  * - **Saving.** The store saves by version; a conflict reloads and handles the request again.
  * - **Signals.** A call with an aborted `signal` stops before its next load and applies nothing. The signal reaches the
@@ -204,15 +204,15 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     };
   };
 
-  /** Schedules the maximum times of a state. The queue ignores a time it has for the session. */
+  /** Schedules the maximum times of a state and its close. The queue ignores a time it has for the session. */
   const scheduleDeadlines = async (
     session: string,
     state: DeliveryState,
     signal: AbortSignal | undefined,
   ): Promise<void> => {
     for (const deadline of engine.deadlines(state)) {
-      // A host without a scheduler was refused for a test with a maximum time, so it meets none here.
-      if (deadline.kind === "max-time") await scheduler?.schedule(session, Math.ceil(deadline.at), { signal });
+      // A host without a scheduler was refused for a test with a maximum time, and for a close, so it meets none here.
+      if (deadline.kind !== "min-time") await scheduler?.schedule(session, Math.ceil(deadline.at), { signal });
     }
   };
 
@@ -446,6 +446,11 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
       checkRecord(startOptions, "The options of start must be an object");
       const { signal, ...engineOptions } = startOptions;
       checkOptional(signal, (value) => checkAbortSignal(value, "The option signal"));
+      if (scheduler === undefined && engineOptions.closeAt !== undefined) {
+        throw new DataError(
+          "The option closeAt closes a session at its instant, which the session host cannot schedule without the option scheduler: pass a Scheduler, so that a session ends when it closes.",
+        );
+      }
       const { session, principal } = caller;
       const exists = (): AccessError =>
         new AccessError(

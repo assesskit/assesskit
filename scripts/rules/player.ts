@@ -67,6 +67,28 @@ export const PLAYER_RULES: readonly Rule[] = [
     test: "packages/player/test/protocol.test.ts",
   },
   {
+    rule: "A session host without a scheduler starts no session with a close, which nothing would enforce.",
+    file: "packages/player/src/server/host.ts",
+    find: "if (scheduler === undefined && engineOptions.closeAt !== undefined) {",
+    replace: "if (false) {",
+    test: "packages/player/test/server.test.ts",
+  },
+  {
+    rule: "A session host schedules the close of a session beside its maximum times.",
+    file: "packages/player/src/server/host.ts",
+    find: 'if (deadline.kind !== "min-time") await scheduler?.schedule(session, Math.ceil(deadline.at), { signal });',
+    replace:
+      'if (deadline.kind === "max-time") await scheduler?.schedule(session, Math.ceil(deadline.at), { signal });',
+    test: "packages/player/test/server.test.ts",
+  },
+  {
+    rule: "A local session arms its timer for the close beside the maximum times.",
+    file: "packages/player/src/client/local/session.ts",
+    find: '(each.kind === "min-time" ? [] : [each.at])',
+    replace: '(each.kind === "max-time" ? [each.at] : [])',
+    test: "packages/player/test/client.test.ts",
+  },
+  {
     rule: "A page, a drawing or a script of a package is served in a sandbox, so that a hostile package runs no script on the asset origin.",
     file: "packages/player/src/server/gate/gate.ts",
     find: "const headers = type === PDF_TYPE ? BASE_HEADERS : SANDBOXED_HEADERS;",

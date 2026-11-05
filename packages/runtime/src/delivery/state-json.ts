@@ -57,6 +57,7 @@ export function serializeState(state: DeliveryState): string {
     ...(contentVersion === undefined ? {} : { contentVersion }),
     status: state.status,
     at: state.at,
+    ...(state.closeAt === undefined ? {} : { closeAt: state.closeAt }),
     random: state.random,
     plan: state.plan,
     ...(current === undefined ? {} : { current }),
@@ -131,6 +132,7 @@ const stateSchema: Schema<DeliveryState> = v.object({
   contentVersion: v.optional(v.string()),
   status: v.picklist(DELIVERY_STATUSES),
   at: finiteSchema,
+  closeAt: v.optional(finiteSchema),
   random: v.pipe(
     v.strictTuple([v.number(), v.number(), v.number(), v.number()]),
     // restoreRandom checks the range of the words.

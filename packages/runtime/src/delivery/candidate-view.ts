@@ -68,7 +68,11 @@ export interface TimerView {
   readonly scope: Deadline["scope"];
   /** The identifier of the item reference, section, test part or test. */
   readonly identifier: string;
-  /** The milliseconds until the maximum time; 0 once it passed with late submission. Absent when there is none. */
+  /**
+   * The milliseconds until the scope ends: its maximum time or, for the test, the close of the session if that comes first;
+   * 0 once the maximum time passed with late submission, unless the close is still to come, which it then counts to. Absent
+   * when there is none.
+   */
   readonly remaining?: number;
   /** The milliseconds until the minimum time; absent when there is none or it was reached. */
   readonly minimumRemaining?: number;

@@ -125,6 +125,8 @@ export interface DeliveryState {
   readonly status: DeliveryStatus;
   /** The time of the latest step, in epoch milliseconds: an action stamped earlier is refused. */
   readonly at: number;
+  /** When the session closes, in epoch milliseconds, as `StartOptions.closeAt` gave it; absent when it has no close. */
+  readonly closeAt?: number;
   /** The state of the generator after the latest draw, so that a resumed session draws as it would have. */
   readonly random: RandomState;
   /** The sections and item instances of the session, which selection and ordering drew at the start. */
@@ -211,6 +213,7 @@ export function checkState(state: DeliveryState): void {
   if (state.contentVersion !== undefined) checkString(state.contentVersion, "The contentVersion of the state");
   checkChoice(state.status, "The status of the state", DELIVERY_STATUSES);
   checkFinite(state.at, "The at of the state");
+  if (state.closeAt !== undefined) checkFinite(state.closeAt, "The closeAt of the state");
   checkArray(state.random, "The random of the state must be an array of four integers");
   checkRecord(state.plan, "The plan of the state must be an object");
   checkArray(state.items, "The items of the state must be an array");

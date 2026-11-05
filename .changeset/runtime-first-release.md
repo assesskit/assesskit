@@ -45,7 +45,12 @@ so far in milliseconds, and with the option `eventOutcomes` of `createEngine` it
 `results()` call after each step. The option `reviewAfterEnd` of `createEngine` lets a candidate review the items presented
 after the test ended, as each item session control allows; it is off by default, and an engine with it names the content
 version of the states it reads. `Engine.hasMaximumTime` says, before any session, whether the test, a test part, a section
-or an item reference has a maximum time, so that a host knows whether it must schedule time-outs. `Engine.apply` and
+or an item reference has a maximum time, so that a host knows whether it must schedule time-outs. The option `closeAt` of
+`Engine.start`, an instant after `at`, closes the session for a sitting that ends for every candidate at one time: the session
+ends then as the test's maximum time ends it, whatever `allow-late-submission` says, also while it is suspended (a `time`
+action at or after the close ends it, and any other action finds the test over), and a close never extends a span that ends
+earlier. It is the `deadlines` entry of the kind `close`, and the timer of the test in the view counts to it when it comes
+before the end of the test's own time, so a late entrant has until the close and not the full span. `Engine.apply` and
 `stamp` read an action through the schema that `readCandidateAction` reads, and `writeCandidateAction` refuses a property
 that the action's type does not have. An item instance in JSON has `ref` and `instance` and no other property, in an action
 as in a state.

@@ -2278,6 +2278,180 @@ describe("deadlines", () => {
   });
 });
 
+describe("the close of a session", () => {
+  const Second = 1_000;
+  /** An engine of a test of two items whose own time is `span` seconds, with late submission when it is asked. */
+  const closing = (span?: number, late = false): Engine =>
+    engineOf(
+      `${TOTAL}${span === undefined ? "" : limits(`max-time="${span}"${late ? ' allow-late-submission="true"' : ""}`)}${testPart(
+        "P",
+        section("S", refs("a", "b")),
+        "linear",
+      )}${outcomeProcessing(SUM_SCORES)}`,
+    );
+  const testTimer = (engine: Engine, state: DeliveryState, now: number) =>
+    engine.view(state, now).timers.find((timer) => timer.scope === "test");
+
+  it("counts the timer of a late entrant to the shared close, and not the full span", () => {
+    const engine = closing(60);
+    // The sitting closes at 60 s; this candidate enters at 20 s, and the span alone would run to 80 s.
+    const { state } = begun(engine, { at: 20 * Second, closeAt: 60 * Second });
+    expect(engine.deadlines(state)).toEqual([
+      { scope: "test", identifier: "T", kind: "max-time", at: 80 * Second, lateSubmission: false },
+      { scope: "test", identifier: "T", kind: "close", at: 60 * Second, lateSubmission: false },
+    ]);
+    expect(testTimer(engine, state, 20 * Second)).toEqual({
+      scope: "test",
+      identifier: "T",
+      remaining: 40 * Second,
+      late: false,
+    });
+    expect(testTimer(engine, state, 50 * Second)?.remaining).toBe(10 * Second);
+    // An action after the close finds the test over, and a `time` action ends it at the close itself.
+    expect(refusalOf(engine, state, answer("a", "B", 61 * Second))).toEqual({
+      reason: "time-over",
+      message: "The test ended when a maximum time passed.",
+    });
+    const out = played(engine, state, { type: "time", at: 65 * Second });
+    expect(described(out.events)[0]).toBe("time-out T@60000");
+    expect(described(out.events).filter((event) => event.startsWith("time-out"))).toHaveLength(1);
+    expect(described(out.events).at(-1)).toBe("test-ended T@60000");
+    expect([out.state.status, out.state.at, out.state.current]).toEqual(["ended", 65 * Second, undefined]);
+    expect(engine.deadlines(out.state)).toEqual([]);
+    expect(refusalOf(engine, out.state, answer("a", "B", 70 * Second)).reason).toBe("ended");
+    // The close applies at its instant exactly, and not before.
+    expect(played(engine, state, { type: "time", at: 60 * Second - 1 }).events).toEqual([]);
+    expect(described(played(engine, state, { type: "time", at: 60 * Second }).events)[0]).toBe("time-out T@60000");
+  });
+
+  it("leaves an on-time entrant a timer of the full span, and reports one time-out where the close and the span come together", () => {
+    const engine = closing(60);
+    const { state } = begun(engine, { at: 0, closeAt: 60 * Second });
+    expect(testTimer(engine, state, 0)?.remaining).toBe(60 * Second);
+    const out = played(engine, state, { type: "time", at: 60 * Second });
+    expect(described(out.events).filter((event) => event.startsWith("time-"))).toEqual(["time-out T@60000"]);
+    // The same where the test allows late submission: the close wins and ends the session at once.
+    const late = closing(60, true);
+    const ended = played(late, begun(late, { at: 0, closeAt: 60 * Second }).state, { type: "time", at: 60 * Second });
+    expect(described(ended.events).filter((event) => event.startsWith("time-"))).toEqual(["time-out T@60000"]);
+    expect(ended.state.status).toBe("ended");
+  });
+
+  it("never extends a span that ends earlier: a close after the end of the span changes neither its deadline nor its timer", () => {
+    const engine = closing(30);
+    const { state } = begun(engine, { at: 0, closeAt: 100 * Second });
+    expect(testTimer(engine, state, 0)?.remaining).toBe(30 * Second);
+    expect(testTimer(engine, state, 29 * Second)?.remaining).toBe(Second);
+    expect(engine.deadlines(state).map(({ kind, at }) => [kind, at])).toEqual([
+      ["max-time", 30 * Second],
+      ["close", 100 * Second],
+    ]);
+    const out = played(engine, state, { type: "time", at: 31 * Second });
+    expect(described(out.events)[0]).toBe("time-out T@30000");
+    expect(out.state.status).toBe("ended");
+    expect(engine.deadlines(out.state)).toEqual([]);
+  });
+
+  it("ends a test that has no maximum time at the close alone, and tells that it has none", () => {
+    const engine = closing();
+    expect(engine.hasMaximumTime).toBe(false);
+    const { state } = begun(engine, { at: 0, closeAt: 45 * Second });
+    expect(engine.deadlines(state)).toEqual([
+      { scope: "test", identifier: "T", kind: "close", at: 45 * Second, lateSubmission: false },
+    ]);
+    expect(testTimer(engine, state, 15 * Second)).toEqual({
+      scope: "test",
+      identifier: "T",
+      remaining: 30 * Second,
+      late: false,
+    });
+    const open = begun(engine, { at: 0 });
+    expect(engine.deadlines(open.state)).toEqual([]);
+    expect(testTimer(engine, open.state, 15 * Second)).toBeUndefined();
+    expect(described(played(engine, state, { type: "time", at: 45 * Second }).events)[0]).toBe("time-out T@45000");
+  });
+
+  it("counts a late submission window to the close, and ends the session there", () => {
+    const engine = closing(30, true);
+    const { state } = begun(engine, { at: 0, closeAt: 100 * Second });
+    const passed = played(engine, state, { type: "time", at: 30 * Second });
+    expect(described(passed.events)).toEqual(["time-limit-passed T@30000"]);
+    expect(testTimer(engine, passed.state, 40 * Second)).toEqual({
+      scope: "test",
+      identifier: "T",
+      remaining: 60 * Second,
+      late: true,
+    });
+    // A submission in the window is accepted, as before; the close ends the session after it.
+    expect(played(engine, passed.state, answer("a", "B", 50 * Second)).state.status).toBe("in-progress");
+    const out = played(engine, passed.state, { type: "time", at: 100 * Second });
+    expect(described(out.events)[0]).toBe("time-out T@100000");
+    expect(out.state.status).toBe("ended");
+  });
+
+  it("keeps the close at its instant across a suspension, which stops the span and not the close", () => {
+    const engine = closing(120);
+    const { state } = begun(engine, { at: 0, closeAt: 60 * Second });
+    const paused = played(engine, state, { type: "suspend", at: 50 * Second });
+    // A suspended session has no maximum time to run, but its close stays.
+    expect(engine.deadlines(paused.state)).toEqual([
+      { scope: "test", identifier: "T", kind: "close", at: 60 * Second, lateSubmission: false },
+    ]);
+    expect(refusalOf(engine, paused.state, { type: "time", at: 55 * Second }).reason).toBe("suspended");
+    expect(engine.view(paused.state, 55 * Second).status).toBe("suspended");
+    // Before the close, a resume moves the span by the time suspended and leaves the close where it is.
+    const resumed = played(engine, paused.state, { type: "resume", at: 55 * Second });
+    expect(engine.deadlines(resumed.state).map(({ kind, at }) => [kind, at])).toEqual([
+      ["max-time", 125 * Second],
+      ["close", 60 * Second],
+    ]);
+    // Past the close, a `time` action ends the suspended session at the close, and the view shows it ended.
+    expect(engine.view(paused.state, 70 * Second).status).toBe("ended");
+    const out = played(engine, paused.state, { type: "time", at: 70 * Second });
+    expect(described(out.events)[0]).toBe("time-out T@60000");
+    expect(described(out.events).at(-1)).toBe("test-ended T@60000");
+    expect([out.state.status, out.state.at]).toEqual(["ended", 70 * Second]);
+    // A resume that is the first action past the close finds the test over, and is refused with the state unchanged.
+    expect(refusalOf(engine, paused.state, { type: "resume", at: 70 * Second })).toEqual({
+      reason: "time-over",
+      message: "The test ended when a maximum time passed.",
+    });
+    expect(refusalOf(engine, out.state, { type: "resume", at: 80 * Second }).reason).toBe("ended");
+    // A move is met by the end, not by the suspension, once the close has come.
+    expect(refusalOf(engine, paused.state, moveTo("next", 70 * Second)).reason).toBe("time-over");
+    // And a suspended session before the close refuses it as suspended.
+    expect(refusalOf(engine, paused.state, moveTo("next", 59 * Second)).reason).toBe("suspended");
+  });
+
+  it("refuses a close that is not after the start, or is not an instant", () => {
+    const engine = closing(60);
+    for (const closeAt of [1_000, 999, -5]) {
+      expect(() => engine.start({ seed: 1, at: 1_000, closeAt })).toThrow(
+        new DataError(`The option closeAt must be after the option at, found ${closeAt} and 1000.`),
+      );
+    }
+    for (const closeAt of ["60", null, Number.NaN, Number.POSITIVE_INFINITY, 253_402_300_800_000]) {
+      expect(() => engine.start({ seed: 1, at: 0, closeAt: closeAt as never }), String(closeAt)).toThrow(
+        /^The options object is invalid at closeAt: /,
+      );
+    }
+  });
+
+  it("keeps the close in the JSON of the state, and refuses a state whose close is not a number", () => {
+    const engine = closing(60);
+    const { state } = begun(engine, { at: 0, closeAt: 60 * Second });
+    expect(deserializeState(serializeState(state)).closeAt).toBe(60 * Second);
+    expect(JSON.parse(serializeState(state)).closeAt).toBe(60 * Second);
+    expect("closeAt" in JSON.parse(serializeState(begun(engine).state))).toBe(false);
+    expect(() => serializeState({ ...state, closeAt: Number.NaN })).toThrow("The closeAt of the state");
+    expect(() => deserializeState(JSON.stringify({ ...JSON.parse(serializeState(state)), closeAt: "soon" }))).toThrow(
+      /^The state is invalid at closeAt: /,
+    );
+    const restored = deserializeState(serializeState(state));
+    expect(described(played(engine, restored, { type: "time", at: 60 * Second }).events)[0]).toBe("time-out T@60000");
+  });
+});
+
 /** What a view must not hold: each string stands for a key, a processing step or a content that is hidden. */
 const LEAK = /LEAK-[A-Z-]+/g;
 

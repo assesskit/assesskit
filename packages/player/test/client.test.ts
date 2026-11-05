@@ -14,7 +14,7 @@ import {
   type ScriptedPort,
   scriptedPort,
 } from "./adaptive-fixture.js";
-import { examDefinition, examFiles, packageOf } from "./exam-fixture.js";
+import { examDefinition, examFiles, fakeClock, packageOf } from "./exam-fixture.js";
 import { answer, localOptions, localStore, SECOND, statusOfQ1 } from "./local-fixture.js";
 import { essay, fail, pick } from "./scoring-fixture.js";
 import { waitFor } from "./wait.js";
@@ -206,6 +206,27 @@ describe("the host side of a local session", () => {
     expect(statusOfQ1(client.view)).toBe("closed");
     expect(steps).toHaveLength(1);
     expect(steps[0]?.length).toBeGreaterThan(0);
+    client.close();
+  });
+
+  it("arms the timer for the close of a session that starts with one, and ends the session there", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const clock = fakeClock();
+    const setup = localOptions({
+      definition: examDefinition(packageOf(examFiles())),
+      clock,
+      start: { closeAt: clock.now() + 600 * SECOND },
+    });
+    const client = await createLocalSession(setup.options);
+    expect(vi.getTimerCount()).toBe(1);
+    const steps: string[][] = [];
+    client.host.subscribeSteps((events) => steps.push(events.map(({ type }) => type)));
+    clock.advance(600 * SECOND);
+    await vi.advanceTimersByTimeAsync(600 * SECOND);
+    await client.host.pending();
+    expect(client.view.status).toBe("ended");
+    expect(steps).toHaveLength(1);
+    expect(steps[0]).toContain("time-out");
     client.close();
   });
 

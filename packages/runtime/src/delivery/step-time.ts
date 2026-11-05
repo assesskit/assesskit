@@ -39,20 +39,33 @@ export function advance(step: StepContext, at: number): void {
   };
 }
 
-/** Returns the running scope whose maximum time passed first, up to `at`, with that time. */
-function due(step: StepContext, at: number): { readonly scope: RunningScope; readonly at: number } | undefined {
-  let first: { readonly scope: RunningScope; readonly at: number } | undefined;
+/** What passed first: the maximum time of a running scope, or the close of the session, at the time it was reached. */
+type Due =
+  | { readonly close: false; readonly scope: RunningScope; readonly at: number }
+  | { readonly close: true; readonly at: number };
+
+/**
+ * Returns what passed first up to `at`, with the time it was reached: the maximum time of a running scope, or the close of the
+ * session, which comes also while the session is suspended and wins a tie with a maximum time, so that the step reports one
+ * time-out.
+ */
+function due(step: StepContext, at: number): Due | undefined {
+  let first: Due | undefined;
   for (const scope of runningScopes(step.course, step.state)) {
     const deadline = scope.expired === undefined ? maximumAt(scope, step.state.at) : undefined;
     if (deadline !== undefined && deadline <= at && (first === undefined || deadline < first.at)) {
-      first = { scope, at: Math.max(deadline, step.state.at) };
+      first = { close: false, scope, at: Math.max(deadline, step.state.at) };
     }
+  }
+  const { closeAt, status } = step.state;
+  if (closeAt !== undefined && closeAt <= at && status !== "ended" && (first === undefined || closeAt <= first.at)) {
+    first = { close: true, at: Math.max(closeAt, step.state.at) };
   }
   return first;
 }
 
 /** Records what a maximum time did, and reports it. */
-function mark(step: StepContext, scope: RunningScope, expiry: Expiry, at: number): void {
+function mark(step: StepContext, scope: Pick<RunningScope, "scope" | "identifier">, expiry: Expiry, at: number): void {
   const type = expiry === "late" ? "time-limit-passed" : "time-out";
   if (scope.scope === "item") {
     const { key } = currentPlacement(step);
@@ -108,11 +121,17 @@ function expire(step: StepContext, scope: RunningScope, at: number): Refusal | u
   }
 }
 
-/** Applies the maximum times that passed up to `at`, earliest first, each at its own time. */
+/** Ends the session at its close: the test is timed out whatever its limits allow, and the candidate goes to its end. */
+function closeSession(step: StepContext, at: number): Refusal | undefined {
+  mark(step, { scope: "test", identifier: step.course.structure.test.model.identifier }, "closed", at);
+  return go(step, TEST_END, at);
+}
+
+/** Applies the maximum times that passed and the close, up to `at`, earliest first, each at its own time. */
 export function expireUntil(step: StepContext, at: number): Refusal | undefined {
   for (let next = due(step, at); next !== undefined; next = due(step, at)) {
     advance(step, next.at);
-    const refused = expire(step, next.scope, next.at);
+    const refused = next.close ? closeSession(step, next.at) : expire(step, next.scope, next.at);
     if (refused !== undefined) return refused;
     reconcile(step, next.at);
   }

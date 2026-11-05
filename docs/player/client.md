@@ -139,7 +139,7 @@ first save. A session that was saved stays, and a new call resumes it.
 | `signal`     | `AbortSignal`                         | Stops the creation before its load and its first save. Default: none.                                                                                                                                                                                              |
 
 It stamps each action with `stamp(state, action, now)`, saves the state of each accepted step before the step takes effect, and
-fires a `time` action at each maximum time with `setTimeout`, so a time-out happens on the device without a server. A store that
+fires a `time` action at each maximum time, and at the `closeAt` of the option `start`, with `setTimeout`, so a time-out happens on the device without a server. A store that
 has the session resumes it. The candidate can suspend and resume. Results of practice are never branded: nothing here brands a
 report, so `buildSessionScore` refuses them.
 

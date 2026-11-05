@@ -8,19 +8,26 @@ import type { StructureNode, TestStructure } from "./structure.js";
 import { type EffectiveTimeLimits, timeLimits } from "./time-limits.js";
 
 /**
- * A time at which a time limit is reached, which the host schedules a `time` action for: the maximum or minimum time of
- * the item presented, of a section that holds it, of its test part or of the test, as an absolute time.
+ * A time at which a time limit is reached or the session closes, which the host schedules a `time` action for: the maximum
+ * or minimum time of the item presented, of a section that holds it, of its test part or of the test, or the close of the
+ * session, as an absolute time.
  */
 export interface Deadline {
-  /** The kind of the scope. */
+  /** The kind of the scope; `test` for the close. */
   readonly scope: "item" | "section" | "part" | "test";
   /** The identifier of the item reference, section, test part or test. */
   readonly identifier: string;
-  /** Whether the time is the maximum or the minimum. */
-  readonly kind: "max-time" | "min-time";
-  /** When the time is reached, in epoch milliseconds, with the candidate's extra time and without suspended time. */
+  /**
+   * Whether the time is the maximum or the minimum, or the close of the session, which `StartOptions.closeAt` sets and which
+   * ends the session whatever its time limits say.
+   */
+  readonly kind: "max-time" | "min-time" | "close";
+  /**
+   * When the time is reached, in epoch milliseconds, with the candidate's extra time and without suspended time; for the
+   * close, the instant it was given.
+   */
   readonly at: number;
-  /** Whether a submission after the maximum time is still accepted. */
+  /** Whether a submission after the maximum time is still accepted; never after the close. */
   readonly lateSubmission: boolean;
 }
 
@@ -140,8 +147,9 @@ export function expiriesOf(
 
 /**
  * Returns the deadlines of a state: for each running scope whose maximum time has not passed, the time it is reached,
- * and its minimum time while that is not reached; none while the session is suspended or has ended, as time does not
- * run then.
+ * and its minimum time while that is not reached; none of these while the session is suspended or has ended, as time does
+ * not run then. The close of the session, when it has one, comes last, until the session ends: an instant does not wait for
+ * the candidate to resume.
  *
  * @throws `DataError` when the state names what the test does not have.
  * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
@@ -160,6 +168,16 @@ export function deadlinesOf(course: Course, state: DeliveryState): Deadline[] {
     if (minimum !== undefined) {
       deadlines.push({ scope: scope.scope, identifier, kind: "min-time", at: minimum, lateSubmission });
     }
+  }
+  const { closeAt } = state;
+  if (closeAt !== undefined && state.status !== "ended") {
+    deadlines.push({
+      scope: "test",
+      identifier: course.structure.test.model.identifier,
+      kind: "close",
+      at: closeAt,
+      lateSubmission: false,
+    });
   }
   return deadlines;
 }

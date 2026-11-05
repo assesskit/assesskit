@@ -53,6 +53,15 @@ export interface StartOptions {
   /** The time the session starts, in epoch milliseconds. */
   readonly at: number;
   /**
+   * The instant the session closes, in epoch milliseconds, after `at`: a sitting that ends for every candidate at one time,
+   * which a candidate who enters late shares. The session ends at that instant, as the maximum time of the test ends it,
+   * also while it is suspended, and the timer of the test counts to it when it comes before the end of the test's own time.
+   * It never extends a time that ends earlier. A test whose time has no maximum is closed by it alone.
+   *
+   * @defaultValue none: the session ends with the test's time, or when the candidate ends it
+   */
+  readonly closeAt?: number;
+  /**
    * The candidate's personal needs and preferences: supports, extra time, hazards, translation.
    *
    * @defaultValue none
@@ -104,8 +113,8 @@ export interface Engine {
   /**
    * Starts a session: plans it from the seed, and presents the first item, or ends a test that has none.
    *
-   * @throws `DataError` when an option has the wrong type, or a context value names no context variable of the test or
-   * its items or does not fit one.
+   * @throws `DataError` when an option has the wrong type, `closeAt` is not after `at`, or a context value names no context
+   * variable of the test or its items or does not fit one.
    * @throws `SecurityError` when the plan would hold more sections and items than `maxPlanNodes` allows.
    */
   start(options: StartOptions): Step;
@@ -123,10 +132,11 @@ export interface Engine {
    */
   apply(state: DeliveryState, action: Action): Step;
   /**
-   * Returns the deadlines of a state: the maximum and minimum times that run, as absolute times.
+   * Returns the deadlines of a state: the maximum and minimum times that run, and the close of the session, as absolute times.
    *
    * @remarks
-   * Time runs only while the session is in progress, so a suspended or ended session has none.
+   * Time runs only while the session is in progress, so a suspended or ended session has none, but its close: it comes at
+   * its instant whether the session runs or not, until the session ends.
    *
    * @throws `DataError` when the state is not one of this engine.
    */
@@ -314,6 +324,7 @@ function planOf(course: Course, random: Random): TestPlan {
 const startOptionsSchema = strictRecord({
   seed: seedSchema,
   at: instantSchema,
+  closeAt: v.optional(instantSchema),
   pnp: v.optional(objectSchema<PersonalNeedsProfile>()),
   universalSupports: v.optional(v.array(guardSchema(isSupportName, "a support name")), []),
   context: v.optional(valueMapSchema, () => new Map<string, Value | null>()),
@@ -321,11 +332,13 @@ const startOptionsSchema = strictRecord({
 });
 
 function start(course: Course, options: StartOptions): Step {
-  const { seed, at, pnp, universalSupports, context, resultContext } = parseWith(
+  const { seed, at, closeAt, pnp, universalSupports, context, resultContext } = parseWith(
     startOptionsSchema,
     options,
     "The options object",
   );
+  if (closeAt !== undefined && closeAt <= at)
+    throw new DataError(`The option closeAt must be after the option at, found ${closeAt} and ${at}.`);
   checkContextValues(course, context);
   const random = createRandom(seed);
   const { structure } = course;
@@ -335,6 +348,7 @@ function start(course: Course, options: StartOptions): Step {
     ...(course.contentVersion === undefined ? {} : { contentVersion: course.contentVersion }),
     status: "in-progress",
     at,
+    ...(closeAt === undefined ? {} : { closeAt }),
     random: random.state(),
     plan,
     items: [],

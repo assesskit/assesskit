@@ -318,10 +318,10 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
   };
   look();
 
-  /** Sets the timer for the nearest maximum time, which fires a `time` action. */
+  /** Sets the timer for the nearest maximum time or close, which fires a `time` action. */
   const arm = (): void => {
     clearTimeout(timer);
-    const times = engine.deadlines(state).flatMap((each) => (each.kind === "max-time" ? [each.at] : []));
+    const times = engine.deadlines(state).flatMap((each) => (each.kind === "min-time" ? [] : [each.at]));
     if (closed || times.length === 0) return;
     const nearest = times.reduce((least, each) => Math.min(least, each));
     const delay = Math.max(0, nearest - now());

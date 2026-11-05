@@ -6,7 +6,7 @@ import type { CandidateView, SupportView, TimerView } from "./candidate-view.js"
 import { partOfSection } from "./cat-session.js";
 import type { Course } from "./course.js";
 import { candidateOf } from "./course.js";
-import { expiriesOf, maximumAt, minimumAt, runningScopes } from "./deadlines.js";
+import { expiriesOf, maximumAt, minimumAt, type RunningScope, runningScopes } from "./deadlines.js";
 import { type DeliveryState, findDelivered } from "./delivery-state.js";
 import { partModel, submissionModeOf } from "./modes.js";
 import { type Placement, planIndex, type SectionInstance } from "./plan-index.js";
@@ -95,17 +95,31 @@ function supportViews(state: DeliveryState): SupportView[] {
   }));
 }
 
+/**
+ * Returns the milliseconds until a scope ends: at the earlier of its maximum time, while that has not passed, and the close
+ * of the session, which only the test has. 0 once the maximum time passed with late submission and no close is to come;
+ * `undefined` when the scope has neither.
+ */
+function remainingOf(scope: RunningScope, maximum: number | undefined, state: DeliveryState): number | undefined {
+  const close = scope.scope === "test" ? state.closeAt : undefined;
+  const span = scope.expired === "late" ? undefined : maximum;
+  const end = span === undefined || (close !== undefined && close < span) ? close : span;
+  if (end === undefined) return maximum === undefined ? undefined : 0;
+  return Math.max(0, end - state.at);
+}
+
 /** Returns the time limits that run in a state that has been settled at its time. */
 function timersOf(course: Course, state: DeliveryState): TimerView[] {
   return runningScopes(course, state).flatMap((scope): TimerView[] => {
     const maximum = scope.expired === "closed" ? undefined : maximumAt(scope, state.at);
     const minimum = minimumAt(scope, state.at);
-    if (maximum === undefined && minimum === undefined) return [];
+    const remaining = remainingOf(scope, maximum, state);
+    if (remaining === undefined && minimum === undefined) return [];
     return [
       {
         scope: scope.scope,
         identifier: scope.identifier,
-        ...(maximum === undefined ? {} : { remaining: Math.max(0, maximum - state.at) }),
+        ...(remaining === undefined ? {} : { remaining }),
         ...(minimum === undefined ? {} : { minimumRemaining: minimum - state.at }),
         late: scope.expired === "late",
       },
