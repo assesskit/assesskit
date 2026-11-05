@@ -2367,7 +2367,9 @@ describe("a recording kept at the clock", () => {
       });
     const s = await shell({ files: recordingFiles(), practice, reserve: store.reserve, fill: store.fill, wrap });
     await vi.advanceTimersByTimeAsync(0);
-    await waitFor(() => expect(contentOf(s.ui).querySelector(".ak-recording")).not.toBeNull());
+    // The start is awaited on the real clock: `waitFor` moves the fake clock at each look, and a busy WebKit that is slow to
+    // run the audio context would see the recorder's limit of 5 seconds pass before it ran.
+    while (contentOf(s.ui).querySelector(".ak-recording") === null) await real(20);
     await heardFor(0.5);
     await vi.advanceTimersByTimeAsync(1100);
     await Promise.all(dispatched);
