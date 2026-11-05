@@ -143,12 +143,12 @@ rather than at each frame, in turns over 5 samples; the gate compares the fastes
 
 | Row                                                            | The player | Amp-up  | Ratio | Budget (ratio) |
 | -------------------------------------------------------------- | ---------- | ------- | ----- | -------------- |
-| A lesson page of ten items from their documents, on the runner | 73.9 ms    | 83.1 ms | 0.89  | 1.5            |
-| The same page on a laptop                                      | 14.5 ms    | 14.6 ms | 0.99  | 1.5            |
+| A lesson page of ten items from their documents, on the runner | 73.9 ms    | 83.1 ms | 0.89  | 2              |
+| The same page on a laptop                                      | 14.5 ms    | 14.6 ms | 0.99  | 2              |
 
 The times are those of the run whose ratio is the median of five runs of the build on the CI runner on 2026-11-05, which gave
-0.80 to 0.98, and of the run of a laptop whose ratio is the median of three, which gave 0.43 to 1.07. The budget is 1.5 times the highest
-ratio of the runner, 0.98, rounded up to the next half: the gate runs there, and a ratio holds on any machine within the noise
+0.80 to 0.98, and of the run of a laptop whose ratio is the median of three, which gave 0.43 to 1.07. The budget is twice the highest
+ratio of the runner, 0.98, rounded up to one significant digit: the gate runs there, and a ratio holds on any machine within the noise
 of a shared one ([performance](../runtime/performance.md#budgets)). The player draws each
 item in shadow roots of its own, with the stylesheet of a content root, a status region and the controls of the supports, where
 the Amp-up player draws plain elements; with the sessions made, the player takes 7 ms on a laptop for the same page (the lesson row

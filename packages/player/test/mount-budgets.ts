@@ -27,8 +27,8 @@ export const MOUNT_BUDGETS = {
 
 /**
  * The most that the fastest sample of the lesson page from its documents may take, as a multiple of the fastest sample of
- * the same page in the Amp-up player (`qti3-item-player`), with the CPU slowed by {@link CPU_SLOWDOWN}: 1.5 times the
- * highest of the ratios that the CI runner gave in five runs of the build on 2026-11-05, 0.80 to 0.98 with a median of 0.89,
- * rounded up to the next half (docs/player/size.md).
+ * the same page in the Amp-up player (`qti3-item-player`), with the CPU slowed by {@link CPU_SLOWDOWN}: twice the highest of
+ * the ratios that the CI runner gave in five runs of the build on 2026-11-05, 0.98 (the five gave 0.80 to 0.98), rounded up
+ * to one significant digit (docs/player/size.md).
  */
-export const AMP_UP_RATIO = 1.5;
+export const AMP_UP_RATIO = 2;

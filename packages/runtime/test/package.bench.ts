@@ -1,10 +1,4 @@
-// The row against Longsight times the build, as Longsight loads from node_modules; the other benchmarks time the sources.
-import * as built from "@assesskit/runtime/package";
-import { parseQtiPackage } from "@longsightgroup/qti3-core";
-import fc from "fast-check";
-import { inflateSync } from "fflate";
-import { expect, test } from "vitest";
-import { type AsiDocument, writeAsi } from "../src/asi/index.js";
+import { type AsiDocument, writeAsi } from "@assesskit/runtime/asi";
 import {
   createPackageResolvers,
   type Manifest,
@@ -12,10 +6,17 @@ import {
   readPackage,
   resolveResourcePath,
   writePackage,
-} from "../src/package/index.js";
+} from "@assesskit/runtime/package";
+import { parseQtiPackage } from "@longsightgroup/qti3-core";
+import fc from "fast-check";
+import { inflateSync } from "fflate";
+import { expect, test } from "vitest";
 import { modelArbitrary } from "./arbitraries/asi.js";
 import { lom, qtiMetadata } from "./arbitraries/metadata.js";
 import { BENCH_OPTIONS, BUDGETS, compareRow, expectWithin, LONGSIGHT_BUDGETS } from "./budgets.js";
+
+// The benchmarks time the build, by name, which `pnpm bench` makes first: the sources would run through Vite's rewrite of
+// their imports, and Longsight loads from node_modules. The generated items and the archive are made outside the time.
 
 /** The items of the package, and the depth of the generated items: about 7 KB each, like items with a prompt and choices. */
 const ITEMS = 1000;
@@ -111,7 +112,7 @@ test("reads a package and every item in it within its budget against Longsight",
   const read = parseQtiPackage(zip, options);
   expect(read.items.filter(({ document }) => document !== undefined)).toHaveLength(COMPARED_ITEMS);
   const readAll = () => {
-    const resolvers = built.createPackageResolvers(built.readPackage(zip));
+    const resolvers = createPackageResolvers(readPackage(zip));
     for (let index = 0; index < COMPARED_ITEMS; index++) resolvers.items(path(index), BASE);
   };
   await compareRow(

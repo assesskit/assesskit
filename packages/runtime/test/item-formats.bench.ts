@@ -1,16 +1,24 @@
-import { expect, test } from "vitest";
 import {
   DEFAULT_ITEM_FORMAT_LIMITS,
   readGift,
   readMoodleXml,
   writeGift,
   writeMoodleXml,
-} from "../src/item-formats/index.js";
+} from "@assesskit/runtime/item-formats";
+import { createScoringOperators } from "@assesskit/runtime/operators";
+import { expect, test } from "vitest";
 import { BENCH_OPTIONS, BUDGETS, expectWithin } from "./budgets.js";
-import { buildWrittenItems, GIFT_EDGES, WRITE_OPTIONS, XML_EDGES, XML_WRITE_OPTIONS } from "./item-formats-cases.js";
+import { buildWrittenItems, GIFT_EDGES, XML_EDGES, XML_WRITE_OPTIONS } from "./item-formats-cases.js";
 
 // The readers take files once, on import, and the writers run each item's response processing on the responses that matter;
-// no library reads GIFT as Moodle does or writes it from QTI items, so the budgets hold the time alone.
+// no library reads GIFT as Moodle does or writes it from QTI items, so the budgets hold the time alone. The benchmarks time
+// the build, by name, which `pnpm bench` makes first, with the operators of the build too: the options of the cases carry the
+// operators of the sources, which would run through Vite's rewrite of their imports.
+
+/** The options of the writers: the scoring operators of the build, which the items that `compileScoring` writes call. */
+const WRITE_OPTIONS = { customOperators: createScoringOperators() };
+/** The options of the Moodle XML writer: those operators, and the image that an item shows. */
+const XML_OPTIONS = { ...WRITE_OPTIONS, files: XML_WRITE_OPTIONS.files };
 
 /** Essays of the most tags of a text, each `<b>` and `</b>` a tag, as many as the limit of elements holds. */
 const TAGS = `[html]${"<b>x</b>".repeat(DEFAULT_ITEM_FORMAT_LIMITS.maxTextTags / 2)}{}\n\n`.repeat(47);
@@ -45,7 +53,7 @@ test("reads the edge cases of Moodle XML within its budget", async ({ annotate, 
 
 test("writes the items of the written cases as Moodle XML within its budget", async ({ annotate, bench }) => {
   const items = buildWrittenItems();
-  expect(writeMoodleXml(items, XML_WRITE_OPTIONS).losses).toHaveLength(2);
-  const result = await bench("write Moodle XML", () => writeMoodleXml(items, XML_WRITE_OPTIONS)).run(BENCH_OPTIONS);
+  expect(writeMoodleXml(items, XML_OPTIONS).losses).toHaveLength(2);
+  const result = await bench("write Moodle XML", () => writeMoodleXml(items, XML_OPTIONS)).run(BENCH_OPTIONS);
   await expectWithin(annotate, "write Moodle XML", result, BUDGETS.moodleXmlWrite);
 });

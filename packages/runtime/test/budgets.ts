@@ -9,15 +9,14 @@ export const BENCH_OPTIONS = { time: 500, iterations: 10, warmupTime: 100, warmu
  * explains. The size of a state is in bytes, which no machine changes.
  */
 export const BUDGETS = {
+  // The package's budgets are five times the fastest sample of the build on the CI runner over five runs of the bench job on
+  // 2026-11-05 (50.9, 2.24 and 0.653 ms), rounded up to one significant digit.
   /** Reading the manifest of a package of 1,000 items. */
-  packageRead: 500,
+  packageRead: 300,
   /** The first use of 3 items of a package that has parsed none. */
   packageFirstUse: 20,
-  /**
-   * Resolving the path of each of the 1,000 resources of a package: five times the fastest sample of a laptop (0.30 ms),
-   * rounded up to one significant digit, until the CI runner's samples replace it.
-   */
-  resourcePaths: 2,
+  /** Resolving the path of each of the 1,000 resources of a package. */
+  resourcePaths: 4,
   // The engine's budgets are five times the fastest sample of the build on the CI runner over five runs of main on 2026-11-05
   // (0.530, 8.62, 99.1 and 2.44 ms), rounded up to one significant digit.
   /** Starting a session of a test of 100 sections. */
@@ -48,64 +47,64 @@ export const BUDGETS = {
   compileItem: 0.2,
   /** Compiling 256 orders of 1,000 choices, scored per position: the limits of keys. */
   compileLimits: 600,
-  // The budgets of the item formats are five times the fastest sample of a laptop (0.32, 0.56, 87.8, 0.26 and 0.69 ms),
-  // rounded up to one significant digit, until the CI runner's samples replace them.
+  // The budgets of the item formats are five times the fastest sample of the build on the CI runner over the same runs (0.897,
+  // 1.19, 218, 0.700 and 1.54 ms), rounded up to one significant digit.
   /** Reading the edge cases of GIFT, 18 items and two questions that Moodle refuses. */
-  giftRead: 2,
+  giftRead: 5,
   /** Writing the 14 items of the written cases as GIFT, running their response processing. */
-  giftWrite: 3,
+  giftWrite: 6,
   /** Reading 47 essays of the most tags of a text, to the limit of elements. */
-  giftTags: 500,
+  giftTags: 2000,
   /** Reading the edge cases of Moodle XML, 9 items and a question of a type that does not convert. */
-  moodleXmlRead: 2,
+  moodleXmlRead: 4,
   /** Writing the 14 items of the written cases as Moodle XML, with an image. */
-  moodleXmlWrite: 4,
+  moodleXmlWrite: 8,
 } as const;
 
 /**
  * The budgets of the rows against Longsight qti3-core: the most that the fastest sample of the runtime may take, in
- * milliseconds, set as the times of {@link BUDGETS} are, and the most it may take as a multiple of the fastest sample of
- * Longsight in the same run. The multiples hold on any machine, because both samples of a row come from one run; they stay
- * within 1.5 of the measured ratios, which docs/runtime/performance.md lists, so that a change which slows one path
- * against the reference fails. Every time is five times the fastest sample of the CI runner in the last four green runs of
- * `bench` on main (validate 11.2 ms, package 146 ms, start a test 0.42 ms), rounded up to one significant digit.
+ * milliseconds, and the most it may take as a multiple of the fastest sample of Longsight in the same run. The multiples
+ * hold on any machine, because both samples of a row come from one run. Both come from five runs of the bench job on main
+ * on 2026-11-05, as docs/runtime/performance.md explains: a time is five times the fastest sample of the CI runner, and a
+ * ratio twice the highest ratio of the runs (parse 0.81, validate 3.12, start 1.10, templated 1.25, submit 1.10, score
+ * 0.92, package 0.56, start a test 0.73 and submit in a test 1.90), each rounded up to one significant digit.
  */
 export const LONGSIGHT_BUDGETS = {
   /** Reading the example items that both implementations read and score, 215 of them. */
-  parse: { time: 500, ratio: 1.5 },
+  parse: { time: 100, ratio: 2 },
   /** Validating each of them. */
-  validate: { time: 60, ratio: 4.5 },
+  validate: { time: 40, ratio: 7 },
   /** Starting an item session of each of them, with the first presentation. */
-  start: { time: 7, ratio: 2 },
+  start: { time: 4, ratio: 3 },
   /** Starting the sessions of the items that have template processing, repeated. */
-  startTemplated: { time: 40, ratio: 2 },
+  startTemplated: { time: 20, ratio: 3 },
   /** Entering the correct responses and submitting them, in sessions that were presented. */
-  submit: { time: 20, ratio: 2 },
+  submit: { time: 5, ratio: 3 },
   /** Reading each item, starting its session and scoring its correct responses. */
-  score: { time: 400, ratio: 1.5 },
+  score: { time: 200, ratio: 2 },
   /** Reading a package of 200 generated items and parsing every item. */
-  package: { time: 800, ratio: 1 },
+  package: { time: 500, ratio: 2 },
   /** Starting the session of a test of 100 items 100 times. */
-  testStart: { time: 3, ratio: 1 },
+  testStart: { time: 3, ratio: 2 },
   /** Submitting the 51st item of a test of 100 items 100 times, with the sum of the scores of the items answered. */
-  testSubmit: { time: 20, ratio: 3 },
+  testSubmit: { time: 7, ratio: 4 },
 } as const;
 
 /**
  * The budget of rescoring a report of 200 items, the reading of its inputs and the outcome processing: the most that the
  * fastest sample may take, in milliseconds, five times the 0.624 ms that the build took on the CI runner (the fastest of
  * five runs of main on 2026-11-05), rounded up to one significant digit, and the most as a multiple of the fastest sample of
- * the outcome step of the engine on the same session, which ran 1.37 to 1.43 times in those runs. No outside library
- * rescores a stored report, so the engine is the reference.
+ * the outcome step of the engine on the same session: twice the highest ratio of those runs, 1.43, rounded up to one
+ * significant digit. No outside library rescores a stored report, so the engine is the reference.
  */
-export const RESCORING_BUDGET = { time: 4, ratio: 2 } as const;
+export const RESCORING_BUDGET = { time: 4, ratio: 3 } as const;
 
 /**
  * The budget of parsing the 1EdTech example documents from their bytes, against libxml2 in WebAssembly
- * (`XmlDocument.fromBuffer` of libxml2-wasm), set as the rows against Longsight are: its time is five times the 28.1 ms that
- * the CI runner took.
+ * (`XmlDocument.fromBuffer` of libxml2-wasm), set as the rows against Longsight are: its time is five times the 20.1 ms
+ * that the CI runner took, and its ratio twice the highest ratio of those runs, 1.87.
  */
-export const LIBXML2_BUDGET = { time: 200, ratio: 2.5 } as const;
+export const LIBXML2_BUDGET = { time: 200, ratio: 4 } as const;
 
 /** The budget of one row against a reference. */
 interface ReferenceBudget {
