@@ -1,3 +1,4 @@
+import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
@@ -64,31 +65,63 @@ const EXAM_SETUP = "packages/player/test/fixtures/exam-setup.ts";
 /** Starts the servers of the LTI browser tests: the storage page of a platform and two tools. */
 const LTI_SETUP = "packages/player/test/fixtures/lti-setup.ts";
 
+/** The least coverage of each measure, in percent. */
+interface Floor {
+  statements: number;
+  branches: number;
+  functions: number;
+  lines: number;
+}
+
 /**
- * The coverage floors, by the folders they hold. The tests of the runtime and of the folders of the player that need no page
- * run in Node (`pnpm test:coverage`); the folders that draw a page and the client that waits on timers run in Chromium
- * (`pnpm test:coverage:browser`, with `COVERAGE_RUN=browser`), the one engine that reports coverage. A run holds only the
- * floors of the folders it exercises, so a gap in the tests of one part fails its own floor and no other.
+ * The modules of a package, as the globs that hold each on its own: every folder of its `src` and every file beside them,
+ * except the names left out.
  */
-const FLOORS: Record<string, { statements: number; branches: number; functions: number; lines: number }> =
+function modulesOf(name: string, leftOut: readonly string[] = []): string[] {
+  return readdirSync(resolve(import.meta.dirname, "packages", name, "src"), { withFileTypes: true })
+    .filter((entry) => !leftOut.includes(entry.name))
+    .map((entry) => `packages/${name}/src/${entry.isDirectory() ? `${entry.name}/**` : entry.name}`);
+}
+
+/** One floor for each module, so that a module under it fails though the others of its package lift the average. */
+function eachModule(modules: readonly string[], floor: Floor): Record<string, Floor> {
+  return Object.fromEntries(modules.map((module) => [module, floor]));
+}
+
+/** The floor of the modules of the runtime, and of the item formats, which hold their own floor of branches. */
+const RUNTIME_FLOOR: Floor = { statements: 96, branches: 92, functions: 97, lines: 97 };
+const ITEM_FORMATS_FLOOR: Floor = { statements: 98, branches: 92, functions: 99, lines: 99 };
+
+/**
+ * The coverage floors, one for each module: a folder of a package's `src`, or a file beside them. The tests of the runtime and of
+ * the modules of the player that need no page run in Node (`pnpm test:coverage`); the modules that draw a page and the client that
+ * waits on timers run in Chromium (`pnpm test:coverage:browser`, with `COVERAGE_RUN=browser`), the one engine that reports
+ * coverage. A run holds only the floors of the modules it exercises, so a gap in the tests of one module fails its own floor
+ * and no other, and a module is never held through the average of its package.
+ */
+const FLOORS: Record<string, Floor> =
   process.env.COVERAGE_RUN === "browser"
     ? {
         "packages/player/src/player/**": { statements: 93, branches: 84, functions: 94, lines: 95 },
         "packages/player/src/client/**": { statements: 86, branches: 71, functions: 82, lines: 90 },
       }
     : {
-        "packages/runtime/src/**": { statements: 96, branches: 92, functions: 97, lines: 97 },
-        // The item formats hold the floor of branches of the runtime on their own, not in its average.
-        "packages/runtime/src/item-formats/**": { statements: 98, branches: 92, functions: 99, lines: 99 },
-        "packages/player/src/{cat,cat-rest,messages,protocol,scoring,server}/**": {
+        ...eachModule(modulesOf("runtime"), RUNTIME_FLOOR),
+        "packages/runtime/src/item-formats/**": ITEM_FORMATS_FLOOR,
+        ...eachModule(modulesOf("player", ["player", "client"]), {
           statements: 95,
           branches: 88,
           functions: 96,
           lines: 97,
-        },
+        }),
         // The modules of the custom interactions run in a frame, where the browser tests run them; Node runs the root entry and
         // the reader of files.
-        "packages/custom-interactions/src/{*.ts,node/**}": { statements: 92, branches: 90, functions: 100, lines: 92 },
+        ...eachModule(["packages/custom-interactions/src/*.ts", "packages/custom-interactions/src/node/**"], {
+          statements: 92,
+          branches: 90,
+          functions: 100,
+          lines: 92,
+        }),
       };
 
 // biome-ignore lint/style/noDefaultExport: Vitest reads its configuration from the default export.
@@ -281,7 +314,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["packages/*/src/**/*.ts"],
-      // One floor for each part of a package, held by the run that exercises it, a little below what the tests reach.
+      // One floor for each module, held by the run that exercises it, a little below what the tests reach.
       thresholds: FLOORS,
     },
   },
