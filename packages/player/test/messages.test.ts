@@ -61,9 +61,10 @@ describe("checkMessages", () => {
   });
 
   it("checks messages that can change each time, so that a message changed after a check is refused", () => {
-    const messages: Record<string, unknown> = { ...EN_MESSAGES };
+    const messages: unknown = JSON.parse(JSON.stringify(EN_MESSAGES));
     checkMessages(messages);
-    messages.readAloud = 1;
+    // The check narrows the type to the read-only messages, which JavaScript still lets a caller change.
+    Reflect.set(messages, "readAloud", 1);
     expect(() => checkMessages(messages)).toThrow(DataError);
   });
 
