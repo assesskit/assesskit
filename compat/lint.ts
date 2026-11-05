@@ -9,9 +9,6 @@ import stylelint from "stylelint";
  */
 const PARTIAL_BUT_USABLE = ["css-text-indent"];
 
-/** The folders of the package whose code runs on a server, which the baseline does not cover. */
-const SERVER_FOLDERS = ["server", "cat-rest"];
-
 /** A use of a feature that the baseline browsers lack. */
 export interface BaselineProblem {
   /** The path of the file, relative to the package. */
@@ -37,6 +34,18 @@ export interface LintBaselineOptions {
    * @defaultValue none
    */
   readonly tested?: readonly string[];
+  /**
+   * The folders of `dist/` whose code runs only on a server or in Node.js, which the baseline does not cover.
+   *
+   * @defaultValue none
+   */
+  readonly serverFolders?: readonly string[];
+  /**
+   * The browsers to lint the JavaScript for, as browserslist queries, for a package whose manifest has no `browserslist`.
+   *
+   * @defaultValue the `browserslist` of the package
+   */
+  readonly browsers?: readonly string[];
 }
 
 /**
@@ -52,14 +61,14 @@ export async function lintBaseline(
   packageDirectory: string,
   options: LintBaselineOptions = {},
 ): Promise<{ readonly problems: readonly BaselineProblem[]; readonly scripts: number }> {
-  const { scripts: globs = ["dist/**/*.js"], tested = [] } = options;
+  const { scripts: globs = ["dist/**/*.js"], tested = [], serverFolders = [], browsers } = options;
   const eslint = new ESLint({
     cwd: packageDirectory,
     overrideConfigFile: true,
     overrideConfig: [
-      { ignores: SERVER_FOLDERS.map((folder) => `dist/${folder}/**`) },
+      { ignores: serverFolders.map((folder) => `dist/${folder}/**`) },
       compat.configs["flat/recommended"],
-      { settings: { polyfills: [...tested] } },
+      { settings: { polyfills: [...tested], ...(browsers === undefined ? {} : { browsers: [...browsers] }) } },
     ],
     errorOnUnmatchedPattern: false,
   });

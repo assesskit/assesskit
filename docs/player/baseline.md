@@ -49,7 +49,8 @@ The `browserslist` of `packages/player/package.json` names the three browsers fo
 | The pinned browsers                       | `pnpm compat:engines`  | The [smoke cases](#the-pinned-browsers), in Chromium 111, Firefox 115 and WebKit 16.4                  |
 
 The smoke test runs only the code paths that its cases reach, so the linters, which read every line of the built JavaScript
-and every stylesheet, stay. `pnpm compat:baseline` builds, then lints `dist/` of the shared and browser folders. The stylelint
+and every stylesheet, stay. `pnpm compat:baseline` builds, then lints `dist/` of the shared and browser folders, and of the runtime but its `node` and `cli`,
+which the player loads in a page, against the `browserslist` of the player. The stylelint
 plugin reports `text-indent` as partial for its `each-line` and `hanging` keywords, which the stylesheet does not use, so
 `compat/lint.ts` ignores that one feature.
 

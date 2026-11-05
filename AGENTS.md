@@ -78,7 +78,7 @@ Biome enforces, folder by folder.
 | `pnpm check:rules`               | Removes each security rule of `scripts/rules/` from a copy of the code and fails when its test still passes (exit 1); a run that takes too long is reported as `TIMED OUT` (exit 2), never as unguarded; needs Chromium; takes the source files whose rules to check |
 | `pnpm docs:api`                  | TypeDoc into `docs/api`, with the pinned Mermaid copied in so that no page loads a script from elsewhere; fails on undocumented exports                                                                                                                              |
 | `pnpm check:site`                | The site that `pnpm docs:api` built: a title, a description and a canonical URL for each page, the sitemap, the Markdown copy of each README and guide, `llms.txt` and the links to it                                                                               |
-| `pnpm compat:baseline`           | The built JavaScript and the CSS of the player stay inside the browser baseline                                                                                                                                                                                      |
+| `pnpm compat:baseline`           | The built JavaScript and the CSS of the player, and the built JavaScript of the runtime but `node` and `cli`, stay inside the browser baseline                                                                                                                       |
 | `pnpm compat:engines`            | The smoke test in the pinned old browsers; needs Docker                                                                                                                                                                                                              |
 | `pnpm compat:runtimes`           | The built runtime and the handler of the CAT binding give the same results on Node.js, Deno, Bun and workerd; needs Deno and Bun                                                                                                                                     |
 | `pnpm corpus`, `pnpm schemas`    | Download the 1EdTech examples into `.cache/corpus` and the XSDs into `.cache/schemas`, which CI keeps by the hash of their locks; `corpus:pin` and `schemas:pin` write new hashes                                                                                    |
@@ -260,8 +260,8 @@ that the player needs and the runtime lacks is a change in the runtime, with its
 
 ## Browser baseline
 
-[baseline.md](docs/player/baseline.md) names the browsers, and `pnpm compat:baseline` holds the shared and browser folders of the player to
-them. Do not guard a feature that a baseline browser lacks with a support check: the code would be dead in some browsers and
+[baseline.md](docs/player/baseline.md) names the browsers, and `pnpm compat:baseline` holds the shared and browser folders of the player, and
+the runtime but its `node` and `cli`, which the player loads in a page, to them. Do not guard a feature that a baseline browser lacks with a support check: the code would be dead in some browsers and
 untested in the others.
 
 ## Repeats left on purpose
