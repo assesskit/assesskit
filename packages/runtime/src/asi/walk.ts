@@ -31,78 +31,77 @@ interface Child {
   readonly model: Readonly<Record<string, unknown>>;
 }
 
+/** Returns the error of a model at a place in the document, naming the path of the element. */
+function fail(parent: ElementVisit | undefined, name: string, message: string): DataError {
+  const names = [name];
+  for (let at = parent; at !== undefined; at = at.parent) names.unshift(at.name);
+  return new DataError(`${message} It is in ${names.join("/")}.`);
+}
+
+/** Returns the members of a slot: the one member of a slot of at most one, or the array of the others. */
+function membersOf(slot: SlotInfo, at: ElementVisit): readonly unknown[] {
+  const { property, max } = slot.def;
+  const value = at.model[property];
+  if (max === 1) return value === undefined ? [] : [value];
+  if (Array.isArray(value)) return value;
+  const message = `The property ${property} of ${at.name} must be an array, found ${describe(value)}.`;
+  throw fail(at.parent, at.name, message);
+}
+
+/** Sorts the members of a slot into elements of the schema and elements that the model keeps as XML. */
+function sortSlot(slot: SlotInfo, at: ElementVisit, children: Child[], foreign: XmlElement[]): void {
+  const { property } = slot.def;
+  for (const member of membersOf(slot, at)) {
+    if (!isRecord(member)) {
+      const message = `A member of ${property} of ${at.name} must be an object, found ${describe(member)}.`;
+      throw fail(at.parent, at.name, message);
+    }
+    if (member.kind === "text") continue;
+    if (isElement(member)) {
+      foreign.push(member);
+      continue;
+    }
+    const accept = typeof member.kind === "string" ? slot.byKind.get(member.kind) : undefined;
+    if (accept === undefined) {
+      const message = `A member of ${property} of ${at.name} has the kind ${describe(member.kind)}, which the property does not accept.`;
+      throw fail(at.parent, at.name, message);
+    }
+    children.push({ info: typeNamed(accept.type), name: accept.element, model: member });
+  }
+}
+
 /** Walks the models of a document in document order, checking the shape of each as it goes. */
-class Walker {
-  private readonly visit: (element: ElementVisit) => void;
-
-  constructor(visit: (element: ElementVisit) => void) {
-    this.visit = visit;
+function walkFrom(
+  info: TypeInfo,
+  name: string,
+  model: unknown,
+  parent: ElementVisit | undefined,
+  visit: (element: ElementVisit) => void,
+): void {
+  if (!isRecord(model)) {
+    throw fail(parent, name, `The model of ${name} must be an object, found ${describe(model)}.`);
   }
-
-  private fail(parent: ElementVisit | undefined, name: string, message: string): DataError {
-    const names = [name];
-    for (let at = parent; at !== undefined; at = at.parent) names.unshift(at.name);
-    return new DataError(`${message} It is in ${names.join("/")}.`);
-  }
-
-  /** Returns the members of a slot: the one member of a slot of at most one, or the array of the others. */
-  private membersOf(slot: SlotInfo, at: ElementVisit): readonly unknown[] {
-    const { property, max } = slot.def;
-    const value = at.model[property];
-    if (max === 1) return value === undefined ? [] : [value];
-    if (Array.isArray(value)) return value;
-    const message = `The property ${property} of ${at.name} must be an array, found ${describe(value)}.`;
-    throw this.fail(at.parent, at.name, message);
-  }
-
-  /** Sorts the members of a slot into elements of the schema and elements that the model keeps as XML. */
-  private sortSlot(slot: SlotInfo, at: ElementVisit, children: Child[], foreign: XmlElement[]): void {
-    const { property } = slot.def;
-    for (const member of this.membersOf(slot, at)) {
-      if (!isRecord(member)) {
-        const message = `A member of ${property} of ${at.name} must be an object, found ${describe(member)}.`;
-        throw this.fail(at.parent, at.name, message);
-      }
-      if (member.kind === "text") continue;
-      if (isElement(member)) {
-        foreign.push(member);
-        continue;
-      }
-      const accept = typeof member.kind === "string" ? slot.byKind.get(member.kind) : undefined;
-      if (accept === undefined) {
-        const message = `A member of ${property} of ${at.name} has the kind ${describe(member.kind)}, which the property does not accept.`;
-        throw this.fail(at.parent, at.name, message);
-      }
-      children.push({ info: typeNamed(accept.type), name: accept.element, model: member });
+  const foreign: XmlElement[] = [];
+  const children: Child[] = [];
+  const at: ElementVisit = {
+    name,
+    model,
+    attributes: info.attributeList,
+    attributeWildcard: info.def.attributeWildcard?.namespaces,
+    foreign,
+    parent,
+  };
+  for (const slot of info.slots) sortSlot(slot, at, children, foreign);
+  if (info.def.content.kind === "slots" && info.def.content.wildcard !== undefined) {
+    const extra = model.extensionElements;
+    if (!Array.isArray(extra)) {
+      const message = `The property extensionElements of ${name} must be an array, found ${describe(extra)}.`;
+      throw fail(parent, name, message);
     }
+    for (const element of extra) if (isElement(element)) foreign.push(element);
   }
-
-  walkElement(info: TypeInfo, name: string, model: unknown, parent: ElementVisit | undefined): void {
-    if (!isRecord(model)) {
-      throw this.fail(parent, name, `The model of ${name} must be an object, found ${describe(model)}.`);
-    }
-    const foreign: XmlElement[] = [];
-    const children: Child[] = [];
-    const at: ElementVisit = {
-      name,
-      model,
-      attributes: info.attributeList,
-      attributeWildcard: info.def.attributeWildcard?.namespaces,
-      foreign,
-      parent,
-    };
-    for (const slot of info.slots) this.sortSlot(slot, at, children, foreign);
-    if (info.def.content.kind === "slots" && info.def.content.wildcard !== undefined) {
-      const extra = model.extensionElements;
-      if (!Array.isArray(extra)) {
-        const message = `The property extensionElements of ${name} must be an array, found ${describe(extra)}.`;
-        throw this.fail(parent, name, message);
-      }
-      for (const element of extra) if (isElement(element)) foreign.push(element);
-    }
-    this.visit(at);
-    for (const child of children) this.walkElement(child.info, child.name, child.model, at);
-  }
+  visit(at);
+  for (const child of children) walkFrom(child.info, child.name, child.model, at, visit);
 }
 
 /**
@@ -124,5 +123,5 @@ export function walkElement(
   model: unknown,
   visit: (element: ElementVisit) => void,
 ): void {
-  new Walker(visit).walkElement(info, name, model, undefined);
+  walkFrom(info, name, model, undefined, visit);
 }

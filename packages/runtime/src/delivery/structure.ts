@@ -111,37 +111,6 @@ function dissolves(section: AssessmentSection, parent: PartNode | SectionNode): 
   return mixable && parent.kind === "section" && (parent.model.ordering?.shuffle === true || parent.dissolved);
 }
 
-class Structure implements TestStructure {
-  readonly test: TestNode;
-  private readonly parts: ReadonlyMap<string, PartNode>;
-  private readonly sections: ReadonlyMap<string, SectionNode>;
-  private readonly itemRefs: ReadonlyMap<string, ItemRefNode>;
-
-  constructor(
-    test: TestNode,
-    parts: ReadonlyMap<string, PartNode>,
-    sections: ReadonlyMap<string, SectionNode>,
-    itemRefs: ReadonlyMap<string, ItemRefNode>,
-  ) {
-    this.test = test;
-    this.parts = parts;
-    this.sections = sections;
-    this.itemRefs = itemRefs;
-  }
-
-  part(identifier: string): PartNode | undefined {
-    return this.parts.get(identifier);
-  }
-
-  section(identifier: string): SectionNode | undefined {
-    return this.sections.get(identifier);
-  }
-
-  itemRef(identifier: string): ItemRefNode | undefined {
-    return this.itemRefs.get(identifier);
-  }
-}
-
 /** Builds a structure; one instance builds one. */
 class Builder {
   private readonly resolvers: Pick<Resolvers, "sections">;
@@ -165,7 +134,13 @@ class Builder {
       for (const child of model.sections) sections.push(this.section(child, base, part));
       parts.push(part);
     }
-    return new Structure(root, this.parts, this.sections, this.itemRefs);
+    const { parts: partsById, sections: sectionsById, itemRefs } = this;
+    return {
+      test: root,
+      part: (identifier) => partsById.get(identifier),
+      section: (identifier) => sectionsById.get(identifier),
+      itemRef: (identifier) => itemRefs.get(identifier),
+    };
   }
 
   /** Test parts, sections and item references share one set of identifiers. */

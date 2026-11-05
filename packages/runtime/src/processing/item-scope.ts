@@ -36,10 +36,10 @@ export class ItemScope implements Scope {
   private readonly index: ItemIndex;
   private readonly contexts: ReadonlyMap<string, Value | null>;
   private readonly responses: ReadonlyMap<string, Value | null>;
-  private outcomes: CopyOnWriteMap<Value | null>;
-  private templates: CopyOnWriteMap<Value | null>;
-  private correctResponses: CopyOnWriteMap<Value | null>;
-  private defaults: CopyOnWriteMap<Value | null>;
+  private outcomes: CopyOnWriteMap;
+  private templates: CopyOnWriteMap;
+  private correctResponses: CopyOnWriteMap;
+  private defaults: CopyOnWriteMap;
 
   constructor(item: AssessmentItem, variables: ItemVariables, environment: Environment, reach: Reach) {
     this.environment = environment;
