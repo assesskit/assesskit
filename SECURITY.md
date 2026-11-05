@@ -262,6 +262,10 @@ items, the rubric for the scorer and the scoring rubric of the outcome ([scoring
 
 - Give a submission only to authorized raters, through an endpoint that checks the rater: never in a candidate's view, in the
   candidate's session or to the candidate's browser. It is not a view of the candidate.
+- An endpoint that receives a submission limits the size of the body before it parses it, and calls `checkSubmission` on the
+  parsed value before any other use: the check refuses what `buildSubmission` does not write, the three names that reach the
+  prototype and content nested deeper than 256 levels, in time that grows with the body (a body of 12 MiB with a million
+  nodes: 0.2 s and 85 MiB of heap, 2026-11-06). It checks the form, not the sender.
 - `mountSubmission` draws the content of a submission with the renderer of the player, so the content is sanitized as a
   candidate's is. It draws a file that a candidate submitted as an image, audio, video or a link, and never in a frame, because
   the candidate chose its bytes and its media type. The URL of a file comes from the host's `files.url`, which must give an

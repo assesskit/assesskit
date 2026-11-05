@@ -248,7 +248,9 @@ responses are read when shown, with `readWireValue` of `@assesskit/runtime/value
 ## Errors
 
 Every refusal is a `DataError` with a sentence that names the path of the first problem. The session host, the remote client, the
-local session, `mountSubmission` and the LTI slot run the checks on what they receive; `checkSubmission` is the one that is exported.
+local session, `mountSubmission` and the LTI slot run the checks on what they receive, so those checks are not exported.
+`checkSubmission` is, because a scoring endpoint receives a submission with no function of the library between the request
+and its own code.
 
 | What is refused              | When                                                                                                                                                                                                                                                                                                                                                                       | What to do                                                                                                      |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |

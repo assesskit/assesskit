@@ -351,6 +351,18 @@ action at or after the close ends a suspended session at the close, and any othe
 | Close after the span: span 30 s, close 100 s  | 30 s               | 100 s     | 30 s               | 30 s, the span      |
 | Suspended at 50 s: span 120 s, close 60 s     | stops              | 60 s      | 60 s, suspended    | the close           |
 
+QTI 3.0 has no close: its time limits count the candidate's own time. The close behaves as the close date of a
+[Moodle quiz](https://docs.moodle.org/503/en/mod/quiz/config) and the until date of a
+[Canvas quiz](https://canvashelp.fullerton.edu/m/Making_the_Most_of_Canvas/l/1298983-what-issues-affect-time-limits-and-due-dates-of-online-quizzes)
+do (2026-11-06): an attempt still open then is submitted, whatever time or extended time it has left.
+
+| The close                                         | Why                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ends the session whatever `allow-late-submission` | Late submission has no end: the scope stays open until the candidate or the host ends it ([spec gaps](spec-gaps.md), D9), so a close that waited for it would close nothing. A host that wants time after the sitting, as the grace period of Moodle, gives a later `closeAt` |
+| Ends a suspended session                          | A suspension stops the candidate's time and not the sitting's; a candidate who suspended would otherwise go on after every other has ended                                                                                                                                    |
+| Cuts the candidate's extra time                   | Extra time lengthens the span, and the close ends the sitting for everyone; a host gives a candidate with extra time a later `closeAt` of their own                                                                                                                           |
+| Needs a scheduler at a session host               | Nothing else ends a session whose candidate sends nothing more, so its results would stay open; a host without one refuses a maximum time for the same reason ([server](../player/server.md#time))                                                                            |
+
 ### Suspension, supports and variants
 
 - `suspend` suspends the item presented and stops every clock; while suspended, every action but `resume` is refused, until the close, if there is one, comes.
