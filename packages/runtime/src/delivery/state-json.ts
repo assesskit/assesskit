@@ -16,9 +16,9 @@ import {
 import { valuesSchema, valuesToJson } from "./entries-json.js";
 import { itemKeySchema } from "./item-key.js";
 import { itemSessionSchema, itemSessionToJson } from "./item-session-json.js";
-import { DELIVERY_STATUSES } from "./names.js";
 import { catSchema, catToJson, reportSchema, scoringSchema, scoringToJson } from "./pending-json.js";
 import type { PlannedChild, PlannedPart, TestPlan } from "./plan.js";
+import { DELIVERY_STATUSES } from "./session-statuses.js";
 import { supportNameSchema, supportsSchema } from "./support-json.js";
 
 /** The kinds of scope of a clock, for the checks. */

@@ -4,9 +4,8 @@ import type { PnpHazard, SupportName, SupportSetting, SupportState } from "../pn
 import type { Value } from "../values/index.js";
 import type { CandidateAction } from "./action.js";
 import type { Deadline } from "./deadlines.js";
-import type { DeliveryStatus } from "./delivery-state.js";
-import type { ItemSessionStatus } from "./item-session.js";
 import type { ItemKey } from "./plan.js";
+import type { DeliveryStatus, ItemSessionStatus } from "./session-statuses.js";
 
 /**
  * A section of the navigation map: a visible section that holds an item the map lists.

@@ -44,9 +44,12 @@ export interface PnpRecord {
   readonly profile: PersonalNeedsProfile;
 }
 
+/** The states of a support, for the checks. */
+export const SUPPORT_STATES = ["prohibited", "active", "option", "assigned"] as const;
+
 /**
  * How a profile treats a support: `prohibited` is not available; `active` is on from the start; `option` is
  * available and off until the candidate turns it on; `assigned` is requested by the profile outside the sets, so the
  * delivery system provides it.
  */
-export type SupportState = "prohibited" | "active" | "option" | "assigned";
+export type SupportState = (typeof SUPPORT_STATES)[number];

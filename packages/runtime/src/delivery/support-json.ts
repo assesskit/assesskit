@@ -1,14 +1,5 @@
 import * as v from "valibot";
-import {
-  describe,
-  isRecord,
-  parseWith,
-  plainSchema,
-  recordSchema,
-  type Schema,
-  strictRecord,
-  transformWith,
-} from "../checks.js";
+import { describe, isRecord, plainSchema, recordSchema, type Schema, strictRecord, transformWith } from "../checks.js";
 import { DataError } from "../errors.js";
 import {
   type Braille,
@@ -20,17 +11,14 @@ import {
   SUPPORT_NAMES,
   type SupportName,
   type SupportSetting,
-  type SupportState,
   type TextAppearance,
   writePnp,
 } from "../pnp/index.js";
+import { SUPPORT_STATES } from "../pnp/internal.js";
 import { ADJUSTABLE_SETTINGS } from "./adjustable-settings.js";
 import type { SupportView } from "./candidate-view.js";
 import type { SessionSupport } from "./delivery-state.js";
 import { entriesSchema } from "./entries-json.js";
-
-/** The states of a support, for the checks. */
-const SUPPORT_STATES: readonly SupportState[] = ["prohibited", "active", "option", "assigned"];
 
 /** The schema of the name of a support: a predefined one, or `ext:` and at least one character. */
 export const supportNameSchema: Schema<SupportName> = v.custom<SupportName>(
@@ -144,24 +132,6 @@ export const supportSettingSchema: Schema<SupportSetting> = v.pipe(
   ),
   transformWith((json) => readSupportSetting(json, json.name)),
 );
-
-/**
- * Checks the settings of a support, as an action carries them: an object whose `name` is a predefined support and whose
- * parameters `writePnp` accepts for that support, as {@link supportSettingSchema} reads them.
- *
- * @param value - The value to check.
- * @param label - Names the value in the message, such as `The settings of support-settings`.
- * @throws `DataError` when it is not the settings of a predefined support.
- */
-export function checkSupportSetting(value: unknown, label: string): asserts value is SupportSetting {
-  const name = isRecord(value) ? value.name : undefined;
-  if (typeof name !== "string" || !SUPPORT_NAMES.some((known) => known === name)) {
-    throw new DataError(
-      `${label} must be an object whose name is a predefined support, found ${describe(isRecord(value) ? name : value)}.`,
-    );
-  }
-  parseWith(supportSettingSchema, value, label);
-}
 
 /** The schema of a support in a view; its settings are those of its name. */
 export const supportViewSchema: Schema<SupportView> = v.pipe(

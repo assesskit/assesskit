@@ -7,6 +7,7 @@ import {
   stamp,
 } from "@assesskit/runtime/delivery";
 import {
+  CANDIDATE_ACTION_TYPES,
   type CandidateAction,
   type CandidateView,
   readView,
@@ -26,7 +27,6 @@ import type { HostApplyOptions, ViewEnvelope } from "../src/protocol/index.js";
 import { isOfficialResult } from "../src/protocol/internal.js";
 import {
   type AssetGate,
-  CANDIDATE_ACTION_TYPES,
   createAssetGate,
   createSessionHost,
   createToolScoreIntake,

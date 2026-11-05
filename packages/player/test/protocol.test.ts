@@ -10,7 +10,12 @@ import {
   type RefusalReason,
   stamp,
 } from "@assesskit/runtime/delivery";
-import { type CandidateAction, type CandidateView, writeCandidateAction } from "@assesskit/runtime/delivery/wire";
+import {
+  CANDIDATE_ACTION_TYPES,
+  type CandidateAction,
+  type CandidateView,
+  writeCandidateAction,
+} from "@assesskit/runtime/delivery/wire";
 import { DataError, ServiceError } from "@assesskit/runtime/errors";
 import type { AssessmentResult } from "@assesskit/runtime/results";
 import { buildSingle } from "@assesskit/runtime/values";
@@ -39,7 +44,6 @@ import {
   resolveViewDocuments,
   stepAfterIdle,
 } from "../src/protocol/internal.js";
-import { CANDIDATE_ACTION_TYPES } from "../src/server/index.js";
 import { examDefinition, examFiles, examHost, packageOf, ratedFiles } from "./exam-fixture.js";
 import { fuzzJson } from "./fuzz.js";
 import { localOptions } from "./local-fixture.js";

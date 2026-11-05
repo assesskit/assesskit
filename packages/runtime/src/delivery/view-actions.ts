@@ -1,8 +1,8 @@
 import type { AssessmentItem } from "../asi/index.js";
 import type { CandidateAction } from "./action.js";
+import { CANDIDATE_ACTION_TYPES } from "./action.js";
 import { adjustableSettings } from "./adjustable-settings.js";
 import { endAttemptInteractions } from "./attempt.js";
-import { CANDIDATE_ACTION_TYPES } from "./candidate-actions.js";
 import type { Course } from "./course.js";
 import type { DeliveredItem, DeliveryState } from "./delivery-state.js";
 import type { EffectiveSessionControl } from "./session-control.js";

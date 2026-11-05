@@ -7,7 +7,7 @@
  * @module @assesskit/runtime/delivery/wire
  */
 
-export type { CandidateAction } from "./action.js";
+export { CANDIDATE_ACTION_TYPES, type CandidateAction } from "./action.js";
 export {
   type ActionLimits,
   DEFAULT_ACTION_LIMITS,

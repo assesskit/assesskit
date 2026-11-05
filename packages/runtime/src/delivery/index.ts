@@ -30,7 +30,6 @@ export type {
   CandidateNeeds,
   DeliveredItem,
   DeliveryState,
-  DeliveryStatus,
   Expiry,
   ScopeClock,
   SessionSupport,
@@ -41,7 +40,7 @@ export { drainCat, sendCatRequest } from "./drain-cat.js";
 export { createEngine, type Engine, type StartOptions } from "./engine.js";
 export type { DeliveryEvent, DeliveryEventType } from "./events.js";
 export type { ItemAction } from "./item-action.js";
-export type { ItemSession, ItemSessionStatus } from "./item-session.js";
+export type { ItemSession } from "./item-session.js";
 export type { CatRequest, PendingWork } from "./pending-work.js";
 export {
   DEFAULT_PLAN_LIMITS,
@@ -64,6 +63,7 @@ export type {
   ScoringRequest,
   SuppliedScore,
 } from "./scoring.js";
+export type { DeliveryStatus, ItemSessionStatus } from "./session-statuses.js";
 export { stamp } from "./stamp.js";
 export { deserializeState, serializeState } from "./state-json.js";
 export {

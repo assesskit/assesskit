@@ -41,7 +41,6 @@ import {
 import {
   additionalTestingTime,
   applyItemAction,
-  CANDIDATE_ACTION_TYPES,
   closeItem,
   deriveItemFeedback,
   deriveItemResponses,
@@ -68,6 +67,7 @@ import {
   timeLimits,
 } from "../src/delivery/internal.js";
 import {
+  CANDIDATE_ACTION_TYPES,
   type CandidateAction,
   type CandidateView,
   DEFAULT_ACTION_LIMITS,
@@ -1552,22 +1552,22 @@ describe("applying actions", () => {
       'The time of the action must be a finite number, found "1".',
     );
     expect(() => engine.apply(state, json('{"type":"move","to":"up","at":1}'))).toThrow(
-      'The place of move must be "next", "previous" or an item instance, found "up".',
+      'The action is invalid at to: The place of move must be "next", "previous" or an item instance.',
     );
     expect(() => engine.apply(state, json('{"type":"move","to":{"ref":"a"},"at":1}'))).toThrow(
-      'The item instance is invalid: missing the property "instance".',
+      'The action is invalid at to: The place of move must be "next", "previous" or an item instance.',
     );
     expect(() => engine.apply(state, json('{"type":"support","name":"chocolate","active":true,"at":1}'))).toThrow(
-      'The name of support must be the name of a support of a PNP, found "chocolate".',
+      "The action is invalid at name: The name of a support must be the name of a support of a PNP.",
     );
     expect(() => engine.apply(state, json('{"type":"support","name":"spoken","active":"yes","at":1}'))).toThrow(
-      'The active of support must be a boolean, found "yes".',
+      'The action is invalid at active: expected true or false, found "yes".',
     );
     expect(() => engine.apply(state, json('{"type":"support-settings","settings":null,"at":1}'))).toThrow(
-      "The settings of support-settings must be an object whose name is a predefined support, found null.",
+      "The action is invalid at settings: expected an object, found null.",
     );
     expect(() => engine.apply(state, json('{"type":"support-settings","settings":{"name":"ext:x"},"at":1}'))).toThrow(
-      'The settings of support-settings must be an object whose name is a predefined support, found "ext:x".',
+      "The action is invalid at settings.name: The name of the settings must be a predefined support.",
     );
     expect(() =>
       engine.apply(
@@ -1584,10 +1584,10 @@ describe("applying actions", () => {
           '{"type":"support-settings","settings":{"name":"spoken","replaceAccessModes":[],"restrictionTypes":[],"note":[]},"at":1}',
         ),
       ),
-    ).toThrow('The settings of support-settings is invalid: unexpected property "note".');
+    ).toThrow('The action is invalid at settings: unexpected property "note".');
     expect(() =>
       engine.apply(state, json('{"type":"set-responses","item":{"ref":"a","instance":1},"responses":{},"at":1}')),
-    ).toThrow("The responses of set-responses must be a Map from response identifier to value, found an object.");
+    ).toThrow("The action is invalid at responses: expected a Map from response identifier to value, found an object.");
     expect(() => engine.apply(state, json('{"type":"jump","at":1}'))).toThrow(
       /^The type of the action must be "set-responses", /,
     );
@@ -3139,22 +3139,6 @@ describe("item actions", () => {
     expect(() => applyItemAction(json("null"), { ...SUBMIT, at: 1 }, context)).toThrow(
       "The item session must be an object from a delivery state, found null.",
     );
-    expect(() => applyItemAction(session, json("null"), context)).toThrow(DataError);
-    expect(() =>
-      applyItemAction(session, json('{"type": "dance", "item": {"ref": "q", "instance": 1}, "at": 1}'), context),
-    ).toThrow(
-      'The type of the action must be "set-responses", "submit", "skip", "end-attempt", "next-attempt", "review", "solution" or "comment", found "dance".',
-    );
-    expect(() =>
-      applyItemAction(session, json('{"type": "submit", "item": {"ref": "q", "instance": 1}, "at": "1"}'), context),
-    ).toThrow('The time must be a finite number, found "1".');
-    expect(() =>
-      applyItemAction(
-        session,
-        json('{"type": "set-responses", "item": {"ref": "q", "instance": 1}, "at": 1, "responses": {}}'),
-        context,
-      ),
-    ).toThrow("The responses of set-responses must be a Map from response identifier to value, found an object.");
     expect(() =>
       applyItemAction(session, { ...respond("RESPONSE", json('{"cardinality": "single"}')), at: 1 }, context),
     ).toThrow(DataError);
@@ -4846,6 +4830,9 @@ describe("candidate actions", () => {
       type: "move",
       to: { ref: "b", instance: 3 },
     });
+    expect(() => writeCandidateAction(Object.assign({}, { type: "submit", item } as const, { note: "x" }))).toThrow(
+      'The action is invalid: unexpected property "note".',
+    );
     expect(writeCandidateAction(Object.assign({}, { type: "submit", item } as const, { at: 12 }))).toEqual({
       type: "submit",
       item: { ref: "a", instance: 1 },
@@ -5182,7 +5169,7 @@ describe("time stamps", () => {
     expect(stamp(state, submit, 9)).toEqual({ type: "submit", item: key("a"), at: 9 });
     expect(() => stamp(state, json('{"type":"fly"}'), 1)).toThrow(/^The type of the action must be /);
     expect(() => stamp(state, json('{"type":"submit"}'), 1)).toThrow(
-      "The item instance is invalid: expected an object, found undefined.",
+      'The action is invalid: missing the property "item".',
     );
   });
 

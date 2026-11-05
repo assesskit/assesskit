@@ -1,14 +1,15 @@
+import * as v from "valibot";
 import type { CatResponse } from "../cat/index.js";
-import { isSessionEnd } from "../cat/index.js";
-import { checkArray, checkBoolean, checkChoice, checkRecord, checkString, describe } from "../checks.js";
-import { DataError } from "../errors.js";
-import { isSupportName, type SupportName, type SupportSetting } from "../pnp/index.js";
-import { normalizeValue, type Value } from "../values/index.js";
-import { checkInstant } from "./datestamp.js";
-import { checkItemAction, ITEM_ACTION_TYPES, type ItemAction } from "./item-action.js";
-import { checkKey, type ItemKey } from "./plan.js";
+import type { Schema } from "../checks.js";
+import type { SupportName, SupportSetting } from "../pnp/index.js";
+import type { Value } from "../values/index.js";
+import type { ItemAction } from "./item-action.js";
+import type { ItemKey } from "./item-key.js";
 import type { Scorer } from "./scoring.js";
-import { checkSupportSetting } from "./support-json.js";
+import { supportNameSchema, supportSettingSchema } from "./support-json.js";
+
+/** The places that `move` names by a word. */
+const MOVES = ["next", "previous"] as const;
 
 /**
  * An action of the candidate:
@@ -42,7 +43,7 @@ export type CandidateAction =
       /** Moves. */
       readonly type: "move";
       /** The next item, the previous one, or an item instance of the test part. */
-      readonly to: "next" | "previous" | ItemKey;
+      readonly to: (typeof MOVES)[number] | ItemKey;
     }
   | {
       /** Turns a support on or off. */
@@ -105,8 +106,20 @@ export type Action = (CandidateAction | HostAction) & {
   readonly at: number;
 };
 
-/** The types of the actions that are not actions on an item. */
-const SESSION_ACTION_TYPES = [
+/**
+ * The types of the actions of the candidate, in the order a view lists them.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
+export const CANDIDATE_ACTION_TYPES = [
+  "set-responses",
+  "submit",
+  "end-attempt",
+  "next-attempt",
+  "skip",
+  "review",
+  "solution",
+  "comment",
   "mark",
   "move",
   "support",
@@ -115,128 +128,46 @@ const SESSION_ACTION_TYPES = [
   "end-test",
   "suspend",
   "resume",
+] as const satisfies readonly CandidateAction["type"][];
+
+/** The types of the actions of the host, which a candidate never sends. */
+export const HOST_ACTION_TYPES = [
   "time",
   "supply-scores",
   "cat-response",
-] as const;
+] as const satisfies readonly HostAction["type"][];
 
-const ACTION_TYPES: readonly Action["type"][] = [...ITEM_ACTION_TYPES, ...SESSION_ACTION_TYPES];
-
-/** The scorers, for the checks. */
-const SCORERS: readonly Scorer[] = ["human", "externalMachine"];
-
-/** The places that `move` names by a word. */
-const MOVES: readonly string[] = ["next", "previous"];
-
-/**
- * Checks an action: its type, its time, and the fields that its type has.
- *
- * @throws `DataError` when it is not an action.
- */
-export function checkAction(action: unknown): asserts action is Action {
-  checkRecord(action, "The action must be an object with a type and a time");
-  checkChoice(action.type, "The type of the action", ACTION_TYPES);
-  checkInstant(action.at, "The time of the action");
-  switch (action.type) {
-    case "mark":
-      checkKey(action.item);
-      checkBoolean(action.marked, "The marked of mark");
-      break;
-    case "move":
-      if (typeof action.to !== "string") checkKey(action.to);
-      else if (!MOVES.includes(action.to)) {
-        throw new DataError(
-          `The place of move must be "next", "previous" or an item instance, found ${describe(action.to)}.`,
-        );
-      }
-      break;
-    case "support":
-      if (!isSupportName(action.name)) {
-        throw new DataError(
-          `The name of support must be the name of a support of a PNP, found ${describe(action.name)}.`,
-        );
-      }
-      checkBoolean(action.active, "The active of support");
-      break;
-    case "support-settings":
-      checkSupportSetting(action.settings, "The settings of support-settings");
-      break;
-    case "supply-scores":
-      checkString(action.request, "The request of supply-scores");
-      checkChoice(action.scorer, "The scorer of supply-scores", SCORERS);
-      if (action.value !== null) normalizeValue(action.value);
-      break;
-    case "cat-response":
-      checkString(action.request, "The request of cat-response");
-      checkCatResponse(action.response);
-      break;
-    case "end-part":
-    case "end-test":
-    case "suspend":
-    case "resume":
-    case "time":
-      break;
-    default:
-      checkItemAction(action);
-  }
-}
-
-/** Checks the variables of a result that a CAT engine returned: the kinds this engine reads. */
-function checkReportedVariables(variables: unknown, what: string): void {
-  checkArray(variables, `The variables of ${what} must be an array`);
-  for (const variable of variables) {
-    checkRecord(variable, `A variable of ${what} must be an object`);
-    checkString(variable.identifier, `The identifier of a variable of ${what}`);
-    if (variable.kind === "outcome" && variable.value !== null) normalizeValue(variable.value);
-  }
-}
-
-/** Checks the result report in the answer to Submit Results: the context, the test result and the item results. */
-function checkReport(report: unknown): void {
-  checkRecord(report, "The assessmentResult of a CAT answer must be an object");
-  if (report.context !== undefined) {
-    checkRecord(report.context, "The context of the assessmentResult of a CAT answer must be an object");
-    checkArray(
-      report.context.sessionIdentifiers,
-      "The sessionIdentifiers of the context of a CAT answer must be an array",
-    );
-    for (const each of report.context.sessionIdentifiers) {
-      checkRecord(each, "A session identifier of the context of a CAT answer must be an object");
-      checkString(each.sourceId, "The sourceId of a session identifier of a CAT answer");
-      checkString(each.identifier, "The identifier of a session identifier of a CAT answer");
-    }
-  }
-  if (report.testResult !== undefined) {
-    checkRecord(report.testResult, "The testResult of a CAT answer must be an object");
-    checkReportedVariables(report.testResult.variables, "the testResult of a CAT answer");
-  }
-  checkArray(report.itemResults, "The itemResults of the assessmentResult of a CAT answer must be an array");
-  for (const result of report.itemResults) {
-    checkRecord(result, "An itemResult of a CAT answer must be an object");
-    checkString(result.identifier, "The identifier of an itemResult of a CAT answer");
-    checkReportedVariables(result.variables, "an itemResult of a CAT answer");
-  }
+/** What the two forms of an action read differently: JSON holds entries and no other property, memory holds maps. */
+export interface ActionForm {
+  /** Reads the object of an action; a form refuses a property it does not know, or leaves it. */
+  readonly object: typeof v.strictObject;
+  /** Reads an item instance. */
+  readonly item: Schema<ItemKey>;
+  /** Reads the responses of `set-responses`. */
+  readonly responses: Schema<ReadonlyMap<string, Value | null>>;
+  /** Reads the states of portable custom interactions of `set-responses`. */
+  readonly pciStates: Schema<ReadonlyMap<string, string>>;
 }
 
 /**
- * Checks the answer of a CAT engine as far as the engine reads it: an End Session answer, or an object whose fields,
- * when present, have their types. Whether it fits the request is decided when it is applied.
+ * Returns the schemas of the actions of the candidate in a form, one for each group of types with the same fields: the one
+ * description of those fields, which `v.variant` reads by the type.
  *
- * @throws `DataError` when it is not an answer.
+ * @param form - How the form reads what differs; see {@link ActionForm}.
  */
-function checkCatResponse(response: unknown): void {
-  checkRecord(response, "The response of cat-response must be an object");
-  if (response.ended !== undefined) {
-    if (response.ended !== true) {
-      throw new DataError(`The ended of the response of cat-response must be true, found ${describe(response.ended)}.`);
-    }
-    return;
-  }
-  const { sessionIdentifier, sessionState, nextItems, assessmentResult } = response;
-  if (sessionIdentifier !== undefined)
-    checkString(sessionIdentifier, "The sessionIdentifier of the response of cat-response");
-  if (sessionState !== undefined) checkString(sessionState, "The sessionState of the response of cat-response");
-  // isSessionEnd checks that the stage is an item stage.
-  if (nextItems !== undefined && nextItems !== null) isSessionEnd(nextItems as Parameters<typeof isSessionEnd>[0]);
-  if (assessmentResult !== undefined) checkReport(assessmentResult);
+export function candidateActionSchemas({ object, item, responses, pciStates }: ActionForm) {
+  return [
+    object({ type: v.literal("set-responses"), item, responses, pciStates: v.optional(pciStates) }),
+    object({ type: v.picklist(["submit", "skip", "next-attempt", "review", "solution"]), item }),
+    object({ type: v.literal("end-attempt"), item, interaction: v.string() }),
+    object({ type: v.literal("comment"), item, text: v.string() }),
+    object({ type: v.literal("mark"), item, marked: v.boolean() }),
+    object({
+      type: v.literal("move"),
+      to: v.union([v.picklist(MOVES), item], 'The place of move must be "next", "previous" or an item instance.'),
+    }),
+    object({ type: v.literal("support"), name: supportNameSchema, active: v.boolean() }),
+    object({ type: v.literal("support-settings"), settings: supportSettingSchema }),
+    object({ type: v.picklist(["end-part", "end-test", "suspend", "resume"]) }),
+  ] as const;
 }

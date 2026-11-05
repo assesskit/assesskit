@@ -254,10 +254,10 @@ describe("host actions of other types", () => {
 
   it("refuses a supply of a request, scorer or value of another type", () => {
     expect(apply('{"type":"supply-scores","request":1,"value":null,"scorer":"human","at":0}')).toThrow(
-      "The request of supply-scores must be a string, found 1.",
+      "The action is invalid at request: expected a string, found 1.",
     );
     expect(apply('{"type":"supply-scores","request":"r","value":null,"scorer":"robot","at":0}')).toThrow(
-      'The scorer of supply-scores must be "human" or "externalMachine", found "robot".',
+      'The action is invalid at scorer: expected "human" or "externalMachine", found "robot".',
     );
     expect(
       apply('{"type":"supply-scores","request":"r","value":{"cardinality":"single"},"scorer":"human","at":0}'),
@@ -267,17 +267,17 @@ describe("host actions of other types", () => {
   it("refuses an answer of a CAT engine of another type", () => {
     const answer = (response: string) =>
       apply(`{"type":"cat-response","request":"cat:A:1:1","response":${response},"at":0}`);
-    expect(answer("null")).toThrow("The response of cat-response must be an object, found null.");
-    expect(answer('{"ended":false}')).toThrow("The ended of the response of cat-response must be true, found false.");
+    expect(answer("null")).toThrow("The action is invalid at response: expected an object, found null.");
+    expect(answer('{"ended":false}')).toThrow("The action is invalid at response.ended: expected true, found false.");
     expect(answer('{"sessionIdentifier":4}')).toThrow(
-      "The sessionIdentifier of the response of cat-response must be a string, found 4.",
+      "The action is invalid at response.sessionIdentifier: expected a string, found 4.",
     );
     expect(answer('{"nextItems":{"itemIdentifiers":"i1"}}')).toThrow(DataError);
     expect(answer('{"nextItems":null,"assessmentResult":5}')).toThrow(
-      "The assessmentResult of a CAT answer must be an object, found 5.",
+      "The action is invalid at response.assessmentResult: expected an object, found 5.",
     );
     expect(answer('{"assessmentResult":{"itemResults":[{"identifier":1,"variables":[]}]}}')).toThrow(
-      "The identifier of an itemResult of a CAT answer must be a string, found 1.",
+      "The action is invalid at response.assessmentResult.itemResults[0].identifier: expected a string, found 1.",
     );
   });
 });

@@ -5,7 +5,6 @@
  *
  * @module
  */
-export { CANDIDATE_ACTION_TYPES } from "./candidate-actions.js";
 export { deriveSessionStatus } from "./derive-session-status.js";
 export { applyItemAction } from "./item-action.js";
 export { deriveItemFeedback, deriveItemResponses } from "./item-display.js";

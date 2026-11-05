@@ -11,11 +11,9 @@ import {
 } from "../checks.js";
 import { checkOptions } from "../checks-internal.js";
 import { DataError, SecurityError } from "../errors.js";
-import type { CandidateAction } from "./action.js";
-import { CANDIDATE_ACTION_TYPES, checkResponseMaps } from "./candidate-actions.js";
+import { CANDIDATE_ACTION_TYPES, type CandidateAction, candidateActionSchemas, HOST_ACTION_TYPES } from "./action.js";
 import { entriesSchema, valuesSchema, valuesToJson } from "./entries-json.js";
 import { checkKey, type ItemKey, itemKeySchema } from "./item-key.js";
-import { supportNameSchema, supportSettingSchema } from "./support-json.js";
 
 /** The limits of {@link readCandidateAction}, which keep a client from sending an action that is too large to handle. */
 export interface ActionLimits {
@@ -58,12 +56,6 @@ export const DEFAULT_ACTION_LIMITS: ActionLimits = {
   maxSettingListLength: 256,
 };
 
-/** The types of the actions of the host, which a candidate never sends. */
-const HOST_ACTION_TYPES: readonly string[] = ["time", "supply-scores", "cat-response"];
-
-/** The places that `move` names by a word. */
-const MOVES = ["next", "previous"] as const;
-
 function readLimits(limits: Partial<ActionLimits>): ActionLimits {
   checkRecord(limits, "The option limits must be an object");
   const {
@@ -77,34 +69,19 @@ function readLimits(limits: Partial<ActionLimits>): ActionLimits {
   return { maxActionSize, maxPciStateLength, maxSettingListLength };
 }
 
-const itemSchema = { item: itemKeySchema };
-
-const actionSchema: Schema<CandidateAction> = v.variant("type", [
-  v.strictObject({
-    type: v.literal("set-responses"),
-    ...itemSchema,
+const actionSchema: Schema<CandidateAction> = v.variant(
+  "type",
+  candidateActionSchemas({
+    object: v.strictObject,
+    item: itemKeySchema,
     responses: valuesSchema,
-    pciStates: v.optional(entriesSchema(v.string())),
+    pciStates: entriesSchema(v.string()),
   }),
-  v.strictObject({ type: v.picklist(["submit", "skip", "next-attempt", "review", "solution"]), ...itemSchema }),
-  v.strictObject({ type: v.literal("end-attempt"), ...itemSchema, interaction: v.string() }),
-  v.strictObject({ type: v.literal("comment"), ...itemSchema, text: v.string() }),
-  v.strictObject({ type: v.literal("mark"), ...itemSchema, marked: v.boolean() }),
-  v.strictObject({
-    type: v.literal("move"),
-    to: v.union(
-      [v.picklist(MOVES), itemKeySchema],
-      'The place of move must be "next", "previous" or an item instance.',
-    ),
-  }),
-  v.strictObject({ type: v.literal("support"), name: supportNameSchema, active: v.boolean() }),
-  v.strictObject({ type: v.literal("support-settings"), settings: supportSettingSchema }),
-  v.strictObject({ type: v.picklist(["end-part", "end-test", "suspend", "resume"]) }),
-]);
+);
 
 /** Refuses an action of the host, which a candidate never sends. */
 function refuseHostAction(json: unknown): void {
-  if (isRecord(json) && typeof json.type === "string" && HOST_ACTION_TYPES.includes(json.type)) {
+  if (isRecord(json) && HOST_ACTION_TYPES.some((type) => type === json.type)) {
     throw new DataError(
       `The type ${describe(json.type)} is an action of the host, and a candidate does not send it; the type of an action of a candidate is ${CANDIDATE_ACTION_TYPES.map((type) => JSON.stringify(type)).join(", ")}.`,
     );
@@ -185,12 +162,31 @@ const UNLIMITED: ActionLimits = {
 };
 
 /**
+ * Checks the maps of a `set-responses` action: the responses by response identifier, and the states of portable custom
+ * interactions when it has them.
+ *
+ * @throws `DataError` when one is not a `Map`.
+ */
+function checkResponseMaps({ responses, pciStates }: Readonly<Record<string, unknown>>): void {
+  if (!(responses instanceof Map)) {
+    throw new DataError(
+      `The responses of set-responses must be a Map from response identifier to value, found ${describe(responses)}.`,
+    );
+  }
+  if (pciStates !== undefined && !(pciStates instanceof Map)) {
+    throw new DataError(
+      `The pciStates of set-responses must be a Map from response identifier to state, found ${describe(pciStates)}.`,
+    );
+  }
+}
+
+/**
  * Writes an action of the candidate as plain data that `JSON.stringify` keeps whole: values are wire values, NULL is
  * `null`, and maps are arrays of entries.
  *
  * @remarks
- * Only the properties of the action's type are written, so a time `at` is not. The result is read back by
- * {@link readCandidateAction} before it is returned.
+ * A time `at` is not written. The result is read back by {@link readCandidateAction} before it is returned, so a property
+ * that the action's type does not have is refused.
  *
  * @param action - The action.
  * @returns The plain data of the action.
@@ -199,49 +195,19 @@ const UNLIMITED: ActionLimits = {
 export function writeCandidateAction(action: CandidateAction): unknown {
   checkRecord(action, "The action must be an object with a type");
   checkChoice(action.type, "The type of the action", CANDIDATE_ACTION_TYPES);
-  let json: Readonly<Record<string, unknown>>;
-  switch (action.type) {
-    case "set-responses":
-      checkResponseMaps(action);
-      json = {
-        type: action.type,
-        item: itemKeyJson(action.item),
-        responses: valuesToJson(action.responses),
-        ...(action.pciStates === undefined ? {} : { pciStates: [...action.pciStates] }),
-      };
-      break;
-    case "submit":
-    case "skip":
-    case "next-attempt":
-    case "review":
-    case "solution":
-      json = { type: action.type, item: itemKeyJson(action.item) };
-      break;
-    case "end-attempt":
-      json = { type: action.type, item: itemKeyJson(action.item), interaction: action.interaction };
-      break;
-    case "comment":
-      json = { type: action.type, item: itemKeyJson(action.item), text: action.text };
-      break;
-    case "mark":
-      json = { type: action.type, item: itemKeyJson(action.item), marked: action.marked };
-      break;
-    case "move":
-      json = { type: action.type, to: typeof action.to === "string" ? action.to : itemKeyJson(action.to) };
-      break;
-    case "support":
-      json = { type: action.type, name: action.name, active: action.active };
-      break;
-    case "support-settings":
-      json = { type: action.type, settings: action.settings };
-      break;
-    case "end-part":
-    case "end-test":
-    case "suspend":
-    case "resume":
-      json = { type: action.type };
-      break;
-  }
+  const { at: _at, responses, pciStates, ...fields }: Readonly<Record<string, unknown>> = action;
+  if (action.type === "set-responses") checkResponseMaps(action);
+  const json = {
+    ...fields,
+    ...("item" in fields ? { item: itemKeyJson(fields.item) } : {}),
+    ...(typeof fields.to === "object" ? { to: itemKeyJson(fields.to) } : {}),
+    ...(responses instanceof Map
+      ? { responses: valuesToJson(responses) }
+      : responses === undefined
+        ? {}
+        : { responses }),
+    ...(pciStates instanceof Map ? { pciStates: [...pciStates] } : pciStates === undefined ? {} : { pciStates }),
+  };
   readCandidateAction(json, { limits: UNLIMITED });
   return json;
 }

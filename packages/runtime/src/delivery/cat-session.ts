@@ -61,11 +61,11 @@ export interface ReportedItem {
   readonly attempts: number;
 }
 
-/** Where a CAT session is: running, ended by the candidate leaving, or ended. */
-export type CatStatus = "running" | "leaving" | "ended";
+/** The statuses of a CAT session, for the checks. */
+export const CAT_STATUSES = ["running", "leaving", "ended"] as const;
 
-/** The statuses, for the checks. */
-export const CAT_STATUSES: readonly CatStatus[] = ["running", "leaving", "ended"];
+/** Where a CAT session is: running, ended by the candidate leaving, or ended. */
+export type CatStatus = (typeof CAT_STATUSES)[number];
 
 /** The candidate session of one adaptive section. */
 export interface CatSession {

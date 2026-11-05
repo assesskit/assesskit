@@ -1,23 +1,21 @@
 import type { AssessmentItem, ResponseDeclaration } from "../asi/index.js";
-import { checkChoice, checkRecord, checkString, describe, isRecord } from "../checks.js";
+import { checkString, describe, isRecord } from "../checks.js";
 import { describeInteractions, validateResponse } from "../interactions/index.js";
 import { describeType } from "../processing/index.js";
 import { fitValue } from "../processing/internal.js";
 import { matchValues, normalizeValue, type Value } from "../values/index.js";
 import { type Ending, endAttempt, endAttemptInteractions, itemEvent, startAttempt } from "./attempt.js";
-import { checkResponseMaps } from "./candidate-actions.js";
 import { presentedInteractions } from "./item-display.js";
 import {
   applied,
   checkSession,
   checkSessionContext,
-  checkTime,
   type ItemSession,
   type ItemSessionContext,
   type ItemStep,
   regression,
 } from "./item-session.js";
-import { checkKey, type ItemKey, sameKey } from "./plan.js";
+import { type ItemKey, sameKey } from "./plan.js";
 import { refuse } from "./refusal.js";
 
 /**
@@ -74,18 +72,6 @@ export type ItemAction =
       readonly text: string;
     };
 
-/** The types of the actions on an item. */
-export const ITEM_ACTION_TYPES: readonly ItemAction["type"][] = [
-  "set-responses",
-  "submit",
-  "skip",
-  "end-attempt",
-  "next-attempt",
-  "review",
-  "solution",
-  "comment",
-];
-
 /** The actions that change or submit responses, which a closed session refuses. */
 const RESPONDING: ReadonlySet<ItemAction["type"]> = new Set(["set-responses", "submit", "skip", "end-attempt"]);
 
@@ -120,21 +106,6 @@ function holdsUnsafeInteger(value: unknown): boolean {
   }
   if (Array.isArray(value.values)) return value.values.some((entry) => isUnsafe(value.baseType, entry));
   return isUnsafe(value.baseType, value.value);
-}
-
-/**
- * Checks the fields of an action on an item that its type has.
- *
- * @throws `DataError` when it is not such an action.
- */
-export function checkItemAction(action: unknown): asserts action is ItemAction & { readonly at: number } {
-  checkRecord(action, "The action must be an object with a type, an item and a time");
-  checkChoice(action.type, "The type of the action", ITEM_ACTION_TYPES);
-  checkKey(action.item);
-  checkTime(action.at);
-  if (action.type === "set-responses") checkResponseMaps(action);
-  if (action.type === "end-attempt") checkString(action.interaction, "The interaction of end-attempt");
-  if (action.type === "comment") checkString(action.text, "The text of comment");
 }
 
 /** Returns the session with an attempt open: the candidate starts the next attempt by acting on the item. */
@@ -371,7 +342,6 @@ export function applyItemAction(
   context: ItemSessionContext,
 ): ItemStep {
   checkSession(session);
-  checkItemAction(action);
   checkSessionContext(context);
   const { at } = action;
   if (!sameKey(action.item, session.key)) {

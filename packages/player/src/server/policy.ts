@@ -1,30 +1,10 @@
 import { checkArray, checkChoice, describe } from "@assesskit/runtime/checks";
 import type { DeliveryState } from "@assesskit/runtime/delivery";
-import type { CandidateAction } from "@assesskit/runtime/delivery/wire";
+import { CANDIDATE_ACTION_TYPES, type CandidateAction } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 
 /** The type of an action of the candidate. */
 export type CandidateActionType = CandidateAction["type"];
-
-/** Every type of action of the candidate, in the order of the runtime's view. */
-export const CANDIDATE_ACTION_TYPES = [
-  "set-responses",
-  "submit",
-  "end-attempt",
-  "next-attempt",
-  "skip",
-  "review",
-  "solution",
-  "comment",
-  "mark",
-  "move",
-  "support",
-  "support-settings",
-  "end-part",
-  "end-test",
-  "suspend",
-  "resume",
-] as const satisfies readonly CandidateActionType[];
 
 /**
  * The actions a client of an exam may send: all but `suspend` and `resume`. The runtime counts suspended time nowhere, so a

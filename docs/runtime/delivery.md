@@ -74,8 +74,8 @@ sequenceDiagram
 | `ItemAction`                                                          | The actions of the candidate on an item session.                                                           |
 | `Refusal`, `RefusalReason`, `DeliveryEvent`, …                        | Why a step is refused, and what an accepted step reports.                                                  |
 
-`writeView`, `readView`, `writeCandidateAction`, `readCandidateAction`, `DEFAULT_ACTION_LIMITS`, `ActionLimits`, `CandidateAction`
-and the types of the candidate's view are exported by `@assesskit/runtime/delivery/wire` and by no other entry
+`writeView`, `readView`, `writeCandidateAction`, `readCandidateAction`, `DEFAULT_ACTION_LIMITS`, `ActionLimits`, `CandidateAction`,
+`CANDIDATE_ACTION_TYPES` and the types of the candidate's view are exported by `@assesskit/runtime/delivery/wire` and by no other entry
 ([Wire forms](#wire-forms)); every other name of this guide is exported by `@assesskit/runtime/delivery`. The session of an item
 and the plan of a test are reached through the engine: `start` and `apply` step them, and the state holds them as plain data.
 
@@ -617,7 +617,7 @@ from `ordered`, and the NULL of one type from that of another.
 | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `writeView(view)`                     | Builds the JSON form property by property, reads it back with `readView` and returns it. The content nodes are shared with the view.                                                                                                                              |
 | `readView(json)`                      | Checks every property of the form and no other, the type of each field, the values, and the content as plain JSON of at most 256 levels with finite numbers. It reads the view of the host's server and sets no limit of size ([SECURITY.md](../../SECURITY.md)). |
-| `writeCandidateAction(action)`        | Writes the properties of the action's type and no other: the time `at` is not written.                                                                                                                                                                            |
+| `writeCandidateAction(action)`        | Writes the properties of the action's type and refuses any other; the time `at` is not written.                                                                                                                                                                   |
 | `readCandidateAction(json, options?)` | Reads an action of the candidate, checks its type, its properties and its limits, and refuses an action of the host and any property `at`.                                                                                                                        |
 
 | Limit                  | Default   | Bounds                                                                                                     |
@@ -1589,9 +1589,9 @@ flowchart BT
 
 | File                                                                                                                                     | Concept                                         |
 | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `engine.ts`, `course.ts`, `delivery-state.ts`, `state-json.ts`                                                                           | The engine, what it delivers, and the state     |
+| `engine.ts`, `course.ts`, `delivery-state.ts`, `session-statuses.ts`, `state-json.ts`                                                    | The engine, what it delivers, and the state     |
 | `session-step.ts`, `step-*.ts`                                                                                                           | The reducer: a step and its rules, in layers    |
-| `action.ts`, `action-json.ts`, `candidate-actions.ts`, `item-action.ts`, `refusal.ts`, `events.ts`                                       | Actions, their JSON forms, refusals and events  |
+| `action.ts`, `action-check.ts`, `action-json.ts`, `item-action.ts`, `refusal.ts`, `events.ts`                                            | Actions, their two forms, refusals and events   |
 | `structure.ts`, `plan.ts`, `plan-index.ts`, `selection.ts`, `navigation.ts`, `session-control.ts`, `time-limits.ts`, `deadlines.ts`      | Planning a session                              |
 | `item-session.ts`, `item-lifecycle.ts`, `attempt.ts`, `item-display.ts`, `result-status.ts`                                              | The session of an item instance                 |
 | `view.ts`, `view-body.ts`, `view-item.ts`, `view-navigation.ts`, `view-actions.ts`, `candidate-view.ts`, `view-json.ts`                  | The candidate view                              |

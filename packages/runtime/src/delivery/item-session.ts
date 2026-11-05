@@ -7,25 +7,9 @@ import { checkContext, checkItem, checkVariables } from "../processing/internal.
 import type { Value } from "../values/index.js";
 import type { DeliveryEvent } from "./events.js";
 import { checkKey, type ItemKey } from "./item-key.js";
-import { ITEM_SESSION_STATUSES } from "./names.js";
 import { type Refusal, refuse } from "./refusal.js";
 import { checkSessionControl, type EffectiveSessionControl } from "./session-control.js";
-
-/**
- * The state of an item session in its lifecycle:
- *
- * | State         | The item …                                                                                         |
- * | ------------- | -------------------------------------------------------------------------------------------------- |
- * | `initial`     | will be delivered and has not been presented                                                       |
- * | `interacting` | is presented: the candidate responds in an attempt, or sees the feedback of the attempt that ended |
- * | `suspended`   | was presented and its candidate session ended, as when the candidate moved to another item         |
- * | `closed`      | allows no further attempt; its responses are fixed                                                 |
- * | `review`      | is presented again after it closed, with its responses fixed                                       |
- * | `solution`    | is presented after it closed, with the correct responses in place of the candidate's               |
- *
- * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
- */
-export type ItemSessionStatus = "initial" | "interacting" | "suspended" | "closed" | "review" | "solution";
+import { ITEM_SESSION_STATUSES, type ItemSessionStatus } from "./session-statuses.js";
 
 /**
  * The state of one item instance for one candidate: its variables, its drafts, its attempts and where it is in its

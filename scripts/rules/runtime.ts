@@ -415,7 +415,7 @@ export const RUNTIME_RULES: readonly Rule[] = [
   {
     rule: "A client cannot send an action of the host: the time, a supplied score or a CAT response.",
     file: ACTION,
-    find: 'if (isRecord(json) && typeof json.type === "string" && HOST_ACTION_TYPES.includes(json.type)) {',
+    find: "if (isRecord(json) && HOST_ACTION_TYPES.some((type) => type === json.type)) {",
     replace: "if (false) {",
     test: DELIVERY_TEST,
   },

@@ -27,16 +27,16 @@ sequenceDiagram
   R-->>B: JSON
 ```
 
-| Export                                                                 | Purpose                                                                              |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `createSessionHost`, `SessionHost`, `SessionHostOptions`               | The session host of exam mode                                                        |
-| `CANDIDATE_ACTION_TYPES`, `EXAM_CLIENT_ACTIONS`, `CandidateActionType` | The client-action policy                                                             |
-| `SessionStore`, `StoredSession`, `SessionSave`                         | The storage of sessions                                                              |
-| `Scheduler`, `FileStore`, `ToolScoreStore`, `ToolScore`                | The scheduler of time-outs, the storage of files, the storage of the scores of tools |
-| `createAssetGate` and the gate's types                                 | The [asset gate](asset-gate.md)                                                      |
-| `StepEvents`, `StepSink`, `SuppliedGrade`, `ForwardOptions`            | What the host does with the events of each step                                      |
-| `createToolScoreIntake`, `ToolScoreIntake`, `ToolScoreIntakeOptions`   | The scores of tool items                                                             |
-| `SYSTEM_CLOCK`                                                         | The clock of the machine                                                             |
+| Export                                                               | Purpose                                                                              |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `createSessionHost`, `SessionHost`, `SessionHostOptions`             | The session host of exam mode                                                        |
+| `EXAM_CLIENT_ACTIONS`, `CandidateActionType`                         | The client-action policy                                                             |
+| `SessionStore`, `StoredSession`, `SessionSave`                       | The storage of sessions                                                              |
+| `Scheduler`, `FileStore`, `ToolScoreStore`, `ToolScore`              | The scheduler of time-outs, the storage of files, the storage of the scores of tools |
+| `createAssetGate` and the gate's types                               | The [asset gate](asset-gate.md)                                                      |
+| `StepEvents`, `StepSink`, `SuppliedGrade`, `ForwardOptions`          | What the host does with the events of each step                                      |
+| `createToolScoreIntake`, `ToolScoreIntake`, `ToolScoreIntakeOptions` | The scores of tool items                                                             |
+| `SYSTEM_CLOCK`                                                       | The clock of the machine                                                             |
 
 ## Quick start
 
@@ -209,7 +209,7 @@ first.
 
 The exam default lists every action of the candidate but `suspend` and `resume`, because the runtime counts suspended time nowhere
 a candidate who could suspend would stop the clock. The host filters `view.actions` through the policy, so the chrome
-never offers such an action. Practice allows every action, and so does a host that passes `CANDIDATE_ACTION_TYPES`.
+never offers such an action. Practice allows every action, and so does a host that passes `CANDIDATE_ACTION_TYPES` of `@assesskit/runtime/delivery/wire`.
 
 A candidate whose profile has breaks (`environment` with `breaks`, on) may also send `suspend` and `resume`: CERT asks that such a
 candidate can pause the assessment to take a break and return without losing a response or incurring a penalty (`A-11`). The

@@ -8,10 +8,10 @@ import type { Value } from "../values/index.js";
 import type { CatSession } from "./cat-session.js";
 import type { DeliveryEvent } from "./events.js";
 import type { ItemSession } from "./item-session.js";
-import { DELIVERY_STATUSES } from "./names.js";
 import { type ItemKey, sameKey, type TestPlan } from "./plan.js";
 import type { Refusal } from "./refusal.js";
 import type { ScoringRequest } from "./scoring.js";
+import { DELIVERY_STATUSES, type DeliveryStatus } from "./session-statuses.js";
 
 /**
  * The version of the format of {@link DeliveryState}, which `deserializeState` reads.
@@ -22,13 +22,6 @@ import type { ScoringRequest } from "./scoring.js";
  * version is refused.
  */
 export const STATE_VERSION = 1;
-
-/**
- * Where a candidate session is: running, suspended or ended.
- *
- * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
- */
-export type DeliveryStatus = "in-progress" | "suspended" | "ended";
 
 /**
  * What a maximum time did when it passed: `closed` the scope, because it does not allow late submission, or left it

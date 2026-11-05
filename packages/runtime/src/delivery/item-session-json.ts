@@ -4,7 +4,7 @@ import type { ItemVariables } from "../processing/index.js";
 import { entriesSchema, type ValueJson, valuesSchema, valuesToJson } from "./entries-json.js";
 import { itemKeySchema } from "./item-key.js";
 import type { ItemSession } from "./item-session.js";
-import { ITEM_SESSION_STATUSES } from "./names.js";
+import { ITEM_SESSION_STATUSES } from "./session-statuses.js";
 
 /** The kinds of variables of a session. */
 type VariableKind = keyof ItemVariables;

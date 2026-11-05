@@ -16,7 +16,7 @@ import type { InteractionDescriptor } from "../interactions/index.js";
 import { checkDescriptor } from "../interactions/internal.js";
 import { PNP_HAZARDS } from "../pnp/index.js";
 import type { Value } from "../values/index.js";
-import { CANDIDATE_ACTION_TYPES } from "./candidate-actions.js";
+import { CANDIDATE_ACTION_TYPES } from "./action.js";
 import type {
   CandidateItem,
   CandidateView,
@@ -32,7 +32,7 @@ import type {
 import { entriesSchema, valuesSchema, valuesToJson } from "./entries-json.js";
 import { checkKey, type ItemKey, itemKeySchema } from "./item-key.js";
 import { nodeSchema, nodesSchema } from "./json-checks.js";
-import { DELIVERY_STATUSES, ITEM_SESSION_STATUSES } from "./names.js";
+import { DELIVERY_STATUSES, ITEM_SESSION_STATUSES } from "./session-statuses.js";
 import { supportViewSchema } from "./support-json.js";
 
 const SCOPES: readonly TimerView["scope"][] = ["item", "section", "part", "test"];
