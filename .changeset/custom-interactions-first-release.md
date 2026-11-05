@@ -14,3 +14,5 @@ shape, direction and order, with the record `{ strokes, mistakes }` as the respo
 `/node` gives the files of a module, MathLive's fonts and their license with it, keyed by their paths under `modules/`, the
 folder of the guides; a tool that keeps the modules elsewhere renames the keys of the `Map`. An option that a function does
 not take is refused, whatever its type.
+
+The package root exports `CallOptions`, which its signatures use, so a host never imports the runtime to name it.

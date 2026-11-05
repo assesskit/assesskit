@@ -126,3 +126,6 @@ LTI and Caliper are in [interopkit](https://github.com/interopkit/interopkit) as
 (`player`), the option `onStep` and `createToolScoreIntake` with `ToolScoreStore` (`server`), and `buildSessionScore`
 (`scoring`). The mapping of delivery events to Caliper events, the outbox and the jobs that publish a grade are in the
 example `examples/player/lms-integration`. `HostApplyOptions.scoredBy` is a non-empty string.
+
+The package root exports the `@assesskit/runtime` types that the player's own signatures use, and `AssesskitError` as a value,
+so a host that installs only the player never imports the runtime to name them.
