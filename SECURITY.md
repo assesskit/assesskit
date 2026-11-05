@@ -396,10 +396,10 @@ Actions of a client (`ActionLimits`; option `limits` of `readCandidateAction`):
 
 Regular expressions (`XsdRegexLimits`; option `limits` of `compileXsdRegex`, whose defaults `qti-pattern-match` uses):
 
-| Limit       | Default | Unit   | Largest example | Applies to                                                           |
-| ----------- | ------- | ------ | --------------- | -------------------------------------------------------------------- |
-| `maxStates` | 100,000 | states | none            | The automaton of a pattern, once its counted repeats are expanded.   |
-| `maxDepth`  | 100     | levels | none            | The nesting of groups and character class subtractions in a pattern. |
+| Limit       | Default | Unit   | Largest example | Applies to                                                                                                                      |
+| ----------- | ------- | ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `maxStates` | 100,000 | states | none            | The automaton of a pattern, once its counted repeats are expanded; the default also bounds the patterns of a text key together. |
+| `maxDepth`  | 100     | levels | none            | The nesting of groups and character class subtractions in a pattern.                                                            |
 
 Scoring operators (`OperatorLimits`; option `limits` of `createScoringOperators` and of `compareMathSteps`). A response past a
 limit is unreadable, never an error: the operator scores it NULL, `readable` says false and a step check is null; only a key past
@@ -415,7 +415,8 @@ a limit throws.
 Keys (`DEFAULT_KEY_LIMITS` of `keys`, fixed for the operators and `compileScoring`): `entries`, 1,000 entries of one key
 (keys, options, pairs, choices, answers, their texts and patterns together, units, tiers, intervals, components, areas, and
 the coordinates of the areas in fours), and `patternLength`, 1,000 characters of one pattern; a key past either is a
-`SecurityError`. `compileScoring` takes `responses`, 256 responses of an item; it counts the entries of a key before it reads
+`SecurityError`. The patterns of a text key together have at most the states of one pattern, the 100,000 of `maxStates`, which
+`text-equivalent` keeps while it scores; more is a `SecurityError` with `limit` `maxStates`. `compileScoring` takes `responses`, 256 responses of an item; it counts the entries of a key before it reads
 it. `compareMathSteps` takes at most `maxSteps` lines, 200 by default, and refuses more with a `SecurityError`.
 
 Item formats (`ItemFormatLimits`; option `limits` of `readGift` and `writeGift`):
@@ -450,39 +451,39 @@ attributes that a reader builds, not the bytes: 300,000 paragraphs of 4 bytes ta
 paragraphs of 31 bytes with three attributes each take 200, so `maxNodes` and `maxBytes` are set together. The budget is 256 MiB,
 and no reader peaks above 224.
 
-| Reader                  | Worst input within the limits                                                           | Least heap (MiB) |
-| ----------------------- | --------------------------------------------------------------------------------------- | ---------------: |
-| `parseXml`              | 300,000 nodes                                                                           |               56 |
-| `parseXml`              | 10 MiB of elements with 256 attributes each                                             |               96 |
-| `parseXml`              | One text of 10 MiB                                                                      |               16 |
-| `parseXml`              | 2,400,000 nodes, stopped at the limit                                                   |               64 |
-| `readAsi` of an item    | 300,000 nodes; the most choices of one interaction; or 300,000 elements of 3 attributes |       104 to 200 |
-| `readAsi` of a test     | The most item references that the limits hold                                           |              136 |
-| `readManifest`          | The most resources that 10 MiB hold                                                     |              200 |
-| `readResults`           | The most item results with an outcome variable that the limits hold                     |              144 |
-| `readUsageData`         | The most statistics that the limits hold                                                |              128 |
-| `validateAsi`           | An issue at every node of an item of the limits, stopped at 1,000 issues                |              120 |
-| `readPackage`           | 100,000 entries                                                                         |               32 |
-| `readPackage`           | A manifest of 10 MiB deflated at the ratio the limit allows                             |              200 |
-| `file` of a package     | A file of 64 MiB deflated at the ratio the limit allows                                 |               16 |
-| `readPackageFile`       | A ZIP file of 2 GiB with 100,000 entries, and a file of 64 MiB deflated, read from it   |               32 |
-| `readPackageFile`       | A ZIP file whose central directory has 512 bytes for each of 100,000 entries            |               80 |
-| planning of a test      | A selection with replacement of 9,999 items                                             |               16 |
-| `readResultsJson`       | One variable of a million values, the most that `maxResultSize` holds                   |              136 |
-| `readCandidateAction`   | The most response entries, or the most integers of one response, that fit               |       144 to 152 |
-| `readCandidateAction`   | A settings list of a million names, refused                                             |               24 |
-| `compileXsdRegex`       | 100,000 states, matched against 100,000 characters                                      |               64 |
-| `readModuleResolution`  | 65,536 characters                                                                       |               16 |
-| `createCatRestHandler`  | A body of 32 MiB and a million tokens; or two million tokens, refused                   |        56 and 40 |
-| `expression-equivalent` | A key and a response of 2,000 characters, sums of 1,000 terms, at 24 points             |               16 |
-| `text-equivalent`       | 1,000 answers whose patterns every word matches, and a response of 1,000 words          |               24 |
-| `hotspot-matching`      | 1,000 areas and 1,000 points, each point in every area                                  |               24 |
-| `compareMathSteps`      | 200 lines of 2,000 characters                                                           |               32 |
-| `compileScoring`        | 256 orders of 1,000 choices scored per position, a condition for each choice            |              224 |
-| `readGift`              | 813 questions of 100 answers, or 4,000 of two: the most elements of the items           |        48 and 72 |
-| `readGift`              | 47 essays of 4,096 tags of HTML each, to the limit of elements                          |               48 |
-| `readGift`              | 8,000 questions of two answers, stopped at the limit of elements                        |               48 |
-| `readMoodleXml`         | 4,000 questions of two answers, also padded to the most nodes of the tree               |        56 and 96 |
+| Reader                  | Worst input within the limits                                                               | Least heap (MiB) |
+| ----------------------- | ------------------------------------------------------------------------------------------- | ---------------: |
+| `parseXml`              | 300,000 nodes                                                                               |               56 |
+| `parseXml`              | 10 MiB of elements with 256 attributes each                                                 |               96 |
+| `parseXml`              | One text of 10 MiB                                                                          |               16 |
+| `parseXml`              | 2,400,000 nodes, stopped at the limit                                                       |               64 |
+| `readAsi` of an item    | 300,000 nodes; the most choices of one interaction; or 300,000 elements of 3 attributes     |       104 to 200 |
+| `readAsi` of a test     | The most item references that the limits hold                                               |              136 |
+| `readManifest`          | The most resources that 10 MiB hold                                                         |              200 |
+| `readResults`           | The most item results with an outcome variable that the limits hold                         |              144 |
+| `readUsageData`         | The most statistics that the limits hold                                                    |              128 |
+| `validateAsi`           | An issue at every node of an item of the limits, stopped at 1,000 issues                    |              120 |
+| `readPackage`           | 100,000 entries                                                                             |               32 |
+| `readPackage`           | A manifest of 10 MiB deflated at the ratio the limit allows                                 |              200 |
+| `file` of a package     | A file of 64 MiB deflated at the ratio the limit allows                                     |               16 |
+| `readPackageFile`       | A ZIP file of 2 GiB with 100,000 entries, and a file of 64 MiB deflated, read from it       |               32 |
+| `readPackageFile`       | A ZIP file whose central directory has 512 bytes for each of 100,000 entries                |               80 |
+| planning of a test      | A selection with replacement of 9,999 items                                                 |               16 |
+| `readResultsJson`       | One variable of a million values, the most that `maxResultSize` holds                       |              136 |
+| `readCandidateAction`   | The most response entries, or the most integers of one response, that fit                   |       144 to 152 |
+| `readCandidateAction`   | A settings list of a million names, refused                                                 |               24 |
+| `compileXsdRegex`       | 100,000 states, matched against 100,000 characters                                          |               64 |
+| `readModuleResolution`  | 65,536 characters                                                                           |               16 |
+| `createCatRestHandler`  | A body of 32 MiB and a million tokens; or two million tokens, refused                       |        56 and 40 |
+| `expression-equivalent` | A key and a response of 2,000 characters, sums of 1,000 terms, at 24 points                 |               16 |
+| `text-equivalent`       | 1,000 answers whose patterns of 98 states every word matches, and a response of 1,000 words |               32 |
+| `hotspot-matching`      | 1,000 areas and 1,000 points, each point in every area                                      |               24 |
+| `compareMathSteps`      | 200 lines of 2,000 characters                                                               |               32 |
+| `compileScoring`        | 256 orders of 1,000 choices scored per position, a condition for each choice                |              224 |
+| `readGift`              | 813 questions of 100 answers, or 4,000 of two: the most elements of the items               |        48 and 72 |
+| `readGift`              | 47 essays of 4,096 tags of HTML each, to the limit of elements                              |               48 |
+| `readGift`              | 8,000 questions of two answers, stopped at the limit of elements                            |               48 |
+| `readMoodleXml`         | 4,000 questions of two answers, also padded to the most nodes of the tree                   |        56 and 96 |
 
 The bytes of a file and the central directory are outside the heap, so the test bounds the resident memory that these readings
 raise at 256 MiB, and they raise 110 to 220: inflating a deflated entry holds the pieces and the joined bytes at once. The

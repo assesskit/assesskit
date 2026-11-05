@@ -72,7 +72,8 @@ response earns the credit when it matches the key or that value.
 | Characters of a pattern                                                                                                    | `patternLength`, UTF-16 code units |   1,000 | `SecurityError` with `limit` `patternLength` |
 
 An operator reads its key within these limits, so that every scorer of an item reads the same items, and `compileScoring` holds
-an item to them ([scoring](scoring.md#limits)).
+an item to them ([scoring](scoring.md#limits)). The patterns of a `text` key together have at most the 100,000 states that
+`maxStates` of `DEFAULT_XSD_REGEX_LIMITS` allows one pattern ([operators](operators.md#limits)).
 
 ## Errors
 

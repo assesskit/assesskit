@@ -769,6 +769,20 @@ describe("text-equivalent", () => {
     expect(share(score(built, text("jakarta")))).toBe(0);
   });
 
+  it("refuses a key whose patterns need more than maxStates states together, as one pattern may", () => {
+    const keyOf = (patterns: readonly string[]): OperatorCall => ({
+      operator: "text-equivalent",
+      key: { kind: "text", answers: patterns.map((pattern) => ({ texts: [], patterns: [pattern] })) },
+    });
+    // `a{49999}` takes 49,999 states and `.`, 1: two of them fill the 100,000 states of one pattern.
+    expect(() => call(keyOf(["a{49999}", "a{49999}", "a", "."]))).not.toThrow();
+    for (const patterns of [["a{49999}", "a{49999}", "a", ".", "b"], ["a{100001}"]]) {
+      expect(() => call(keyOf(patterns))).toThrow(
+        expect.objectContaining({ name: "SecurityError", limit: "maxStates", maximum: 100_000 }),
+      );
+    }
+  });
+
   it("measures a credit tier's edit distance within maxEditBand, and a response within maxInputLength", () => {
     const built = call({
       operator: "text-equivalent",

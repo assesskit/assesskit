@@ -664,8 +664,9 @@ export const READINGS = {
       ),
   },
   /**
-   * `text-equivalent` on a key of as many answers as a key holds, each a pattern that every word matches, and a response of
-   * `maxInputLength` characters of one-letter words: a matching of 1,000 answers to 1,000 words.
+   * `text-equivalent` on a key of as many answers as a key holds, each a pattern that every word matches, of 98 states, so
+   * that the patterns hold nearly the 100,000 states that they share, and a response of `maxInputLength` characters of
+   * one-letter words: a matching of 1,000 answers to 1,000 words.
    */
   operatorText: {
     input: () => "a ".repeat(DEFAULT_OPERATOR_LIMITS.maxInputLength / 2),
@@ -676,7 +677,7 @@ export const READINGS = {
           operator: "text-equivalent",
           key: {
             kind: "text",
-            answers: Array.from({ length: DEFAULT_KEY_LIMITS.entries }, () => ({ texts: [], patterns: [".*"] })),
+            answers: Array.from({ length: DEFAULT_KEY_LIMITS.entries }, () => ({ texts: [], patterns: ["a{0,49}"] })),
             count: DEFAULT_KEY_LIMITS.entries,
             scheme: "words",
           },
@@ -705,7 +706,6 @@ export const READINGS = {
         [{ cardinality: "multiple", baseType: "point", values: points }],
       ),
   },
-  /** `compareMathSteps` on 200 lines, its default `maxSteps`, of `maxInputLength` characters each. */
   /**
    * `compileScoring` on as many responses as the limits of keys allow, each an order of as many choices as a key holds,
    * scored per position: the scheme that writes the most rules for an entry, a condition for each choice.
@@ -763,6 +763,7 @@ export const READINGS = {
     input: () => repeated("<quiz>", MOODLE_XML_PADDED, GIFT_SHORT_QUESTIONS, "</quiz>"),
     read: (xml: Uint8Array) => `${readMoodleXml(xml).items.length} items`,
   },
+  /** `compareMathSteps` on 200 lines, its default `maxSteps`, of `maxInputLength` characters each. */
   mathSteps: {
     input: () =>
       Array.from({ length: 200 }, () => "x+".repeat(DEFAULT_OPERATOR_LIMITS.maxInputLength / 2 - 1).concat("x")),

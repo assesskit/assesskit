@@ -60,11 +60,36 @@ export function compileXsdRegex(pattern: string, options: CompileXsdRegexOptions
   checkString(pattern, "The pattern");
   const { maxStates, maxDepth } =
     parseWith(compileXsdRegexOptionsSchema, options, "The options object").limits ?? DEFAULT_XSD_REGEX_LIMITS;
-  const tree = new PatternParser(pattern, maxDepth).parse();
-  if (countStates(tree, maxStates) > maxStates) {
+  const compiled = compileWithin(pattern, maxStates, maxDepth);
+  if (compiled === undefined) {
     throw new DataError(
       `The pattern ${JSON.stringify(pattern)} needs more than ${maxStates} states once its repeats are expanded.`,
     );
   }
-  return buildMatcher(tree);
+  return compiled.pattern;
+}
+
+/** Compiles a pattern with the count of its states, or returns `undefined` when it needs more than `maxStates`. */
+function compileWithin(
+  pattern: string,
+  maxStates: number,
+  maxDepth: number,
+): { readonly pattern: XsdPattern; readonly states: number } | undefined {
+  const tree = new PatternParser(pattern, maxDepth).parse();
+  const states = countStates(tree, maxStates);
+  return states > maxStates ? undefined : { pattern: buildMatcher(tree), states };
+}
+
+/**
+ * Compiles a pattern as {@link compileXsdRegex} does with its default `maxDepth`, within `maxStates`, and counts its states,
+ * for a caller that bounds the states of several patterns together.
+ *
+ * @returns The pattern and its states, or `undefined` when it needs more than `maxStates`.
+ * @throws `DataError` when the pattern is not in the dialect or is nested deeper than `maxDepth`.
+ */
+export function compileCountedXsdRegex(
+  pattern: string,
+  maxStates: number,
+): { readonly pattern: XsdPattern; readonly states: number } | undefined {
+  return compileWithin(pattern, maxStates, DEFAULT_XSD_REGEX_LIMITS.maxDepth);
 }

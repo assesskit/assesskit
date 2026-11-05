@@ -1,4 +1,6 @@
-import { type CompileXsdRegexOptions, compileXsdRegex, type Value, type XsdPattern } from "../values/index.js";
+import { SecurityError } from "../errors.js";
+import { DEFAULT_XSD_REGEX_LIMITS, type Value, type XsdPattern } from "../values/index.js";
+import { compileCountedXsdRegex } from "../values/internal.js";
 import { countLength } from "./count-length.js";
 import { boundedEditDistance } from "./edit-distance.js";
 import type { OperatorLimits } from "./limits.js";
@@ -13,8 +15,12 @@ import { collapseWhiteSpace, splitWhiteSpace } from "./white-space.js";
 /** The Halfwidth and Fullwidth Forms block. */
 const WIDTH_FORMS = /[\uff00-\uffef]/gu;
 const NONSPACING_MARK = /\p{Mn}/gu;
-/** The options of `compileXsdRegex` for a key's patterns: its defaults. */
-const PATTERN_OPTIONS: CompileXsdRegexOptions = {};
+/**
+ * The most states of the automata of a key's patterns together, as of one pattern. The patterns of a key are kept together
+ * while it scores, and a pattern of 100,000 states takes about 5 MiB of heap: 1,000 such patterns, which the limits of a key
+ * allow otherwise, would take 5 GiB.
+ */
+const { maxStates: KEY_PATTERN_STATES } = DEFAULT_XSD_REGEX_LIMITS;
 
 /**
  * Normalizes a text as `text-equivalent` does, in this order: `form`; `foldWidth`, which maps the Halfwidth and Fullwidth
@@ -75,6 +81,7 @@ function codePointsOf(text: string): number[] {
  * @throws `DataError` for a `spelling` other than `"exact"`, which no source defines, a count above the answers, an answer
  *   with no text or pattern, no points to earn, a pattern that does not compile, or a `below` or `above` effect without its
  *   bound.
+ * @throws `SecurityError` when the patterns of the key need more than `maxStates` of `DEFAULT_XSD_REGEX_LIMITS` together.
  */
 export function prepareText(options: OptionsOf<"text-equivalent">, prefix: string): PreparedText {
   const { key } = options;
@@ -89,8 +96,25 @@ export function prepareText(options: OptionsOf<"text-equivalent">, prefix: strin
       `the count ${key.count} is above the ${key.answers.length} answers.`,
     );
   checkLengthRule(key.length, pathOf(prefix, "key.length"));
+  let states = 0;
+  const compile = (pattern: string, path: string): XsdPattern => {
+    let compiled: ReturnType<typeof compileCountedXsdRegex>;
+    try {
+      compiled = compileCountedXsdRegex(pattern, KEY_PATTERN_STATES - states);
+    } catch (error) {
+      throw optionsError(path, `the pattern does not compile: ${(error as Error).message}`, { cause: error });
+    }
+    if (compiled === undefined)
+      throw new SecurityError(
+        `The patterns of the key at ${pathOf(prefix, "key")} need more than ${KEY_PATTERN_STATES} states together, over the limit maxStates.`,
+        "maxStates",
+        KEY_PATTERN_STATES,
+      );
+    states += compiled.states;
+    return compiled.pattern;
+  };
   const answers = key.answers.map((answer, index) =>
-    prepareAnswer(answer, key, pathOf(prefix, `key.answers[${index}]`)),
+    prepareAnswer(answer, key, pathOf(prefix, `key.answers[${index}]`), compile),
   );
   answers.sort((a, b) => b.points - a.points);
   const maximum = answers.slice(0, key.count).reduce((total, answer) => total + answer.points, 0);
@@ -111,18 +135,20 @@ function checkLengthRule(rule: TextKeyData["length"], path: string): void {
   });
 }
 
-function prepareAnswer(answer: TextKeyData["answers"][number], key: TextKeyData, path: string): PreparedAnswer {
+/**
+ * Prepares an answer of a text key.
+ *
+ * @param compile - Compiles a pattern of the key, within the states that the key's patterns share.
+ */
+function prepareAnswer(
+  answer: TextKeyData["answers"][number],
+  key: TextKeyData,
+  path: string,
+  compile: (pattern: string, path: string) => XsdPattern,
+): PreparedAnswer {
   if (answer.texts.length === 0 && answer.patterns.length === 0)
     throw optionsError(path, "an answer has a text or a pattern.");
-  const patterns = answer.patterns.map((pattern, index) => {
-    try {
-      return compileXsdRegex(pattern, PATTERN_OPTIONS);
-    } catch (error) {
-      throw optionsError(`${path}.patterns[${index}]`, `the pattern does not compile: ${(error as Error).message}`, {
-        cause: error,
-      });
-    }
-  });
+  const patterns = answer.patterns.map((pattern, index) => compile(pattern, `${path}.patterns[${index}]`));
   const normalized = answer.texts.map((text) => normalizeText(text, key.normalization));
   const numbers = key.numericEquivalence ? normalized.flatMap((text) => numberOf(text) ?? []) : [];
   return {

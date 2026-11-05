@@ -14,3 +14,4 @@ export { primitiveKey } from "./primitive-key.js";
 export { wireValueSchema } from "./wire.js";
 export { xmlTokens } from "./xml-tokens.js";
 export { isXsdDate } from "./xsd-date-time.js";
+export { compileCountedXsdRegex } from "./xsd-regex.js";

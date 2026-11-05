@@ -178,9 +178,10 @@ const READINGS: readonly {
     outcome: '{"cardinality":"single","baseType":"float","value":1}',
   },
   {
-    title: "matches the most words of a text response to the most answers of a key",
+    title:
+      "matches the most words of a text response to the most answers of a key, whose patterns hold the most states",
     name: "operatorText",
-    heapMiB: 48,
+    heapMiB: 64,
     outcome: '{"cardinality":"single","baseType":"float","value":1}',
   },
   {
