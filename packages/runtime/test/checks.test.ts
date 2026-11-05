@@ -506,6 +506,26 @@ describe("the names of a property that reach the prototype", () => {
       expect.objectContaining({ name: "SecurityError", limit: "maxSize", maximum: 5 }),
     );
   });
+
+  it("reads no more of a wide array or object than the limit, so that a refusal costs the limit and not the input", () => {
+    let reads = 0;
+    const counted = <TTarget extends object>(target: TTarget): TTarget =>
+      new Proxy(target, {
+        get: (object, property, receiver) => {
+          if (typeof property === "string" && property !== "length") reads += 1;
+          return Reflect.get(object, property, receiver);
+        },
+      });
+    const list = counted(Array.from({ length: 10_000 }, () => 1));
+    const record = counted(Object.fromEntries(Array.from({ length: 10_000 }, (_, index) => [`k${index}`, 1])));
+    for (const wide of [list, record]) {
+      reads = 0;
+      expect(() => checkJsonInput({ wide }, "The input", 100, "maxSize")).toThrow(
+        expect.objectContaining({ name: "SecurityError", limit: "maxSize" }),
+      );
+      expect(reads).toBeLessThanOrEqual(100);
+    }
+  });
 });
 
 describe("mapSchema", () => {

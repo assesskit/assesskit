@@ -266,6 +266,20 @@ export const RUNTIME_RULES: readonly Rule[] = [
     test: DELIVERY_TEST,
   },
   {
+    rule: "checkJsonInput reads no more of a wide array than its limit before it refuses it.",
+    file: CHECKS,
+    find: "    if (pending.length > room) return;\n    pending.push(member);",
+    replace: "    pending.push(member);",
+    test: CHECKS_TEST,
+  },
+  {
+    rule: "checkJsonInput reads no more of a wide object than its limit before it refuses it.",
+    file: CHECKS,
+    find: "    if (pending.length + length > room) break;\n",
+    replace: "",
+    test: CHECKS_TEST,
+  },
+  {
     rule: "Every reader refuses the three names that reach the prototype, and not only the first.",
     file: CHECKS,
     find: 'const RESERVED_KEYS: readonly string[] = ["__proto__", "prototype", "constructor"];',

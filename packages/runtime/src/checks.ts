@@ -37,12 +37,28 @@ function reservedKeyProblem(record: Readonly<Record<string, unknown>>): string |
   return name === undefined ? undefined : `holds a property ${JSON.stringify(name)}, a name that reaches the prototype`;
 }
 
-/** Puts the values of a record of JSON on the list to walk, and returns the length of its property names. */
-function pushProperties(record: Readonly<Record<string, unknown>>, pending: unknown[]): number {
-  let length = 0;
-  for (const [property, member] of Object.entries(record)) {
-    length += property.length;
+/**
+ * Puts the members of an array of JSON on the list to walk while the list holds at most `room` values. Each value on the list
+ * counts at least 1, so a list beyond the room passes the limit already: a wide array is never listed whole.
+ */
+function pushMembers(list: readonly unknown[], pending: unknown[], room: number): void {
+  for (const member of list) {
+    if (pending.length > room) return;
     pending.push(member);
+  }
+}
+
+/**
+ * Puts the values of a record of JSON on the list to walk, one property at a time, while the list and the names hold at most
+ * `room`, and returns the length of the names listed: a wide object is never copied whole, as `Object.entries` would.
+ */
+function pushProperties(record: Readonly<Record<string, unknown>>, pending: unknown[], room: number): number {
+  let length = 0;
+  for (const property in record) {
+    if (pending.length + length > room) break;
+    if (!Object.hasOwn(record, property)) continue;
+    length += property.length;
+    pending.push(record[property]);
   }
   return length;
 }
@@ -67,11 +83,11 @@ export function checkJsonInput(json: unknown, label: string, limit = Number.POSI
     const value = pending.pop();
     size += 1;
     if (typeof value === "string") size += value.length;
-    else if (Array.isArray(value)) for (const member of value) pending.push(member);
+    else if (Array.isArray(value)) pushMembers(value, pending, limit - size);
     else if (isRecord(value)) {
       const problem = reservedKeyProblem(value);
       if (problem !== undefined) throw new DataError(`${label} ${problem}.`);
-      size += pushProperties(value, pending);
+      size += pushProperties(value, pending, limit - size);
     }
   }
   if (size > limit)
