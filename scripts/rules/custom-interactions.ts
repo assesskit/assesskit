@@ -9,13 +9,6 @@ const CHARACTER = "packages/custom-interactions/src/write-character-module.ts";
 /** The rules of the custom interactions that decide what a candidate's response is, each with the test that guards it. */
 export const CUSTOM_INTERACTION_RULES: readonly Rule[] = [
   {
-    rule: "The files of a module go below a folder of the package in normal form, never outside the package.",
-    file: "packages/custom-interactions/src/node/read-module-files.ts",
-    find: "if (!isPackageFolder(directory)) {",
-    replace: 'if (!isPackageFolder("")) {',
-    test: "packages/custom-interactions/test/node.test.ts",
-  },
-  {
     rule: "The shortcut log writes \\log, so that the argument of a logarithm is not read as its base.",
     file: "packages/custom-interactions/src/math-entry/shortcuts.ts",
     find: '["log", "\\\\log"],',

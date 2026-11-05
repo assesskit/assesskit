@@ -38,22 +38,19 @@ describe("readModuleFiles", () => {
     ).toBe(true);
   });
 
-  it("puts the files below another folder of the package, or at its root", async () => {
-    expect([...(await readModuleFiles("math-entry", { directory: "items/shared/" })).keys()][0]).toBe(
-      "items/shared/math-entry.js",
-    );
-    expect([...(await readModuleFiles("math-entry", { directory: "" })).keys()][0]).toBe("math-entry.js");
+  it("puts the files below modules/, which a tool that keeps them elsewhere renames", async () => {
+    const files = await readModuleFiles("math-entry");
+    expect([...files.keys()].every((path) => path.startsWith("modules/math-entry"))).toBe(true);
+    const moved = new Map([...files].map(([path, bytes]) => [path.replace(/^modules\//u, "items/shared/"), bytes]));
+    expect([...moved.keys()][0]).toBe("items/shared/math-entry.js");
   });
 
-  it("refuses a name that is not an interaction, a folder outside normal form and an unknown option", async () => {
+  it("refuses a name that is not an interaction and an unknown option", async () => {
     await expect(readModuleFiles(JSON.parse('"choice"'))).rejects.toThrow(
       new DataError('The name of an interaction must be one of "math-entry", "stroke-writing", found "choice".'),
     );
-    for (const directory of ["/modules/", "modules", "../modules/", "modules/../", "a\\b/", "./"]) {
-      await expect(readModuleFiles("math-entry", { directory }), directory).rejects.toThrow(DataError);
-    }
-    await expect(readModuleFiles("math-entry", JSON.parse('{"folder":"x/"}'))).rejects.toThrow(
-      'The options has the properties "directory" and "signal", found "folder".',
+    await expect(readModuleFiles("math-entry", JSON.parse('{"directory":"x/"}'))).rejects.toThrow(
+      'The options has the property "signal", found "directory".',
     );
     await expect(readModuleFiles("math-entry", JSON.parse("null"))).rejects.toThrow(DataError);
     await expect(readModuleFiles("math-entry", { signal: JSON.parse("{}") })).rejects.toThrow(DataError);

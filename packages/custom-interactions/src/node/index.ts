@@ -3,4 +3,4 @@
  *
  * @module @assesskit/custom-interactions/node
  */
-export { type ReadModuleFilesOptions, readModuleFiles } from "./read-module-files.js";
+export { readModuleFiles } from "./read-module-files.js";

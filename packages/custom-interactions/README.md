@@ -38,11 +38,11 @@ flowchart LR
 
 ## API
 
-| Import                                     | Contents                                                                                                         |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `@assesskit/custom-interactions`           | `PCI_TYPE_IDENTIFIERS`, the type identifier of each interaction by its name, and `InteractionName`               |
-| `@assesskit/custom-interactions/node`      | `readModuleFiles`, `ReadModuleFilesOptions`: the files of an interaction's module, by their paths in the package |
-| `@assesskit/custom-interactions/modules/*` | The built modules and the files beside them, for a tool that copies them                                         |
+| Import                                     | Contents                                                                                           |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `@assesskit/custom-interactions`           | `PCI_TYPE_IDENTIFIERS`, the type identifier of each interaction by its name, and `InteractionName` |
+| `@assesskit/custom-interactions/node`      | `readModuleFiles`: the files of an interaction's module, by their paths in the package             |
+| `@assesskit/custom-interactions/modules/*` | The built modules and the files beside them, for a tool that copies them                           |
 
 ## Supported
 
