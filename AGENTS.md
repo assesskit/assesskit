@@ -146,7 +146,8 @@ that the player needs and the runtime lacks is a change in the runtime, with its
   `scripts/asi-table.ts` imports only types, through `asi/internal.ts`. A script downloads through
   `scripts/download.ts`, which reports each retry on the standard error.
 - Dependencies are pinned to exact versions, development ones too; a runtime dependency has its row in
-  [SECURITY.md](SECURITY.md#runtime-dependencies).
+  [SECURITY.md](SECURITY.md#runtime-dependencies). A version is installed only when it is at least 3 days old:
+  `pnpm-workspace.yaml` sets `minimumReleaseAge: 4320`, which pnpm checks against the lock file on every install.
 - The player gets `AssesskitError` and `DataError` from `@assesskit/runtime/errors` and its checks from
   `@assesskit/runtime/checks`, never from the root of the runtime, which holds only the random number generator. Its browser folders take the wire
   forms of views and actions from `@assesskit/runtime/delivery/wire` and only types from `@assesskit/runtime/delivery`, whose
