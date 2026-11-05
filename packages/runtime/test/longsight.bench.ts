@@ -14,7 +14,8 @@ import {
   validateAssessmentItem,
 } from "@longsightgroup/qti3-core";
 import { expect, test } from "vitest";
-import { applyItemAction, type ItemSessionContext, presentItem, startItemSession } from "../src/delivery/internal.js";
+import type * as ItemSteps from "../src/delivery/internal.js";
+import type { ItemSessionContext } from "../src/delivery/internal.js";
 import { compareRow, LONGSIGHT_BUDGETS } from "./budgets.js";
 import { EXAMPLES } from "./corpus-items.js";
 import { corpusCases } from "./differential/cases.js";
@@ -43,8 +44,13 @@ import {
 // examples for items, and a fixed test of choice items for a submission with outcome processing. Longsight's tests
 // have a fixed order, individual submission and the sum of the scores, so the test is that, and the runtime's own
 // benchmark of selection, ordering and many rules stands alone in delivery.bench.ts.
-// The item session steps are those of the sources, which no entry of the package exports: the engine runs them. The reader, the
-// validator and the engine of the test are the build.
+// Every row times the build, which `pnpm bench` makes first: the reader, the validator and the engine of the test by name,
+// and the item session steps, which no entry of the package exports, by the path of their file in it. The sources would run
+// through Vite's rewrite of their imports, which makes them about 1.7 times slower than the code that ships.
+
+/** The file of the build that holds the item session steps; a path that is not a literal, so the types come from the sources. */
+const ITEM_STEPS = new URL("../dist/delivery/internal.js", import.meta.url).href;
+const { applyItemAction, presentItem, startItemSession }: typeof ItemSteps = await import(ITEM_STEPS);
 
 /** An example item that both implementations read and score, with the responses the oracle takes as correct. */
 interface Subject extends ItemCase {
