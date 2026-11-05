@@ -905,13 +905,23 @@ describe("extended text", () => {
     expect(again.find("[role=textbox]").innerHTML).toBe("<p>one two three \u{1f600}</p>");
   });
 
-  it("shows an XHTML answer of more nodes than a call of the engine takes as arguments", () => {
+  // Chromium takes about 123,000 arguments in a call, fewer than the other engines, and the answers below have more. Each holds
+  // one kind of node, the fewest that go over the limit: they show the two places where the editor appends the nodes it reads, an
+  // element and the area, and take seconds in Firefox, which builds nodes more slowly than the others.
+  const OverTheLimit = 150_000;
+
+  it("shows an XHTML paragraph of more nodes than a call of the engine takes as arguments", () => {
     const scene = mountScene(declare("single", "string"), Body('format="xhtml"'));
-    const lines = 200_000;
-    scene.setValue("R", buildSingle("string", `<p>${"a<br/>".repeat(lines)}</p>${"<p>b</p>".repeat(lines)}`));
+    scene.setValue("R", buildSingle("string", `<p>${"<br/>".repeat(OverTheLimit)}</p>`));
     const area = scene.find("[role=textbox]");
-    expect(area.childElementCount).toBe(lines + 1);
-    expect(area.firstElementChild?.childElementCount).toBe(lines);
+    expect(area.childElementCount).toBe(1);
+    expect(area.firstElementChild?.childElementCount).toBe(OverTheLimit);
+  });
+
+  it("shows an XHTML answer of more paragraphs than a call of the engine takes as arguments", () => {
+    const scene = mountScene(declare("single", "string"), Body('format="xhtml"'));
+    scene.setValue("R", buildSingle("string", "<p/>".repeat(OverTheLimit)));
+    expect(scene.find("[role=textbox]").childElementCount).toBe(OverTheLimit);
   });
 
   it("formats the selected text with the buttons of the toolbar", async () => {
