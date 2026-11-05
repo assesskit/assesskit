@@ -273,6 +273,10 @@ describe("buildOperatorCall", () => {
     expect(error).toBeInstanceOf(SecurityError);
     expect((error as SecurityError).limit).toBe("patternLength");
     expect(() => expression({ expression: "x+".repeat(1000).concat("x") })).toThrow(SecurityError);
+    const signs = "1".concat("\\pm1".repeat(5));
+    expect(() => expression({ expression: signs, form: "solution-set" })).toThrow(
+      expect.objectContaining({ name: "SecurityError", limit: "maxSolutions" }),
+    );
   });
 });
 
@@ -492,6 +496,8 @@ describe("expression-equivalent", () => {
     for (const response of [null, text("  \\, \\quad~"), text("\\text{x}"), text("x".repeat(2001)), text(deep)]) {
       expect(score(built, response)).toBeNull();
     }
+    expect(score(built, text("\\pm x"))).toBeNull();
+    expect(score(built, text("x,x"))).toBeNull();
     const roots = expression({ expression: "x=1", form: "solution-set" });
     expect(score(roots, text(Array.from({ length: 17 }, () => "\\pm1").join(",")))).toBeNull();
   });
@@ -648,6 +654,16 @@ describe("compareMathSteps", () => {
     expect(compareMathSteps(["2x=4", "x+1"]).map((check) => check.equivalent)).toStrictEqual([null, false]);
   });
 
+  it("checks values against the one variable of the line before, or against its values", () => {
+    const checks = (steps: readonly string[]) => compareMathSteps(steps).map((check) => check.equivalent);
+    expect(checks(["x^2=4", "\\pm2"])).toStrictEqual([null, true]);
+    expect(checks(["x^2-4", "2,-2"])).toStrictEqual([null, true]);
+    expect(checks(["x^2-4", "x=3"])).toStrictEqual([null, false]);
+    expect(checks(["x+y=4", "2,2"])).toStrictEqual([null, null]);
+    expect(checks(["x^2=4", "x=\\pm y"])).toStrictEqual([null, null]);
+    expect(checks(["x=2,x=3", "3,2", "x=4"])).toStrictEqual([null, true, false]);
+  });
+
   it("takes the options of the reader and the limits", () => {
     expect(compareMathSteps(["2{,}5x=5", "x=2"], { decimalSeparator: "," })[1]?.equivalent).toBe(true);
     expect(compareMathSteps(["\\sqrt{x^2}", "x"], { variables: { x: { min: 1, max: 5 } } })[1]?.equivalent).toBe(true);
@@ -765,6 +781,24 @@ describe("text-equivalent", () => {
       );
     });
     expect(differ).toStrictEqual([]);
+  });
+
+  it("moves an answer to another string when that lets a later answer match, so that each string counts once", () => {
+    // The answer of 2 points takes "ab", the first string it matches; the answer of 1 point matches "ab" alone, and takes it
+    // once the first moves along an augmenting path to "ac".
+    const built = call({
+      operator: "text-equivalent",
+      key: {
+        kind: "text",
+        answers: [
+          { texts: [], patterns: ["a[bc]"], points: 2 },
+          { texts: ["ab"], points: 1 },
+        ],
+        count: 2,
+      },
+    });
+    const strings: Value = { cardinality: "multiple", baseType: "string", values: ["ab", "ac"] };
+    expect(share(score(built, strings))).toBe(1);
   });
 
   it("matches the patterns of an answer as XSD regular expressions", () => {
