@@ -1,7 +1,7 @@
 import type { Dirent } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { type CallOptions, checkAbortSignal, checkProperties, checkRecord, describe } from "@assesskit/runtime/checks";
+import { type CallOptions, checkCallOptions, describe } from "@assesskit/runtime/checks";
 import { AssesskitError, DataError } from "@assesskit/runtime/errors";
 import { type InteractionName, PCI_TYPE_IDENTIFIERS } from "../interaction-types.js";
 
@@ -55,10 +55,8 @@ export async function readModuleFiles(
     const names = Object.keys(PCI_TYPE_IDENTIFIERS).map((known) => JSON.stringify(known));
     throw new DataError(`The name of an interaction must be one of ${names.join(", ")}, found ${describe(name)}.`);
   }
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", ["signal"]);
+  checkCallOptions(options);
   const { signal } = options;
-  if (signal !== undefined) checkAbortSignal(signal, "The option signal");
   const files = new Map<string, Uint8Array>();
   try {
     files.set(`${DIRECTORY}${name}.js`, new Uint8Array(await readFile(`${MODULES}${name}.js`, { signal })));
