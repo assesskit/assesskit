@@ -1766,9 +1766,11 @@ describe("regular expressions", () => {
     });
 
     it("takes time that grows in proportion to the text, whatever the pattern", () => {
-      const runs = 7;
-      const smallLength = 125_000;
-      const largeLength = 2_000_000;
+      // Five runs keep the least of them stable: a growth of 1.7 at most in 120 readings on a loaded machine, against 2.2 for
+      // three. The lengths take about a second under coverage.
+      const runs = 5;
+      const smallLength = 31_250;
+      const largeLength = 500_000;
       const repeats = largeLength / smallLength;
       const microsecondsPerMillisecond = 1000;
       // A busy machine delays a process but adds nothing to its processor time, so the growth is measured on that, not
@@ -1793,7 +1795,7 @@ describe("regular expressions", () => {
         // of 4 is where the time grows with the 1.5th power of the length.
         expect(growth, pattern).toBeLessThan(4);
       }
-    }, 30_000);
+    });
 
     it("stays fast when a text needs more deterministic states than the matcher keeps", () => {
       // (a|b)*a(a|b){20} has up to 2^21 states, more than a matcher keeps; the pattern needs the last 21 characters.
