@@ -1,10 +1,10 @@
+import { DEFAULT_KEY_LIMITS, type ScoredResponse } from "@assesskit/runtime/keys";
+import { compileScoring } from "@assesskit/runtime/scoring";
 import { expect, test } from "vitest";
-import { DEFAULT_KEY_LIMITS, type ScoredResponse } from "../src/keys/index.js";
-import { compileScoring } from "../src/scoring/index.js";
 import { BENCH_OPTIONS, BUDGETS, expectWithin } from "./budgets.js";
 
 // compileScoring writes an item's scoring once, when the item is authored; no library compiles keys into QTI, so the budgets
-// hold the time alone.
+// hold the time alone. The benchmarks time the build, by name, which `pnpm bench` makes first.
 
 /** An item of four responses: a choice, pairs, an order and a text, as an author writes one. */
 const ITEM: readonly ScoredResponse[] = [

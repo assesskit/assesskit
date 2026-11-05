@@ -1,16 +1,17 @@
 // cspell:ignore answr
-import { expect, test } from "vitest";
 import {
   buildOperatorCall,
   compareMathSteps,
   createScoringOperators,
   OPERATOR_DEFINITIONS,
-} from "../src/operators/index.js";
-import type { Value } from "../src/values/index.js";
+} from "@assesskit/runtime/operators";
+import type { Value } from "@assesskit/runtime/values";
+import { expect, test } from "vitest";
 import { BENCH_OPTIONS, BUDGETS, expectWithin } from "./budgets.js";
 
 // The operators score one response at a time, inside response processing; no library of JavaScript scores the same work, so
-// the budgets hold the time alone. The comparator's reference, SymPy, is Python and decides symbolically.
+// the budgets hold the time alone. The comparator's reference, SymPy, is Python and decides symbolically. The benchmarks time
+// the build, by name, which `pnpm bench` makes first: the sources would run through Vite's rewrite of their imports.
 
 const OPERATORS = createScoringOperators();
 const text = (value: string): Value => ({ cardinality: "single", baseType: "string", value });

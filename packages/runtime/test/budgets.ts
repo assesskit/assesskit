@@ -26,7 +26,8 @@ export const BUDGETS = {
   /** The size of the state of a session of 100 items that has ended, in bytes. */
   stateBytes: 150_000,
   // The operators' budgets are five times the fastest sample of the CI runner over five runs of main on 2026-11-05 (0.0273,
-  // 3.86, 0.0051, 0.544 and 1.17 ms), rounded up to one significant digit.
+  // 3.86, 0.0051, 0.544 and 1.17 ms), rounded up to one significant digit; those runs timed the sources, and the samples of
+  // the build, which the benchmarks now time, replace them at the next run of the bench job.
   /** Comparing an expression with its key by `expression-equivalent`, its options read on the call. */
   operatorExpression: 0.2,
   /** Comparing a sum of 1,000 terms with a key of as many, the most that a response holds. */
@@ -38,7 +39,7 @@ export const BUDGETS = {
   /** Checking 60 lines of worked steps. */
   mathSteps: 6,
   // The compiler's budgets are five times the fastest sample of the CI runner over the same runs (0.025 and 152 ms), rounded
-  // up to one significant digit.
+  // up to one significant digit, of the sources likewise until the samples of the build replace them.
   /** Compiling the keys of an item of four responses. */
   compileItem: 0.2,
   /** Compiling 256 orders of 1,000 choices, scored per position: the limits of keys. */
