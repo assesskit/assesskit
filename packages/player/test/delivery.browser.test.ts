@@ -144,11 +144,9 @@ async function shell(
     staticUrl: `${origin}/static/`,
     stylesheet: player,
     fetch: options.fetch ?? fetcher,
-    hooks: {
-      ...(options.onError === undefined ? {} : { onError: options.onError }),
-      ...(options.voice === undefined ? {} : { voice: options.voice }),
-      ...(options.tools === undefined ? {} : { tools: options.tools }),
-    },
+    ...(options.onError === undefined ? {} : { onError: options.onError }),
+    ...(options.voice === undefined ? {} : { voice: options.voice }),
+    ...(options.tools === undefined ? {} : { tools: options.tools }),
     ...(options.language === undefined ? {} : { language: options.language }),
     ...(options.catalogs === undefined ? {} : { catalogs: options.catalogs }),
     ...(options.chrome === undefined ? {} : { chrome: options.chrome }),
@@ -945,7 +943,7 @@ describe("mountDelivery", () => {
     again.destroy();
   });
 
-  it("needs reserve and fill to record, and asks for neither when the recording is off", async () => {
+  it("records with reserve and fill, which come together, and offers no recording without them", async () => {
     const s = await shell();
     const bare = {
       upload: async () => ({ reference: "f", mimeType: "x" }),
@@ -964,13 +962,13 @@ describe("mountDelivery", () => {
       hosts.push(host);
       return host;
     };
-    expect(() => mountDelivery(fresh(), { ...options, files: bare })).toThrow(
-      "The function reserve of the option files",
-    );
     expect(() => mountDelivery(fresh(), { ...options, files: { ...bare, reserve: NO_RECORDING.reserve } })).toThrow(
-      "The function fill of the option files",
+      "The function fill of the option files must be a function, given with reserve for a recording",
     );
-    mountDelivery(fresh(), { ...options, files: bare, hooks: { record: false } }).destroy();
+    expect(() => mountDelivery(fresh(), { ...options, files: { ...bare, fill: NO_RECORDING.fill } })).toThrow(
+      "The function reserve of the option files must be a function, given with fill for a recording",
+    );
+    mountDelivery(fresh(), { ...options, files: bare }).destroy();
   });
 
   it("checks its arguments", async () => {
@@ -1011,15 +1009,15 @@ describe("mountDelivery", () => {
     expect(() => mount(fresh(), { resumeCheckMs: 2 ** 31 })).toThrow(
       "The option resumeCheckMs must be at most 2147483647, the longest delay of a timer, found 2147483648.",
     );
-    expect(() => mount(fresh(), { hooks: { voice: {} } })).toThrow("The method speak of the hook voice");
-    expect(() => mount(fresh(), { hooks: { voice: "robot" } })).toThrow("The hook voice must be an object");
-    expect(() => mount(fresh(), { hooks: { tools: { dictionary: 1 } } })).toThrow(
-      "The tool dictionary of the hook tools must be a function",
+    expect(() => mount(fresh(), { voice: {} })).toThrow("The method speak of the option voice");
+    expect(() => mount(fresh(), { voice: "robot" })).toThrow("The option voice must be an object");
+    expect(() => mount(fresh(), { ltiLogin: "x" })).toThrow("The option ltiLogin must be a function");
+    expect(() => mount(fresh(), { tools: { dictionary: 1 } })).toThrow(
+      "The tool dictionary of the option tools must be a function",
     );
-    expect(() => mount(fresh(), { hooks: { tools: { abacus: () => undefined } } })).toThrow(
-      "The hook tools has the properties",
-    );
-    expect(() => mount(fresh(), { hooks: { tools: [] } })).toThrow("The hook tools must be an object");
+    expect(() => mount(fresh(), { tools: { abacus: () => undefined } })).toThrow("The option tools has the properties");
+    expect(() => mount(fresh(), { tools: [] })).toThrow("The option tools must be an object");
+    expect(() => mount(fresh(), { hooks: {} })).toThrow("The options has the properties");
     expect(() => mount(fresh(), { client: {} })).toThrow("The function age of the option client");
     expect(() => mount(fresh(), { other: 1 })).toThrow("The options has the properties");
   });

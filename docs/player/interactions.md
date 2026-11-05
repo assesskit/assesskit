@@ -74,7 +74,6 @@ const mounted = mountItem(host, {
   staticUrl: "https://assets.example/static/",
   stylesheet,
   fetch: (url, request) => fetch(url, request),
-  hooks: { record: false },
 });
 
 const content = host.shadowRoot.querySelector(".ak-content-host").shadowRoot;
@@ -90,11 +89,11 @@ mounted.destroy();
 ## Options
 
 The interactions take their options from the mount: `files`, `staticUrl` and `language` with `catalogs` for the text of the
-interface ([delivery](delivery.md#options)), and these hooks.
+interface ([delivery](delivery.md#options)), and these. An upload of audio offers a recording when `files` has `reserve` and `fill`,
+which come together; a host that offers none leaves both out.
 
-| Hook                | Type                    | Meaning                                                                                                                                        |
+| Option              | Type                    | Meaning                                                                                                                                        |
 | ------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `record`            | `boolean`               | Whether an upload of audio offers a recording. Default: `true`; then `files` needs `reserve` and `fill`.                                       |
 | `customInteraction` | `CustomInteractionHook` | Draws custom interactions. Default: none, so that a custom interaction says it is not supported.                                               |
 | `onError`           | `(error) => void`       | Receives the errors that a recording can only report: the host could not name the file or store the bytes. Default: `reportError` of the page. |
 
@@ -268,8 +267,8 @@ The reservation and the microphone are asked for when the countdown starts, or w
 refusal shows at once and the prompt of the browser stays out of the time of the response. A visible indicator and the clock show
 while it records. The recording is named `recording.` and an extension. A browser without `MediaRecorder` records WAV or nothing.
 The page's content security policy must allow the origin of `staticUrl` in `script-src`, which governs worklets; `pnpm build` writes
-the file to `dist/recorder-worklet.js`, and the package exports it as `@assesskit/player/recorder-worklet.js`. `record: false`
-turns the recording off, and then `files` needs no `reserve` and `fill`.
+the file to `dist/recorder-worklet.js`, and the package exports it as `@assesskit/player/recorder-worklet.js`. Files without
+`reserve` and `fill` offer no recording.
 
 An author asks for a timed, limited or single recording with three attributes of the interaction, which QTI has no attribute for, so
 that the runtime knows nothing of them and another player ignores them:
@@ -288,17 +287,17 @@ that the runtime knows nothing of them and another player ignores them:
 A value that is not a whole number of seconds counts as absent. A blueprint's prepare and respond times are one item with
 `max-time` of their sum and the prompt on screen throughout; no item needs extra seconds for storing.
 
-| Event                                                         | Happens                                                                                                            |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Item shown with a start and no response                       | Type check, `reserve`, microphone; a countdown; the status says once that the recording starts by itself           |
-| The countdown ends, or Record is pressed                      | The recording starts, the response names the file, and the clock counts down the limit                             |
-| While recording                                               | The part that plays the file and Remove stay hidden: they would show a file with no bytes                          |
-| Stop, or the limit                                            | The recorder stops, `fill` stores the bytes, and the file shows                                                    |
-| The microphone goes away, as when a headset is unplugged      | The recording ends with what it holds: `fill` stores it, and the status says that the microphone could not be used |
-| The interaction locks, or the element leaves the page         | The same: stop and `fill`, and the microphone is let go of. A countdown ends with nothing kept                     |
-| The candidate goes on or submits                              | `settled()` waits for the recorder to stop and ends a countdown; `fill` goes on behind it                          |
-| The mount is destroyed during a recording                     | The same; the end of the mount does not abort `fill`                                                               |
-| The item is shown with a response, locked, or `record: false` | Nothing starts                                                                                                     |
+| Event                                                                             | Happens                                                                                                            |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Item shown with a start and no response                                           | Type check, `reserve`, microphone; a countdown; the status says once that the recording starts by itself           |
+| The countdown ends, or Record is pressed                                          | The recording starts, the response names the file, and the clock counts down the limit                             |
+| While recording                                                                   | The part that plays the file and Remove stay hidden: they would show a file with no bytes                          |
+| Stop, or the limit                                                                | The recorder stops, `fill` stores the bytes, and the file shows                                                    |
+| The microphone goes away, as when a headset is unplugged                          | The recording ends with what it holds: `fill` stores it, and the status says that the microphone could not be used |
+| The interaction locks, or the element leaves the page                             | The same: stop and `fill`, and the microphone is let go of. A countdown ends with nothing kept                     |
+| The candidate goes on or submits                                                  | `settled()` waits for the recorder to stop and ends a countdown; `fill` goes on behind it                          |
+| The mount is destroyed during a recording                                         | The same; the end of the mount does not abort `fill`                                                               |
+| The item is shown with a response, locked, or `files` has no `reserve` and `fill` | Nothing starts                                                                                                     |
 
 | Failure                                                 | Result                                                                                                                                                                                                                 |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -348,7 +347,7 @@ stop();
 host.querySelector("button"); // => null
 ```
 
-Pass the hook as `hooks.customInteraction` of `mountItem` or `mountDelivery`.
+Pass the hook as the option `customInteraction` of `mountItem` or `mountDelivery`.
 
 `state` holds the response and `disabled` at that moment; the hook does not hear of later changes of the host. `set` checks the
 value, and ignores it while the candidate cannot respond. The function that the hook returns runs when the element
@@ -414,7 +413,7 @@ An interaction never throws at the candidate: it says in words what is wrong and
 | A message that the file could not be sent | `files.upload` rejected                                                                                                                                                                                            | The host's store failed: check it; no response is given, so nothing wrong is saved                |
 | A recording that does not start           | The browser has no microphone, no `MediaRecorder` for an accepted type, the page's content security policy blocks the worklet, or the audio context of a WAV recording does not run within 5 seconds               | Allow the origin of `staticUrl` in `script-src`, or accept an audio type that the browser records |
 | A custom interaction that did not start   | The page's policy, a module that did not load, no registration or a factory that threw ([pci](pci.md#events))                                                                                                      | The `failed` event gives the reason; the guide's table says what each one means                   |
-| The error of `hooks.onError`              | Something failed after the mount, with no call to carry the error                                                                                                                                                  | Log it; the default is `reportError` of the page                                                  |
+| The error of `onError`                    | Something failed after the mount, with no call to carry the error                                                                                                                                                  | Log it; the default is `reportError` of the page                                                  |
 
 ## Not included
 

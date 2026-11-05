@@ -279,10 +279,9 @@ describe("readInteractionOptions", () => {
     ...extra,
   });
 
-  it("resolves the worklet below the static URL and defaults the recording to on", () => {
+  it("resolves the worklet below the static URL", () => {
     const settings = readInteractionOptions(valid());
     expect(settings.workletUrl).toBe("https://static.example/player/recorder-worklet.js");
-    expect(settings.record).toBe(true);
     expect(settings.customInteraction).toBeUndefined();
   });
 
@@ -336,17 +335,19 @@ describe("readInteractionOptions", () => {
     );
   });
 
-  it("needs reserve and fill to record, and asks for neither when the recording is off", () => {
+  it("records with reserve and fill, which come together, and asks for neither from files that offer no recording", () => {
     const { upload, url } = Files;
-    expect(() => readInteractionOptions(valid({ files: { upload, url } }))).toThrow(
+    expect(() => readInteractionOptions(valid({ files: { upload, url, fill: Files.fill } }))).toThrow(
       new DataError(
-        "The method reserve of the option files must be a function unless the option record is false, found undefined.",
+        "The method reserve of the option files must be a function, given with fill for a recording, found undefined.",
       ),
     );
     expect(() => readInteractionOptions(valid({ files: { upload, url, reserve: Files.reserve } }))).toThrow(
-      /The method fill of the option files/,
+      new DataError(
+        "The method fill of the option files must be a function, given with reserve for a recording, found undefined.",
+      ),
     );
-    const off = readInteractionOptions(valid({ files: { upload, url }, record: false }));
+    const off = readInteractionOptions(valid({ files: { upload, url } }));
     expect(off.files.reserve).toBeUndefined();
     expect(off.files.fill).toBeUndefined();
   });
@@ -394,8 +395,8 @@ describe("readInteractionOptions", () => {
     expect(() => readInteractionOptions(valid({ files: { ...Files, upload: 1 } }))).toThrow(
       new DataError("The method upload of the option files must be a function, found 1."),
     );
-    expect(() => readInteractionOptions(valid({ record: parse('"yes"') }))).toThrow(
-      new DataError('The option record must be a boolean, found "yes".'),
+    expect(() => readInteractionOptions(valid({ record: false }))).toThrow(
+      /^The options has the properties .*, found "record"\.$/,
     );
     expect(() => readInteractionOptions(valid({ customInteraction: parse("5") }))).toThrow(
       new DataError("The option customInteraction must be a function, found 5."),

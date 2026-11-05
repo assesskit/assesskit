@@ -1220,7 +1220,8 @@ describe("upload", () => {
   it("offers no recording for a type that the browser cannot record and the interaction does not take as WAV", () => {
     const scene = mountScene(Declaration, Body('type="audio/mpeg"'));
     expect(scene.root.querySelector(".ak-upload button")).toBeNull();
-    const without = mountScene(Declaration, Body('type="audio/wav"'), { options: { record: false } });
+    const { upload, url } = fakeFiles();
+    const without = mountScene(Declaration, Body('type="audio/wav"'), { options: { files: { upload, url } } });
     expect(without.root.querySelector(".ak-upload button")).toBeNull();
   });
 
@@ -1545,7 +1546,10 @@ describe("a recording that starts by itself and is kept", () => {
     answered.scene.setValue("R", buildSingle("file", { reference: "r", mimeType: "audio/webm" }));
     const locked = open('data-ak-record-start="0"');
     locked.scene.interaction().disabled = true;
-    const off = open('data-ak-record-start="0"', fakeFiles(), { record: false });
+    const unrecorded = fakeFiles();
+    const off = open('data-ak-record-start="0"', unrecorded, {
+      files: { upload: unrecorded.upload, url: unrecorded.url },
+    });
     await new Promise<void>((done) => queueMicrotask(done));
     await new Promise<void>((done) => queueMicrotask(done));
     for (const each of [answered, locked, off]) {

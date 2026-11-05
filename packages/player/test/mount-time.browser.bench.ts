@@ -81,7 +81,7 @@ async function timeDelivery(): Promise<number> {
     staticUrl: `${inject("fixtures").asset}/static/`,
     stylesheet: player,
     fetch: fetcher,
-    hooks: { onError: ignore },
+    onError: ignore,
   });
   await untilFrame(() => drawn(host));
   const took = performance.now() - began;
@@ -130,7 +130,7 @@ async function timeLesson(): Promise<number> {
       staticUrl: `${inject("fixtures").asset}/static/`,
       stylesheet: player,
       fetch: fetcher,
-      hooks: { onError: ignore },
+      onError: ignore,
     }),
   );
   await untilFrame(() => slots.every(({ host }) => drawn(host)));
@@ -173,7 +173,7 @@ async function timeLessonFromDocuments(): Promise<number> {
         staticUrl: `${inject("fixtures").asset}/static/`,
         stylesheet: player,
         fetch: fetcher,
-        hooks: { onError: ignore },
+        onError: ignore,
       });
       return { host, client, mount };
     }),

@@ -73,7 +73,6 @@ const mounted = mountItem(host, {
   staticUrl: "https://assets.example/static/",
   stylesheet: new CSSStyleSheet(),
   fetch: async () => ({ ok: true, status: 200, text: async () => resolution }),
-  hooks: { record: false },
 });
 
 const content = host.shadowRoot.querySelector(".ak-content-host").shadowRoot;
@@ -108,7 +107,7 @@ also keeps a module from navigating its own frame to another site.
 
 The mounts build the frame from the view and the options of the mount, and no host calls the frame by hand. It throws
 `DataError` when the interaction names no module to load, a module has no location, or a module in the package is on an
-origin that the frame loads no scripts from. The mount reports it through `hooks.onError` and shows the notice that the
+origin that the frame loads no scripts from. The mount reports it through `onError` and shows the notice that the
 interaction could not start.
 
 | Option              | Type                              | Meaning                                                                                                                                    |
@@ -317,7 +316,7 @@ prevent.
 The mounts check their options once, where they read them (`staticUrl`, `origins` and `files` among them). The frame throws
 `DataError` for a variable that does not have its declared type, an interaction that names no module to load, a module
 without a location, and a module in the package on an origin that the frame loads no scripts from; the mount reports it
-through `hooks.onError`. The runtime's `DataError` passes through unchanged. A message from the frame that fails its check, and a response that is not a value of its declaration,
+through `onError`. The runtime's `DataError` passes through unchanged. A message from the frame that fails its check, and a response that is not a value of its declaration,
 are dropped, not thrown. An error of the host's storage goes to `reportError`.
 
 ## Not included

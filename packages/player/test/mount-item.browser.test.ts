@@ -8,7 +8,7 @@ import { createRemoteSession, type Transport } from "../src/client/index.js";
 import { createLocalSession } from "../src/client/local/index.js";
 import { ID_MESSAGES } from "../src/messages/id/index.js";
 import type { Messages } from "../src/messages/index.js";
-import { type ItemMountOptions, mountItem } from "../src/player/index.js";
+import { type MountOptions, mountItem } from "../src/player/index.js";
 import { deepActiveElement, HOST_SHADOW_RULE } from "../src/player/internal.js";
 import type { SessionClient } from "../src/protocol/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
@@ -450,7 +450,7 @@ describe("the lifecycle of an item in a page", () => {
     again.destroy();
   });
 
-  it("needs reserve and fill to record, and asks for neither when the recording is off", async () => {
+  it("records with reserve and fill, which come together, and offers no recording without them", async () => {
     const s = await embed("l1");
     const bare = { upload: files.upload, read: files.read, url: files.url };
     const options = { client: s.client, staticUrl: "https://s.example/", stylesheet: player, fetch: fetcher };
@@ -460,11 +460,13 @@ describe("the lifecycle of an item in a page", () => {
       hosts.push(host);
       return host;
     };
-    expect(() => mountItem(fresh(), { ...options, files: bare })).toThrow("The function reserve of the option files");
     expect(() => mountItem(fresh(), { ...options, files: { ...bare, reserve: files.reserve } })).toThrow(
-      "The function fill of the option files",
+      "The function fill of the option files must be a function, given with reserve for a recording",
     );
-    mountItem(fresh(), { ...options, files: bare, hooks: { record: false } }).destroy();
+    expect(() => mountItem(fresh(), { ...options, files: { ...bare, fill: files.fill } })).toThrow(
+      "The function reserve of the option files must be a function, given with fill for a recording",
+    );
+    mountItem(fresh(), { ...options, files: bare }).destroy();
   });
 
   it("checks its arguments", async () => {
@@ -481,23 +483,28 @@ describe("the lifecycle of an item in a page", () => {
     expect(() => mount(fresh(), { files: { upload: 1 } })).toThrow("The function upload of the option files");
     expect(() => mount(fresh(), { language: "" })).toThrow("The option language must be a non-empty string");
     expect(() => mount(fresh(), { origins: ["ftp://x"] })).toThrow("An origin of the option origins");
-    expect(() => mount(fresh(), { hooks: { voice: "robot" } })).toThrow("The hook voice must be an object");
-    expect(() => mount(fresh(), { hooks: [] })).toThrow("The option hooks must be an object");
+    expect(() => mount(fresh(), { voice: "robot" })).toThrow("The option voice must be an object");
+    expect(() => mount(fresh(), { onError: 1 })).toThrow("The option onError must be a function");
+    expect(() => mount(fresh(), { customInteraction: {} })).toThrow("The option customInteraction must be a function");
+    expect(() => mount(fresh(), { hooks: {} })).toThrow("The options has the properties");
     expect(() => mount(fresh(), { client: {} })).toThrow("The function age of the option client");
     expect(() => mount(fresh(), { chrome: false })).toThrow("The options has the properties");
-    for (const only of [{ landmark: "main" }, { headingLevel: 1 }, { resumeCheckMs: 0 }, { marking: true }]) {
+    for (const only of [
+      { landmark: "main" },
+      { headingLevel: 1 },
+      { resumeCheckMs: 0 },
+      { marking: true },
+      { tools: {} },
+      { ltiLogin: () => undefined },
+    ]) {
       expect(() => mount(fresh(), only)).toThrow("The options has the properties");
     }
-    expect(() => mount(fresh(), { hooks: { tools: {} } })).toThrow("The option hooks has the properties");
-    expect(() => mount(fresh(), { hooks: { ltiLogin: () => undefined } })).toThrow(
-      "The option hooks has the properties",
-    );
   });
 });
 
 describe("the type of the options", () => {
   it("holds none of the options that only a delivery uses, which the check refuses", () => {
-    const named = (options: ItemMountOptions): ItemMountOptions => options;
+    const named = (options: MountOptions): MountOptions => options;
     const shared = {
       client: {} as SessionClient,
       files,
@@ -512,6 +519,8 @@ describe("the type of the options", () => {
     named({ ...shared, headingLevel: 1 });
     // @ts-expect-error `resumeCheckMs` is an option of `mountDelivery`.
     named({ ...shared, resumeCheckMs: 0 });
+    // @ts-expect-error `tools` is an option of `mountDelivery`.
+    named({ ...shared, tools: {} });
   });
 });
 

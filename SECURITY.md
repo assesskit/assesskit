@@ -167,7 +167,7 @@ An upload interaction can record the candidate's voice, and a WAV recording load
 - The microphone is asked for when the candidate presses Record in an upload interaction, or when the countdown of an item with
   `data-ak-record-start` begins, and a visible indicator shows while it records. A recording that is under way when the
   candidate leaves the item, or when its time ends, is stopped and its bytes go to the host: the response already names the
-  file. Set `hooks.record` to `false` in `mountItem` or `mountDelivery` to offer no recording.
+  file. Leave `reserve` and `fill` out of the `files` of `mountItem` or `mountDelivery` to offer no recording.
 - Put the origin of `staticUrl` in the `script-src` of the page, because a worklet is a script. `recorder-worklet.js` holds no
   package data and reaches no network; serve it from the asset origin, like `pci-frame/*`.
 - Recordings and files go only to the host's storage, through `files.fill` and `files.upload`; the state and the results hold

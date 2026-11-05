@@ -143,8 +143,8 @@ export function createInteractionRenderers(options: InteractionOptions): Interac
     ),
     forKind(
       "upload-interaction",
-      (node, renderer, { messages, files, workletUrl, record, report }) =>
-        renderUpload(node, renderer, messages, { files, workletUrl, record, report }),
+      (node, renderer, { messages, files, workletUrl, report }) =>
+        renderUpload(node, renderer, messages, { files, workletUrl, report }),
       settings,
     ),
   ]);

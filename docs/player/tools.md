@@ -82,7 +82,7 @@ that has another item or other supports, and with every view whose content was d
 `companionMaterials` of the item, the `supports` of the view and the names of the content, once the content is shown. A tool that stays in force stays open where the candidate put it when the next item
 comes, and the others close; with no item presented there are no tools. A button for a tool of the profile that is an
 option sends the `support` action, and the tool opens when the next view says it is on. The tools of the host come from
-`hooks.tools`. A host that draws its own chrome (`chrome: false`) gets no tools from the shell and mounts `mountTools` itself.
+the option `tools`. A host that draws its own chrome (`chrome: false`) gets no tools from the shell and mounts `mountTools` itself.
 
 The stage takes only the stylesheet of what lies over the item (the layer, the line reader, the marks and the masks); the toolbar and
 the panels have another, adopted into the chrome, so that their classes do not restyle the interactions of the item.

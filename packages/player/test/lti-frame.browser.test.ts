@@ -257,7 +257,7 @@ describe("mountDelivery with an item that is a link to a tool", () => {
       staticUrl: `${asset}/static/`,
       stylesheet,
       fetch: async () => ({ ok: false, status: 404, text: async () => "" }),
-      ...(ltiLogin === undefined ? {} : { hooks: { ltiLogin } }),
+      ...(ltiLogin === undefined ? {} : { ltiLogin }),
     });
     const ui = host.shadowRoot as ShadowRoot;
     const slot = ui.querySelector<HTMLElement>(".ak-lti") as HTMLElement;

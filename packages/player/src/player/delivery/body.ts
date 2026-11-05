@@ -31,7 +31,7 @@ export interface BodyContext
     | "stylesheet"
     | "fetch"
     | "mathjax"
-    | "hooks"
+    | "customInteraction"
   > {
   /** The state of the mounted player. */
   readonly state: MountState;
@@ -120,15 +120,14 @@ function createPci(context: BodyContext): PciHost {
 
 /** Creates the content root of the player, with the renderers of the interactions of the package and the host's hooks. */
 function createRoot(context: BodyContext, pci: PciHost): ContentRoot {
-  const { messages, client, files, staticUrl, hooks, mathjax } = context;
+  const { messages, client, files, staticUrl, customInteraction, mathjax } = context;
   const interactions: InteractionRenderers = new Map([
     ...createInteractionRenderers({
       messages,
       files,
       staticUrl,
       onError: context.report,
-      ...(hooks.record === undefined ? {} : { record: hooks.record }),
-      ...(hooks.customInteraction === undefined ? {} : { customInteraction: hooks.customInteraction }),
+      ...(customInteraction === undefined ? {} : { customInteraction }),
     }),
     ["portable-custom-interaction", pci.render],
   ]);

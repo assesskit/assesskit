@@ -72,7 +72,6 @@ const mounted = mountItem(host, {
   staticUrl: "https://assets.example/static/",
   stylesheet,
   fetch: (url, request) => fetch(url, request),
-  hooks: { record: false },
 });
 
 const content = host.shadowRoot.querySelector(".ak-content-host").shadowRoot;

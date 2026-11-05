@@ -50,7 +50,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
   const resolved = resolveSettings(options);
   const state = createMountState(resolved.client.view);
   const settings = bindToLifetime(resolved, state);
-  const { client, messages, language, chrome, marking, staticUrl, hooks } = settings;
+  const { client, messages, language, chrome, marking, staticUrl, ltiLogin } = settings;
   const shadow = shadowRootOf(host);
   shadow.adoptedStyleSheets = [baseStyles(), chromeStyles()];
 
@@ -63,7 +63,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
   const lti = createLtiSlot({
     host,
     messages,
-    login: hooks.ltiLogin,
+    login: ltiLogin,
     refused: [window.location.origin, new URL(staticUrl, window.location.href).origin],
     report: settings.report,
   });

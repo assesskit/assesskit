@@ -9,7 +9,7 @@ import { type DeliveryTools, mountDeliveryTools } from "./tools.js";
 
 /** What the parts that follow the content need of the player. */
 export interface AttachmentsContext
-  extends Pick<Settings, "client" | "messages" | "language" | "chrome" | "fetch" | "hooks" | "report"> {
+  extends Pick<Settings, "client" | "messages" | "language" | "chrome" | "fetch" | "voice" | "tools" | "report"> {
   /** The state of the mounted player. */
   readonly state: MountState;
   /** Sends the requests of the supports and the tools. */
@@ -37,13 +37,13 @@ export interface Attachments extends ContentAttachments {
  * @returns The parts.
  */
 export function mountAttachments(context: AttachmentsContext): Attachments {
-  const { client, messages, language, chrome, hooks, state, sender, shell, body } = context;
+  const { client, messages, language, chrome, voice, tools: slots = {}, state, sender, shell, body } = context;
   const content = mountContentAttachments({
     report: context.report,
     client,
     messages,
     language,
-    hooks,
+    voice,
     fetch: context.fetch,
     state,
     slot: shell.supportsSlot,
@@ -64,7 +64,7 @@ export function mountAttachments(context: AttachmentsContext): Attachments {
         slot: shell.toolsSlot,
         stage: body.content.stage,
         assets: (path) => client.assets(path),
-        slots: hooks.tools ?? {},
+        slots,
         request: sender.request,
       })
     : undefined;

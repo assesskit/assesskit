@@ -35,8 +35,6 @@ export interface UploadServices {
   readonly files: InteractionFiles;
   /** The URL of the recording worklet. */
   readonly workletUrl: string;
-  /** Whether a recording is offered where the browser can make one. */
-  readonly record: boolean;
   /** Reports an error that a recording can only report. */
   readonly report: (error: unknown) => void;
 }
@@ -181,8 +179,8 @@ export class UploadInteractionElement extends InteractionElement {
     this.#input = input;
     this.#attributes = readRecordAttributes(this);
     const { reserve, fill } = services.files;
-    const method =
-      services.record && reserve !== undefined && fill !== undefined ? chooseRecording(accepted) : undefined;
+    // A recording is offered where the browser can make one and the host's files can name and store it.
+    const method = reserve !== undefined && fill !== undefined ? chooseRecording(accepted) : undefined;
     this.#recorder =
       method === undefined || reserve === undefined || fill === undefined ? undefined : { method, reserve, fill };
     const buttons = this.#recorder === undefined ? [] : this.#recordButtons(messages);

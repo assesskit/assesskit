@@ -10,7 +10,6 @@ import {
   checkRecord,
   checkString,
   describe,
-  isRecord,
 } from "@assesskit/runtime/checks";
 import type { CandidateView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
@@ -55,8 +54,8 @@ export interface MountFiles {
    */
   url(file: FileValue): string;
   /**
-   * Names a file whose bytes come later, so that the response of a recording refers to it as the recording starts. Required
-   * unless `hooks.record` is `false`.
+   * Names a file whose bytes come later, so that the response of a recording refers to it as the recording starts. An upload
+   * of audio offers a recording when `files` has `reserve` and `fill`; a host that offers none leaves both out.
    *
    * @param mimeType - Their media type.
    * @param options - Its `fileName` is the name of the file, if it has one; its `signal` aborts when the mount is destroyed.
@@ -67,7 +66,7 @@ export interface MountFiles {
   /**
    * Stores the bytes of a reserved file, retrying as the host sees fit. The end of the mount does not abort it, because a
    * recording that a time limit, a proctor or a destroy stops still has to arrive; the host's own timeout ends a store that
-   * hangs. Required unless `hooks.record` is `false`.
+   * hangs. Given with `reserve`, or not at all.
    *
    * @param file - The file value that `reserve` returned.
    * @param bytes - The bytes.
@@ -76,8 +75,10 @@ export interface MountFiles {
   fill?(file: FileValue, bytes: Blob, options?: CallOptions): Promise<void>;
 }
 
-/** What the player needs of its page, whatever it shows. */
+/** What the player needs of its page and of the session it shows, whatever it shows: the options of `mountItem`. */
 export interface MountOptions {
+  /** The session: the player shows its view, sends its actions, and resolves package paths through it. */
+  readonly client: SessionClient;
   /** The host's storage of files. */
   readonly files: MountFiles;
   /** The base URL of the player's static files, ending in `/`: `pci-frame/frame.html`, `player.css` and `recorder-worklet.js` are under it. */
@@ -112,6 +113,29 @@ export interface MountOptions {
    */
   readonly mathjax?: string;
   /**
+   * Mounts custom interactions (`qti-custom-interaction`).
+   *
+   * @defaultValue None, so that a custom interaction says it is not supported
+   */
+  readonly customInteraction?: CustomInteractionHook;
+  /**
+   * Receives the errors that the player can only report: a stylesheet or a lexicon that failed to load, a tool of the host that
+   * threw, a voice that failed. No error is reported after the mount is destroyed.
+   *
+   * @defaultValue `reportError` of the page, which raises a global `error` event
+   */
+  readonly onError?: (error: unknown) => void;
+  /**
+   * The voice that reads aloud for the candidates whose supports ask for it.
+   *
+   * @defaultValue The voice of the browser, `createWebSpeech()`.
+   */
+  readonly voice?: SpeechHook;
+}
+
+/** What `mountDelivery` needs: the options of `mountItem`, and those of the chrome, the tools and LTI items. */
+export interface DeliveryOptions extends MountOptions {
+  /**
    * Whether the player draws the navigation, timers, actions and comment box.
    *
    * @remarks
@@ -120,61 +144,6 @@ export interface MountOptions {
    * @defaultValue `true`
    */
   readonly chrome?: boolean;
-  /**
-   * Hooks of the host.
-   *
-   * @defaultValue None
-   */
-  readonly hooks?: {
-    /**
-     * Mounts custom interactions (`qti-custom-interaction`).
-     *
-     * @defaultValue None, so that a custom interaction says it is not supported
-     */
-    readonly customInteraction?: CustomInteractionHook;
-    /**
-     * Whether an upload of audio offers a recording.
-     *
-     * @defaultValue `true`
-     */
-    readonly record?: boolean;
-    /**
-     * Receives the errors that the player can only report: a stylesheet or a lexicon that failed to load, a tool of the host that
-     * threw, a voice that failed. No error is reported after the mount is destroyed.
-     *
-     * @defaultValue `reportError` of the page, which raises a global `error` event
-     */
-    readonly onError?: (error: unknown) => void;
-    /**
-     * The voice that reads aloud for the candidates whose supports ask for it.
-     *
-     * @defaultValue The voice of the browser, `createWebSpeech()`.
-     */
-    readonly voice?: SpeechHook;
-    /**
-     * Starts the login of the tool of an LTI item: the host's authenticated route answers with the frame of the item, which
-     * its LTI library builds. The `signal` aborts when the candidate leaves the item.
-     *
-     * @defaultValue None, so that an LTI item says that its tool is not available
-     */
-    readonly ltiLogin?: LtiLogin;
-    /**
-     * The tools that the host provides, by name: the scientific and graphing calculators, the dictionary and the other
-     * tools of the supports.
-     *
-     * @remarks
-     * A tool without a function says that it is not available.
-     *
-     * @defaultValue No tools
-     */
-    readonly tools?: ToolSlots;
-  };
-}
-
-/** What `mountDelivery` needs: the options of the page and the session it shows and drives. */
-export interface DeliveryOptions extends MountOptions {
-  /** The session: the player shows its view, sends its actions, and resolves package paths through it. */
-  readonly client: SessionClient;
   /**
    * How often in milliseconds the player asks the session whether a paused test continues, for as long as the candidate has
    * no action to continue it.
@@ -212,23 +181,23 @@ export interface DeliveryOptions extends MountOptions {
    * @defaultValue `false`
    */
   readonly marking?: boolean;
-}
-
-/**
- * What `mountItem` needs: the options of `mountDelivery` without what only a delivery uses (the chrome, the marking, the
- * resume check, the landmark and the heading level), the tools and the login of an LTI item.
- */
-export interface ItemMountOptions
-  extends Omit<DeliveryOptions, "chrome" | "hooks" | "marking" | "resumeCheckMs" | "landmark" | "headingLevel"> {
   /**
-   * Hooks of the host.
+   * Starts the login of the tool of an LTI item: the host's authenticated route answers with the frame of the item, which
+   * its LTI library builds. The `signal` aborts when the candidate leaves the item.
+   *
+   * @defaultValue None, so that an LTI item says that its tool is not available
+   */
+  readonly ltiLogin?: LtiLogin;
+  /**
+   * The tools that the host provides, by name: the scientific and graphing calculators, the dictionary and the other
+   * tools of the supports.
    *
    * @remarks
-   * An item mounted alone draws no tools and refuses an LTI item, so it has neither the `tools` nor the `ltiLogin` hook.
+   * A tool without a function says that it is not available.
    *
-   * @defaultValue None
+   * @defaultValue No tools
    */
-  readonly hooks?: Omit<NonNullable<MountOptions["hooks"]>, "ltiLogin" | "tools">;
+  readonly tools?: ToolSlots;
 }
 
 /** A player that is mounted. */
@@ -258,6 +227,7 @@ export interface Mounted {
 }
 
 const ITEM_OPTION_NAMES = [
+  "client",
   "files",
   "staticUrl",
   "stylesheet",
@@ -266,54 +236,51 @@ const ITEM_OPTION_NAMES = [
   "catalogs",
   "origins",
   "mathjax",
-  "hooks",
-  "client",
+  "customInteraction",
+  "onError",
+  "voice",
 ];
 
-const ITEM_HOOK_NAMES = ["customInteraction", "record", "voice", "onError"];
-
-/** Checks the hooks that every mount has: the custom interaction, the recording and the voice. */
-function checkItemHooks(hooks: Readonly<Record<string, unknown>>): void {
-  if (hooks.customInteraction !== undefined) {
-    checkFunction(hooks.customInteraction, "The hook customInteraction must be a function");
-  }
-  if (hooks.record !== undefined) checkBoolean(hooks.record, "The hook record");
-  if (hooks.onError !== undefined) checkFunction(hooks.onError, "The hook onError must be a function");
-  if (hooks.voice !== undefined) {
-    checkRecord(hooks.voice, "The hook voice must be an object");
-    checkFunction(hooks.voice.speak, "The method speak of the hook voice must be a function");
-    checkFunction(hooks.voice.stop, "The method stop of the hook voice must be a function");
-  }
-}
-
-/** Checks the hooks of the host of a player with chrome: those of every mount, the login of an LTI item and the tools. */
-function checkDeliveryHooks(hooks: unknown): void {
-  checkRecord(hooks, "The option hooks must be an object");
-  checkProperties(hooks, "The option hooks", [...ITEM_HOOK_NAMES, "ltiLogin", "tools"]);
-  checkItemHooks(hooks);
-  if (hooks.ltiLogin !== undefined) checkFunction(hooks.ltiLogin, "The hook ltiLogin must be a function");
-  if (hooks.tools !== undefined) {
-    checkRecord(hooks.tools, "The hook tools must be an object");
-    checkProperties(hooks.tools, "The hook tools", SLOT_TOOLS);
-    for (const name of SLOT_TOOLS) {
-      if (hooks.tools[name] !== undefined)
-        checkFunction(hooks.tools[name], `The tool ${name} of the hook tools must be a function`);
-    }
-  }
-}
-
-/** The options that `mountDelivery` and `mountItem` share, with the two that differ not yet checked. */
-type SharedOptions = Omit<ItemMountOptions, "hooks"> & {
-  readonly hooks?: unknown;
+/** The options of `mountDelivery` and `mountItem`, with those of `mountDelivery` alone not yet checked. */
+type SharedOptions = MountOptions & {
   readonly chrome?: unknown;
   readonly resumeCheckMs?: unknown;
   readonly landmark?: unknown;
   readonly headingLevel?: unknown;
   readonly marking?: unknown;
+  readonly ltiLogin?: unknown;
+  readonly tools?: unknown;
 };
 
 /** The deepest level of a heading in HTML. */
 const MAX_HEADING_LEVEL = 6;
+
+/** Checks the storage of files: `upload`, `read` and `url`, and `reserve` and `fill` together or not at all. */
+function checkFiles(files: unknown): void {
+  checkRecord(files, "The option files must be an object");
+  for (const name of ["upload", "read", "url"]) {
+    checkFunction(files[name], `The function ${name} of the option files must be a function`);
+  }
+  if (files.reserve === undefined && files.fill === undefined) return;
+  checkFunction(
+    files.reserve,
+    "The function reserve of the option files must be a function, given with fill for a recording",
+  );
+  checkFunction(
+    files.fill,
+    "The function fill of the option files must be a function, given with reserve for a recording",
+  );
+}
+
+/** Checks the tools of the host: a function for each name of `SLOT_TOOLS` that it gives. */
+function checkTools(tools: unknown): void {
+  checkRecord(tools, "The option tools must be an object");
+  checkProperties(tools, "The option tools", SLOT_TOOLS);
+  for (const name of SLOT_TOOLS) {
+    if (tools[name] !== undefined)
+      checkFunction(tools[name], `The tool ${name} of the option tools must be a function`);
+  }
+}
 
 /** Checks the host and the options that `mountDelivery` and `mountItem` share. */
 function checkSharedOptions(
@@ -325,11 +292,7 @@ function checkSharedOptions(
   if (!canMount(host)) throw new DataError(HOST_SHADOW_RULE);
   checkRecord(options, "The options must be an object");
   checkProperties(options, "The options", names);
-  checkRecord(options.files, "The option files must be an object");
-  const recording = !(isRecord(options.hooks) && options.hooks.record === false);
-  for (const name of recording ? ["upload", "read", "url", "reserve", "fill"] : ["upload", "read", "url"]) {
-    checkFunction(options.files[name], `The function ${name} of the option files must be a function`);
-  }
+  checkFiles(options.files);
   checkString(options.staticUrl, "The option staticUrl");
   if (!options.staticUrl.endsWith("/")) {
     throw new DataError(`The option staticUrl must end in "/", found ${describe(options.staticUrl)}.`);
@@ -345,6 +308,15 @@ function checkSharedOptions(
   checkRecord(options.client, "The option client must be a session client");
   for (const name of ["age", "assets", "dispatch", "refresh", "subscribe", "close"]) {
     checkFunction(options.client[name], `The function ${name} of the option client must be a function`);
+  }
+  if (options.customInteraction !== undefined) {
+    checkFunction(options.customInteraction, "The option customInteraction must be a function");
+  }
+  if (options.onError !== undefined) checkFunction(options.onError, "The option onError must be a function");
+  if (options.voice !== undefined) {
+    checkRecord(options.voice, "The option voice must be an object");
+    checkFunction(options.voice.speak, "The method speak of the option voice must be a function");
+    checkFunction(options.voice.stop, "The method stop of the option voice must be a function");
   }
 }
 
@@ -364,6 +336,8 @@ export function checkDeliveryOptions(host: unknown, options: unknown): asserts o
     "landmark",
     "headingLevel",
     "marking",
+    "ltiLogin",
+    "tools",
   ]);
   if (options.landmark !== undefined) checkChoice(options.landmark, "The option landmark", ["main", "region"]);
   if (options.headingLevel !== undefined) {
@@ -385,7 +359,8 @@ export function checkDeliveryOptions(host: unknown, options: unknown): asserts o
       );
     }
   }
-  if (options.hooks !== undefined) checkDeliveryHooks(options.hooks);
+  if (options.ltiLogin !== undefined) checkFunction(options.ltiLogin, "The option ltiLogin must be a function");
+  if (options.tools !== undefined) checkTools(options.tools);
 }
 
 /**
@@ -396,10 +371,6 @@ export function checkDeliveryOptions(host: unknown, options: unknown): asserts o
  * @throws `DataError` when the host is not an element that can have a shadow root and has none, or has one that an earlier mount of the player left empty, or an option is not of its
  * type.
  */
-export function checkItemOptions(host: unknown, options: unknown): asserts options is ItemMountOptions {
+export function checkItemOptions(host: unknown, options: unknown): asserts options is MountOptions {
   checkSharedOptions(host, options, ITEM_OPTION_NAMES);
-  if (options.hooks === undefined) return;
-  checkRecord(options.hooks, "The option hooks must be an object");
-  checkProperties(options.hooks, "The option hooks", ITEM_HOOK_NAMES);
-  checkItemHooks(options.hooks);
 }
