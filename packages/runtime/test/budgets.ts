@@ -13,14 +13,16 @@ export const BUDGETS = {
   packageRead: 500,
   /** The first use of 3 items of a package that has parsed none. */
   packageFirstUse: 20,
+  // The engine's budgets are five times the fastest sample of the build on a laptop (0.38, 6.11, 91 and 1.59 ms), rounded up
+  // to one significant digit, until the CI runner's samples replace them.
   /** Starting a session of a test of 100 sections. */
-  planStart: 6,
+  planStart: 2,
   /** A submission with the outcome processing of a test of 100 sections, halfway through its session. */
-  outcomeSubmit: 100,
+  outcomeSubmit: 40,
   /** Reading a stored state and replaying 1,000 actions. */
-  replay: 2000,
+  replay: 500,
   /** Writing and reading the state of a session of 100 items. */
-  stateRoundTrip: 30,
+  stateRoundTrip: 8,
   /** The size of the state of a session of 100 items that has ended, in bytes. */
   stateBytes: 150_000,
   // The operators' budgets are five times the fastest sample of a laptop (0.02, 2.68, 0.0033, 0.53 and 0.82 ms), rounded up to one
@@ -86,10 +88,11 @@ export const LONGSIGHT_BUDGETS = {
 
 /**
  * The budget of rescoring a report of 200 items, the reading of its inputs and the outcome processing: the most that the
- * fastest sample may take, in milliseconds, and the most as a multiple of the fastest sample of the outcome step of the
- * engine on the same session. No outside library rescores a stored report, so the engine is the reference.
+ * fastest sample may take, in milliseconds, five times the 0.42 ms of the build on a laptop until the CI runner's sample
+ * replaces it, and the most as a multiple of the fastest sample of the outcome step of the engine on the same session. No
+ * outside library rescores a stored report, so the engine is the reference.
  */
-export const RESCORING_BUDGET = { time: 7, ratio: 2 } as const;
+export const RESCORING_BUDGET = { time: 3, ratio: 2 } as const;
 
 /**
  * The budget of parsing the 1EdTech example documents from their bytes, against libxml2 in WebAssembly

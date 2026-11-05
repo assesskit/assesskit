@@ -1,17 +1,18 @@
-import { expect, test } from "vitest";
-import type { AssessmentItem } from "../src/asi/index.js";
+import { createRandom } from "@assesskit/runtime";
+import type { AssessmentItem } from "@assesskit/runtime/asi";
 import {
   type Action,
+  createEngine,
   type DeliveryState,
   deserializeState,
   type Engine,
   type ItemKey,
   readTestInputs,
   serializeState,
-} from "../src/delivery/index.js";
-import { createRandom } from "../src/index.js";
-import { runOutcomeProcessing } from "../src/processing/index.js";
-import { buildSingle } from "../src/values/index.js";
+} from "@assesskit/runtime/delivery";
+import { runOutcomeProcessing } from "@assesskit/runtime/processing";
+import { buildSingle } from "@assesskit/runtime/values";
+import { expect, test } from "vitest";
 import { BENCH_OPTIONS, BUDGETS, compareRow, expectWithin, RESCORING_BUDGET } from "./budgets.js";
 import {
   act,
@@ -31,6 +32,11 @@ import {
   setOutcome,
   structureOf,
 } from "./pending-fixtures.js";
+
+// The engine, the state and the rescoring are the build, imported by name, which `pnpm bench` makes first, as the rows against
+// Longsight are: the sources would run through Vite's rewrite of their imports, about 1.7 times slower than the code that
+// ships. The helpers of the fixtures build the documents, the structure that the report is read against and the actions
+// from the sources, outside the time.
 
 /** The sections of the large test, and the items that each selects of those it lists. */
 const SECTIONS = 100;
@@ -75,7 +81,7 @@ function sectionedContent(sections: number, listed: number, selected = listed): 
 
 /** The engine of {@link sectionedContent}. */
 function sectioned(sections: number, listed: number, selected = listed): Engine {
-  return engineOf(sectionedContent(sections, listed, selected));
+  return engineOf(sectionedContent(sections, listed, selected), { create: createEngine });
 }
 
 /** The item presented. */
@@ -179,7 +185,7 @@ test("reads the inputs of a report of 200 items and runs the outcome processing 
   bench,
 }) => {
   const content = sectionedContent(RESCORED_SECTIONS, RESCORED_LISTED);
-  const engine = engineOf(content);
+  const engine = engineOf(content, { create: createEngine });
   const structure = structureOf(content);
   const total = RESCORED_SECTIONS * RESCORED_LISTED;
   const almost = answered(engine, begun(engine).state, total - 1).state;
