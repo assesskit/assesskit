@@ -5,7 +5,7 @@ import { isIdentifier } from "../values/index.js";
 import { exceedsBytes } from "../xml/internal.js";
 import { createContentState } from "./html-content.js";
 import { buildItem } from "./item-build.js";
-import { type ItemFormatLimits, readLimitsSchema } from "./limits.js";
+import { DEFAULT_ITEM_FORMAT_LIMITS, type ItemFormatLimits, readLimitsSchema } from "./limits.js";
 import type { BankItem, ConversionLoss, ImportedItems, ReadItemsOptions, TrueFalseLabels } from "./model.js";
 import type { ReadEntry } from "./question.js";
 
@@ -13,7 +13,7 @@ const DEFAULT_LABELS: TrueFalseLabels = Object.freeze({ true: "True", false: "Fa
 
 const readItemsOptionsSchema = strictRecord({
   trueFalseLabels: v.optional(strictRecord({ true: v.string(), false: v.string() })),
-  limits: v.optional(readLimitsSchema, {}),
+  limits: v.optional(readLimitsSchema),
 });
 
 /** The options of a reader with their defaults. */
@@ -28,7 +28,11 @@ export interface ResolvedReadOptions {
  * @throws `DataError` when an option has the wrong type or a limit is not a positive integer.
  */
 export function resolveReadOptions(options: ReadItemsOptions): ResolvedReadOptions {
-  const { trueFalseLabels = DEFAULT_LABELS, limits } = parseWith(readItemsOptionsSchema, options, "The options object");
+  const { trueFalseLabels = DEFAULT_LABELS, limits = DEFAULT_ITEM_FORMAT_LIMITS } = parseWith(
+    readItemsOptionsSchema,
+    options,
+    "The options object",
+  );
   return { labels: trueFalseLabels, limits };
 }
 

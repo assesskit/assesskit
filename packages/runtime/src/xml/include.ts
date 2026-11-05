@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import { checkFunction, checkRecord, checkString, describe, isRecord, parseWith, strictRecord } from "../checks.js";
 import { DataError, type IssueLocation, type ReadError, SecurityError } from "../errors.js";
-import { type XmlLimits, xmlLimitsSchema } from "./limits.js";
+import { DEFAULT_XML_LIMITS, type XmlLimits, xmlLimitsSchema } from "./limits.js";
 import { findAttribute } from "./query.js";
 import { createReadError, locateElement } from "./read-error.js";
 import { XINCLUDE_NAMESPACE, type XmlElement, type XmlNode } from "./tree.js";
@@ -24,7 +24,7 @@ export interface ResolveIncludesOptions {
   readonly limits?: Partial<XmlLimits>;
 }
 
-const resolveIncludesOptionsSchema = strictRecord({ limits: v.optional(xmlLimitsSchema, {}) });
+const resolveIncludesOptionsSchema = strictRecord({ limits: v.optional(xmlLimitsSchema) });
 
 /** Where an element is read: the path of its document, the chain of documents that led to it and its depth. */
 interface Context {
@@ -217,7 +217,7 @@ export function resolveIncludes(
   checkRecord(root, "The root must be an element");
   checkString(base, "The base");
   checkFunction(resolve, "The resolver must be a function of an href and a base");
-  const { limits } = parseWith(resolveIncludesOptionsSchema, options, "The options object");
+  const { limits = DEFAULT_XML_LIMITS } = parseWith(resolveIncludesOptionsSchema, options, "The options object");
   const expander = new Expander(limits, resolve);
   const key = joinReference("", base);
   const [expanded, ...others] = expander.expandNode(root, { base: key, chain: [key], depth: 1 });

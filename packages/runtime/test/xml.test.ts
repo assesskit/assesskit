@@ -124,15 +124,15 @@ describe("building elements", () => {
   it("rejects arguments of other types", () => {
     expect(() => buildElement(JSON.parse("5"), "a")).toThrow("The namespace of an element must be a string, found 5.");
     expect(() => buildElement("", JSON.parse("null"))).toThrow("The name of an element must be a string, found null.");
-    expect(() => buildElement("", "a", JSON.parse("null"))).toThrow(
-      "The options object is invalid: expected an object, found null",
+    expect(() => buildElement("", "a", JSON.parse("null"))).toThrow("The options must be an object, found null.");
+    expect(() => buildElement("", "a", JSON.parse('{"bogus":1}'))).toThrow(
+      'The options has the properties "attributes" and "children", found "bogus".',
     );
-    expect(() => buildElement("", "a", JSON.parse('{"bogus":1}'))).toThrow('unexpected property "bogus"');
     expect(() => buildElement("", "a", { attributes: JSON.parse("null") })).toThrow(
-      "The options object is invalid at attributes: expected an object, found null.",
+      "The attributes of an element must be an object, found null.",
     );
     expect(() => buildElement("", "a", { children: JSON.parse('{"0":"x"}') })).toThrow(
-      "The options object is invalid at children: expected an array, found an object.",
+      "The children of an element must be an array, found an object.",
     );
   });
 });

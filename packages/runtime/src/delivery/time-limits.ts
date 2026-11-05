@@ -1,6 +1,5 @@
-import * as v from "valibot";
-import { checkRecord, describe, objectSchema, parseWith, strictRecord } from "../checks.js";
-import { checkFinite, checkNonNegative } from "../checks-internal.js";
+import { checkRecord, describe } from "../checks.js";
+import { checkFinite, checkNonNegative, checkOptionNames } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import { type PersonalNeedsProfile, resolveSupports, type TestingTime } from "../pnp/index.js";
 import { type ContentNode, findTestPart, listAncestors, type StructureNode, type TestStructure } from "./structure.js";
@@ -97,7 +96,7 @@ function extendedMaximum(
   }
 }
 
-const timeLimitsOptionsSchema = strictRecord({ extra: v.optional(objectSchema<TestingTime>()) });
+const TIME_LIMITS_OPTIONS = ["extra"] as const;
 
 /** The options of {@link timeLimits}. */
 export interface TimeLimitsOptions {
@@ -132,7 +131,9 @@ export interface TimeLimitsOptions {
  */
 export function timeLimits(node: StructureNode, options: TimeLimitsOptions = {}): EffectiveTimeLimits {
   checkRecord(node, "The node must be an object from resolveStructure");
-  const { extra } = parseWith(timeLimitsOptionsSchema, options, "The options object");
+  checkOptionNames(options, TIME_LIMITS_OPTIONS);
+  const { extra } = options;
+  if (extra !== undefined) checkTestingTime(extra);
   if (extra !== undefined) checkTestingTime(extra);
   if (node.kind === "section" && node.dissolved) return { allowLateSubmission: false };
   const declared = node.model.timeLimits;

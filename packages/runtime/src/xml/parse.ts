@@ -3,7 +3,7 @@ import * as v from "valibot";
 import { describe, parseWith, strictRecord } from "../checks.js";
 import { AssesskitError, DataError, type ReadError, SecurityError } from "../errors.js";
 import { decodeXml } from "./encoding.js";
-import { type XmlLimits, xmlLimitsSchema } from "./limits.js";
+import { DEFAULT_XML_LIMITS, type XmlLimits, xmlLimitsSchema } from "./limits.js";
 import { Locator } from "./locator.js";
 import { createReadError, documentName } from "./read-error.js";
 import type { XmlElement } from "./tree.js";
@@ -26,10 +26,10 @@ export interface ParseXmlOptions {
 }
 
 /** The schema of {@link ParseXmlOptions}, which also reads the options of the readers that parse a document. */
-export const parseXmlOptionsSchema = strictRecord({
-  path: v.optional(v.string()),
-  limits: v.optional(xmlLimitsSchema, {}),
-});
+export const parseXmlOptionsSchema = v.pipe(
+  strictRecord({ path: v.optional(v.string()), limits: v.optional(xmlLimitsSchema) }),
+  v.transform(({ path, limits = DEFAULT_XML_LIMITS }) => ({ path, limits })),
+);
 
 /** Returns whether the UTF-8 encoding of a string has more bytes than a limit; a string has at least as many bytes as UTF-16 code units. */
 export function exceedsBytes(text: string, limit: number): boolean {

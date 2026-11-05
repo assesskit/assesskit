@@ -14,7 +14,7 @@ import { agree, compareShapes, residualAt, type Shape, shapeOf } from "./compare
 import { complex } from "./complex.js";
 import { collectVariables, evaluate, measured } from "./evaluate.js";
 import { checkVariableName } from "./expression-equivalent.js";
-import { type OperatorLimits, operatorLimitsSchema } from "./limits.js";
+import { DEFAULT_OPERATOR_LIMITS, type OperatorLimits, operatorLimitsSchema } from "./limits.js";
 import { isBlank } from "./operands.js";
 import { readStatement } from "./read.js";
 import { MIN_POINTS, POINT_COUNT, type Ranges, Sample } from "./sample.js";
@@ -72,7 +72,7 @@ const rangesSchema = mapSchema(
 const compareMathStepsOptionsSchema = strictRecord({
   decimalSeparator: v.optional(v.picklist([".", ","]), "."),
   variables: v.optional(rangesSchema, {}),
-  limits: v.optional(operatorLimitsSchema, {}),
+  limits: v.optional(operatorLimitsSchema),
   maxSteps: v.optional(positiveIntegerSchema, DEFAULT_MAX_STEPS),
 });
 
@@ -200,7 +200,7 @@ export function compareMathSteps(
   const {
     decimalSeparator: separator,
     variables: ranges,
-    limits,
+    limits = DEFAULT_OPERATOR_LIMITS,
     maxSteps,
   } = parseWith(compareMathStepsOptionsSchema, options, "The options object");
   for (const name of ranges.keys()) checkVariableName(name, `variables[${JSON.stringify(name)}]`);

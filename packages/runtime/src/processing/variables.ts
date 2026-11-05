@@ -1,6 +1,6 @@
-import * as v from "valibot";
 import type { AssessmentItem, OutcomeDeclaration, ValueElement } from "../asi/index.js";
-import { checkRecord, describe, guardSchema, parseWith, strictRecord } from "../checks.js";
+import { checkRecord, describe, guardSchema } from "../checks.js";
+import { checkOptionNames } from "../checks-internal.js";
 import { DataError } from "../errors.js";
 import { normalizeValue, type Value } from "../values/index.js";
 import { describeType, fitValue, type VariableType } from "./assign.js";
@@ -63,9 +63,7 @@ export const valueMapSchema = guardSchema(
   "a Map from identifier to value",
 );
 
-const createItemVariablesOptionsSchema = strictRecord({
-  context: v.optional(valueMapSchema, () => new Map<string, Value | null>()),
-});
+const CREATE_ITEM_VARIABLES_OPTIONS = ["context"] as const;
 
 /**
  * The value outcomes of a numeric base type start with when they have no default.
@@ -134,7 +132,10 @@ export function givenContext(identifier: string, value: unknown, type: VariableT
 }
 
 /** Checks the values that the caller gives context variables. */
-function givenContexts(item: AssessmentItem, given: ReadonlyMap<string, Value | null>): Map<string, Value | null> {
+function givenContexts(item: AssessmentItem, given: unknown): Map<string, Value | null> {
+  if (!(given instanceof Map)) {
+    throw new DataError(`The option context must be a Map from identifier to value, found ${describe(given)}.`);
+  }
   const values = new Map<string, Value | null>();
   if (given.size === 0) return values;
   const types = new Map<string, VariableType>(BUILT_IN_CONTEXTS);
@@ -235,7 +236,8 @@ function declaredVariables(item: AssessmentItem): ItemVariables {
  */
 export function createItemVariables(item: AssessmentItem, options: CreateItemVariablesOptions = {}): ItemVariables {
   checkItem(item);
-  const { context } = parseWith(createItemVariablesOptionsSchema, options, "The options object");
+  checkOptionNames(options, CREATE_ITEM_VARIABLES_OPTIONS);
+  const { context = new Map<string, Value | null>() } = options;
   const given = givenContexts(item, context);
   const declared = declaredVariables(item);
   return { ...declared, contexts: given.size === 0 ? declared.contexts : new Map([...declared.contexts, ...given]) };

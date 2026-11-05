@@ -1,7 +1,23 @@
 // The checks of one value that only the runtime uses. `checks.ts` holds those that the player shares.
 import * as v from "valibot";
-import { describe, positiveIntegerSchema, type Schema, strictRecord } from "./checks.js";
+import { checkProperties, checkRecord, describe, positiveIntegerSchema, type Schema, strictRecord } from "./checks.js";
 import { DataError } from "./errors.js";
+
+/**
+ * Checks that options are an object that has no property but the given ones.
+ *
+ * @remarks
+ * A function that every item, node or element goes through reads its options with this and not with a schema, which takes
+ * three to five times as long: the budgets of the benchmarks hold the work of one item to a few microseconds.
+ *
+ * @param options - The options, as a caller passes them from JavaScript.
+ * @param known - The names of the options that the function takes.
+ * @throws `DataError` when they are not an object, or have another property.
+ */
+export function checkOptionNames(options: unknown, known: readonly string[]): void {
+  checkRecord(options, "The options must be an object");
+  checkProperties(options, "The options", known);
+}
 
 /**
  * Checks that a value is bytes, such as the content of a file.
@@ -55,8 +71,14 @@ export const seedSchema = v.pipe(v.number(), v.safeInteger());
 export const nonNegativeSchema = v.pipe(v.number(), v.finite(), v.minValue(0));
 
 /**
- * The schema of the limits that a caller sets: each a positive integer of at most its cap, and a limit left out has its
- * default. A name that is not a limit is refused, so that a misspelled limit never passes unseen.
+ * The schema of the limits that a caller sets: each a positive integer of at most its cap. A name that is not a limit is
+ * refused, so that a misspelled limit never passes unseen.
+ *
+ * @remarks
+ * A limit left out has its default in the output, and the limits of a caller who sets none are one frozen object, so that the
+ * options that hold them read quickly: a reader that sits on the path of every item, or of every element, would otherwise
+ * build the limits at each call. An option that holds the limits is `v.optional(schema)`, whose absence a transform of the
+ * options turns into the defaults.
  *
  * @param defaults - The limits as they are when the caller sets none; its names are the limits.
  * @param caps - The most a caller may set for a limit; a limit not named has no cap.
@@ -71,11 +93,24 @@ export function limitsSchema<TLimits extends Readonly<Record<keyof TLimits, numb
   const entries: Record<string, v.GenericSchema> = {};
   for (const name of names) {
     const cap: unknown = caps === undefined ? undefined : Reflect.get(caps, name);
-    const limit = typeof cap === "number" ? v.pipe(positiveIntegerSchema, v.maxValue(cap)) : positiveIntegerSchema;
-    entries[name] = v.optional(limit, Reflect.get(defaults, name));
+    entries[name] = v.optional(
+      typeof cap === "number" ? v.pipe(positiveIntegerSchema, v.maxValue(cap)) : positiveIntegerSchema,
+    );
   }
+  const unset: Readonly<TLimits> = Object.freeze({ ...defaults });
   return v.pipe(
     strictRecord(entries),
-    v.transform((given): Readonly<TLimits> => Object.freeze({ ...defaults, ...given })),
+    v.transform((given): Readonly<TLimits> => {
+      const set: Record<string, number> = {};
+      let any = false;
+      for (const name of names) {
+        const value: unknown = given[name];
+        if (typeof value === "number") {
+          set[name] = value;
+          any = true;
+        }
+      }
+      return any ? Object.freeze({ ...defaults, ...set }) : unset;
+    }),
   );
 }

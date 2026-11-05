@@ -1,10 +1,10 @@
-import * as v from "valibot";
-import { checkString, describe, parseWith, strictRecord } from "../checks.js";
+import { checkString, describe } from "../checks.js";
+import { checkOptionNames } from "../checks-internal.js";
 import { AssesskitError, DataError } from "../errors.js";
 import { describeInteractions } from "../interactions/index.js";
 import { drawOrders, startingResponse } from "../interactions/internal.js";
 import { createItemVariables, describeType, type ItemVariables, runTemplateProcessing } from "../processing/index.js";
-import { fitValue, valueMapSchema } from "../processing/internal.js";
+import { fitValue } from "../processing/internal.js";
 import { normalizeValue, type Value } from "../values/index.js";
 import { endAttempt, itemEvent, startAttempt, timed } from "./attempt.js";
 import {
@@ -39,10 +39,7 @@ export interface StartItemSessionOptions {
   readonly templateDefaults?: ReadonlyMap<string, Value | null>;
 }
 
-const startItemSessionOptionsSchema = strictRecord({
-  contextValues: v.optional(valueMapSchema, () => new Map<string, Value | null>()),
-  templateDefaults: v.optional(valueMapSchema, () => new Map<string, Value | null>()),
-});
+const START_ITEM_SESSION_OPTIONS = ["contextValues", "templateDefaults"] as const;
 
 /**
  * Returns the variables with the default values of template variables replaced, before template processing starts from
@@ -56,6 +53,11 @@ function withTemplateDefaults(
   given: ReadonlyMap<string, Value | null>,
   item: ItemSessionContext["item"],
 ): ItemVariables {
+  if (!(given instanceof Map)) {
+    throw new DataError(
+      `The option templateDefaults must be a Map from identifier to value, found ${describe(given)}.`,
+    );
+  }
   if (given.size === 0) return variables;
   const defaults = new Map(variables.defaults);
   const templates = new Map(variables.templates);
@@ -109,7 +111,9 @@ export function startItemSession(
   checkKey(key);
   checkTime(at);
   checkSessionContext(context);
-  const { contextValues, templateDefaults } = parseWith(startItemSessionOptionsSchema, options, "The options object");
+  checkOptionNames(options, START_ITEM_SESSION_OPTIONS);
+  const { contextValues = new Map<string, Value | null>(), templateDefaults = new Map<string, Value | null>() } =
+    options;
   const { item } = context;
   const variables = withTemplateDefaults(createItemVariables(item, { context: contextValues }), templateDefaults, item);
   const session: ItemSession = {

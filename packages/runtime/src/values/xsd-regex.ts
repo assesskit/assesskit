@@ -26,7 +26,7 @@ export interface XsdRegexLimits {
 export const DEFAULT_XSD_REGEX_LIMITS: XsdRegexLimits = { maxStates: 100_000, maxDepth: 100 };
 
 const compileXsdRegexOptionsSchema = strictRecord({
-  limits: v.optional(limitsSchema(DEFAULT_XSD_REGEX_LIMITS), {}),
+  limits: v.optional(limitsSchema(DEFAULT_XSD_REGEX_LIMITS)),
 });
 
 /** The options of {@link compileXsdRegex}. */
@@ -58,7 +58,8 @@ export interface CompileXsdRegexOptions {
  */
 export function compileXsdRegex(pattern: string, options: CompileXsdRegexOptions = {}): XsdPattern {
   checkString(pattern, "The pattern");
-  const { maxStates, maxDepth } = parseWith(compileXsdRegexOptionsSchema, options, "The options object").limits;
+  const { maxStates, maxDepth } =
+    parseWith(compileXsdRegexOptionsSchema, options, "The options object").limits ?? DEFAULT_XSD_REGEX_LIMITS;
   const tree = new PatternParser(pattern, maxDepth).parse();
   if (countStates(tree, maxStates) > maxStates) {
     throw new DataError(

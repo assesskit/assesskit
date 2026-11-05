@@ -265,10 +265,13 @@ export function itemContextValues(
 /** The kind of the model of `qti-assessment-test`. */
 const TEST_KIND = "assessment-test";
 
+/** The limits of an engine: those of the processing and of the plan. */
+const ENGINE_LIMITS = { ...DEFAULT_PROCESSING_LIMITS, ...DEFAULT_PLAN_LIMITS };
+
 const engineOptionsSchema = strictRecord({
   customOperators: v.optional(customOperatorsSchema),
   resolveTemplate: v.optional(functionSchema<(uri: string) => ResponseProcessing | undefined>()),
-  limits: v.optional(limitsSchema({ ...DEFAULT_PROCESSING_LIMITS, ...DEFAULT_PLAN_LIMITS }), {}),
+  limits: v.optional(limitsSchema(ENGINE_LIMITS)),
   contentVersion: v.optional(nonEmptyStringSchema),
   eventOutcomes: v.optional(v.boolean(), false),
   reviewAfterEnd: v.optional(v.boolean(), false),
@@ -281,7 +284,7 @@ function readEngineOptions(
   Course,
   "customOperators" | "resolveTemplate" | "limits" | "contentVersion" | "eventOutcomes" | "reviewAfterEnd"
 > {
-  const { limits, ...read } = parseWith(engineOptionsSchema, options, "The options object");
+  const { limits = ENGINE_LIMITS, ...read } = parseWith(engineOptionsSchema, options, "The options object");
   const { customOperators, resolveTemplate, limits: processing } = checkProcessingOptions({ ...read, limits });
   return {
     customOperators,

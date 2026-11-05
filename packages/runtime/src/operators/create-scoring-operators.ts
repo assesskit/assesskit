@@ -4,13 +4,13 @@ import type { CustomOperator } from "../processing/index.js";
 import { OPERATOR_DEFINITIONS } from "./definitions.js";
 import { prepareExpression, scoreExpression } from "./expression-equivalent.js";
 import { prepareAreas, scoreAreas } from "./hotspot-matching.js";
-import { type OperatorLimits, operatorLimitsSchema } from "./limits.js";
+import { DEFAULT_OPERATOR_LIMITS, type OperatorLimits, operatorLimitsSchema } from "./limits.js";
 import { prepareNumber, scoreNumber } from "./number-equivalent.js";
 import { readOptions } from "./options.js";
 import { prepareReadable, scoreReadable } from "./readable.js";
 import { prepareText, scoreText } from "./text-equivalent.js";
 
-const createScoringOperatorsOptionsSchema = strictRecord({ limits: v.optional(operatorLimitsSchema, {}) });
+const createScoringOperatorsOptionsSchema = strictRecord({ limits: v.optional(operatorLimitsSchema) });
 
 /** The options of {@link createScoringOperators}. */
 export interface CreateScoringOperatorsOptions {
@@ -44,7 +44,11 @@ export interface CreateScoringOperatorsOptions {
 export function createScoringOperators(
   options: CreateScoringOperatorsOptions = {},
 ): ReadonlyMap<string, CustomOperator> {
-  const { limits } = parseWith(createScoringOperatorsOptionsSchema, options, "The options object");
+  const { limits = DEFAULT_OPERATOR_LIMITS } = parseWith(
+    createScoringOperatorsOptionsSchema,
+    options,
+    "The options object",
+  );
   const operators: [string, CustomOperator][] = [
     [
       OPERATOR_DEFINITIONS["expression-equivalent"],

@@ -57,7 +57,7 @@ export const DEFAULT_ACTION_LIMITS: ActionLimits = {
 };
 
 const readCandidateActionOptionsSchema = strictRecord({
-  limits: v.optional(limitsSchema(DEFAULT_ACTION_LIMITS), {}),
+  limits: v.optional(limitsSchema(DEFAULT_ACTION_LIMITS)),
 });
 
 const actionSchema: Schema<CandidateAction> = v.variant(
@@ -134,7 +134,7 @@ function checkPciStates(action: CandidateAction, limit: number): void {
  * a list in the settings of `support-settings` is longer than `maxSettingListLength`.
  */
 export function readCandidateAction(json: unknown, options: ReadCandidateActionOptions = {}): CandidateAction {
-  const { limits } = parseWith(readCandidateActionOptionsSchema, options, "The options object");
+  const { limits = DEFAULT_ACTION_LIMITS } = parseWith(readCandidateActionOptionsSchema, options, "The options object");
   const { maxActionSize, maxPciStateLength, maxSettingListLength } = limits;
   checkJsonInput(json, "The action", maxActionSize, "maxActionSize");
   refuseHostAction(json);

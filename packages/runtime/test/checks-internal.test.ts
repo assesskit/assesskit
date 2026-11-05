@@ -4,11 +4,24 @@ import {
   checkBytes,
   checkFinite,
   checkNonNegative,
+  checkOptionNames,
   checkSeed,
   limitsSchema,
   nonNegativeSchema,
 } from "../src/checks-internal.js";
 import { DataError } from "../src/errors.js";
+
+describe("checkOptionNames", () => {
+  it("accepts an object that has the names it is given, or fewer, and refuses another property and another type", () => {
+    expect(() => checkOptionNames({}, ["a", "b"])).not.toThrow();
+    expect(() => checkOptionNames({ a: 1 }, ["a", "b"])).not.toThrow();
+    expect(() => checkOptionNames({ c: 1 }, ["a", "b"])).toThrow(
+      'The options has the properties "a" and "b", found "c".',
+    );
+    expect(() => checkOptionNames(JSON.parse("null"), ["a"])).toThrow("The options must be an object, found null.");
+    expect(() => checkOptionNames(JSON.parse("[]"), ["a"])).toThrow("The options must be an object, found an array.");
+  });
+});
 
 describe("limitsSchema", () => {
   const defaults = { maxBytes: 10, maxDepth: 4 };
@@ -21,6 +34,7 @@ describe("limitsSchema", () => {
       maxDepth: 4,
     });
     expect(Object.isFrozen(parseWith(schema, {}, "The limits"))).toBe(true);
+    expect(parseWith(schema, {}, "The limits")).toBe(parseWith(schema, {}, "The limits"));
   });
 
   it("refuses a name that is not a limit, so that a misspelled limit never passes", () => {

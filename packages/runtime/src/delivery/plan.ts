@@ -1,6 +1,6 @@
 import * as v from "valibot";
-import { checkArray, checkRecord, describe, methodsSchema, parseWith, strictRecord } from "../checks.js";
-import { limitsSchema } from "../checks-internal.js";
+import { checkArray, checkRecord, checkString, describe, methodsSchema, parseWith, strictRecord } from "../checks.js";
+import { checkOptionNames, limitsSchema } from "../checks-internal.js";
 import { DataError, SecurityError } from "../errors.js";
 import { type Random, shuffle } from "../random.js";
 import type { ItemKey } from "./item-key.js";
@@ -69,10 +69,10 @@ export const DEFAULT_PLAN_LIMITS: PlanLimits = { maxPlanNodes: 10_000 };
 
 const planOptionsSchema = strictRecord({
   random: methodsSchema<Random>("uniform"),
-  limits: v.optional(limitsSchema(DEFAULT_PLAN_LIMITS), {}),
+  limits: v.optional(limitsSchema(DEFAULT_PLAN_LIMITS)),
 });
 
-const listPlanItemsOptionsSchema = strictRecord({ part: v.optional(v.string()) });
+const LIST_PLAN_ITEMS_OPTIONS = ["part"] as const;
 
 /** The options of {@link planTest}. */
 export interface PlanOptions {
@@ -207,10 +207,11 @@ export function planTest(structure: TestStructure, options: PlanOptions): TestPl
     structure.test.parts,
     "The structure must be an object from resolveStructure, whose test has an array parts",
   );
-  const {
-    random,
-    limits: { maxPlanNodes },
-  } = parseWith(planOptionsSchema, options, "The options object");
+  const { random, limits: { maxPlanNodes } = DEFAULT_PLAN_LIMITS } = parseWith(
+    planOptionsSchema,
+    options,
+    "The options object",
+  );
   const drafting: Drafting = { random, maxPlanNodes, remaining: maxPlanNodes };
   const occurrences = new Map<string, number>();
   const parts = structure.test.parts.map((part): PlannedPart => {
@@ -260,7 +261,9 @@ export interface ListPlanItemsOptions {
 export function listPlanItems(plan: TestPlan, options: ListPlanItemsOptions = {}): readonly ItemKey[] {
   checkRecord(plan, "The plan must be an object");
   checkArray(plan.parts, "The plan must have an array parts");
-  const { part } = parseWith(listPlanItemsOptionsSchema, options, "The options object");
+  checkOptionNames(options, LIST_PLAN_ITEMS_OPTIONS);
+  const { part } = options;
+  if (part !== undefined) checkString(part, "The test part");
   const chosen = part === undefined ? plan.parts : plan.parts.filter((candidate) => candidate.identifier === part);
   if (part !== undefined && chosen.length === 0) throw new DataError(`The plan has no test part ${describe(part)}.`);
   return chosen.flatMap((entry) => keysOf(entry.children));

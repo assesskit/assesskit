@@ -265,7 +265,7 @@ export interface ReadResultsJsonOptions {
 export const DEFAULT_RESULTS_JSON_LIMITS: ResultsJsonLimits = { maxResultSize: 8_388_608 };
 
 const readResultsJsonOptionsSchema = strictRecord({
-  limits: v.optional(limitsSchema(DEFAULT_RESULTS_JSON_LIMITS), {}),
+  limits: v.optional(limitsSchema(DEFAULT_RESULTS_JSON_LIMITS)),
 });
 
 /**
@@ -286,7 +286,8 @@ const readResultsJsonOptionsSchema = strictRecord({
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, JSON binding of the assessment result}
  */
 export function readResultsJson(json: unknown, options: ReadResultsJsonOptions = {}): AssessmentResult {
-  const { maxResultSize } = parseWith(readResultsJsonOptionsSchema, options, "The options object").limits;
+  const { maxResultSize } =
+    parseWith(readResultsJsonOptionsSchema, options, "The options object").limits ?? DEFAULT_RESULTS_JSON_LIMITS;
   checkJsonInput(json, "The assessmentResult", maxResultSize, "maxResultSize");
   return parseWith(assessmentResultSchema, json, "The assessmentResult");
 }

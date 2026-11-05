@@ -2,13 +2,13 @@ import * as v from "valibot";
 import { type AsiDocument, readAsi } from "../asi/index.js";
 import { checkArray, checkFunction, checkRecord, checkString, describe, parseWith, strictRecord } from "../checks.js";
 import { AssesskitError, DataError, SecurityError } from "../errors.js";
-import { parseXml, resolveIncludes, type XmlElement, type XmlLimits } from "../xml/index.js";
+import { DEFAULT_XML_LIMITS, parseXml, resolveIncludes, type XmlElement, type XmlLimits } from "../xml/index.js";
 import { createReadError, xmlLimitsSchema } from "../xml/internal.js";
 import type { Manifest } from "./manifest.js";
 import type { PackageFiles } from "./package-files.js";
 import { normalizeEntryName, resolveReference } from "./paths.js";
 import { readManifest } from "./read-manifest.js";
-import { type ZipLimits, zipLimitsSchema } from "./zip-limits.js";
+import { DEFAULT_ZIP_LIMITS, type ZipLimits, zipLimitsSchema } from "./zip-limits.js";
 import { memorySource, openZip } from "./zip-reader.js";
 
 /** The path of the manifest in a package. */
@@ -72,13 +72,13 @@ export interface ReadPackageOptions extends OpenPackageOptions {
   readonly limits?: Partial<ZipLimits>;
 }
 
-const openPackageOptionsSchema = strictRecord({ xmlLimits: v.optional(xmlLimitsSchema, {}) });
+const openPackageOptionsSchema = strictRecord({ xmlLimits: v.optional(xmlLimitsSchema) });
 
 /** The schema of {@link ReadPackageOptions}, which `readPackageFile` reads as `readPackage` does. */
-export const readPackageOptionsSchema = strictRecord({
-  limits: v.optional(zipLimitsSchema, {}),
-  xmlLimits: v.optional(xmlLimitsSchema, {}),
-});
+export const readPackageOptionsSchema = v.pipe(
+  strictRecord({ limits: v.optional(zipLimitsSchema), xmlLimits: v.optional(xmlLimitsSchema) }),
+  v.transform(({ limits = DEFAULT_ZIP_LIMITS, xmlLimits = DEFAULT_XML_LIMITS }) => ({ limits, xmlLimits })),
+);
 
 class OpenedPackage implements QtiPackage {
   readonly manifest: Manifest;
@@ -191,7 +191,7 @@ class OpenedPackage implements QtiPackage {
  * @throws `SecurityError` as {@link parseXml} does for the manifest.
  */
 export function openPackage(files: PackageFiles, options: OpenPackageOptions = {}): QtiPackage {
-  const { xmlLimits } = parseWith(openPackageOptionsSchema, options, "The options object");
+  const { xmlLimits = DEFAULT_XML_LIMITS } = parseWith(openPackageOptionsSchema, options, "The options object");
   checkRecord(files, "The files must be an object");
   checkArray(files.paths, "The paths of the files must be an array");
   checkFunction(files.read, "The files must have a function read of a path");
