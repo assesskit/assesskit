@@ -418,15 +418,9 @@ function checkTags(html: string, state: ContentState): void {
  * @throws `SecurityError` when the items of the file pass `maxNodes`, a text holds more tags than `maxTextTags`, or it nests
  * deeper than `maxDepth`.
  */
-export function readMoodleText(
-  text: FormattedText,
-  parentType: string | TypeInfo,
-  state: ContentState,
-  blank?: Blank,
-): XmlNode[] {
+export function readMoodleText(text: FormattedText, parent: TypeInfo, state: ContentState, blank?: Blank): XmlNode[] {
   const html = moodleHtml(text, state);
   if (html.trim() === "") return [];
   checkTags(html, state);
-  const parent = typeof parentType === "string" ? typeNamed(parentType) : parentType;
   return convertNodes(parseFragment(html).childNodes, parent, 0, state, blank);
 }

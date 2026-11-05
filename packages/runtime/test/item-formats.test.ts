@@ -382,6 +382,45 @@ describe("readGift and readMoodleXml", () => {
     ]);
     expect(losses[0]?.message).toMatch(/^The question does not form a QTI item: The attribute expected-lines/);
   });
+
+  it("reads Moodle XML questions of no right answer, no answers or no stems, and the hints of each", () => {
+    const question = (type: string, inner: string) =>
+      `<question type="${type}"><name><text>${type}</text></name><questiontext format="html"><text>Q</text></questiontext>${inner}</question>`;
+    const answer = (fraction: string, text: string) => `<answer fraction="${fraction}"><text>${text}</text></answer>`;
+    const pair = (stem: string, target: string) =>
+      `<subquestion><text>${stem}</text><answer><text>${target}</text></answer></subquestion>`;
+    const { items, losses } = readMoodleXml(
+      `<quiz>${[
+        question("multichoice", `<single>true</single>${answer("0", "a")}${answer("-50", "b")}`),
+        question("shortanswer", ""),
+        question("shortanswer", answer("0", "maybe")),
+        question("matching", `${pair("s", "")}${pair("", "t")}`),
+        question("matching", pair("", "t")),
+        question("truefalse", `<hint><text>h1</text></hint><hint><text>h2</text></hint>${answer("100", "true")}`),
+      ].join("")}</quiz>`,
+    );
+    const trees = items.map(({ item }) => parseXml(writeAsi({ kind: "item", item })));
+    // No answer earns credit, so no response is correct; no answer, or no stem, leaves no rule to run.
+    expect(
+      trees.map((tree) => [
+        descendants(tree, ({ name }) => name === "qti-correct-response").length,
+        children(tree, "qti-response-processing").length,
+      ]),
+    ).toStrictEqual([
+      [0, 1],
+      [0, 0],
+      [0, 1],
+      [0, 1],
+      [0, 0],
+      [1, 1],
+    ]);
+    const [noRight] = items;
+    if (noRight === undefined) throw new Error("The multiple choice reads.");
+    expect(scoreOf(noRight.item, { choice: 1 })).toBe(-0.5);
+    expect(losses.map(({ index, reason, message }) => [index, reason, message])).toStrictEqual([
+      [5, "setting", "The 2 hints of Moodle's interactive modes have no place in a QTI item."],
+    ]);
+  });
 });
 
 describe("writeGift", () => {
@@ -552,6 +591,23 @@ describe("the content of a question", () => {
     ]);
   });
 
+  it("names a question by the start of its text, skips an empty identifier, and gives up an image without its source", () => {
+    const { items, losses } = readGift(
+      '// [id:] [tag:x]\n<b>Unnamed</b> question whose text is long enough to need a name cut by Moodle\'s shorten_text after eighty characters {=a}\n\n[html]<p><img alt="x">pic <math><mi mathvariant="bold">x</mi></math></p>{}',
+    );
+    expect(items.map(({ item, tags = [] }) => [item.identifier, item.title, tags])).toStrictEqual([
+      ["item-1", "Unnamed question whose text is long enough to need a name cut by Moodle's ...", ["x"]],
+      ["item-2", "pic x", []],
+    ]);
+    const essay = items[1]?.item;
+    expect(essay === undefined ? "" : writeAsi({ kind: "item", item: essay })).toContain(
+      '<p>pic <math xmlns="http://www.w3.org/1998/Math/MathML"><mi mathvariant="bold">x</mi></math></p>',
+    );
+    expect(losses.map(({ item, message }) => [item, message])).toStrictEqual([
+      ["item-2", "The elements img are not QTI content where they stand: their content is kept without them."],
+    ]);
+  });
+
   it("labels the choices of a true-false question as the option says", () => {
     const { items } = readGift("Is it?{T}", { trueFalseLabels: { true: "Benar", false: "Salah" } });
     expect(items.map(({ item }) => choiceTexts(item))).toStrictEqual([["Benar", "Salah"]]);
@@ -608,6 +664,110 @@ describe("writeGift and the items that do not convert", () => {
     );
     expect(losses.map(({ reason, message }) => [reason, message])).toStrictEqual([
       ["feedback", "The feedback never shows for no response that Moodle tells apart: it is left out."],
+    ]);
+  });
+
+  it("writes an item without a body, a choice of no full credit, true and false of half credit, and an essay of no lines", () => {
+    const choices = `<qti-item-body><qti-choice-interaction response-identifier="RESPONSE" max-choices="1"><qti-simple-choice identifier="A">a</qti-simple-choice><qti-simple-choice identifier="B">b</qti-simple-choice></qti-choice-interaction></qti-item-body>`;
+    const mapped = (entries: string, max: string) =>
+      `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"><qti-mapping default-value="0">${entries}</qti-mapping></qti-response-declaration>${SCORE}<qti-outcome-declaration identifier="MAXSCORE" cardinality="single" base-type="float"><qti-default-value><qti-value>${max}</qti-value></qti-default-value></qti-outcome-declaration>`;
+    const mapResponse = `<qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/map_response.xml"/>`;
+    const items = [
+      qtiItem(SCORE, "nobody"),
+      qtiItem(`${mapped('<qti-map-entry map-key="A" mapped-value="1"/>', "2")}${choices}${mapResponse}`, "half"),
+      qtiItem(
+        `${mapped('<qti-map-entry map-key="true" mapped-value="0.5"/><qti-map-entry map-key="false" mapped-value="0.5"/>', "1")}${choices.replace('"A">a', '"true">True').replace('"B">b', '"false">False')}${mapResponse}`,
+        "tf",
+      ),
+      qtiItem(
+        `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>${SCORE}<qti-item-body><qti-extended-text-interaction response-identifier="RESPONSE" expected-lines="0"/></qti-item-body>`,
+        "essay",
+      ),
+    ].map((item) => ({ item }));
+    // Two choices of half credit are not a true-false question, and an essay of no lines has Moodle's 15.
+    expect(writeGift(items).text).toBe(
+      "// [id:nobody]\n::Item::[html]\n\n// [id:half]\n::Item::[html]{\n\t~%50%a\n\t~b\n}\n\n// [id:tf]\n::Item::[html]{\n\t~%50%True\n\t~%50%False\n}\n\n// [id:essay]\n::Item::[html]{}\n\n",
+    );
+    expect(writeMoodleXml(items).text).toContain("<responsefieldlines>15</responsefieldlines>");
+    expect(
+      writeGift(items)
+        .losses.filter(({ reason }) => reason === "scoring")
+        .map(({ item }) => item),
+    ).toStrictEqual(["half", "tf"]);
+  });
+
+  it("leaves out a match of one pair from GIFT, a short answer of no full credit from Moodle XML, and an unknown operator", () => {
+    const set =
+      '<qti-simple-match-set><qti-simple-associable-choice identifier="A" match-max="1">a</qti-simple-associable-choice></qti-simple-match-set>';
+    const onePair = qtiItem(
+      `<qti-response-declaration identifier="RESPONSE" cardinality="multiple" base-type="directedPair"><qti-correct-response><qti-value>A A</qti-value></qti-correct-response></qti-response-declaration>${SCORE}<qti-item-body><qti-match-interaction response-identifier="RESPONSE" max-associations="1">${set}${set}</qti-match-interaction></qti-item-body>${MATCH_CORRECT}`,
+      "pair",
+    );
+    const text = (rules: string, identifier: string, outcomes = "") =>
+      qtiItem(
+        `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>${SCORE}${outcomes}<qti-item-body><p>Q <qti-text-entry-interaction response-identifier="RESPONSE"/></p></qti-item-body><qti-response-processing>${rules}</qti-response-processing>`,
+        identifier,
+      );
+    const half = text(
+      '<qti-response-condition><qti-response-if><qti-pattern-match pattern="\\s*a\\s*"><qti-variable identifier="RESPONSE"/></qti-pattern-match><qti-set-outcome-value identifier="SCORE"><qti-base-value base-type="float">0.5</qti-base-value></qti-set-outcome-value></qti-response-if></qti-response-condition>',
+      "half",
+      '<qti-outcome-declaration identifier="MAXSCORE" cardinality="single" base-type="float"><qti-default-value><qti-value>1</qti-value></qti-default-value></qti-outcome-declaration>',
+    );
+    const other = text(
+      '<qti-set-outcome-value identifier="SCORE"><qti-custom-operator class="com.example.Other"><qti-variable identifier="RESPONSE"/></qti-custom-operator></qti-set-outcome-value>',
+      "other",
+    );
+    const omitted = (losses: readonly ConversionLoss[]) =>
+      losses.filter(({ omitted }) => omitted).map(({ item, message }) => [item, message]);
+    expect(omitted(writeGift([{ item: onePair }, { item: other }]).losses)).toStrictEqual([
+      ["pair", "GIFT holds a matching question of two pairs or more, and this item has one."],
+      ["other", "No answer of the item earns credit, and Moodle's short answer needs one that does."],
+    ]);
+    expect(omitted(writeMoodleXml([{ item: half }]).losses)).toStrictEqual([
+      ["half", "No answer earns the item's full credit, and Moodle refuses a short answer without one of 100%."],
+    ]);
+  });
+
+  it("lists each pattern that is not an answer with Moodle's wildcards, and holds every interaction to maxAnswers", () => {
+    const condition = (pattern: string, score: string) =>
+      `<qti-response-condition><qti-response-if><qti-pattern-match pattern="${pattern}"><qti-variable identifier="RESPONSE"/></qti-pattern-match><qti-set-outcome-value identifier="SCORE"><qti-base-value base-type="float">${score}</qti-base-value></qti-set-outcome-value></qti-response-if></qti-response-condition>`;
+    const text = (rules: string, identifier: string) =>
+      qtiItem(
+        `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>${SCORE}<qti-outcome-declaration identifier="MAXSCORE" cardinality="single" base-type="float"><qti-default-value><qti-value>1</qti-value></qti-default-value></qti-outcome-declaration><qti-item-body><p>Q <qti-text-entry-interaction response-identifier="RESPONSE"/></p></qti-item-body><qti-response-processing>${rules}</qti-response-processing>`,
+        identifier,
+      );
+    // A class of two letters that are not one in both cases, an escape of no mark, a quantifier, and a class beside a letter.
+    const unread = ["\\s*a[bc]\\s*", "\\s*a\\d\\s*", "\\s*a+\\s*", "\\s*[aA]b\\s*"];
+    const patterns = text(
+      [
+        ...unread.map((pattern) => condition(pattern, "1")),
+        condition("\\s*42\\s*", "1"),
+        condition("\\s*a\\.\\s*", "0.5"),
+      ].join(""),
+      "patterns",
+    );
+    const { text: gift, losses } = writeGift([{ item: patterns }]);
+    expect(gift).toBe("// [id:patterns]\n::Item::[html]<p>Q </p>{\n\t=42\n\t=%50%a.\n}\n\n");
+    expect(losses.map(({ message }) => message)).toStrictEqual([
+      ...unread.map((pattern) => `The pattern ${pattern} is not an answer with Moodle's wildcards: it is left out.`),
+      "GIFT's short answers ignore case: the answers' case no longer counts.",
+    ]);
+    const choices =
+      '<qti-simple-associable-choice identifier="A" match-max="1">a</qti-simple-associable-choice><qti-simple-associable-choice identifier="B" match-max="1">b</qti-simple-associable-choice>';
+    const match = qtiItem(
+      `<qti-response-declaration identifier="RESPONSE" cardinality="multiple" base-type="directedPair"><qti-correct-response><qti-value>A A</qti-value></qti-correct-response></qti-response-declaration>${SCORE}<qti-item-body><qti-match-interaction response-identifier="RESPONSE" max-associations="2"><qti-simple-match-set>${choices}</qti-simple-match-set><qti-simple-match-set>${choices}</qti-simple-match-set></qti-match-interaction></qti-item-body>${MATCH_CORRECT}`,
+      "match",
+    );
+    const numbers = qtiItem(
+      `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="float"><qti-correct-response><qti-value>1</qti-value></qti-correct-response><qti-mapping default-value="0"><qti-map-entry map-key="2" mapped-value="0.5"/></qti-mapping></qti-response-declaration>${SCORE}<qti-item-body><p>Q <qti-text-entry-interaction response-identifier="RESPONSE"/></p></qti-item-body><qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/map_response.xml"/>`,
+      "numbers",
+    );
+    const two = text(condition("\\s*a\\s*", "1") + condition("\\s*b\\s*", "0.5"), "texts");
+    const limited = writeGift([{ item: match }, { item: two }, { item: numbers }], { limits: { maxAnswers: 1 } });
+    expect(limited.losses.map(({ item, omitted, message }) => [item, omitted, message])).toStrictEqual([
+      ["match", true, "The match has more than 1 choices in a set, the limit maxAnswers."],
+      ["texts", true, "The item names 2 answers, over the limit maxAnswers of 1."],
+      ["numbers", true, "The item names 2 answers, over the limit maxAnswers of 1."],
     ]);
   });
 

@@ -176,7 +176,7 @@ function mappedScore(): XmlElement {
 }
 
 /** Converts a text into the content of an element of the type, where `content` holds the item's texts. */
-type Content = (text: FormattedText, parent: string | TypeInfo, blank?: Blank) => XmlNode[];
+type Content = (text: FormattedText, parent: TypeInfo, blank?: Blank) => XmlNode[];
 
 function choicePart(
   question: Extract<Question, { qtype: "multichoice" }>,

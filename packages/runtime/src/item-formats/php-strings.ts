@@ -19,20 +19,16 @@ export function phpEmpty(text: string | undefined): boolean {
   return text === undefined || text === "" || text === "0";
 }
 
-/** PHP's `substr`, with a negative start or length counted from the end and an empty result past the end. */
-export function phpSubstr(text: string, start: number, length?: number): string {
-  const from = start < 0 ? Math.max(text.length + start, 0) : start;
-  if (from > text.length) return "";
-  if (length === undefined) return text.slice(from);
-  const to = length < 0 ? text.length + length : from + length;
-  return to <= from ? "" : text.slice(from, to);
+/** PHP's `substr` from a start within the text, with a negative length counted from the end, as the importer calls it. */
+export function phpSubstr(text: string, start: number, length: number): string {
+  const to = length < 0 ? text.length + length : start + length;
+  return to <= start ? "" : text.slice(start, to);
 }
 
-/** PHP's `substr_replace` of one string. */
+/** PHP's `substr_replace` of one string from a start within it, with a negative length counted from the end. */
 export function phpSubstrReplace(text: string, replacement: string, start: number, length: number): string {
-  const from = start < 0 ? Math.max(text.length + start, 0) : Math.min(start, text.length);
-  const to = length < 0 ? Math.max(text.length + length, from) : Math.min(from + length, text.length);
-  return text.slice(0, from) + replacement + text.slice(to);
+  const to = length < 0 ? Math.max(text.length + length, start) : Math.min(start + length, text.length);
+  return text.slice(0, start) + replacement + text.slice(to);
 }
 
 /** PHP's `explode` with a limit: at most `limit` parts, the last holding the rest. */

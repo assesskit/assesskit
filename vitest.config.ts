@@ -78,6 +78,8 @@ const FLOORS: Record<string, { statements: number; branches: number; functions: 
       }
     : {
         "packages/runtime/src/**": { statements: 96, branches: 92, functions: 97, lines: 97 },
+        // The item formats hold the floor of branches of the runtime on their own, not in its average.
+        "packages/runtime/src/item-formats/**": { statements: 98, branches: 92, functions: 99, lines: 99 },
         "packages/player/src/{cat,cat-rest,messages,protocol,scoring,server}/**": {
           statements: 95,
           branches: 88,

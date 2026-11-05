@@ -67,7 +67,8 @@ export function planExport(
     if (tags.some((tag) => typeof tag !== "string"))
       throw new DataError(`The tags of the item at ${index} must be strings.`);
     const converted = convertItem(item, context);
-    const identifier = typeof item.identifier === "string" ? item.identifier : String(index);
+    // `convertItem` has written the item, which refuses one without an identifier.
+    const identifier = item.identifier;
     for (const loss of converted.losses) {
       losses.push({ index, item: identifier, omitted: converted.question === undefined, ...loss });
     }

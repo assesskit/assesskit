@@ -196,12 +196,6 @@ function recordLosses(question: Question, entry: ExportEntry, plan: ExportPlan):
       message: "GIFT has no feedback by how right a response is: it is left out.",
     });
   }
-  if (question.qtype === "description" && question.generalFeedback.text !== "") {
-    addLoss(plan, entry, {
-      reason: "feedback",
-      message: "A description of GIFT has no general feedback: it is left out.",
-    });
-  }
   if (question.qtype === "essay") recordEssayLosses(question, entry, plan);
 }
 
@@ -232,11 +226,11 @@ function textsOf(question: Question): string[] {
 function writeQuestion(entry: ExportEntry, plan: ExportPlan): string {
   const { question } = entry;
   recordLosses(question, entry, plan);
-  const marks: string[] = [];
-  if (question.idNumber !== "") marks.push(`[id:${question.idNumber.replaceAll("]", "\\]")}]`);
+  // The identifier is the item's, which every item has.
+  const marks = [`[id:${question.idNumber.replaceAll("]", "\\]")}]`];
   // A line break would end the comment, and the rest of the tag would be read as the question's text.
   for (const tag of question.tags) marks.push(`[tag:${tag.replaceAll(/[\r\n]+/g, " ").replaceAll("]", "\\]")}]`);
-  const comment = marks.length === 0 ? "" : `// ${marks.join(" ")}\n`;
+  const comment = `// ${marks.join(" ")}\n`;
   const answers = writeAnswers(question, entry, plan);
   const text = question.text.text;
   const name = `::${escapeGift(question.name)}::`;
