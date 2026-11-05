@@ -1,7 +1,7 @@
 import { type AssessmentItem, readAsi } from "../asi/index.js";
 import { type TypeInfo, typeNamed } from "../asi/internal.js";
 import { ReadError } from "../errors.js";
-import type { XmlElement, XmlNode } from "../xml/index.js";
+import type { XmlAttribute, XmlElement, XmlNode } from "../xml/index.js";
 import { type Blank, type ContentState, childType, countElements, readMoodleText, startItem } from "./html-content.js";
 import type { LossReason, TrueFalseLabels } from "./model.js";
 import { baseValue, condition, floatOutcome, formatFloat, isNull, qti, setOutcome, variable } from "./qti-elements.js";
@@ -686,34 +686,32 @@ function treeSize(element: XmlElement): number {
 }
 
 /** A character that XML 1.0 does not allow, which a GIFT file may hold: a control character, U+FFFE or U+FFFF. */
-const NOT_XML = /[^\t\n\r\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu;
+const NOT_XML = /[^\t\n\r\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/u;
+const EVERY_NOT_XML = /[^\t\n\r\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu;
 
 /**
  * Returns the tree with U+FFFD in place of each character of its texts and attributes that XML does not allow, so that the
- * item can be written; the same tree when it has none.
+ * item can be written; the same tree, with nothing copied, when it has none.
  */
 function withXmlCharacters(element: XmlElement): XmlElement {
-  const clean = (text: string) => text.replaceAll(NOT_XML, "\uFFFD");
-  let changed = false;
-  const attributes = element.attributes.map((attribute) => {
-    const value = clean(attribute.value);
-    if (value === attribute.value) return attribute;
-    changed = true;
-    return { ...attribute, value };
-  });
-  const children = element.children.map((child): XmlNode => {
-    if (child.kind === "element") {
-      const written = withXmlCharacters(child);
-      if (written !== child) changed = true;
-      return written;
-    }
-    if (child.kind !== "text") return child;
-    const value = clean(child.value);
-    if (value === child.value) return child;
-    changed = true;
-    return { ...child, value };
-  });
-  return changed ? { ...element, attributes, children } : element;
+  let attributes: XmlAttribute[] | undefined;
+  for (const [index, attribute] of element.attributes.entries()) {
+    if (!NOT_XML.test(attribute.value)) continue;
+    attributes ??= [...element.attributes];
+    attributes[index] = { ...attribute, value: attribute.value.replaceAll(EVERY_NOT_XML, "\uFFFD") };
+  }
+  let children: XmlNode[] | undefined;
+  for (const [index, child] of element.children.entries()) {
+    let written: XmlNode = child;
+    if (child.kind === "element") written = withXmlCharacters(child);
+    else if (child.kind === "text" && NOT_XML.test(child.value))
+      written = { ...child, value: child.value.replaceAll(EVERY_NOT_XML, "\uFFFD") };
+    if (written === child) continue;
+    children ??= [...element.children];
+    children[index] = written;
+  }
+  if (attributes === undefined && children === undefined) return element;
+  return { ...element, attributes: attributes ?? element.attributes, children: children ?? element.children };
 }
 
 /** The prefix by which Moodle's texts name the files of their area. */
