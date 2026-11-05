@@ -1,14 +1,11 @@
 import { type Stats, statSync } from "node:fs";
 import { checkString, parseWith } from "../checks.js";
+import { messageOf } from "../checks-internal.js";
 import { DataError, SecurityError } from "../errors.js";
 import { openPackage, type QtiPackage, type ReadPackageOptions } from "../package/index.js";
 import { openZip, readPackageOptionsSchema } from "../package/internal.js";
 import { openDirectory } from "./directory-files.js";
 import { fileSource } from "./file-source.js";
-
-function reasonOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 /**
  * Reads a QTI content package from a ZIP file or from an unpacked package directory, detected by what the path is.
@@ -33,7 +30,7 @@ export async function readPackageFile(path: string, options: ReadPackageOptions 
   try {
     stat = statSync(path);
   } catch (error) {
-    throw new DataError(`The package ${path} cannot be read: ${reasonOf(error)}`, { cause: error });
+    throw new DataError(`The package ${path} cannot be read: ${messageOf(error)}`, { cause: error });
   }
   const packageOptions = { xmlLimits };
   if (stat.isDirectory()) return openPackage(await openDirectory(path, resolved), packageOptions);

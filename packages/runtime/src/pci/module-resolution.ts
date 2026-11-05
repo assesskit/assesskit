@@ -1,6 +1,6 @@
 import * as v from "valibot";
 import { checkString, mapSchema, nonEmptyStringSchema, parseWith, recordSchema, type Schema } from "../checks.js";
-import { nonNegativeSchema } from "../checks-internal.js";
+import { messageOf, nonNegativeSchema } from "../checks-internal.js";
 import { DataError, SecurityError } from "../errors.js";
 
 /**
@@ -71,10 +71,7 @@ export function readModuleResolution(text: string): ModuleResolution {
   try {
     json = JSON.parse(text);
   } catch (error) {
-    throw new DataError(
-      `The module resolution file must be JSON: ${error instanceof Error ? error.message : String(error)}.`,
-      { cause: error },
-    );
+    throw new DataError(`The module resolution file must be JSON: ${messageOf(error)}.`, { cause: error });
   }
   return parseWith(resolutionSchema, json, "The module resolution file");
 }

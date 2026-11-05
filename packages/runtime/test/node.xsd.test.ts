@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { XsdValidator } from "libxml2-wasm";
+import { readBuffer, XsdValidator, xmlCleanupInputProvider, xmlRegisterInputProvider } from "libxml2-wasm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
@@ -227,6 +227,26 @@ describe("validating documents", () => {
       expect(compile).toHaveBeenCalledTimes(2);
     } finally {
       compile.mockRestore();
+      own.close();
+    }
+  });
+
+  it("tells a program that has used every input provider of libxml2 to remove its own, and compiles again once it has", async () => {
+    const own = await loadSchemaSet(schemaDirectory);
+    const taken = { match: () => false, open: () => undefined, read: readBuffer, close: () => true };
+    let registered = 0;
+    while (registered < 64 && xmlRegisterInputProvider(taken)) registered += 1;
+    try {
+      expect(registered).toBeLessThan(64);
+      await expect(validateXmlFiles(own, [item("<p>1</p>")])).rejects.toThrow(
+        "libxml2-wasm has no room for another input provider: remove the ones your program registered.",
+      );
+    } finally {
+      xmlCleanupInputProvider();
+    }
+    try {
+      expect(await validateXmlFiles(own, [item("<p>1</p>")])).toEqual([]);
+    } finally {
       own.close();
     }
   });

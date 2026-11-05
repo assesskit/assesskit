@@ -1,13 +1,10 @@
 import { checkArray, checkString } from "../checks.js";
+import { messageOf } from "../checks-internal.js";
 import { type RunCliOptions, resolveOptions } from "./options.js";
 import { EXIT_CODES } from "./report.js";
 import { schemasCommand } from "./schemas-command.js";
 import { USAGE, UsageError } from "./usage.js";
 import { validateCommand } from "./validate-command.js";
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 /**
  * Runs the command line of `assesskit` and returns its exit code; the caller sets it as the exit code of the process. The

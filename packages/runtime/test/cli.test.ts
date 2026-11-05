@@ -120,6 +120,31 @@ describe("running the command line", () => {
     }
   });
 
+  it("writes to the standard output and the standard error of the process unless the options give writers", async () => {
+    const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      expect(await runCli(["--help"], { schemaDirectory: join(directory, "none") })).toBe(0);
+      expect(await runCli([], { schemaDirectory: join(directory, "none") })).toBe(2);
+      expect(out).toHaveBeenCalledWith(USAGE);
+      expect(err).toHaveBeenCalledWith(expect.stringContaining("assesskit: A command is required."));
+    } finally {
+      out.mockRestore();
+      err.mockRestore();
+    }
+  });
+
+  it("reports a writer that throws something that is no Error by its text, and exits with 2", async () => {
+    const stderr: string[] = [];
+    const code = await runCli(["--help"], {
+      stdout: () => {
+        throw "the pipe is closed";
+      },
+      stderr: (text) => void stderr.push(text),
+    });
+    expect([code, stderr]).toEqual([2, ["assesskit: the pipe is closed\n"]]);
+  });
+
   it("exits with 2 and prints the usage to the standard error for a command line that is wrong", async () => {
     const cases: [string[], string][] = [
       [[], "A command is required."],
@@ -493,6 +518,18 @@ describe("fetching the schemas", () => {
     delay = 20;
     await fetchSchemas(freshDirectory("concurrent"), schemas);
     expect(mostInFlight).toBe(4);
+  });
+
+  it("reports a download that fails with a value that is no Error by its text, after the tries", async () => {
+    const { a } = fixtureSchemas();
+    let tries = 0;
+    const refusing: typeof fetch = () => {
+      tries += 1;
+      return Promise.reject("the proxy refused");
+    };
+    const result = await fetchSchemas(freshDirectory("proxy"), [a], { fetch: refusing, retryMs: 1 });
+    expect(tries).toBe(3);
+    expect(result.failures.map(({ reason }) => reason)).toEqual(["the proxy refused"]);
   });
 
   it("uses the function it is given in place of the global fetch", async () => {

@@ -1,4 +1,5 @@
 import { closeSync, openSync, readSync } from "node:fs";
+import { messageOf } from "../checks-internal.js";
 import { AssesskitError, DataError } from "../errors.js";
 import type { ByteSource } from "../package/internal.js";
 import { createReadError } from "../xml/internal.js";
@@ -33,10 +34,7 @@ export function fileSource(path: string, length: number): ByteSource {
       }
     } catch (error) {
       if (error instanceof AssesskitError) throw error;
-      throw new DataError(
-        `The package ${path} cannot be read: ${error instanceof Error ? error.message : String(error)}`,
-        { cause: error },
-      );
+      throw new DataError(`The package ${path} cannot be read: ${messageOf(error)}`, { cause: error });
     }
     return bytes;
   };

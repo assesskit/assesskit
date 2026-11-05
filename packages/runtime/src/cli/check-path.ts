@@ -1,5 +1,6 @@
 import type { Stats } from "node:fs";
 import { open, readFile, stat } from "node:fs/promises";
+import { messageOf } from "../checks-internal.js";
 import { DataError, type Issue, SecurityError } from "../errors.js";
 import { type SchemaSet, validateXmlFiles } from "../node/index.js";
 import { DEFAULT_XML_LIMITS } from "../xml/index.js";
@@ -36,7 +37,7 @@ async function statOf(path: string): Promise<Stats> {
   try {
     return await stat(path);
   } catch (error) {
-    throw new DataError(`The path ${path} cannot be read: ${error instanceof Error ? error.message : String(error)}`, {
+    throw new DataError(`The path ${path} cannot be read: ${messageOf(error)}`, {
       cause: error,
     });
   }

@@ -1,4 +1,5 @@
-// The checks of one value that only the runtime uses. `checks.ts` holds those that the player shares.
+// The checks of one value that only the runtime uses, and the message of a thrown value. `checks.ts` holds the checks that the
+// player shares.
 import * as v from "valibot";
 import { checkProperties, checkRecord, describe, positiveIntegerSchema, type Schema, strictRecord } from "./checks.js";
 import { DataError } from "./errors.js";
@@ -51,6 +52,15 @@ export function checkNonNegative(value: unknown, label: string): asserts value i
   if (!(typeof value === "number" && Number.isFinite(value) && value >= 0)) {
     throw new DataError(`${label} must be a non-negative number, found ${describe(value)}.`);
   }
+}
+
+/**
+ * Returns what an error says, or the text of a thrown value that is no `Error`, such as a string that a host function throws.
+ *
+ * @param error - What a `catch` clause caught.
+ */
+export function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 /**

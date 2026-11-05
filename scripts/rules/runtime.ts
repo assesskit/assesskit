@@ -3,6 +3,7 @@ import type { Rule } from "./rule.ts";
 
 const ZIP = "packages/runtime/src/package/zip-reader.ts";
 const DIRECTORY = "packages/runtime/src/node/directory-files.ts";
+const PACKAGE_FILE = "packages/runtime/src/node/package-file.ts";
 const PARSE = "packages/runtime/src/xml/parse.ts";
 const TREE = "packages/runtime/src/xml/tree-builder.ts";
 const INCLUDE = "packages/runtime/src/xml/include.ts";
@@ -158,6 +159,13 @@ export const RUNTIME_RULES: readonly Rule[] = [
     file: DIRECTORY,
     find: 'if (this.total > limits.maxTotalBytes) throw exceeded("maxTotalBytes", limits, "holds more bytes than");',
     replace: "",
+    test: NODE_TEST,
+  },
+  {
+    rule: "A ZIP file larger than maxTotalBytes is refused before its directory is read.",
+    file: PACKAGE_FILE,
+    find: "if (stat.size > resolved.maxTotalBytes) {",
+    replace: "if (false) {",
     test: NODE_TEST,
   },
   {

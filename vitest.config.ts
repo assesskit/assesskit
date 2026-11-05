@@ -93,20 +93,34 @@ const RUNTIME_FLOOR: Floor = { statements: 96, branches: 92, functions: 97, line
 const ITEM_FORMATS_FLOOR: Floor = { statements: 98, branches: 92, functions: 99, lines: 99 };
 
 /**
+ * The modules of the runtime that load the official schemas, which `pnpm schemas` downloads. Their tests need the schemas, and
+ * the `test` job of CI has none, so the `xsd` job holds their floors.
+ */
+const SCHEMA_MODULES = ["cli", "node"];
+
+/**
  * The coverage floors, one for each module: a folder of a package's `src`, or a file beside them. The tests of the runtime and of
  * the modules of the player that need no page run in Node (`pnpm test:coverage`); the modules that draw a page and the client that
  * waits on timers run in Chromium (`pnpm test:coverage:browser`, with `COVERAGE_RUN=browser`), the one engine that reports
- * coverage. A run holds only the floors of the modules it exercises, so a gap in the tests of one module fails its own floor
- * and no other, and a module is never held through the average of its package.
+ * coverage; the modules that load the schemas run with the tests of the runtime and those that read the schemas
+ * (`pnpm test:coverage:xsd`, with `COVERAGE_RUN=xsd`). A run holds only the floors of the modules it exercises, so a gap in the
+ * tests of one module fails its own floor and no other, and a module is never held through the average of its package.
  */
-const FLOORS: Record<string, Floor> =
-  process.env.COVERAGE_RUN === "browser"
-    ? {
+const FLOORS: Record<string, Floor> = (() => {
+  switch (process.env.COVERAGE_RUN) {
+    case "browser":
+      return {
         "packages/player/src/player/**": { statements: 93, branches: 84, functions: 94, lines: 95 },
         "packages/player/src/client/**": { statements: 86, branches: 71, functions: 82, lines: 90 },
-      }
-    : {
-        ...eachModule(modulesOf("runtime"), RUNTIME_FLOOR),
+      };
+    case "xsd":
+      return eachModule(
+        SCHEMA_MODULES.map((name) => `packages/runtime/src/${name}/**`),
+        RUNTIME_FLOOR,
+      );
+    default:
+      return {
+        ...eachModule(modulesOf("runtime", SCHEMA_MODULES), RUNTIME_FLOOR),
         "packages/runtime/src/item-formats/**": ITEM_FORMATS_FLOOR,
         ...eachModule(modulesOf("player", ["player", "client"]), {
           statements: 95,
@@ -123,6 +137,8 @@ const FLOORS: Record<string, Floor> =
           lines: 92,
         }),
       };
+  }
+})();
 
 // biome-ignore lint/style/noDefaultExport: Vitest reads its configuration from the default export.
 export default defineConfig({

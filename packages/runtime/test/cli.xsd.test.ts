@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
-import { tmpdir } from "node:os";
+import { devNull, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
@@ -252,6 +252,22 @@ describe("assesskit validate: documents", () => {
     ]);
   });
 
+  it("checks each profile of a bulk PNP file", async () => {
+    const record = (id: string, profile: string): string =>
+      `<access-for-all-pnp-record><person-sourced-id source-system="S">${id}</person-sourced-id><access-for-all-pnp>${profile}</access-for-all-pnp></access-for-all-pnp-record>`;
+    const bulk = (...records: string[]): string =>
+      `<access-for-all-pnp-records xmlns="${PNP_NAMESPACE}">${records.join("")}</access-for-all-pnp-records>`;
+    const valid = await report(write("pnp-bulk-valid.xml", bulk(record("1", "<spoken/>"), record("2", "<captions/>"))));
+    expect([valid.code, valid.report.issues]).toEqual([0, []]);
+    const contradiction =
+      "<prohibit-set><magnification/></prohibit-set><activate-as-option-set><magnification/></activate-as-option-set>";
+    const found = await report(
+      write("pnp-bulk-contradiction.xml", bulk(record("1", "<spoken/>"), record("2", contradiction))),
+    );
+    expect(found.code).toBe(1);
+    expect(found.report.issues).toMatchObject([{ rule: "assesskit/validate/pnp-prohibited", severity: "error" }]);
+  });
+
   it("reports a manifest that cannot be read with the issues of its reader, and a document that has an xi:include as unresolved", async () => {
     const manifest = write(
       "bad/imsmanifest.xml",
@@ -351,6 +367,29 @@ describe("assesskit validate: packages", () => {
       { severity: "error", message: "The package has no imsmanifest.xml at its root." },
     ]);
   });
+
+  it("refuses a package with an entry that fails its CRC-32 with exit 2, and writes no report", async () => {
+    const manifest = new Uint8Array(readFileSync(example("packaging/simple/imsmanifest.xml")));
+    const zip = write(
+      "bad-crc.zip",
+      buildZip([
+        { name: "imsmanifest.xml", data: manifest },
+        { name: "item.xml", data: bytes("<qti-assessment-item/>"), crc: 1 },
+      ]),
+    );
+    const refused = await run(["validate", zip]);
+    expect([refused.code, refused.stdout]).toEqual([2, ""]);
+    expect(refused.stderr).toContain('The entry "item.xml" fails its CRC-32 check.');
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "refuses a path that is neither a file nor a directory with exit 2",
+    async () => {
+      const refused = await run(["validate", devNull]);
+      expect([refused.code, refused.stdout]).toEqual([2, ""]);
+      expect(refused.stderr).toContain(`The path ${devNull} is neither a file nor a directory.`);
+    },
+  );
 
   it("refuses a hostile ZIP file with exit 2 and a message on the standard error, and writes no report", async () => {
     const slip = write(

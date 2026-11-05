@@ -8,6 +8,7 @@ import {
   readSync,
   renameSync,
   rmSync,
+  statSync,
   symlinkSync,
   truncateSync,
   unlinkSync,
@@ -329,6 +330,20 @@ describe("reading package files", () => {
     const error = await readPackageFile(file, { limits: { maxTotalBytes: 1000 } }).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(SecurityError);
     expect((error as SecurityError).limit).toBe("maxTotalBytes");
+  });
+
+  it("refuses a ZIP file that is itself above maxTotalBytes before it reads its directory", async () => {
+    const file = join(directory, "large.zip");
+    writeFileSync(file, writePackage(MANIFEST, new Map([["a.txt", new Uint8Array(5000)]])));
+    const size = statSync(file).size;
+    const error = await readPackageFile(file, { limits: { maxTotalBytes: size - 1 } }).catch(
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(SecurityError);
+    expect((error as SecurityError).limit).toBe("maxTotalBytes");
+    expect((error as SecurityError).message).toBe(
+      `The file ${file} has ${size} bytes, above the limit maxTotalBytes of ${size - 1}.`,
+    );
   });
 
   it("passes the xml limits to the manifest", async () => {

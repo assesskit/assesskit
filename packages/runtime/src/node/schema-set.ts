@@ -12,6 +12,7 @@ import {
   xmlRegisterInputProvider,
 } from "libxml2-wasm";
 import { checkString } from "../checks.js";
+import { messageOf } from "../checks-internal.js";
 import { AssesskitError, DataError } from "../errors.js";
 import { SCHEMA_FILES, type SchemaFile } from "./schema-files.js";
 
@@ -33,19 +34,13 @@ interface State {
 
 const STATES = new WeakMap<SchemaSet, State>();
 
-const SCHEMAS_BY_URL: ReadonlyMap<string, SchemaFile> = new Map(SCHEMA_FILES.map((schema) => [schema.url, schema]));
-
-function reasonOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 /** Reads a schema and checks its hash, so that a changed file is never compiled. */
 function readVerified(directory: string, schema: SchemaFile): Uint8Array {
   let bytes: Uint8Array;
   try {
     bytes = readFileSync(join(directory, schema.file));
   } catch (error) {
-    throw new DataError(`The schema ${schema.file} cannot be read from ${directory}: ${reasonOf(error)}.`, {
+    throw new DataError(`The schema ${schema.file} cannot be read from ${directory}: ${messageOf(error)}.`, {
       cause: error,
     });
   }
@@ -60,12 +55,10 @@ function readVerified(directory: string, schema: SchemaFile): Uint8Array {
 
 /** Serves the pinned schemas to libxml2 for the `import` and `include` of the schema it compiles. */
 function schemaProvider(directory: string): XmlInputProvider {
+  const opens = new Map(SCHEMA_FILES.map((schema) => [schema.url, () => openBuffer(readVerified(directory, schema))]));
   return {
-    match: (url) => SCHEMAS_BY_URL.has(url),
-    open: (url) => {
-      const schema = SCHEMAS_BY_URL.get(url);
-      return schema === undefined ? undefined : openBuffer(readVerified(directory, schema));
-    },
+    match: (url) => opens.has(url),
+    open: (url) => opens.get(url)?.(),
     read: readBuffer,
     close: (descriptor) => {
       closeBuffer(descriptor);
@@ -111,7 +104,7 @@ export async function loadSchemaSet(directory: string): Promise<SchemaSet> {
     try {
       readVerified(directory, schema);
     } catch (error) {
-      problems.push(reasonOf(error));
+      problems.push(messageOf(error));
     }
   }
   if (problems.length > 0) {

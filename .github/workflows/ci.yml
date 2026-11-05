@@ -447,7 +447,8 @@ jobs:
       - run: pnpm test:corpus --project '!player*'
 
   # Tests of the runtime and of its examples that validate against the official XSDs, downloaded at the hashes that
-  # packages/runtime/src/node/schema-files.json pins, and that read the 1EdTech examples.
+  # packages/runtime/src/node/schema-files.json pins, and that read the 1EdTech examples. The run adds the tests of the runtime
+  # and holds the coverage floors of its cli and node modules, which only these tests exercise in full.
   xsd:
     needs: changes
     if: needs.changes.outputs.xsd == 'true'
@@ -471,4 +472,5 @@ jobs:
           path: .cache/corpus
           key: corpus-${{ hashFiles('scripts/corpus.lock.json') }}
       - run: pnpm corpus
-      - run: pnpm test:xsd
+      # The XSD tests with the tests of the runtime, which hold the floors of the modules that load the schemas.
+      - run: pnpm test:coverage:xsd

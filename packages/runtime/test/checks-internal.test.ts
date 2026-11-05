@@ -7,6 +7,7 @@ import {
   checkOptionNames,
   checkSeed,
   limitsSchema,
+  messageOf,
   nonNegativeSchema,
 } from "../src/checks-internal.js";
 import { DataError } from "../src/errors.js";
@@ -88,6 +89,15 @@ describe("checkNonNegative", () => {
     expect(() => checkNonNegative(0, "The minimum")).not.toThrow();
     expect(() => checkNonNegative(-1, "The minimum")).toThrow("The minimum must be a non-negative number, found -1.");
     expect(() => checkNonNegative(Number.POSITIVE_INFINITY, "The minimum")).toThrow(DataError);
+  });
+});
+
+describe("messageOf", () => {
+  it("gives the message of an error, and the text of a thrown value that is not one", () => {
+    expect(messageOf(new RangeError("out of range"))).toBe("out of range");
+    expect(messageOf("disk full")).toBe("disk full");
+    expect(messageOf(404)).toBe("404");
+    expect(messageOf(null)).toBe("null");
   });
 });
 

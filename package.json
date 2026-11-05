@@ -16,6 +16,7 @@
     "test:coverage:browser": "COVERAGE_RUN=browser BROWSERS=chromium vitest run --coverage --project player-browser",
     "test:corpus": "vitest run --project '*-corpus*'",
     "test:xsd": "vitest run --project '*-xsd'",
+    "test:coverage:xsd": "COVERAGE_RUN=xsd vitest run --coverage --project runtime --project '*-xsd'",
     "lint": "biome check . && cspell --no-progress",
     "check:standards": "node scripts/check-standards.ts",
     "check:duplication": "node scripts/check-duplication.ts",
