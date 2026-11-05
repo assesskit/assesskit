@@ -388,6 +388,24 @@ describe("writeGift", () => {
     );
   });
 
+  it("writes the missing word at the interaction when the text holds U+E000, and a tag on its comment line", () => {
+    const item = qtiItem(
+      `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"><qti-correct-response><qti-value>Jakarta</qti-value></qti-correct-response></qti-response-declaration>${SCORE}<qti-item-body><p>Icon \uE000 then <qti-text-entry-interaction response-identifier="RESPONSE"/> indeed.</p></qti-item-body>${MATCH_CORRECT}`,
+    );
+    // A line break of a tag would end its comment, and the rest would be a question of its own.
+    const { text } = writeGift([{ item, tags: ["a\n\n::X::Q{=b}"] }]);
+    expect(text).toBe(
+      "// [id:item] [tag:a ::X::Q{=b}]\n::Item::[html]<p>Icon &\\#xE000; then {\n\t=Jakarta\n} indeed.</p>\n\n",
+    );
+    const { items, losses } = readGift(text);
+    expect(losses).toStrictEqual([]);
+    expect(items.map(({ tags }) => tags)).toStrictEqual([["a ::X::Q{=b}"]]);
+    const [read] = items;
+    expect(read === undefined ? "" : writeAsi({ kind: "item", item: read.item })).toContain(
+      '<p>Icon \uE000 then <qti-text-entry-interaction response-identifier="RESPONSE" base-type="string"/> indeed.</p>',
+    );
+  });
+
   it.each([
     ["gift-written", () => writeGift(buildWrittenItems(), WRITE_OPTIONS).losses],
     ["xml-written", () => writeMoodleXml(buildWrittenItems(), XML_WRITE_OPTIONS).losses],

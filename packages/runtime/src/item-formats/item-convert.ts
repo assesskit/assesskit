@@ -2,7 +2,7 @@ import type { AssessmentItem } from "../asi/index.js";
 import { typeNamed, writeElement } from "../asi/internal.js";
 import { DataError, ProcessingError } from "../errors.js";
 import { collectText, findAttribute, type XmlElement } from "../xml/index.js";
-import { type HtmlVisitor, writeHtml } from "./body-html.js";
+import { type HtmlVisitor, INTERACTION_MARKER, writeHtml } from "./body-html.js";
 import { type Choice, convertChoices } from "./convert-choices.js";
 import { convertEssay } from "./convert-essay.js";
 import { convertMatch } from "./convert-match.js";
@@ -32,8 +32,6 @@ const INTERACTIONS: ReadonlySet<string> = new Set([
 ]);
 /** The interactions that stand in a line of text, which a missing word takes. */
 const INLINE: ReadonlySet<string> = new Set(["qti-text-entry-interaction", "qti-inline-choice-interaction"]);
-/** The text that stands for an interaction in the HTML of the body until the writer splits it there. */
-const MARKER = "\uE000";
 
 /** Returns the HTML of content, with interactions, feedback and rubric blocks as the item's conversion takes them. */
 function createVisitor(interaction: XmlElement | undefined, graderInfo: string[]): HtmlVisitor {
@@ -50,7 +48,7 @@ function createVisitor(interaction: XmlElement | undefined, graderInfo: string[]
     visit(element) {
       if (element === interaction) {
         const prompt = elements(element, "qti-prompt")[0];
-        return `${prompt === undefined ? "" : writeHtml(prompt.children, visitor)}${MARKER}`;
+        return `${prompt === undefined ? "" : writeHtml(prompt.children, visitor)}${INTERACTION_MARKER}`;
       }
       if (element.name === "qti-feedback-inline" || element.name === "qti-feedback-block") return "";
       return element.name === "qti-rubric-block" ? rubric(element) : undefined;
@@ -113,9 +111,9 @@ function questionText(
   view: ItemView,
 ): Pick<QuestionCommon, "text" | "blank"> {
   const bodyHtml = body === undefined ? "" : writeHtml(body.children, view.visitor);
-  const at = bodyHtml.indexOf(MARKER);
+  const at = bodyHtml.indexOf(INTERACTION_MARKER);
   const before = at < 0 ? bodyHtml : bodyHtml.slice(0, at);
-  const after = at < 0 ? "" : bodyHtml.slice(at + MARKER.length);
+  const after = at < 0 ? "" : bodyHtml.slice(at + INTERACTION_MARKER.length);
   const textAfter = after.replaceAll(/<[^>]*>/g, "").trim() !== "";
   const inline = interaction !== undefined && INLINE.has(interaction.name);
   if (!inline && textAfter) {
@@ -126,8 +124,11 @@ function questionText(
     });
   }
   if (inline && textAfter) {
-    const text = `${before}${MARKER}${after}`.trim();
-    return { text: { text: text.replace(MARKER, "_____"), format: "html" }, blank: text.indexOf(MARKER) };
+    const text = `${before}${INTERACTION_MARKER}${after}`.trim();
+    return {
+      text: { text: text.replace(INTERACTION_MARKER, "_____"), format: "html" },
+      blank: text.indexOf(INTERACTION_MARKER),
+    };
   }
   const text = `${before}${after}`.replace(/<(div|p)>\s*<\/\1>\s*$/, "").trim();
   return { text: { text, format: "html" }, blank: null };

@@ -34,9 +34,19 @@ export interface HtmlVisitor {
   readonly omitted: Set<string>;
 }
 
-/** Escapes text for the content of an HTML element. */
+/**
+ * The character that stands for an interaction in the HTML of a body until a writer splits the HTML there. Content writes it
+ * as a character reference, so that the one in the HTML is the interaction's.
+ */
+export const INTERACTION_MARKER = "\uE000";
+
+/** Escapes text for the content of an HTML element, and the marker of an interaction. */
 function escapeText(text: string): string {
-  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  return text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll(INTERACTION_MARKER, "&#xE000;");
 }
 
 function escapeAttribute(text: string): string {

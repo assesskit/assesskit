@@ -232,7 +232,8 @@ function writeQuestion(entry: ExportEntry, plan: ExportPlan): string {
   recordLosses(question, entry, plan);
   const marks: string[] = [];
   if (question.idNumber !== "") marks.push(`[id:${question.idNumber.replaceAll("]", "\\]")}]`);
-  for (const tag of question.tags) marks.push(`[tag:${tag.replaceAll("]", "\\]")}]`);
+  // A line break would end the comment, and the rest of the tag would be read as the question's text.
+  for (const tag of question.tags) marks.push(`[tag:${tag.replaceAll(/[\r\n]+/g, " ").replaceAll("]", "\\]")}]`);
   const comment = marks.length === 0 ? "" : `// ${marks.join(" ")}\n`;
   const answers = writeAnswers(question, entry, plan);
   const text = question.text.text;
