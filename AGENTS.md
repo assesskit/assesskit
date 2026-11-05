@@ -108,11 +108,11 @@ Biome enforces, folder by folder.
 | `test` (Node 22, 24)  | any package, example, compat or script                                                    |      20 |
 | `bench`               | the runtime                                                                               |      10 |
 | `player-bench`        | the player                                                                                |      10 |
-| `browsers`            | the player, its guides, or the custom interactions                                        |      45 |
-| `engines`             | the player or compat                                                                      |      15 |
+| `browsers`            | the player, its guides, or the custom interactions                                        |      25 |
+| `engines`             | the player or compat                                                                      |      10 |
 | `runtimes`            | the runtime, the player or compat/runtimes                                                |      10 |
 | `corpus`              | the runtime, its guides or an example of it                                               |      10 |
-| `xsd`                 | the runtime, its guides, the player, the custom interactions or an example of the runtime |      12 |
+| `xsd`                 | the runtime, its guides, the player, the custom interactions or an example of the runtime |      10 |
 | `rules` (`rules.yml`) | each Monday, on dispatch and at a release                                                 |     120 |
 
 - The scripts in `compat/` and `scripts/` are TypeScript that Node runs directly, so their relative imports end in `.ts`.

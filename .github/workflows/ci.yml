@@ -19,6 +19,9 @@ concurrency:
 # all (scripts/download.ts). The jobs that run a browser run in the image of the Playwright that the lock file pins, which holds
 # its browsers and their system libraries, so that no job installs them: apt under sudo outlives the timeout of a step, and a
 # slow mirror once held such an install past the limit of the job. scripts/test/versions.test.ts holds the tag to the lock file.
+# Each job stops at about three times its last green run, and at no less than 10 minutes when it downloads (an image, the
+# schemas, the corpus or a browser), so that a slow download is not taken for a hang: browsers ran 8:18 in its image, and
+# player-bench, xsd, engines, corpus and bench 2 minutes or less (run 42121463727).
 jobs:
   # What a push or a pull request changed since the last commit of main whose run passed, or since the base of a pull request,
   # and so which jobs have something to check. A job that is skipped passes a required check. When nothing can be compared,
@@ -359,7 +362,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.browsers == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 25
     container:
       image: mcr.microsoft.com/playwright:v1.64.1-noble
       options: --ipc=host
@@ -410,7 +413,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.engines == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -473,7 +476,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.xsd == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
