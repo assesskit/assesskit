@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import fc from "fast-check";
-import { deflateSync, unzipSync, zipSync } from "fflate";
+import { unzipSync } from "fflate";
 import { describe, expect, it, vi } from "vitest";
 import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import { DataError, ReadError, SecurityError } from "../src/errors.js";
@@ -1321,53 +1321,62 @@ describe("writing packages", () => {
       ]);
       const zip = writePackage(manifest, files);
       expect(createHash("sha256").update(zip).digest("hex")).toBe(
-        "df25a0a65037571b5d6f66190b542d70cc0953355a5b530d9ac51e4bf40d354d",
+        "ea7e81ee69bdeb758106b706a0a0fc99a9404dac3f31d6148a1b4895bd1e9c32",
       );
     } finally {
       vi.unstubAllEnvs();
     }
   });
 
-  it("keeps the files in the order of the map, a name that is a whole number or __proto__ at the root among them", () => {
+  it("keeps the files in the order of the map, but for a name at the root that is a whole number, which comes first", () => {
     const files = new Map([
       ["b.txt", bytes("b")],
       ["constructor", bytes("c")],
       ["007", bytes("z")],
       ["12", bytes("n")],
-      ["__proto__", bytes("p")],
       ["a/34", bytes("a")],
     ]);
     const pkg = readPackage(writePackage(manifest, files));
-    expect(pkg.paths).toEqual(["imsmanifest.xml", "b.txt", "constructor", "007", "12", "__proto__", "a/34"]);
+    expect(pkg.paths).toEqual(["12", "imsmanifest.xml", "b.txt", "constructor", "007", "a/34"]);
     expect(pkg.file("constructor")).toEqual(bytes("c"));
-    expect(pkg.file("__proto__")).toEqual(bytes("p"));
   });
 
-  it("writes the bytes that zipSync of fflate writes for the same files, deflating each once", () => {
-    const files = new Map([
-      ["a.xml", bytes("<a>x</a>".repeat(200))],
-      ["b/ünï.bin", Uint8Array.from({ length: 300 }, (_, index) => (index * 7919) % 251)],
-      ["empty", new Uint8Array()],
-    ]);
-    const entries: Record<string, Uint8Array | [Uint8Array, { level: 0 }]> = {};
-    for (const [name, data] of [["imsmanifest.xml", bytes(writeManifest(manifest))] as const, ...files]) {
-      entries[name] = deflateSync(data).length < data.length ? data : [data, { level: 0 }];
-    }
-    expect(writePackage(manifest, files)).toEqual(zipSync(entries, { mtime: new Date(1980, 0, 1) }));
+  it("refuses a file named __proto__ at the root, which the library that writes the archive cannot hold", () => {
+    expect(() => writePackage(manifest, new Map([["__proto__", bytes("x")]]))).toThrow(
+      'A file at the root of a package cannot be named "__proto__"; move it to a folder or rename it.',
+    );
+    expect(readPackage(writePackage(manifest, new Map([["a/__proto__", bytes("x")]]))).file("a/__proto__")).toEqual(
+      bytes("x"),
+    );
   });
 
-  it("deflates an entry when that makes it smaller and stores it otherwise", () => {
-    const text = bytes("a".repeat(1000));
+  it("stores a file whose extension names a compressed media type, and deflates every other file once", () => {
+    const repeated = bytes("a".repeat(1000));
     const zip = writePackage(
       manifest,
       new Map([
-        ["text", text],
+        ["text.xml", repeated],
         ["tiny", bytes("a")],
+        ["media/photo.PNG", repeated],
+        ["media/clip.mp4", repeated],
       ]),
     );
-    expect(zip.length).toBeLessThan(2000);
+    // The method of each entry of the central directory, which follows the manifest's: 8 deflated, 0 stored.
+    const methods: number[] = [];
+    const view = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+    for (let at = zip.length - 22; at >= 0; at--) {
+      if (view.getUint32(at, true) !== 0x06054b50) continue;
+      let entry = view.getUint32(at + 16, true);
+      for (let count = view.getUint16(at + 10, true); count > 0; count--) {
+        methods.push(view.getUint16(entry + 10, true));
+        entry +=
+          46 + view.getUint16(entry + 28, true) + view.getUint16(entry + 30, true) + view.getUint16(entry + 32, true);
+      }
+      break;
+    }
+    expect(methods).toEqual([8, 8, 8, 0, 0]);
     const pkg = readPackage(zip);
-    expect(pkg.file("text")).toEqual(text);
+    for (const path of ["text.xml", "media/photo.PNG", "media/clip.mp4"]) expect(pkg.file(path)).toEqual(repeated);
     expect(pkg.file("tiny")).toEqual(bytes("a"));
   });
 
@@ -1712,7 +1721,9 @@ describe("properties", () => {
         // because the archive stores names, not a tree.
         const map = new Map(entries);
         const pkg = readPackage(writePackage(manifest, map));
-        expect(pkg.paths).toEqual(["imsmanifest.xml", ...map.keys()]);
+        // A name at the root that is a whole number comes first; the others keep the order of the map.
+        const others = [...map.keys()].filter((path) => path !== "1");
+        expect(pkg.paths).toEqual([...(map.has("1") ? ["1"] : []), "imsmanifest.xml", ...others]);
         for (const [path, data] of map) expect(pkg.file(path)).toEqual(data);
       }),
       { numRuns: 100 },

@@ -106,9 +106,10 @@ The builders of the covers block and of the scoring rubric block are `buildScore
 and `RUBRIC_KINDS` of `asi` lists the kinds of a rubric block. `isInsideShape(shape, coords, point)` of
 `@assesskit/runtime/processing` is the hit test of the shapes of QTI that `qti-inside` and `qti-map-response-point` make, the
 edge included, for a scorer of the points of a response. `resolveResourcePath(manifest, resource)` without the option `href`
-resolves the main file of a resource: its `href`, or else its only file. `writePackage` writes the manifest, then the
-files in the order of the map, each deflated once and stored when that does not make it smaller, with the bytes that
-`zipSync` of `fflate` writes for them. `encodeBase64`, `decodeBase64` and `decodeBase64Url` run on
+resolves the main file of a resource: its `href`, or else its only file. `writePackage` writes through `zipSync` of
+`fflate`, the manifest first and the files in the order of the map, each deflated once, or stored when its extension names a
+media type that is compressed already, such as `png` or `mp4`; a file at the root whose name is a whole number, such as `12`,
+comes before the manifest, and a file named `__proto__` at the root is refused with a `DataError`. `encodeBase64`, `decodeBase64` and `decodeBase64Url` run on
 `@scure/base` and refuse every spelling but the canonical one: a text with bits after the last byte, white space, a lone
 digit or excess padding gives `undefined`. `writeWireValue(value, { declaration })` needs the declaration only for a NULL.
 
