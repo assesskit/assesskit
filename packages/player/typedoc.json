@@ -20,6 +20,8 @@
     "notDocumented": true
   },
   "readme": "README.md",
+  "excludeExternals": true,
+  "externalPattern": ["**/packages/runtime/**"],
   "excludePrivate": true,
   "excludeProtected": true,
   "projectDocuments": ["../../docs/player/*.md"],
