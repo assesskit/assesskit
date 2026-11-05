@@ -86,13 +86,13 @@ class takes `ErrorOptions` last, and an error that reports another, such as a `R
 form, holds it as `cause`. A broken invariant of the runtime itself, such as an element table that is not consistent with
 itself, is an `AssesskitError`.
 
-| Class             | Thrown when                                                                                                               | Carries               |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| `DataError`       | An argument has the wrong type or is out of range, an untrusted action is not an action, or a state has an unknown format | the message           |
-| `ReadError`       | A document is not well-formed, not in the expected namespace, or cannot be mapped to the model                            | `issues`              |
-| `SecurityError`   | Input breaks a security rule or a limit: a DOCTYPE, a path escape, a size, depth or ratio above its limit                 | `limit` and `maximum` |
-| `ProcessingError` | Processing meets a condition the specification does not define as NULL                                                    | `identifier`          |
-| `ServiceError`    | A call to a service fails, a store conflict outlasts its retries, or a `CatPort` refuses a request                        | `status` and `body`   |
+| Class             | Thrown when                                                                                                               | Carries               | What to do                                                                                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DataError`       | An argument has the wrong type or is out of range, an untrusted action is not an action, or a state has an unknown format | the message           | Fix the call; the message names the argument and the path of the value                                                                      |
+| `ReadError`       | A document is not well-formed, not in the expected namespace, or cannot be mapped to the model                            | `issues`              | Read `issues`, which locate each problem, and fix the document                                                                              |
+| `SecurityError`   | Input breaks a security rule or a limit: a DOCTYPE, a path escape, a size, depth or ratio above its limit                 | `limit` and `maximum` | Refuse the input, or raise the limit for a reason ([SECURITY](https://github.com/assesskit/assesskit/blob/main/SECURITY.md#default-limits)) |
+| `ProcessingError` | Processing meets a condition the specification does not define as NULL                                                    | `identifier`          | Fix the processing of the item or test that `identifier` names                                                                              |
+| `ServiceError`    | A call to a service fails, a store conflict outlasts its retries, or a `CatPort` refuses a request                        | `status` and `body`   | Retry, or check the service; `status` is `0` when it did not answer                                                                         |
 
 `limit` names the option that sets the limit, such as `maxBytes`, or the rule, such as `doctype`; `maximum` is the value of the
 limit, `0` for a rule that allows none.
@@ -137,7 +137,7 @@ session replays to the same state and events from its seed and its actions.
 - The engine reaches items, sections and stimuli through resolvers, which are synchronous: the host keeps the pool a session
   can reach in memory. An in-memory `QtiPackage` meets this, a pool of an adaptive section included.
 - State holds variables, positions in the plan, times, states of portable custom interactions and pending work, never item
-  content. One engine serves every session of a test.
+  content.
 - Processing interprets the model. Outcome processing runs after each submission in individual mode, so a step costs the rules
   of the test times the item instances they read ([Performance](performance.md#outcome-processing)). What a session reads of
   an item that does not change, such as its interactions or its declared values, is read once and kept for the item.

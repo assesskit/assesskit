@@ -153,11 +153,13 @@ schema allows several appointments; none means every assignment of the candidate
 
 ## Errors
 
-`readPnp` throws `ReadError` with one issue; `writePnp` and `resolveSupports` throw `DataError` for a model that is not a
-profile: a field of the wrong type, a key that differs from the name of its setting, a name that no set can list, a
-parameter outside its vocabulary, a list that must not be empty, or text with a character that XML 1.0 does not allow.
-Input that is not text, bytes or an element is a `DataError`, and text or bytes that break a limit of `parseXml` are a
-`SecurityError`. The rules are those of [results](results.md#errors) with the module `pnp`:
+| Error           | When                                                                                                                                                                                                                                                                                                                                             | What to do                                                                                      |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `ReadError`     | `readPnp` cannot map the document: one issue with the rule below, the line and column, and the element path                                                                                                                                                                                                                                      | Fix the document at the place the issue names                                                   |
+| `DataError`     | The input is not text, bytes or an element; `writePnp` or `resolveSupports` gets a model that is not a profile: a field of the wrong type, a key that differs from the name of its setting, a name that no set can list, a parameter outside its vocabulary, a list that must not be empty, or text with a character that XML 1.0 does not allow | Pass the input or the model that the types of this module describe; the message names the field |
+| `SecurityError` | The text or bytes break a limit of `parseXml`                                                                                                                                                                                                                                                                                                    | Refuse the document, or raise the limit for one you trust ([xml](xml.md#limits))                |
+
+The rules of `ReadError`:
 
 | Rule                                                                                                      | Meaning                                                                           |
 | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |

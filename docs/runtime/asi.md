@@ -158,7 +158,7 @@ fallback of a `video`, is one array of `children`; the writer does not check the
 
 ### HTML
 
-The 76 HTML elements (H1 to H76) have the attributes the schema gives them, typed like any other (`rowspan` is a number,
+The 76 HTML elements have the attributes the schema gives them, typed like any other (`rowspan` is a number,
 `scope` one of its four terms), and `extensions` for `data-*` and other attributes. A place that holds only one kind of
 element has a name of its own:
 
@@ -175,7 +175,7 @@ element has a name of its own:
 
 ### Interactions
 
-The 22 interactions (A131 to A153, `Interaction`) have the attributes of the schema and these places:
+The 22 interactions (`Interaction`) have the attributes of the schema and these places:
 
 | Interaction                                                                         | Places                                                                                                                      |
 | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
@@ -232,30 +232,30 @@ carries the file.
 
 Each vocabulary below is the type of an attribute; the reader refuses any other text with `assesskit/asi/invalid-value`.
 
-| Row | Vocabulary                 | Attribute               | On                                       |
-| --- | -------------------------- | ----------------------- | ---------------------------------------- |
-| W1  | `ARIAAutoCompleteEnum`     | `aria-autocomplete`     | every element with the common attributes |
-| W2  | `ARIACheckedEnum`          | `aria-checked`          | the same                                 |
-| W3  | `ARIACurrentEnum`          | `aria-current`          | the same                                 |
-| W4  | `ARIAExpandedEnum`         | `aria-expanded`         | the same                                 |
-| W5  | `ARIAInvalidEnum`          | `aria-invalid`          | the same                                 |
-| W6  | `ARIALiveValueEnum`        | `aria-live`             | the same                                 |
-| W7  | `ARIAOrientationValueEnum` | `aria-orientation`      | the same                                 |
-| W8  | `ARIAPressedEnum`          | `aria-pressed`          | the same                                 |
-| W9  | `ARIARoleValue`            | `role`                  | the same                                 |
-| W10 | `ARIASelectedEnum`         | `aria-selected`         | the same                                 |
-| W11 | `ARIASortEnum`             | `aria-sort`             | the same                                 |
-| W12 | `AlignEnum`                | `align`                 | `td`, `th`                               |
-| W14 | `CORSSettingsEnum`         | `crossorigin`           | `audio`, `video`                         |
-| W17 | `DIR`                      | `dir`                   | every element with the common attributes |
-| W19 | `KindValueEnum`            | `kind` (`trackKind`)    | `track`                                  |
-| W24 | `ParamTypeEnum`            | `valuetype`             | `param`                                  |
-| W25 | `PreLoadValueEnum`         | `preload`               | `audio`, `video`                         |
-| W34 | `SuppressTTSEnum`          | `data-qti-suppress-tts` | every element with the common attributes |
-| W35 | `TableCellScopeEnum`       | `scope`                 | `td`, `th`                               |
-| W42 | `ValignEnum`               | `valign`                | `td`, `th`                               |
-| W46 | `StringList`               | `class`                 | every element with the common attributes |
-| W48 | `ARIARelevantList`         | `aria-relevant`         | every element with the common attributes |
+| Vocabulary                 | Attribute               | On                                       |
+| -------------------------- | ----------------------- | ---------------------------------------- |
+| `ARIAAutoCompleteEnum`     | `aria-autocomplete`     | every element with the common attributes |
+| `ARIACheckedEnum`          | `aria-checked`          | the same                                 |
+| `ARIACurrentEnum`          | `aria-current`          | the same                                 |
+| `ARIAExpandedEnum`         | `aria-expanded`         | the same                                 |
+| `ARIAInvalidEnum`          | `aria-invalid`          | the same                                 |
+| `ARIALiveValueEnum`        | `aria-live`             | the same                                 |
+| `ARIAOrientationValueEnum` | `aria-orientation`      | the same                                 |
+| `ARIAPressedEnum`          | `aria-pressed`          | the same                                 |
+| `ARIARoleValue`            | `role`                  | the same                                 |
+| `ARIASelectedEnum`         | `aria-selected`         | the same                                 |
+| `ARIASortEnum`             | `aria-sort`             | the same                                 |
+| `AlignEnum`                | `align`                 | `td`, `th`                               |
+| `CORSSettingsEnum`         | `crossorigin`           | `audio`, `video`                         |
+| `DIR`                      | `dir`                   | every element with the common attributes |
+| `KindValueEnum`            | `kind` (`trackKind`)    | `track`                                  |
+| `ParamTypeEnum`            | `valuetype`             | `param`                                  |
+| `PreLoadValueEnum`         | `preload`               | `audio`, `video`                         |
+| `SuppressTTSEnum`          | `data-qti-suppress-tts` | every element with the common attributes |
+| `TableCellScopeEnum`       | `scope`                 | `td`, `th`                               |
+| `ValignEnum`               | `valign`                | `td`, `th`                               |
+| `StringList`               | `class`                 | every element with the common attributes |
+| `ARIARelevantList`         | `aria-relevant`         | every element with the common attributes |
 
 The lists are arrays of their items; `aria-relevant` takes `additions`, `all`, `removals` and `text`.
 
@@ -307,11 +307,9 @@ the runtime follows the schema, so another text is an `assesskit/asi/invalid-val
 
 ## Writing
 
-`writeAsi` writes the document with `xmlns`, `xmlns:xsi` and `xsi:schemaLocation` that names the 3.0.1 ASI schema. Attributes and child elements are in the order of the schema, so a valid model gives a valid document. It throws a
-`DataError` for a model that is not the model of its element: a property the element does not have, a missing required
-property, a value of the wrong type, a `kind` that does not match, more members than a place takes, a member that the
-place does not accept, or text where the place takes none. Text without characters writes nothing, and two texts in a row
-read back as one.
+`writeAsi` writes the document with `xmlns`, `xmlns:xsi` and `xsi:schemaLocation` that names the 3.0.1 ASI schema. Attributes
+and child elements are in the order of the schema, so a valid model gives a valid document. Text without characters writes
+nothing, and two texts in a row read back as one.
 
 `writeAsi` writes a document, not a node: a node that a builder returns, such as the block of `buildScoringRubricBlock`, goes into the model of its
 document first ([Conventions](conventions.md#placing-a-block-in-a-document)).
@@ -362,13 +360,13 @@ required `use` of a rubric block, and one has an attribute `qti-interaction-modu
 
 ## Errors
 
-| Situation                                                                                             | Class                                                    | What to do                                                                                              |
-| ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| The document is not well-formed, declares XML 1.1 or an encoding the reader cannot use                | `ReadError`, rule `assesskit/xml/...`                    | See the [rules of the XML reader](xml.md#errors); fix the document at the line and column of the issue. |
-| The document does not map to the model                                                                | `ReadError`, a rule of the table under Reading           | Fix the document where the issue says: its `location` has the path, line, column and element path.      |
-| The document has a DOCTYPE, or is above a limit of the XML reader                                     | `SecurityError`, `limit` names the limit                 | Do not read it. For a document you trust, raise the limit with the option `limits`.                     |
-| An argument is not of its type: a document that is neither text, bytes nor an element, or bad options | `DataError` that says what is wrong and what is expected | Pass the type that the message names.                                                                   |
-| `writeAsi` is given a model that is not the model of its element                                      | `DataError` that names the property                      | Build the model with the types of this module, and fix the property that the message names.             |
+| Situation                                                                                                                                                                                                                                                                                      | Class                                                    | What to do                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| The document is not well-formed, declares XML 1.1 or an encoding the reader cannot use                                                                                                                                                                                                         | `ReadError`, rule `assesskit/xml/...`                    | See the [rules of the XML reader](xml.md#errors); fix the document at the line and column of the issue. |
+| The document does not map to the model                                                                                                                                                                                                                                                         | `ReadError`, a rule of the table under Reading           | Fix the document where the issue says: its `location` has the path, line, column and element path.      |
+| The document has a DOCTYPE, or is above a limit of the XML reader                                                                                                                                                                                                                              | `SecurityError`, `limit` names the limit                 | Do not read it. For a document you trust, raise the limit with the option `limits`.                     |
+| An argument is not of its type: a document that is neither text, bytes nor an element, or bad options                                                                                                                                                                                          | `DataError` that says what is wrong and what is expected | Pass the type that the message names.                                                                   |
+| `writeAsi` is given a model that is not the model of its element: a property the element does not have, a missing required property, a value of the wrong type, a `kind` that does not match, more members than a place takes, a member the place does not accept, or text where it takes none | `DataError` that names the property                      | Build the model with the types of this module, and fix the property that the message names.             |
 
 ## Not included
 

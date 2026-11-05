@@ -103,11 +103,13 @@ writeResults({ context: { sessionIdentifiers: [] }, itemResults: [] });
 
 ## Errors
 
-`readResults` throws `ReadError`; its `issues` hold one issue with the code, the rule, the line and column, and the element
-path, such as `assessmentResult/itemResult`. `writeResults` throws `DataError` for a model that is not a result: a field of
-the wrong type, an identifier that is not one, a date that is not an `xs:dateTime`, a value that is not of the type its
-variable declares, a term outside its vocabulary, or text with a character that XML 1.0 does not allow. Input that is not
-text, bytes or an element is a `DataError`, and text or bytes that break a limit of `parseXml` are a `SecurityError`.
+| Error           | When                                                                                                                                                                                                                                                                                                                                    | What to do                                                                                      |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `ReadError`     | `readResults` cannot map the document: one issue with the rule below, the line and column, and the element path                                                                                                                                                                                                                         | Fix the document at the place the issue names                                                   |
+| `DataError`     | The input is not text, bytes or an element; `writeResults` gets a model that is not a result: a field of the wrong type, an identifier that is not one, a date that is not an `xs:dateTime`, a value that is not of the type its variable declares, a term outside its vocabulary, or text with a character that XML 1.0 does not allow | Pass the input or the model that the types of this module describe; the message names the field |
+| `SecurityError` | The text or bytes break a limit of `parseXml`                                                                                                                                                                                                                                                                                           | Refuse the document, or raise the limit for one you trust ([xml](xml.md#limits))                |
+
+The rules of `ReadError`, whose element path reads such as `assessmentResult/itemResult`:
 
 | Rule                                     | Meaning                                                                               |
 | ---------------------------------------- | ------------------------------------------------------------------------------------- |

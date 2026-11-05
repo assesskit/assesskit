@@ -107,12 +107,18 @@ The `ReadError` of the identifiers lists the first 1,000 problems, and its messa
 The reader does not check that files exist; the manifest of a package can list a file that the archive lacks (the 1EdTech `pci`
 example does), and `file(path)` then returns `undefined`.
 
-The model differs from the XML in three places. `organizations` is not kept, and `writeManifest` always writes it empty.
-`schemaversion` is not kept, and is always `3.0.0`. `resourcesBase` holds the `xml:base` of the `resources` element, next to
-`base` of the manifest and of each resource. `writeManifest` throws a `DataError` for a manifest that the CP schema would reject:
-an identifier that is not an XML name or is declared twice, a vocabulary term outside its list, a resource with no file, a
-`dependency` or `variant` that names no resource. It declares the namespaces of QTI metadata, curriculum standards, the DRD and the
-manifest extension once, on the root.
+The model differs from the XML in three places:
+
+| In the XML                | In the model                                                        |
+| ------------------------- | ------------------------------------------------------------------- |
+| `organizations`           | Not kept; `writeManifest` writes it empty                           |
+| `schemaversion`           | Not kept; always `3.0.0`                                            |
+| `xml:base` of `resources` | `resourcesBase`, beside `base` of the manifest and of each resource |
+
+`writeManifest` refuses a manifest that the CP schema would reject: an identifier that is not an XML name or is declared twice,
+a vocabulary term outside its list, a resource with no file, a `dependency` or `variant` that names no resource
+([Errors](#errors)). It declares the namespaces of QTI metadata, curriculum standards, the DRD and the manifest extension once,
+on the root.
 
 ## Paths
 
@@ -158,10 +164,15 @@ a file when `file(path)` asks for it; a package of 10,000 items costs the manife
 | `limits`    | `DEFAULT_ZIP_LIMITS` | Limits that replace the defaults, field by field.              |
 | `xmlLimits` | `DEFAULT_XML_LIMITS` | XML limits for the manifest and every document of the package. |
 
-The reader supports stored and deflated entries, UTF-8 names, directory entries (left out of `paths`), data descriptors, archive
-comments and ZIP64 (the ZIP64 end of central directory record and locator, and the 64-bit values in the extra field). It does not
-read archives in several parts, other compression methods, or encrypted entries. `writePackage` writes the classic format only:
-it throws a `DataError` for more than 65,534 files or an archive of 4 GiB or more. It writes through `zipSync` of `fflate`: the
+| ZIP feature                                                                                      | Read                     |
+| ------------------------------------------------------------------------------------------------ | ------------------------ |
+| Stored and deflated entries, UTF-8 names, data descriptors, archive comments                     | Yes                      |
+| Directory entries                                                                                | Yes, left out of `paths` |
+| ZIP64: its end of central directory record and locator, and the 64-bit values in the extra field | Yes                      |
+| Archives in several parts, other compression methods, encrypted entries                          | No                       |
+
+`writePackage` writes the classic format only, so more than 65,534 files or an archive of 4 GiB or more is a `DataError`. It
+writes through `zipSync` of `fflate`: the
 manifest first, then the files in the order of the map, with one fixed time stamp, so that equal input gives equal bytes in every
 time zone. Each file is deflated once, at the default level, or stored when its extension names a media type that is compressed
 already: `png`, `jpg`, `jpeg`, `gif`, `webp`, `avif`, `heic`, `mp3`, `m4a`, `aac`, `ogg`, `oga`, `opus`, `flac`, `mp4`, `m4v`,
@@ -209,9 +220,8 @@ package opens, and the bytes of one entry when `file(path)` asks for it, so a so
 | `maxTotalBytes` | 2,147,483,648 | bytes   | The uncompressed bytes of all files.                                                       |
 | `maxRatio`      | 250           | ratio   | Uncompressed over compressed size of an entry above 102,400 bytes.                         |
 
-The largest package of the 1EdTech QTI 3.0 examples has 99 entries, an entry of 5.0 MiB and 11.0 MB uncompressed; its largest ratio
-is 27.9, on a 7.5 KB entry, and 3.6 on the entries above 102,400 bytes. The defaults are about 1,000, 13, 200 and 9 times those.
-`file` inflates a deflated entry with its pieces and the joined bytes in memory at once, so an entry of `maxEntryBytes` raises the
+The defaults are about 1,000, 13, 200 and 9 times the largest package of the 1EdTech examples
+([SECURITY.md](../../SECURITY.md#default-limits) gives both). `file` inflates a deflated entry with its pieces and the joined bytes in memory at once, so an entry of `maxEntryBytes` raises the
 resident memory of the process by up to 215 MiB, under the budget of 256 MiB ([SECURITY.md](../../SECURITY.md#peak-memory)); a host
 that packs larger files raises the limit, at two to three and a half times the file. `maxTotalBytes` costs no memory: it bounds the
 size of the archive file and the work of a host that reads every file.
@@ -272,11 +282,11 @@ platform that launches it.
 
 ## Errors
 
-| Class           | Thrown when                                                                                                                                                                                                                                                                                        |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DataError`     | An argument has the wrong type, a limit is not a positive integer, the paths of `PackageFiles` are not normalized and unique, `writeManifest` and `writePackage` get a model that is not valid, or a path of `writePackage` is not normalized, is `imsmanifest.xml` or is `__proto__` at the root. |
-| `ReadError`     | The data is not a ZIP archive or is cut off; a manifest, document or link cannot be read; a reference cannot be resolved. `issues` names the rule.                                                                                                                                                 |
-| `SecurityError` | The input breaks a rule or limit of the table above, or an XML limit.                                                                                                                                                                                                                              |
+| Class           | Thrown when                                                                                                                                                                                                                                                                                                                                    | What to do                                                                                                                                               |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DataError`     | An argument has the wrong type, a limit is not a positive integer, the paths of `PackageFiles` are not normalized and unique, `writeManifest` and `writePackage` get a model that is not valid, or a path of `writePackage` is not normalized, is `imsmanifest.xml` or is `__proto__` at the root, or it gets more than 65,534 files or 4 GiB. | Fix the call; write paths in normal form, unique, and never `imsmanifest.xml` or `__proto__` at the root                                                 |
+| `ReadError`     | The data is not a ZIP archive or is cut off; a manifest, document or link cannot be read; a reference cannot be resolved. `issues` names the rule.                                                                                                                                                                                             | Read `issues`, which name the rule and the place; fix or refuse the package                                                                              |
+| `SecurityError` | The input breaks a rule or limit of the table above, or an XML limit.                                                                                                                                                                                                                                                                          | Refuse the package; raise a limit only for a package you trust ([SECURITY](https://github.com/assesskit/assesskit/blob/main/SECURITY.md#default-limits)) |
 
 ## Not included
 

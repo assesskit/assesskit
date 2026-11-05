@@ -188,7 +188,9 @@ term is a `ReadError`, or a `DataError` in the writer. The elements come in the 
 | `assesskit/metadata/unexpected-attribute`, `unexpected-text` | `ReadError` | An attribute the schema does not declare, or text in an element that has elements only.           |
 | `assesskit/metadata/duplicate-element`                       | `ReadError` | An external metadata file has the QTI metadata or the curriculum standards twice.                 |
 
-The readers throw `DataError` for an argument of the wrong type. The writers throw `DataError` for a model that is not valid.
+A `ReadError` has one issue with its rule and place: fix the document there. The readers throw `DataError` for an argument
+of the wrong type and the writers for a model that is not valid, with a message that names the field: pass what the types of
+this module describe. A text or bytes above a limit of `parseXml` is a `SecurityError` ([xml](xml.md#limits)).
 
 ## Not included
 

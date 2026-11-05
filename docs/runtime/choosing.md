@@ -46,9 +46,14 @@ flowchart TD
 | [oat-sa/qti-sdk](https://github.com/oat-sa/qti-sdk), [kennisnet/php-qti3](https://github.com/kennisnet/php-qti3) | QTI in PHP                                                                                                      | Not applicable: this package is JavaScript and TypeScript                                                                                                              |
 | 1EdTech conformance evidence                                                                                     | A page for each conformance criterion with its result (Citolab); member-only test sets and a validator          | Partly: [conformance](conformance.md) maps each of 150 feature IDs to a guide and a test; the member-only test sets and validator have never been run on its output    |
 
-None of the open comparators has Results Reporting, Usage Data, a CAT port or an exam server, by their documentation and source
-trees of 2026-11-02. For a whole test session, Amp-up exposes the test information model, Citolab's `qti-test` lacks time limits and
-section references (its issues 296 and 301), and Longsight lists tests as a non-goal; the runtime runs sessions ([delivery](delivery.md)).
+By their documentation and source trees of 2026-11-02:
+
+| Comparator         | Results Reporting, usage data, a CAT port, an exam server | A whole test session                                              |
+| ------------------ | --------------------------------------------------------- | ----------------------------------------------------------------- |
+| Amp-up             | None                                                      | Exposes the test information model                                |
+| Citolab `qti-test` | None                                                      | Lacks time limits and section references (its issues 296 and 301) |
+| Longsight          | None                                                      | A non-goal                                                        |
+| The runtime        | All four                                                  | Runs sessions ([delivery](delivery.md))                           |
 
 ## Where the evidence is
 

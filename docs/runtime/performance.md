@@ -41,10 +41,9 @@ the time. The two sides take turns in five rounds of a fifth of the window each,
 both and not on whichever ran then; the fastest sample of each side is the fastest of its rounds. The ratio compares those
 fastest samples, and a gate compares the runtime with both its time and its ratio. `pnpm bench` runs the rows.
 
-A ratio budget is twice the highest ratio that the CI runner measured in five runs, rounded up to one significant digit, so that
-a path that becomes about twice as slow against its reference fails the gate and the noise of a shared host does not. What each
-side does besides the work in the table, where the runtime is above parity or its budget
-allows for more:
+A ratio budget ([Budgets](#budgets)) fails a path that becomes about twice as slow against its reference, and not the noise of
+a shared host. What each side does besides the work in the table, where the runtime is above parity or its budget allows for
+more:
 
 - **Reading (parse, item end to end; budget 2).** The runtime reads every attribute value against the type of the ASI
   schema, refuses a DOCTYPE and enforces limits on size, depth and nodes. Longsight collects diagnostics and validates in a
@@ -72,12 +71,21 @@ allows for more:
   tree of JavaScript objects whose names, namespaces and limits it checks as it goes; the readers of the runtime take that tree.
 
 The budget column comes from five runs of the `bench` job on main on 2026-11-05, on the build. A time is five times the
-fastest sample that the CI runner took, rounded up to one significant digit: 19.8 ms for parse, 7.34 ms for validate, 0.613 ms
-for start, 3.12 ms for start with templates, 0.955 ms for submit, 25.7 ms for an item end to end, 97.7 ms for package, 0.412 ms
-for start a test, 1.38 ms for submit in a test and 20.1 ms for XML. A ratio is twice the highest ratio of the five runs, rounded
-up to one significant digit; the ratios of the runs were between 0.65 and 0.81 for parse, 2.71 and 3.12 for validate, 1.05 and
-1.10 for start, 1.19 and 1.25 for start with templates, 1.06 and 1.10 for submit, 0.85 and 0.92 for an item end to end, 0.53 and
-0.56 for package, 0.69 and 0.73 for start a test, 1.49 and 1.90 for submit in a test and 1.82 and 1.87 for XML.
+fastest sample that the CI runner took, and a ratio twice the highest ratio of the five runs, each rounded up to one
+significant digit:
+
+| Row              | Fastest sample on the runner | Ratios of the five runs |
+| ---------------- | ---------------------------: | ----------------------- |
+| parse            |                      19.8 ms | 0.65 to 0.81            |
+| validate         |                      7.34 ms | 2.71 to 3.12            |
+| start            |                     0.613 ms | 1.05 to 1.10            |
+| start + template |                      3.12 ms | 1.19 to 1.25            |
+| submit           |                     0.955 ms | 1.06 to 1.10            |
+| item end to end  |                      25.7 ms | 0.85 to 0.92            |
+| package          |                      97.7 ms | 0.53 to 0.56            |
+| start a test     |                     0.412 ms | 0.69 to 0.73            |
+| submit in a test |                      1.38 ms | 1.49 to 1.90            |
+| XML (libxml2)    |                      20.1 ms | 1.82 to 1.87            |
 
 ## Budgets
 

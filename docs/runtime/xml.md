@@ -252,9 +252,10 @@ fail: an attribute or a child that is not there is `undefined` or left out. A re
 | `assesskit/xml/xinclude-cycle`     | `ReadError` | Includes form a loop.                                                              |
 | `assesskit/xml/xinclude-resource`  | `ReadError` | The resolver failed and the include has no fallback.                               |
 
-`ReadError.issues` has one issue with the code, the path, and the line and column where the parser stopped. Every function
-checks its arguments, as plain JavaScript and JSON can pass anything: a value of the wrong type is a `DataError` that names the
-argument and what was found.
+`ReadError.issues` has one issue with the code, the path, and the line and column where the parser stopped: fix the document
+there, or refuse it. Every function checks its arguments, as plain JavaScript and JSON can pass anything: a value of the wrong
+type is a `DataError` that names the argument and what was found, so pass the type it asks for. A DOCTYPE or a document above
+a limit is a `SecurityError` ([Limits](#limits)): refuse it, or raise the limit for a document you trust.
 
 ## Not included
 

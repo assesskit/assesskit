@@ -85,9 +85,13 @@ An optional field the document leaves out is absent from the model, never `undef
 
 ## Errors
 
-`readUsageData` throws `ReadError` with one issue; `writeUsageData` throws `DataError` for a model that is not usage data. Input
-that is not text, bytes or an element is a `DataError`, and text or bytes that break a limit of `parseXml` are a `SecurityError`.
-The rules are those of [results](results.md#errors) with the module `usage`:
+| Error           | When                                                                                                              | What to do                                                                                      |
+| --------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `ReadError`     | `readUsageData` cannot map the document: one issue with the rule below, the line and column, and the element path | Fix the document at the place the issue names                                                   |
+| `DataError`     | The input is not text, bytes or an element; `writeUsageData` gets a model that is not usage data                  | Pass the input or the model that the types of this module describe; the message names the field |
+| `SecurityError` | The text or bytes break a limit of `parseXml`                                                                     | Refuse the document, or raise the limit for one you trust ([xml](xml.md#limits))                |
+
+The rules of `ReadError`:
 
 | Rule                                                                                                             | Meaning                                                                                       |
 | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
