@@ -339,6 +339,12 @@ regular expression, which is a `DataError` from `compileXsdRegex` and a `Process
 1EdTech QTI 3.0 examples, where the examples have one, and the factor is as large as the memory allows: the limits are set so that the worst
 input within all of them peaks at 224 MiB of heap or less in every reader, under a budget of 256 MiB ([Peak memory](#peak-memory)).
 
+A rule that allows none is a `SecurityError` too, with `maximum` 0 and the rule as `limit`: `doctype`, a DOCTYPE in an XML
+document; `path`, an entry of a package directory whose name a package may not have or whose real path leaves the directory,
+or an `xi:include` that names a file outside the package; `symlink`, a symbolic link in a package directory; `special-file`,
+an entry of a package directory that is neither a file nor a directory. `declaredBytes` is an entry of a ZIP file that
+inflates to more bytes than its header declares, with that size as `maximum`.
+
 XML (`XmlLimits`; option `limits` of `parseXml`, `resolveIncludes`, `readAsi`, `readManifest` and the other readers, and
 `xmlLimits` of `readPackage`, `openPackage` and `readPackageFile`):
 

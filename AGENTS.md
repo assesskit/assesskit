@@ -376,7 +376,8 @@ tests of every engine, and waits for the next change to that part.
 
 - A reader of untrusted input or a limit: the worst input within it as a reading of `scripts/peak-memory-readings.ts`, its case in
   `scripts/test/peak-memory.test.ts`, its row in the table of [SECURITY.md](SECURITY.md#default-limits) and its rule in
-  `scripts/rules/`. A reader of JSON takes its size limit, and its refusal of the three reserved names at any depth, from `checkJsonInput`. A reader that reads only what the engine wrote, from
+  `scripts/rules/`. `pnpm check:standards` fails on a limit that SECURITY.md does not name: the `limit` of a `SecurityError`,
+  a key of an exported `*_LIMITS` object and a property of an exported `*Limits` interface. A reader of JSON takes its size limit, and its refusal of the three reserved names at any depth, from `checkJsonInput`. A reader that reads only what the engine wrote, from
   the host's own store or server, has no limit of size: SECURITY.md says so in **Readers of trusted input**, and its TSDoc.
 - A construct of the specifications: its test, and a line of `supported.md` of the package when what is supported changes.
 - A test that a row of [conformance.md](docs/runtime/conformance.md) cites: that row changes with it, and `scripts/test/conformance.test.ts`

@@ -2,6 +2,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { basename, dirname, extname, join, posix, resolve } from "node:path";
+import ts from "typescript";
 import { checkClaimWords, checkIdentity, checkReadmeLinks, checkTrademarks } from "./check-identity.ts";
 
 /** One breach of the standards: the file, the 1-based line (0 for the whole file), the rule and what to do. */
@@ -406,6 +407,129 @@ export function checkConsole(files: Files): Violation[] {
   );
 }
 
+/** Returns an expression without the parentheses, `as` and `satisfies` around it. */
+function unwrapped(expression: ts.Expression): ts.Expression {
+  let inner = expression;
+  while (ts.isParenthesizedExpression(inner) || ts.isAsExpression(inner) || ts.isSatisfiesExpression(inner))
+    inner = inner.expression;
+  return inner;
+}
+
+/** The text of the name of a property, or `undefined` for a computed one. */
+function propertyName(name: ts.PropertyName | undefined): string | undefined {
+  return name !== undefined && (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) ? name.text : undefined;
+}
+
+/** Whether a declaration carries `export`. */
+function isExported(node: ts.Node): boolean {
+  return (
+    ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some(({ kind }) => kind === ts.SyntaxKind.ExportKeyword)
+  );
+}
+
+/** The files that are entries of a package, or the indexes that an entry gathers: their exports are its public names. */
+const ENTRY_FILE = /^packages\/[^/]+\/src\/(?:.*\/)?(?:index|checks|errors|wire)\.ts$/;
+
+/** The exported interfaces named `*Limits` that hold no limit on input: the time limits of a test are QTI's. */
+const NOT_LIMITS = new Set(["EffectiveTimeLimits"]);
+
+/** The names that an entry of a package exports by name. */
+function namesExportedBy(file: string, text: string): string[] {
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+  return source.statements.flatMap((statement) => {
+    const clause = ts.isExportDeclaration(statement) ? statement.exportClause : undefined;
+    return clause !== undefined && ts.isNamedExports(clause) ? clause.elements.map(({ name }) => name.text) : [];
+  });
+}
+
+/** The names that the entries of the packages export, which make a limits interface a public one. */
+function entryExports(files: Files): Set<string> {
+  return new Set([...files].flatMap(([file, text]) => (ENTRY_FILE.test(file) ? namesExportedBy(file, text) : [])));
+}
+
+/** A node that names a limit, with the name. */
+type NamedLimit = readonly [ts.Node, string | undefined];
+
+/** The limit of a `SecurityError` that a `new` expression makes, when it names it in a string. */
+function limitOfError(node: ts.NewExpression): NamedLimit[] {
+  const limit = node.arguments?.[1];
+  const isLimitError = ts.isIdentifier(node.expression) && node.expression.text === "SecurityError";
+  return isLimitError && limit !== undefined && ts.isStringLiteralLike(limit) ? [[limit, limit.text]] : [];
+}
+
+/** The keys of the exported `*_LIMITS` objects that a statement declares. */
+function limitsOfObjects(node: ts.VariableStatement): NamedLimit[] {
+  if (!isExported(node)) return [];
+  return node.declarationList.declarations.flatMap(({ name, initializer }) => {
+    let value = initializer === undefined ? undefined : unwrapped(initializer);
+    // `Object.freeze({ ... })` holds the object as its argument.
+    if (value !== undefined && ts.isCallExpression(value) && value.arguments.length === 1) {
+      const [argument] = value.arguments;
+      if (argument !== undefined) value = unwrapped(argument);
+    }
+    return ts.isIdentifier(name) &&
+      name.text.endsWith("_LIMITS") &&
+      value !== undefined &&
+      ts.isObjectLiteralExpression(value)
+      ? value.properties.map((property): NamedLimit => [property, propertyName(property.name)])
+      : [];
+  });
+}
+
+/** The limits that a node names: the limit of a `SecurityError`, the keys of a limits object or the properties of a limits interface. */
+function limitsNamedBy(node: ts.Node, exported: ReadonlySet<string>): NamedLimit[] {
+  if (ts.isNewExpression(node)) return limitOfError(node);
+  if (ts.isVariableStatement(node)) return limitsOfObjects(node);
+  if (
+    ts.isInterfaceDeclaration(node) &&
+    node.name.text.endsWith("Limits") &&
+    exported.has(node.name.text) &&
+    !NOT_LIMITS.has(node.name.text)
+  )
+    return node.members.map((member): NamedLimit => [member, propertyName(member.name)]);
+  return [];
+}
+
+/**
+ * The limits that a file of a package names, each with its line: the `limit` of each `SecurityError` that it throws, each
+ * key of an exported `*_LIMITS` object, and each property of a `*Limits` interface that an entry of the package exports.
+ */
+function limitsOf(file: string, text: string, exported: ReadonlySet<string>): [number, string][] {
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+  const found: [number, string][] = [];
+  const visit = (node: ts.Node): void => {
+    for (const [named, name] of limitsNamedBy(node, exported)) {
+      if (name !== undefined) found.push([source.getLineAndCharacterOfPosition(named.getStart(source)).line + 1, name]);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return found;
+}
+
+/**
+ * SECURITY.md names every limit of the packages, so that a limit added without its row, or the file emptied by a merge, fails:
+ * the `limit` of each `SecurityError`, the keys of each exported `*_LIMITS` object and of each exported `*Limits` interface.
+ */
+export function checkSecurityLimits(files: Files): Violation[] {
+  const security = files.get("SECURITY.md") ?? "";
+  const exported = entryExports(files);
+  const found: Violation[] = [];
+  for (const [file, text] of files) {
+    if (!isLibrary(file) || !/SecurityError|_LIMITS\b|Limits\b/.test(text)) continue;
+    for (const [line, name] of limitsOf(file, text, exported)) {
+      if (security.includes(`\`${name}\``)) continue;
+      found.push({
+        file,
+        line,
+        rule: "security-limit",
+        message: `The limit ${name} is not named in SECURITY.md; give it a row of its table of limits, with its default.`,
+      });
+    }
+  }
+  return found;
+}
+
 /** Every check, in the order of the standards. */
 export const CHECKS: readonly ((files: Files) => Violation[])[] = [
   checkSectionSigns,
@@ -420,6 +544,7 @@ export const CHECKS: readonly ((files: Files) => Violation[])[] = [
   checkFamilies,
   checkEntries,
   checkConsole,
+  checkSecurityLimits,
   checkIdentity,
   checkTrademarks,
   checkClaimWords,
