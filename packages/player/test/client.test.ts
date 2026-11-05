@@ -881,7 +881,7 @@ describe("input of other types", () => {
       'The type of a host action must be "time", "supply-scores" or "cat-response", found undefined.',
     );
     await expect(client.host.apply(action('{"type":"supply-scores"}'))).rejects.toThrow(
-      "The request of supply-scores must be a string, found undefined.",
+      'The action is invalid: missing the property "request".',
     );
     client.close();
   });
