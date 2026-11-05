@@ -662,6 +662,13 @@ describe("mountSupportPanel", () => {
       expect(select.options[8]?.textContent).toBe(new Intl.NumberFormat("id", { style: "percent" }).format(4));
     });
 
+    it("writes the amounts in English for a language that Intl does not take, as the rest of the player does", () => {
+      // The option language of a mount is any non-empty string, and `Intl.NumberFormat` throws a RangeError for "en_US".
+      const { host, panel } = adjusting({ language: "en_US" });
+      panel.update([magnified()]);
+      expect((el(host, "select") as HTMLSelectElement).options[8]?.textContent).toBe("400%");
+    });
+
     it("has no list while the magnification is off or prohibited", () => {
       const { host, panel } = adjusting();
       panel.update([

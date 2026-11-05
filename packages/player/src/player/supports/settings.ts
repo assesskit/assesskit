@@ -17,7 +17,7 @@ import type {
   Zoom,
 } from "@assesskit/runtime/pnp";
 import type { Messages } from "../../messages/index.js";
-import { html } from "../internal.js";
+import { html, numberFormatter } from "../internal.js";
 import { BASE_FONT_SIZE, fontSizeOf, zoomAmountOf } from "./appearance.js";
 import { EXTENSION_PREFIX } from "./names.js";
 
@@ -76,7 +76,7 @@ const termText = (value: string): string =>
 
 /** Returns the formatter of a percentage in the language of the interface: 1.5 is 150%. */
 function percent(language: string): (value: number) => string {
-  const format = new Intl.NumberFormat(language, { style: "percent", maximumFractionDigits: 0 });
+  const format = numberFormatter(language, { style: "percent", maximumFractionDigits: 0 });
   return (value) => format.format(value);
 }
 
@@ -174,7 +174,7 @@ function textAppearanceFields(settings: TextAppearance, context: FieldContext): 
       messages.settingFontSize,
       FONT_SIZES,
       size,
-      new Intl.NumberFormat(language).format,
+      numberFormatter(language).format,
       (fontSize) => ({ ...settings, fontSize }),
     ),
   ];
@@ -236,7 +236,7 @@ function spokenFields(settings: Spoken, context: FieldContext): Field[] {
       messages.settingSpeechRate,
       SPEECH_RATES,
       settings.speechRate,
-      new Intl.NumberFormat(language).format,
+      numberFormatter(language).format,
       (speechRate) => ({ ...settings, speechRate }),
     ),
     numberField("pitch", messages.settingPitch, PITCHES, settings.pitch, share, (pitch) => ({ ...settings, pitch })),
@@ -299,7 +299,7 @@ function brailleFields(settings: Braille, context: FieldContext): Field[] {
       messages.settingBrailleGrade,
       GRADES,
       settings.grade,
-      new Intl.NumberFormat(language).format,
+      numberFormatter(language).format,
       (value) => {
         const grade = GRADES.find((known) => known === value);
         return grade === undefined ? undefined : { ...settings, grade };
