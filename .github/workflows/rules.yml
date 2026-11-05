@@ -32,5 +32,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # The rules of the code that runs in a page are checked in Chromium.
-      - run: pnpm exec playwright install --with-deps chromium
+      # An install that stalls is stopped after 240 s and tried again, three times in all, as STANDARDS section 7 asks of a download.
+      - run: for attempt in 1 2 3; do timeout 240 pnpm exec playwright install --with-deps chromium && exit 0; echo "The install stalled or failed, try $attempt of 3."; done; exit 1
       - run: pnpm check:rules

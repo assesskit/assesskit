@@ -339,7 +339,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      # An install that stalls is stopped after 240 s and tried again, three times in all, as STANDARDS section 7 asks of a download.
+      - run: for attempt in 1 2 3; do timeout 240 pnpm exec playwright install --with-deps chromium && exit 0; echo "The install stalled or failed, try $attempt of 3."; done; exit 1
       - run: pnpm --filter @assesskit/player bench
 
   # The rendering tests of the player, and its tests that render the 1EdTech examples, in the current Chromium, Firefox and
@@ -371,7 +372,8 @@ jobs:
           path: .cache/corpus
           key: corpus-${{ hashFiles('scripts/corpus.lock.json') }}
       - run: pnpm corpus
-      - run: pnpm exec playwright install --with-deps chromium firefox webkit
+      # An install that stalls is stopped after 240 s and tried again, three times in all, as STANDARDS section 7 asks of a download.
+      - run: for attempt in 1 2 3; do timeout 240 pnpm exec playwright install --with-deps chromium firefox webkit && exit 0; echo "The install stalled or failed, try $attempt of 3."; done; exit 1
       - run: sudo apt-get install -y pulseaudio
       - run: scripts/linux-audio.sh
       # Chromium runs with coverage, the one engine that reports it, and holds the floors of the folders that draw a page.
