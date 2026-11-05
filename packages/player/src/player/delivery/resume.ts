@@ -5,8 +5,8 @@ import { html } from "../internal.js";
 import type { Announcer } from "./announcer.js";
 import type { MountState } from "./state.js";
 
-/** How often in milliseconds a paused test is checked when the host does not choose. */
-export const DEFAULT_RESUME_CHECK_MS = 30_000;
+/** How often in milliseconds the player checks a test that a proctor paused; each check of a remote client is one request. */
+export const RESUME_CHECK_MS = 30_000;
 
 /** What the check for a resume needs of the player. */
 export interface ResumeContext {
@@ -18,8 +18,6 @@ export interface ResumeContext {
   readonly status: Announcer;
   /** The state of the mounted player, which tells the view shown and whether the player is gone. */
   readonly state: MountState;
-  /** How often a paused test is checked, in milliseconds; 0 for never. */
-  readonly everyMs: number;
 }
 
 /** The check of a paused test, with the button that asks for it. */
@@ -53,7 +51,7 @@ const waitsForOthers = (view: CandidateView): boolean =>
  * @returns The check.
  */
 export function createResumeWatch(context: ResumeContext): ResumeWatch {
-  const { client, messages, status, state, everyMs } = context;
+  const { client, messages, status, state } = context;
   const button = html("button", { type: "button", class: "ak-button" }, messages.checkAgain);
   const element = html("div", { class: "ak-resume", hidden: "" }, button);
   let timer: ReturnType<typeof setInterval> | undefined;
@@ -90,7 +88,7 @@ export function createResumeWatch(context: ResumeContext): ResumeWatch {
       const waiting = waitsForOthers(view);
       element.hidden = !waiting;
       if (!waiting) stop();
-      else if (timer === undefined && everyMs > 0) timer = setInterval(() => void check(false), everyMs);
+      else if (timer === undefined) timer = setInterval(() => void check(false), RESUME_CHECK_MS);
     },
     destroy: () => {
       stop();

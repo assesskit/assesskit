@@ -225,8 +225,8 @@ envelope carries the suspended view, and `view(caller)` gives it after a reload.
 
 A paused candidate has no action to send, so the page learns of the resume only by asking. `SessionClient.refresh` sends a
 view request through the route that carries the actions, so that route needs nothing besides `handle`. The player asks while
-the view is suspended and lists no `resume`: on a button, when the page becomes visible, and every `resumeCheckMs`
-([delivery](delivery.md#options)).
+the view is suspended and lists no `resume`: on a button, when the page becomes visible, and every 30 seconds
+([delivery](delivery.md#what-the-player-draws)).
 
 ```mermaid
 sequenceDiagram

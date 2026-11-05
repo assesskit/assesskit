@@ -4,19 +4,16 @@ import {
   checkChoice,
   checkFunction,
   checkNonEmptyString,
-  checkNonNegativeInteger,
   checkPositiveInteger,
   checkProperties,
   checkRecord,
   checkString,
   describe,
 } from "@assesskit/runtime/checks";
-import type { CandidateView } from "@assesskit/runtime/delivery/wire";
 import { DataError } from "@assesskit/runtime/errors";
 import type { FileValue } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { SessionClient } from "../../protocol/index.js";
-import { MAX_TIMER_DELAY_MS } from "../../protocol/internal.js";
 import { readOrigins } from "../content/internal.js";
 import type { CustomInteractionHook } from "../elements/index.js";
 import { canMount, HOST_SHADOW_RULE } from "../internal.js";
@@ -145,19 +142,6 @@ export interface DeliveryOptions extends MountOptions {
    */
   readonly chrome?: boolean;
   /**
-   * How often in milliseconds the player asks the session whether a paused test continues, for as long as the candidate has
-   * no action to continue it.
-   *
-   * @remarks
-   * A proctor pauses a test and resumes it; the candidate has no action, so the client learns of the resume only when it
-   * asks (`SessionClient.refresh`). The player also asks when the page becomes visible and on a button. A remote client
-   * sends one request for each check, so a host with many paused candidates sets a longer time, or 0 for none. The longest
-   * is 2,147,483,647, the longest delay of a timer of the browser, which fires at once after a longer one.
-   *
-   * @defaultValue `30000`
-   */
-  readonly resumeCheckMs?: number;
-  /**
    * The element that holds the player: `"main"` for a page that is the player, `"region"` for a page that has a `main` of its
    * own, since a page has one main landmark. A region is named by the heading.
    *
@@ -200,17 +184,11 @@ export interface DeliveryOptions extends MountOptions {
   readonly tools?: ToolSlots;
 }
 
-/** A player that is mounted. */
+/**
+ * A player that is mounted. It follows its session client by itself: a host that has views of its own shows them through a
+ * `SessionClient` of its own.
+ */
 export interface Mounted {
-  /**
-   * Shows a view in place of the one before.
-   *
-   * @remarks
-   * A mount with a session client follows the client by itself.
-   *
-   * @param view - The view.
-   */
-  update(view: CandidateView): void;
   /**
    * Resolves when the interactions of the item shown have handed over what the candidate gave, such as a drawing that is
    * still being stored.
@@ -244,7 +222,6 @@ const ITEM_OPTION_NAMES = [
 /** The options of `mountDelivery` and `mountItem`, with those of `mountDelivery` alone not yet checked. */
 type SharedOptions = MountOptions & {
   readonly chrome?: unknown;
-  readonly resumeCheckMs?: unknown;
   readonly landmark?: unknown;
   readonly headingLevel?: unknown;
   readonly marking?: unknown;
@@ -332,7 +309,6 @@ export function checkDeliveryOptions(host: unknown, options: unknown): asserts o
   checkSharedOptions(host, options, [
     ...ITEM_OPTION_NAMES,
     "chrome",
-    "resumeCheckMs",
     "landmark",
     "headingLevel",
     "marking",
@@ -350,15 +326,6 @@ export function checkDeliveryOptions(host: unknown, options: unknown): asserts o
   }
   if (options.chrome !== undefined) checkBoolean(options.chrome, "The option chrome");
   if (options.marking !== undefined) checkBoolean(options.marking, "The option marking");
-  if (options.resumeCheckMs !== undefined) {
-    checkNonNegativeInteger(options.resumeCheckMs, "The option resumeCheckMs");
-    // A longer delay would fire at once, and a remote client would send a check after each answer.
-    if (options.resumeCheckMs > MAX_TIMER_DELAY_MS) {
-      throw new DataError(
-        `The option resumeCheckMs must be at most ${MAX_TIMER_DELAY_MS}, the longest delay of a timer, found ${options.resumeCheckMs}.`,
-      );
-    }
-  }
   if (options.ltiLogin !== undefined) checkFunction(options.ltiLogin, "The option ltiLogin must be a function");
   if (options.tools !== undefined) checkTools(options.tools);
 }

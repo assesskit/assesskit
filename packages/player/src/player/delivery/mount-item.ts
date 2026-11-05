@@ -87,7 +87,6 @@ export function mountItem(host: HTMLElement, options: MountOptions): Mounted {
   update(client.view);
 
   return {
-    update,
     settled: body.settled,
     destroy: () => {
       if (state.destroyed) return;

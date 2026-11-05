@@ -2,7 +2,6 @@ import type { Messages } from "../../messages/index.js";
 import { selectMessages } from "../../messages/index.js";
 import { readOrigins } from "../content/internal.js";
 import type { DeliveryOptions, MountOptions } from "./options.js";
-import { DEFAULT_RESUME_CHECK_MS } from "./resume.js";
 
 /** The options of a player that draws content only, with their defaults applied, which its parts read. */
 export interface ItemSettings
@@ -24,8 +23,6 @@ export interface ItemSettings
 export interface Settings extends ItemSettings, Pick<DeliveryOptions, "ltiLogin" | "tools"> {
   /** Whether the player draws its chrome. */
   readonly chrome: boolean;
-  /** How often a paused test is checked, in milliseconds; 0 for never. */
-  readonly resumeCheckMs: number;
   /** The element that holds the player. */
   readonly landmark: "main" | "region";
   /** The level of the heading of the item. */
@@ -66,22 +63,12 @@ export function resolveItemSettings(options: MountOptions): ItemSettings {
  * @returns The settings.
  */
 export function resolveSettings(options: DeliveryOptions): Settings {
-  const {
-    chrome = true,
-    resumeCheckMs = DEFAULT_RESUME_CHECK_MS,
-    landmark = "region",
-    headingLevel = 2,
-    marking = false,
-    ltiLogin,
-    tools,
-    ...shared
-  } = options;
+  const { chrome = true, landmark = "region", headingLevel = 2, marking = false, ltiLogin, tools, ...shared } = options;
   return {
     ...resolveItemSettings(shared),
     chrome,
     ltiLogin,
     tools,
-    resumeCheckMs,
     landmark,
     headingLevel,
     marking,

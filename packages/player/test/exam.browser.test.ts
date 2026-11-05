@@ -1,9 +1,10 @@
 import { DataError, ServiceError } from "@assesskit/runtime/errors";
 import { buildSingle } from "@assesskit/runtime/values";
-import { afterEach, describe, expect, inject, it } from "vitest";
+import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { commands } from "vitest/browser";
 import { createRemoteSession, type Transport } from "../src/client/index.js";
 import { AccessError } from "../src/index.js";
+import { RESUME_CHECK_MS } from "../src/player/delivery/internal.js";
 import { mountDelivery } from "../src/player/index.js";
 import type { SessionClient, ViewEnvelope } from "../src/protocol/index.js";
 import { isViewRequest } from "../src/protocol/internal.js";
@@ -22,8 +23,14 @@ const fresh = (): string => `e2e-${crypto.randomUUID()}`;
 
 const hosts: HTMLElement[] = [];
 afterEach(() => {
+  vi.useRealTimers();
   for (const host of hosts.splice(0)) host.remove();
 });
+
+/** Holds the intervals, the check for a resume among them, until a test moves them on. */
+const holdIntervals = (): void => {
+  vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+};
 
 /** A candidate of the exam server: what a host's page does with `fetch`, and the status of each answer. */
 function candidate(session: string, principal = "alice", exam = "plain") {
@@ -216,9 +223,9 @@ describe("exam mode over HTTP", () => {
 async function mountExam(
   session: string,
   principal = "alice",
-  extra: { readonly resumeCheckMs?: number; readonly wrap?: (inner: Transport) => Transport } = {},
+  extra: { readonly wrap?: (inner: Transport) => Transport } = {},
 ) {
-  const { wrap = (inner: Transport) => inner, ...mountOptions } = extra;
+  const { wrap = (inner: Transport) => inner } = extra;
   const who = candidate(session, principal);
   const initial = await start(who);
   const client: SessionClient = createRemoteSession(wrap(who.transport()), initial);
@@ -238,7 +245,6 @@ async function mountExam(
     staticUrl: `${inject("fixtures").asset}/static/`,
     stylesheet: player,
     fetch: (url, init) => fetch(url, init),
-    ...mountOptions,
   });
   return { who, client, ui: host.shadowRoot as ShadowRoot, host, mounted };
 }
@@ -281,7 +287,8 @@ describe("the player over the exam server", () => {
 
   it("lets the candidate continue after the proctor resumed the test, on the button that checks", async () => {
     const session = fresh();
-    const { who, ui } = await mountExam(session, "alice", { resumeCheckMs: 0 });
+    holdIntervals();
+    const { who, ui } = await mountExam(session);
     await waitFor(() => expect(ui.querySelector(".ak-heading")?.textContent).toBe("Item q1"));
     const check = ui.querySelector<HTMLButtonElement>(".ak-resume button");
     expect(check?.closest<HTMLElement>(".ak-resume")?.hidden).toBe(true);
@@ -311,7 +318,8 @@ describe("the player over the exam server", () => {
         );
       };
     };
-    const { who, ui, mounted } = await mountExam(fresh(), "alice", { resumeCheckMs: 0, wrap });
+    holdIntervals();
+    const { who, ui, mounted } = await mountExam(fresh(), "alice", { wrap });
     await waitFor(() => expect(ui.querySelector(".ak-heading")?.textContent).toBe("Item q1"));
     await who.post("proctor", { type: "suspend" });
     [...ui.querySelectorAll("button")].find((button) => button.textContent === "Skip question")?.click();
@@ -326,12 +334,14 @@ describe("the player over the exam server", () => {
 
   it("continues by itself at the interval after the proctor resumed the test", async () => {
     const session = fresh();
-    const { who, ui } = await mountExam(session, "alice", { resumeCheckMs: 50 });
+    holdIntervals();
+    const { who, ui } = await mountExam(session);
     await waitFor(() => expect(ui.querySelector(".ak-heading")?.textContent).toBe("Item q1"));
     await who.post("proctor", { type: "suspend" });
     [...ui.querySelectorAll("button")].find((button) => button.textContent === "Skip question")?.click();
     await waitFor(() => expect(ui.querySelector(".ak-notice")?.textContent).toContain("The test is paused"));
     await who.post("proctor", { type: "resume" });
+    vi.advanceTimersByTime(RESUME_CHECK_MS);
     await waitFor(() => expect(ui.querySelector(".ak-notice")).toBeNull());
     expect(ui.querySelectorAll(".ak-actions button").length).toBeGreaterThan(0);
   });

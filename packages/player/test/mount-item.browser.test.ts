@@ -11,6 +11,7 @@ import type { Messages } from "../src/messages/index.js";
 import { type MountOptions, mountItem } from "../src/player/index.js";
 import { deepActiveElement, HOST_SHADOW_RULE } from "../src/player/internal.js";
 import type { SessionClient } from "../src/protocol/index.js";
+import { feedViews } from "./client-fixture.js";
 import { PLAYER_CSS } from "./css-fixture.js";
 import { examHost, fakeClock, pciFiles } from "./exam-fixture.js";
 import { NO_RECORDING } from "./files-fixture.js";
@@ -285,12 +286,13 @@ describe("mountItem", () => {
   });
 
   it("keeps the content and the answers when a view arrives that answers an earlier request", async () => {
-    const s = await embed("l1");
+    const views = feedViews();
+    const s = await embed("l1", { wrap: views.wrap });
     await shown(s);
     choices(s.ui)[1]?.click();
     const current = s.client.view.current;
     if (current === undefined) throw new Error("The fixture shows an item.");
-    s.mounted.update({
+    views.show({
       ...s.client.view,
       current: { ...current, responses: new Map([["RESPONSE", buildSingle("identifier", "A")]]) },
     });
@@ -419,7 +421,8 @@ describe("the lifecycle of an item in a page", () => {
   });
 
   it("refuses an item that is a link to an LTI tool, which needs the login of mountDelivery", async () => {
-    const s = await embed("l1");
+    const views = feedViews();
+    const s = await embed("l1", { wrap: views.wrap });
     const current = s.client.view.current;
     if (current === undefined) throw new Error("The fixture shows an item.");
     const lti: CandidateView = { ...s.client.view, current: { ...current, lti: { title: "Tool", custom: new Map() } } };
@@ -436,7 +439,7 @@ describe("the lifecycle of an item in a page", () => {
       }),
     ).toThrow("The item l1 is a link to an LTI tool");
     expect(host.shadowRoot).toBeNull();
-    expect(() => s.mounted.update(lti)).toThrow("Use mountDelivery");
+    expect(() => views.show(lti)).toThrow("Use mountDelivery");
   });
 
   it("mounts again on the element of an item that was destroyed, as a lesson does that shows another item in it", async () => {
@@ -492,7 +495,6 @@ describe("the lifecycle of an item in a page", () => {
     for (const only of [
       { landmark: "main" },
       { headingLevel: 1 },
-      { resumeCheckMs: 0 },
       { marking: true },
       { tools: {} },
       { ltiLogin: () => undefined },
@@ -517,8 +519,6 @@ describe("the type of the options", () => {
     named({ ...shared, landmark: "main" });
     // @ts-expect-error `headingLevel` is an option of `mountDelivery`.
     named({ ...shared, headingLevel: 1 });
-    // @ts-expect-error `resumeCheckMs` is an option of `mountDelivery`.
-    named({ ...shared, resumeCheckMs: 0 });
     // @ts-expect-error `tools` is an option of `mountDelivery`.
     named({ ...shared, tools: {} });
   });

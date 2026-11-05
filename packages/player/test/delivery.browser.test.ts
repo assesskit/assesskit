@@ -16,6 +16,7 @@ import { mountDelivery } from "../src/player/index.js";
 import { HOST_SHADOW_RULE } from "../src/player/internal.js";
 import type { HostSession, SessionClient } from "../src/protocol/index.js";
 import { audioContextRuns, fakeMicrophone, heardFor, needsAudio, trackAudioContexts } from "./audio.js";
+import { feedViews } from "./client-fixture.js";
 import { computed, PLAYER_CSS } from "./css-fixture.js";
 import { examDefinition, examFiles, examHost, lexiconFiles, packageOf, pciFiles } from "./exam-fixture.js";
 import { NO_RECORDING } from "./files-fixture.js";
@@ -226,7 +227,8 @@ describe("mountDelivery", () => {
   });
 
   it("lists more items in the map than a call of the engine takes as arguments", async () => {
-    const s = await shell();
+    const views = feedViews();
+    const s = await shell({ wrap: views.wrap });
     await shown(s);
     const [first] = s.client.view.navigation.filter((entry) => entry.kind === "item");
     if (first?.kind !== "item") throw new Error("The fixture lists items.");
@@ -238,7 +240,7 @@ describe("mountDelivery", () => {
     }));
     // The map is built and not laid out: WebKit lays out a grid of this many rows in minutes, and the test is of the build.
     s.page.style.display = "none";
-    s.mounted.update({ ...s.client.view, navigation });
+    views.show({ ...s.client.view, navigation });
     expect(s.ui.querySelectorAll("nav li")).toHaveLength(count);
   });
 
@@ -1000,15 +1002,6 @@ describe("mountDelivery", () => {
     expect(() => mount(fresh(), { landmark: "page" })).toThrow('The option landmark must be "main" or "region"');
     expect(() => mount(fresh(), { headingLevel: 7 })).toThrow("The option headingLevel must be from 1 to 6, found 7.");
     expect(() => mount(fresh(), { headingLevel: "2" })).toThrow("The option headingLevel must be a positive integer");
-    expect(() => mount(fresh(), { resumeCheckMs: -1 })).toThrow(
-      "The option resumeCheckMs must be a non-negative integer",
-    );
-    expect(() => mount(fresh(), { resumeCheckMs: "30" })).toThrow(
-      "The option resumeCheckMs must be a non-negative integer",
-    );
-    expect(() => mount(fresh(), { resumeCheckMs: 2 ** 31 })).toThrow(
-      "The option resumeCheckMs must be at most 2147483647, the longest delay of a timer, found 2147483648.",
-    );
     expect(() => mount(fresh(), { voice: {} })).toThrow("The method speak of the option voice");
     expect(() => mount(fresh(), { voice: "robot" })).toThrow("The option voice must be an object");
     expect(() => mount(fresh(), { ltiLogin: "x" })).toThrow("The option ltiLogin must be a function");
@@ -1209,12 +1202,13 @@ describe("the interactions in the player", () => {
   });
 
   it("keeps what the candidate chose when a view that answers an earlier request arrives", async () => {
-    const s = await shell();
+    const views = feedViews();
+    const s = await shell({ wrap: views.wrap });
     await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     choices(s.ui)[1]?.click();
     const current = s.client.view.current;
     if (current === undefined) throw new Error("The fixture shows an item.");
-    s.mounted.update({
+    views.show({
       ...s.client.view,
       current: { ...current, responses: new Map([["RESPONSE", buildSingle("identifier", "A")]]) },
     });
@@ -1713,16 +1707,17 @@ describe("the supports in the player", () => {
   });
 
   it("says which version of the question was delivered", async () => {
-    const s = await shell();
+    const views = feedViews();
+    const s = await shell({ wrap: views.wrap });
     await shown(s);
     const current = s.client.view.current;
     if (current === undefined) throw new Error("The fixture shows an item.");
     const notice = (): HTMLElement => s.ui.querySelector(".ak-variant") as HTMLElement;
     expect(notice().hidden).toBe(true);
-    s.mounted.update({ ...s.client.view, current: { ...current, variant: { resource: "q1-id", language: "id" } } });
+    views.show({ ...s.client.view, current: { ...current, variant: { resource: "q1-id", language: "id" } } });
     await waitFor(() => expect(notice().textContent).toBe("Language of this version: Indonesian"));
     expect(notice().querySelector("span")?.getAttribute("lang")).toBe("id");
-    s.mounted.update({ ...s.client.view, current });
+    views.show({ ...s.client.view, current });
     await waitFor(() => expect(notice().hidden).toBe(true));
   });
 

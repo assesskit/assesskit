@@ -59,7 +59,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
   const timers = createTimerBar(messages, language, timerStatus);
   const sender = createSender({ client, messages, status, state, report: settings.report });
   const comment = createCommentBox(messages, sender.comment);
-  const resume = createResumeWatch({ client, messages, status, state, everyMs: settings.resumeCheckMs });
+  const resume = createResumeWatch({ client, messages, status, state });
   const lti = createLtiSlot({
     host,
     messages,
@@ -100,7 +100,6 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
   update(client.view);
 
   return {
-    update,
     settled: body.settled,
     destroy: () => {
       if (state.destroyed) return;
