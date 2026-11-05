@@ -4,8 +4,9 @@ Report vulnerabilities privately through the repository's security advisory form
 version, the document or the sequence of actions that shows the problem, and what it lets an attacker do.
 
 Every input is untrusted: packages, documents, personal needs profiles, results, candidate responses, client actions and what
-callbacks and resolvers return. The sections below state the controls of the runtime and what a deployment adds; the sections that
-start with the player state those of the player.
+callbacks and resolvers return. Entry points validate their input and throw `DataError` on malformed data, so data from users
+or files can be passed in directly. Each section states the controls of the library and what a deployment adds: first the
+runtime's, then, in the sections that start with "The player", the player's.
 
 ```mermaid
 flowchart LR
@@ -18,8 +19,6 @@ flowchart LR
 
 ## Points to be aware of when deploying
 
-The points below are the runtime's; the sections that start with "The player" hold the player's.
-
 - **No I/O.** The runtime core reads no files, makes no network requests, reads no environment variables, reads no clock and
   runs no code it is given. Only the `node` and `cli` modules use Node.js. `node` reads only the paths it is given.
 - **No fetching.** Absolute URLs in content are data. The core never fetches them, and callers supply the callbacks that
@@ -30,8 +29,6 @@ The points below are the runtime's; the sections that start with "The player" ho
 - **CAT engines.** The core never calls a CAT engine. `qti-adaptive-engine-ref` names the URL prefix of an engine, so a
   document chooses where a host sends a candidate's results. A host that implements `CatPort` checks the prefix against
   the engines it trusts before it sends a request.
-- **Untrusted input.** Every input is untrusted: documents, packages, actions and what callbacks return. Entry points
-  validate their input and throw `DataError` on malformed data, so data from users or files can be passed in directly.
 - **Randomness.** `createRandom` is a seeded generator whose draws are reproducible from the seed. It is not
   cryptographically secure. Selections and shuffles that use it can be reproduced by anyone who knows the seed, so keep the
   seed of an exam session on the server.
@@ -99,7 +96,6 @@ The points below are the runtime's; the sections that start with "The player" ho
   (outside the solution state the item session control allows), processing, mapping, outcome or template value, hidden
   content or metadata but the hazards, and a property test searches every view of random sessions for marked key material.
   In device mode the engine, the items with their keys and the seed are in the client, which is fit for practice only.
-  `createRandom` is not cryptographic: selections and shuffles are reproducible from the seed.
 - **Client actions.** `readCandidateAction` checks the shape, the types and the size of an action from a client (see
   **Default limits**) and refuses the actions of the host (`time`, `supply-scores`, `cat-response`) and any `at`; the server
   stamps the time. The engine checks every action against the rules and answers a refusal, never a state change, and an
@@ -219,8 +215,8 @@ it is built to send them only to the engines that the host configured.
   reference: the port sends the client secret and the candidate's data wherever the function points.
 - The endpoint and the token URL must be `https`. Redirects are errors, so a redirect cannot carry the token to another
   address or from HTTPS to HTTP. Every request is aborted after `timeoutMs`.
-- An answer has at most `maxTokens` tokens of JSON (a million by default), counted before the parse, whose memory follows the
-  tokens: 32 MiB of empty objects took 850 MiB without the count. The answer is read whole, so its bytes are the engine's to
+- An answer has at most `maxTokens` tokens of JSON ([Default limits](#default-limits)), counted before the parse, whose memory
+  follows the tokens: 32 MiB of empty objects took 850 MiB without the count. The answer is read whole, so its bytes are the engine's to
   keep within reason, and the host's `fetch` can cap them.
 - The personal needs and preferences of a candidate go only to an engine with `sharePnp: true`.
 - The client secret goes only to the token URL of its engine, as HTTP Basic credentials. A token is kept for each token URL,
@@ -242,9 +238,8 @@ items to present. It trusts nothing it is sent.
 - The handler does not know who a client is. A host that serves several clients on one root answers with the port of the
   caller, built over the shared engine with a check of the owner of every section and session. Without it every client with a
   valid token can read and end every section, and the guide shows the pattern.
-- A body must be `application/json`, at most `maxBodyBytes` (32 MiB by default), counted as it arrives, with at most
-  `maxTokens` tokens of JSON (a million by default), counted before the parse, whose memory follows the tokens, and valid UTF-8 and
-  JSON. A body above a limit is the `SecurityError` of that limit, which the handler answers with 413. Each body is read with
+- A body must be `application/json`, valid UTF-8 and JSON, within `maxBodyBytes` and `maxTokens`
+  ([Default limits](#default-limits)). A body above a limit is the `SecurityError` of that limit, which the handler answers with 413. Each body is read with
   a strict schema of the binding, so an unknown property is a 400; the assessment result is read by the runtime's codec.
 - The status follows the origin of an error. What the caller sent wrong is a 400 that names the path of the caller's own value.
   An error of the port is never shown: a `ServiceError` of status 400, 404 (not for Create Section), 429 or 503 is the refusal that
@@ -342,11 +337,15 @@ regular expression, which is a `DataError` from `compileXsdRegex` and a `Process
 1EdTech QTI 3.0 examples, where the examples have one, and the factor is as large as the memory allows: the limits are set so that the worst
 input within all of them peaks at 224 MiB of heap or less in every reader, under a budget of 256 MiB ([Peak memory](#peak-memory)).
 
-A rule that allows none is a `SecurityError` too, with `maximum` 0 and the rule as `limit`: `doctype`, a DOCTYPE in an XML
-document; `path`, an entry of a package directory whose name a package may not have or whose real path leaves the directory,
-or an `xi:include` that names a file outside the package; `symlink`, a symbolic link in a package directory; `special-file`,
-an entry of a package directory that is neither a file nor a directory. `declaredBytes` is an entry of a ZIP file that
-inflates to more bytes than its header declares, with that size as `maximum`.
+A rule that allows none is a `SecurityError` too, with the rule as `limit`:
+
+| `limit`         | `maximum`            | Refuses                                                                                                                                         |
+| --------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `doctype`       | 0                    | A DOCTYPE in an XML document                                                                                                                    |
+| `path`          | 0                    | An entry of a package directory whose name a package may not have or whose real path leaves the directory; an `xi:include` of a file outside it |
+| `symlink`       | 0                    | A symbolic link in a package directory                                                                                                          |
+| `special-file`  | 0                    | An entry of a package directory that is neither a file nor a directory                                                                          |
+| `declaredBytes` | The size it declares | An entry of a ZIP file that inflates to more bytes than its header declares                                                                     |
 
 XML (`XmlLimits`; option `limits` of `parseXml`, `resolveIncludes`, `readAsi`, `readManifest` and the other readers, and
 `xmlLimits` of `readPackage`, `openPackage` and `readPackageFile`):
@@ -415,12 +414,25 @@ a limit throws.
 | `maxSolutions`       | 16      | values                  | none            | The values of a solution set once `\pm` is expanded; capped at 64.                                            |
 | `maxEditBand`        | 64      | edits                   | none            | The widest edit distance that a credit tier of a text key measures; capped at 256.                            |
 
-Keys (`DEFAULT_KEY_LIMITS` of `keys`, fixed for the operators and `compileScoring`): `entries`, 1,000 entries of one key
-(keys, options, pairs, choices, answers, their texts and patterns together, units, tiers, intervals, components, areas, and
-the coordinates of the areas in fours), and `patternLength`, 1,000 characters of one pattern; a key past either is a
-`SecurityError`. The patterns of a text key together have at most the states of one pattern, the 100,000 of `maxStates`, which
-`text-equivalent` keeps while it scores; more is a `SecurityError` with `limit` `maxStates`. `compileScoring` takes `responses`, 256 responses of an item; it counts the entries of a key before it reads
-it. `compareMathSteps` takes at most `maxSteps` lines, 200 by default, and refuses more with a `SecurityError`.
+Keys (`DEFAULT_KEY_LIMITS` of `keys`, fixed for the operators and `compileScoring`, which counts the entries of a key before it
+reads it) and worked steps (`maxSteps`, an option of `compareMathSteps`); input past a limit is a `SecurityError`:
+
+| Limit           | Value   | Unit       | Applies to                                                                                                                                                             |
+| --------------- | ------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `responses`     | 256     | responses  | The responses of an item that `compileScoring` scores.                                                                                                                 |
+| `entries`       | 1,000   | entries    | One key: keys, options, pairs, choices, answers, their texts and patterns together, units, tiers, intervals, components, areas, and the coordinates of areas in fours. |
+| `patternLength` | 1,000   | characters | One pattern.                                                                                                                                                           |
+| `maxStates`     | 100,000 | states     | The patterns of a text key together, which `text-equivalent` keeps while it scores: the states of one pattern.                                                         |
+| `maxSteps`      | 200     | lines      | The lines that `compareMathSteps` checks; a default, which the option replaces.                                                                                        |
+
+The CAT REST binding of the player (options of `createRestCatPort` and `createCatRestHandler`); a body or an answer above a limit
+is the `SecurityError` of that limit, which the handler answers with 413:
+
+| Limit          | Default    | Unit         | Applies to                                                                                 |
+| -------------- | ---------- | ------------ | ------------------------------------------------------------------------------------------ |
+| `maxBodyBytes` | 33,554,432 | bytes        | A request body that `createCatRestHandler` reads, counted as it arrives.                   |
+| `maxTokens`    | 1,000,000  | JSON tokens  | A request body of the handler, or an answer that the port reads, counted before the parse. |
+| `timeoutMs`    | 10,000     | milliseconds | Each request of `createRestCatPort`, aborted after it.                                     |
 
 Item formats (`ItemFormatLimits`; option `limits` of `readGift` and `readMoodleXml`, and `maxAnswers` alone of `writeGift` and
 `writeMoodleXml`):
