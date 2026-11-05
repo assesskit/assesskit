@@ -42,9 +42,10 @@ which shows the response beside it. `mountDelivery` holds the player in a `regio
 test that the engine lets the candidate review, the navigation map lists the items presented and reviews the one chosen.
 With the option `marking`, `mountDelivery` offers Mark for review in a nonlinear part, and the map names a marked item. A
 candidate whom a proctor paused learns of the resume through `SessionClient.refresh`, which sends a view request to
-`SessionHost.handle`; the player asks on a button, when the page becomes visible and every 30 seconds. The status lines and
-the line of the timer warnings keep their room whether or not they hold text, so that writing a message moves nothing under
-a pointer; a line stays announced (`role="status"`, `aria-live="polite"`).
+`SessionHost.handle`; the player asks on a button, when the page becomes visible and every 30 seconds. The status lines, the
+line of the timer warnings, the line of an upload, which holds its status, its clock and the stored file in the height of a
+button, and the notice of a media interaction whose rules can hold its playback keep their room whether or not they hold
+text, so that writing a message moves nothing under a pointer; a line stays announced (`role="status"`).
 
 The frame of a portable custom interaction takes a relative URL from `assets`, resolved against the base URL of the page,
 and refuses at mount a module of the package on an origin that the frame loads no scripts from, the origin of `staticUrl`
