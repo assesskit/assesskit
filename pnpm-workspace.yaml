@@ -5,8 +5,8 @@ packages:
   - compat/runtimes
   - compat/engines/*
 
-# A version is installed only when it has been on the registry for 3 days (in minutes), which STANDARDS.md asks of every
-# dependency. pnpm checks the lock file against it on every install.
+# A version is installed only when it has been on the registry for 3 days (in minutes), as every
+# dependency of the family must be. pnpm checks the lock file against it on every install.
 minimumReleaseAge: 4320
 
 allowBuilds:

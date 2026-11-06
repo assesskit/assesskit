@@ -13,7 +13,7 @@ import {
 } from "./identity.ts";
 
 /**
- * The rules of the identity of the family (STANDARDS.md sections 2 "Names" and 8 "Identity"): each package says what
+ * The rules of the identity of the family: each package says what
  * `family.ts` says of it, the texts carry the lines of the marks they name, no claim word is used, and the published READMEs
  * link absolutely. `check:standards` runs them; every family copies this file unchanged.
  */
@@ -259,7 +259,7 @@ export function checkReadmeLinks(files: Files): Violation[] {
   return found;
 }
 
-/** The pages that every package has beside the guides of its modules (STANDARDS.md section 8, "Evidence pages"). */
+/** The pages that every package has beside the guides of its modules: what it supports, its evidence and how to choose. */
 const EVIDENCE_PAGES = ["supported", "evidence", "choosing"];
 
 /**

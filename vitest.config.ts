@@ -29,8 +29,8 @@ const PLAYER_SOURCES = [
 
 /**
  * The limit of a test and of a hook, in milliseconds, which catches a hang. A test ends within half of it on a runner under
- * coverage, which runs two to three times as long as a developer's machine, so it holds the tests of about 10 s that STANDARDS
- * section 7 allows; a test that needs more is cut, never given a longer timeout of its own.
+ * coverage, which runs two to three times as long as a developer's machine, so it holds the tests of about 10 s that the family
+ * allows; a test that needs more is cut, never given a longer timeout of its own.
  */
 const HANG_LIMIT = 60_000;
 

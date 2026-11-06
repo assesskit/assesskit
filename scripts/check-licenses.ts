@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
-/** The licenses that a runtime dependency may have (STANDARDS: MIT, Apache-2.0, BSD, ISC). */
+/** The licenses that a runtime dependency of the family may have: MIT, Apache-2.0, BSD, ISC. */
 export const ALLOWED_LICENSES: ReadonlySet<string> = new Set([
   "MIT",
   "Apache-2.0",
