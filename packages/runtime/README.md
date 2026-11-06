@@ -177,18 +177,8 @@ npx assesskit validate packaging/simple/simple.zip
 packaging/simple/simple.zip: valid (0 errors, 0 warnings)
 ```
 
-| Command                   | Argument or option    | Default                                                                                                       |
-| ------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `assesskit validate`      | `<path>`              | required: a ZIP file, an unpacked package directory or one XML document                                       |
-|                           | `--schemas <dir>`     | `assesskit/schemas/<version>` in the user cache directory, where `assesskit schemas fetch` writes the schemas |
-|                           | `--format text\|json` | `text`                                                                                                        |
-| `assesskit schemas fetch` | `--dir <dir>`         | the same cache directory                                                                                      |
-| `assesskit --help`        |                       | prints the commands                                                                                           |
-
-The exit code is 0 when the content has no issue with severity error, 1 when it has one, and 2 when the command line is
-wrong, the path cannot be read or is refused, or the schemas are missing. `--format json` prints
-`{ tool, version, target, valid, summary: { errors, warnings }, issues }`. `assesskit schemas fetch` is the only code in the runtime that
-uses the network. [CLI](https://assesskit.wakan.dev/_assesskit/runtime/cli/) has the checks, the output and the cache directory of each platform.
+[CLI](https://assesskit.wakan.dev/_assesskit/runtime/cli/) has the options with their defaults, the exit codes, the checks, the output
+and the cache directory of each platform. `assesskit schemas fetch` is the only code in the runtime that uses the network.
 
 ## API
 
