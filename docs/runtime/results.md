@@ -78,17 +78,12 @@ writeResults({ context: { sessionIdentifiers: [] }, itemResults: [] });
 
 ## Rules
 
-| Rule                                                                                                                                                                                        | Source                                                       |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `context` is required, so `writeResults` always writes it, empty when nothing is known. A report is never placed in a package.                                                              | Results Reporting, `assessmentResult`; ASI XML Binding       |
-| A variable has a `cardinality` and, except for a record, a `baseType`. A record's `value` elements name their field and base type; any other `value` has neither.                           | Results Reporting, variables and `value`                     |
-| A value is read and written in the lexical form of its base type ([values](values.md)). No `value` element is NULL, and so is an empty `string`. A single variable has at most one `value`. | ASI Information Model, base types and values                 |
-| A `file` is written as its reference alone and reads back with the content type `application/octet-stream`; the host keeps the bytes.                                                       | [Spec gaps](spec-gaps.md): the lexical form of `file` values |
-| A `duration` is written as seconds. It is read as seconds, or as an ISO 8601 duration without years and months, which 1EdTech's `conformance-use-case-1.xml` writes.                        | [Spec gaps](spec-gaps.md): ISO 8601 durations with years     |
-| A `value` is an `xs:normalizedString`: the runtime writes it as given, so a consumer that applies the schema reads a newline in an essay as a space.                                        | [Spec gaps](spec-gaps.md): `value` as a normalized string    |
-| An integer outside the safe integers is a `ReadError`.                                                                                                                                      | [Spec gaps](spec-gaps.md): the range of integers             |
-| The namespace is strict: a root in another namespace is a `ReadError`. The writer names the schema in `xsi:schemaLocation`.                                                                 | [Spec gaps](spec-gaps.md): namespaces of the samples         |
-| The reader refuses an attribute, element or text that the schema does not define at that place, so nothing in a document is dropped without notice.                                         | The RR schema                                                |
+| Rule                                                                                                                                                                                        | Source                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `context` is required, so `writeResults` always writes it, empty when nothing is known. A report is never placed in a package.                                                              | Results Reporting, `assessmentResult`; ASI XML Binding |
+| A variable has a `cardinality` and, except for a record, a `baseType`. A record's `value` elements name their field and base type; any other `value` has neither.                           | Results Reporting, variables and `value`               |
+| A value is read and written in the lexical form of its base type ([values](values.md)). No `value` element is NULL, and so is an empty `string`. A single variable has at most one `value`. | ASI Information Model, base types and values           |
+| The reader refuses an attribute, element or text that the schema does not define at that place, so nothing in a document is dropped without notice.                                         | The RR schema                                          |
 
 ## Vocabularies
 
@@ -137,14 +132,14 @@ The rules of `ReadError`, whose element path reads such as `assessmentResult/ite
 
 ## Differences from the references
 
-| Case                                                                                                   | Resolution                                                                                        |
-| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| The lexical form of a `file` value                                                                     | The reference alone, read with the content type `application/octet-stream` ([G10](spec-gaps.md))  |
-| A duration with years or months, which `conformance-use-case-1.xml` of 1EdTech writes                  | Read as an ISO 8601 duration without years and months, written as seconds ([G14](spec-gaps.md))   |
-| A `value` is an `xs:normalizedString`, which loses the newlines of an essay in a schema-aware consumer | Written as given: the exact string travels in scoring requests and in state ([G36](spec-gaps.md)) |
-| The base type integer is unbounded                                                                     | An integer outside the safe integers is a `ReadError` ([G2](spec-gaps.md))                        |
-| The namespaces in the samples differ from the schema's                                                 | The schema decides: a root in another namespace is a `ReadError` ([G12](spec-gaps.md))            |
-| Nothing says the order of the item results of a report                                                 | Plan order, with `sequenceIndex` as the specification defines it ([G48](spec-gaps.md))            |
+| Case                                                                                                   | Resolution                                                                                                                                      |
+| ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| The lexical form of a `file` value                                                                     | The reference alone, read with the content type `application/octet-stream` ([G10](spec-gaps.md))                                                |
+| A duration with years or months, which `conformance-use-case-1.xml` of 1EdTech writes                  | Read as an ISO 8601 duration without years and months, written as seconds ([G14](spec-gaps.md))                                                 |
+| A `value` is an `xs:normalizedString`, which loses the newlines of an essay in a schema-aware consumer | Written as given: the exact string travels in scoring requests and in state ([G36](spec-gaps.md))                                               |
+| The base type integer is unbounded                                                                     | An integer outside the safe integers is a `ReadError` ([G2](spec-gaps.md))                                                                      |
+| The namespaces in the samples differ from the schema's                                                 | The schema decides: a root in another namespace is a `ReadError`, and the writer names the schema in `xsi:schemaLocation` ([G12](spec-gaps.md)) |
+| Nothing says the order of the item results of a report                                                 | Plan order, with `sequenceIndex` as the specification defines it ([G48](spec-gaps.md))                                                          |
 
 ## Files
 

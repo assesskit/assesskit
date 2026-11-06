@@ -65,15 +65,13 @@ An optional field the document leaves out is absent from the model, never `undef
 
 ## Rules
 
-| Rule                                                                                                                                                                              | Source                                                             |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| A statistic has at least one target object; a mapping has at least one entry. A categorized statistic has a `mapping`, an ordinary one a `value`.                                 | Usage Data, item statistics                                        |
-| A `value` without a base type is a `float`, because an ordinary statistic is a numeric value. Any other value needs its `baseType`, and is read in the lexical form of that type. | Usage Data, `ordinaryStatistic`; ASI Information Model, base types |
-| `lastUpdated` is `YYYY-MM-DD` with a four-digit year, a month and a day of that month, and no time zone: the pattern of `DateDType`.                                              | The UD schema                                                      |
-| `name` is an identifier. The two vocabularies list common names; any other name is read and written, and its `glossary` defines it.                                               | Usage Data, external vocabularies                                  |
-| `defaultValue` is absent when the document gives none; the schema's default is `0`.                                                                                               | The UD schema                                                      |
-| The namespace is strict. The usage data of the packages of the 1EdTech examples are in the namespace of QTI 2.2, so `readUsageData` refuses them.                                 | [Spec gaps](spec-gaps.md): namespaces of the samples               |
-| The reader refuses an attribute, element or text that the schema does not define at that place.                                                                                   | The UD schema                                                      |
+| Rule                                                                                                                                              | Source                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| A statistic has at least one target object; a mapping has at least one entry. A categorized statistic has a `mapping`, an ordinary one a `value`. | Usage Data, item statistics                                        |
+| Any `value` but that of an ordinary statistic needs its `baseType`, and is read in the lexical form of that type.                                 | Usage Data, `ordinaryStatistic`; ASI Information Model, base types |
+| `lastUpdated` is `YYYY-MM-DD` with a four-digit year, a month and a day of that month, and no time zone: the pattern of `DateDType`.              | The UD schema                                                      |
+| `name` is an identifier. The two vocabularies list common names; any other name is read and written, and its `glossary` defines it.               | Usage Data, external vocabularies                                  |
+| The reader refuses an attribute, element or text that the schema does not define at that place.                                                   | The UD schema                                                      |
 
 ## Vocabularies
 
@@ -102,11 +100,11 @@ The rules of `ReadError`:
 
 ## Not included
 
-| Not included                        | Why                                                                          |
-| ----------------------------------- | ---------------------------------------------------------------------------- |
-| Computing the statistics            | A psychometrics library does that; `usage` carries the results as data       |
-| Applying a mapping to a value       | A mapping is data about categories; processing owns the mapping of responses |
-| Reading the usage data of a package | The 1EdTech packages use the namespace of QTI 2.2, which the reader refuses  |
+| Not included                        | Why                                                                                                                     |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Computing the statistics            | A psychometrics library does that; `usage` carries the results as data                                                  |
+| Applying a mapping to a value       | A mapping is data about categories; processing owns the mapping of responses                                            |
+| Reading the usage data of a package | The usage data of the 1EdTech packages is in the namespace of QTI 2.2 ([Differences](#differences-from-the-references)) |
 
 ## Differences from the references
 
