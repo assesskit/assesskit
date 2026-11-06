@@ -21,7 +21,7 @@ python3 validation/scoring.py      # the scores of items of the keys that QTI sc
 `moodle.py` runs Moodle 5.3.0 itself, at its pinned commit and in containers of pinned images, on the cases of
 `packages/runtime/test/item-formats-cases.ts`: Moodle's own importers read each file, its questions grade the responses of the
 case, and its exporters write each question back (`moodle/questions.php`). It needs Docker with Compose, Git, network access the
-first time and about 1 GB of disk for the source, which it keeps in the cache; a run removes
+first time and about 1 GB of disk for the source, which it keeps in the cache; a run takes about a minute and a half and removes
 its containers and volumes. The cache must lie where Docker can mount it.
 
 ```bash
