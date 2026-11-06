@@ -1,7 +1,16 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { importAll, type Manifest, moduleSpecifiers, RESOLUTIONS, typeAll } from "../check-tarballs.ts";
+import {
+  importAll,
+  type Manifest,
+  moduleSpecifiers,
+  publishedFolders,
+  RESOLUTIONS,
+  typeAll,
+} from "../check-tarballs.ts";
+
+const ROOT = join(import.meta.dirname, "../..");
 
 const MANIFEST: Manifest = {
   name: "@scope/pkg",
@@ -19,13 +28,18 @@ describe("moduleSpecifiers", () => {
   });
 
   it("finds every module of the packages of the repository", () => {
-    const root = join(import.meta.dirname, "../..");
-    const player: Manifest = JSON.parse(readFileSync(join(root, "packages/player/package.json"), "utf8"));
+    const player: Manifest = JSON.parse(readFileSync(join(ROOT, "packages/player/package.json"), "utf8"));
     const specifiers = moduleSpecifiers(player);
     expect(specifiers).toContain("@assesskit/player");
     expect(specifiers).toContain("@assesskit/player/player");
     expect(specifiers).toContain("@assesskit/player/server");
     expect(specifiers).not.toContain("@assesskit/player/player.css");
+  });
+});
+
+describe("publishedFolders", () => {
+  it("lists the packages of the repository, all of them published", () => {
+    expect(publishedFolders(ROOT)).toStrictEqual(["custom-interactions", "player", "runtime"]);
   });
 });
 

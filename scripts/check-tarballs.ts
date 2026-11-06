@@ -3,12 +3,10 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-/** The packages that the check packs, installs and imports. */
-const PACKAGES = ["runtime", "player", "custom-interactions"] as const;
-
 /** The fields of a `package.json` that tell which specifiers a user can import. */
 export interface Manifest {
   readonly name: string;
+  readonly private?: boolean;
   readonly exports: Readonly<Record<string, unknown>>;
 }
 
@@ -42,6 +40,18 @@ export function typeAll(specifiers: readonly string[]): string {
   return `${specifiers.map((specifier, index) => `import type * as m${index} from ${JSON.stringify(specifier)};`).join("\n")}\nexport type {${specifiers.map((_, index) => ` m${index}`).join(",")} };\n`;
 }
 
+/** The folders of `packages/` whose package is published: a private package is never packed. */
+export function publishedFolders(root: string): string[] {
+  return readdirSync(join(root, "packages"), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter((name) => {
+      const manifest: Manifest = JSON.parse(readFileSync(join(root, "packages", name, "package.json"), "utf8"));
+      return manifest.private !== true;
+    })
+    .sort();
+}
+
 /** Runs a command and returns its exit code, printing what it said when it failed. */
 function run(command: string, args: readonly string[], cwd: string): number {
   const result = spawnSync(command, [...args], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
@@ -56,10 +66,11 @@ function main(): number {
   try {
     const packed = join(scratch, "packed");
     mkdirSync(packed);
-    const manifests = PACKAGES.map(
+    const folders = publishedFolders(root);
+    const manifests = folders.map(
       (name): Manifest => JSON.parse(readFileSync(join(root, "packages", name, "package.json"), "utf8")),
     );
-    for (const name of PACKAGES) {
+    for (const name of folders) {
       if (run("pnpm", ["--dir", join(root, "packages", name), "pack", "--pack-destination", packed], root) !== 0) {
         return 1;
       }
@@ -92,7 +103,7 @@ function main(): number {
       if (run(process.execPath, [tsc, "-p", `tsconfig.${resolution.moduleResolution}.json`], project) !== 0) return 1;
     }
     console.log(
-      `${specifiers.length} specifiers of the tarballs load in Node and type-check with ${RESOLUTIONS.map((each) => each.moduleResolution).join(" and ")}.`,
+      `${specifiers.length} specifiers of ${folders.length} tarballs load in Node and type-check with ${RESOLUTIONS.map((each) => each.moduleResolution).join(" and ")}.`,
     );
     return 0;
   } finally {
