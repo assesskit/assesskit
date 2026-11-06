@@ -110,7 +110,7 @@ export class UploadInteractionElement extends InteractionElement {
   readonly #stored = html("div", { class: "ak-stored" });
   /**
    * The line of the status, the clock and the stored file, which keeps the height of a button whether or not it holds
-   * anything, so that what the upload writes after an action moves nothing that follows it (STANDARDS section 10).
+   * anything, so that what the upload writes after an action moves nothing that follows it.
    */
   readonly #result = html("div", { class: "ak-upload-result" }, this.#status, this.#clock, this.#stored);
   #services: UploadServices | undefined;

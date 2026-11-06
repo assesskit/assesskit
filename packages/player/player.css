@@ -2098,7 +2098,7 @@ qti-choice-interaction > .ak-notes {
   content: "! ";
 }
 
-/* STANDARDS 10: the hint of an interaction whose response can break a rule keeps its line while the candidate responds, so
+/* The hint of an interaction whose response can break a rule keeps its line while the candidate responds, so
    that a hint that comes or goes moves nothing that follows; the limits are set once at the render, and a hint that cannot
    change takes no room while it is empty. */
 
@@ -2335,7 +2335,7 @@ qti-simple-associable-choice.ak-target {
   gap: 0.5rem;
 }
 
-/* STANDARDS 10: what the player writes after an action keeps its room whether or not it has text, so that what follows does
+/* What the player writes after an action keeps its room whether or not it has text, so that what follows does
    not move under a pointer. The notice of a media interaction whose rules can hold its playback has a line of its own, and
    the line of an upload holds its status, its clock and the stored file in the height of a button. */
 

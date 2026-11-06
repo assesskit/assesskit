@@ -50,7 +50,7 @@ export class Notes {
 
   /**
    * Keeps the line of the hint whether or not it has text, for an interaction whose hint can change while the candidate
-   * responds, so that a hint that comes or goes moves nothing that follows (STANDARDS section 10); a hint that cannot change
+   * responds, so that a hint that comes or goes moves nothing that follows; a hint that cannot change
    * takes no room while it is empty.
    *
    * @param keep - Whether the hint keeps its line.

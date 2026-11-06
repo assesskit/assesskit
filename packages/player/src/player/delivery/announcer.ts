@@ -52,7 +52,7 @@ export function createAnnouncer(className: string): Announcer {
  * Puts a region in a frame that keeps the room of the longest of the texts that it may say, at the width it has: each text
  * stands, hidden, in the cell of the region, so that the cell is as tall as the tallest of them and grows or shrinks with the
  * width alone. A region that a control of the page may follow, such as the status of an item among others, keeps that room,
- * so that a message of two lines on a narrow screen moves nothing that a pointer aims at (STANDARDS section 10).
+ * so that a message of two lines on a narrow screen moves nothing that a pointer aims at.
  *
  * @param region - The element of the announcer.
  * @param texts - Every text that the region may say.
