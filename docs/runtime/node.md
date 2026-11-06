@@ -161,20 +161,6 @@ Two npm packages compile libxml2 to WebAssembly. The runtime uses `libxml2-wasm`
 keep it. `libxml2-wasm` compiles an `XsdValidator` and reuses it. Its risks: its README marks XSD `import` and `include` support experimental, and `xmlRegisterInputProvider` is marked alpha and
 is process-wide. Both are covered by the tests, which compile each primary schema and the schemas it imports.
 
-## Evidence
-
-`pnpm test:xsd` (run `pnpm schemas` and `pnpm corpus` first) validates on this engine:
-
-| Document                                                                                                                                | Result                                                              |
-| --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| 1EdTech items `choice.xml`, `adaptive_template.xml`, `Example03-feedbackBlock-solution-random.xml`, `associate.xml`, test `rtest01.xml` | valid under the ASI schema, 3.0.0 and 3.0.1                         |
-| `choice.xml` without `time-dependent`                                                                                                   | rejected: "The attribute 'time-dependent' is required but missing." |
-| `results/report.xml`, `results/conformance-use-case-1.xml`                                                                              | valid under the Results Reporting schema                            |
-| `results/full-example.xml`                                                                                                              | not well-formed (a second root element)                             |
-| `usageData/example.xml`                                                                                                                 | valid under the usage data schema                                   |
-| `packaging/simple/imsmanifest.xml`                                                                                                      | valid under the content package schema                              |
-| An item with `xi:include` and `xi:fallback`                                                                                             | valid; an include with `parse="binary"` is rejected                 |
-
 ## Errors
 
 | Situation                                                                              | Result                                                        | What to do                                                                         |
@@ -201,6 +187,20 @@ is process-wide. Both are covered by the tests, which compile each primary schem
 ## Differences from the references
 
 None. The schemas of 1EdTech and W3C are the reference, and libxml2 applies them: the module changes no verdict of a schema, except that a document goes through `parseXml` first, so that a DOCTYPE or a document over a limit is refused whatever the schema says ([xml](xml.md#security)). What the schemas cannot express is the work of [validate](validate.md), which lists its own differences.
+
+## Evidence
+
+`pnpm test:xsd` (run `pnpm schemas` and `pnpm corpus` first) validates on this engine:
+
+| Document                                                                                                                                | Result                                                              |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| 1EdTech items `choice.xml`, `adaptive_template.xml`, `Example03-feedbackBlock-solution-random.xml`, `associate.xml`, test `rtest01.xml` | valid under the ASI schema, 3.0.0 and 3.0.1                         |
+| `choice.xml` without `time-dependent`                                                                                                   | rejected: "The attribute 'time-dependent' is required but missing." |
+| `results/report.xml`, `results/conformance-use-case-1.xml`                                                                              | valid under the Results Reporting schema                            |
+| `results/full-example.xml`                                                                                                              | not well-formed (a second root element)                             |
+| `usageData/example.xml`                                                                                                                 | valid under the usage data schema                                   |
+| `packaging/simple/imsmanifest.xml`                                                                                                      | valid under the content package schema                              |
+| An item with `xi:include` and `xi:fallback`                                                                                             | valid; an include with `parse="binary"` is rejected                 |
 
 ## Files
 

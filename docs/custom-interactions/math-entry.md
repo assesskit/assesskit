@@ -155,16 +155,6 @@ each against the nearest earlier line that reads.
 | Contrast                      | axe finds no violation of WCAG 2.2 AA with the keyboard shown, nor with worked steps; the keyboard's selected tab takes the color of its text, since MathLive's accent fails the contrast of AA on its gray |
 | Pointer                       | The virtual keyboard writes every key of the subset with a tap                                                                                                                                              |
 
-## Errors
-
-| Error                                  | When                                                                                                     | What to do                                                                 |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `DataError` of `readModuleFiles`       | The name is not an interaction of the package, an option is unknown, or `signal` is not an `AbortSignal` | Pass `"math-entry"` and at most `{ signal }`                               |
-| `AssesskitError` of `readModuleFiles`  | The package was installed without its built modules                                                      | Install the published package, or run `pnpm build` in a checkout           |
-| The signal's reason                    | `signal` aborted the reading                                                                             | Nothing: the caller ended it                                               |
-| The frame's `failed` event, `instance` | `data-decimal-separator` is neither `.` nor `,`                                                          | Fix the item                                                               |
-| The frame's `failed` event, `modules`  | The module is not at `primary-path` in the package                                                       | Put the files of `readModuleFiles` at the folder that `primary-path` names |
-
 ## Limits
 
 The module sets no limit on what a candidate types or on the lines of worked steps. What bounds a response is where it goes:
@@ -175,6 +165,16 @@ The module sets no limit on what a candidate types or on the lines of worked ste
 | `maxSteps` of `compareMathSteps`      | 200 lines                                                       | Scoring worked steps: more lines are a `SecurityError` ([operators](../runtime/operators.md#limits))                                                  |
 | `maxActionSize` of `ActionLimits`     | 4,194,304                                                       | The action that carries the response to the engine                                                                                                    |
 | `maxPciStateLength` of `ActionLimits` | 1,048,576 code units                                            | The state of the interaction ([delivery](../runtime/delivery.md#wire-forms))                                                                          |
+
+## Errors
+
+| Error                                  | When                                                                                                     | What to do                                                                 |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `DataError` of `readModuleFiles`       | The name is not an interaction of the package, an option is unknown, or `signal` is not an `AbortSignal` | Pass `"math-entry"` and at most `{ signal }`                               |
+| `AssesskitError` of `readModuleFiles`  | The package was installed without its built modules                                                      | Install the published package, or run `pnpm build` in a checkout           |
+| The signal's reason                    | `signal` aborted the reading                                                                             | Nothing: the caller ended it                                               |
+| The frame's `failed` event, `instance` | `data-decimal-separator` is neither `.` nor `,`                                                          | Fix the item                                                               |
+| The frame's `failed` event, `modules`  | The module is not at `primary-path` in the package                                                       | Put the files of `readModuleFiles` at the folder that `primary-path` names |
 
 ## Not included
 

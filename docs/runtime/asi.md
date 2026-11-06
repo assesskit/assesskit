@@ -344,12 +344,6 @@ property of elements whose plural is not a word to add `s` to, and the attribute
 A schema that needs a name the script lacks stops the script with the slot to name. `pnpm test:xsd` compares the committed
 table with the one the script generates, and validates documents that fast-check generates from the table.
 
-## Evidence
-
-The generated documents use every element and attribute that the schema declares, and the schema accepts them. The 1EdTech
-examples contain every interaction but the custom one; the other elements have no corpus evidence, only the schema and the
-unit tests. The two examples that the schema rejects are in [Differences from the references](#differences-from-the-references).
-
 ## Errors
 
 | Situation                                                                                                                                                                                                                                                                                      | Class                                                    | What to do                                                                                              |
@@ -379,6 +373,12 @@ unit tests. The two examples that the schema rejects are in [Differences from th
 | The schema types the target value of a match table entry as a base type name                                                  | The runtime follows the schema; a numeric table is an interpolation table ([G53](spec-gaps.md))                                           |
 | The namespaces in the samples of the specifications differ from those of the schemas                                          | The schemas decide, and the namespace of an assessment document is strict ([G12](spec-gaps.md))                                           |
 | Two 1EdTech examples that the schema rejects: a rubric block without `use`, an attribute that `qti-interaction-modules` lacks | Not read, as the schema refuses them                                                                                                      |
+
+## Evidence
+
+The generated documents use every element and attribute that the schema declares, and the schema accepts them. The 1EdTech
+examples contain every interaction but the custom one; the other elements have no corpus evidence, only the schema and the
+unit tests. The two examples that the schema rejects are in [Differences from the references](#differences-from-the-references).
 
 ## Files
 

@@ -144,6 +144,13 @@ message that wraps the issue of a nested parse.
 An array is no object here: valibot reads one as an object whose entries are all optional, so every object schema of this module
 starts with `recordSchema`. `Schema<TOutput>` is the type of a valibot schema of unknown input.
 
+## Limits
+
+| Limit               | Value                         | Applies to                                   |
+| ------------------- | ----------------------------- | -------------------------------------------- |
+| `limit` of the JSON | The caller's; none by default | `checkJsonInput`, a `SecurityError` above it |
+| Depth of plain JSON | 256 levels, fixed             | `plainSchema`, a `DataError`                 |
+
 ## Errors
 
 | Error           | When                                                                                                                     | What to do                                                                                                      |
@@ -151,13 +158,6 @@ starts with `recordSchema`. `Schema<TOutput>` is the type of a valibot schema of
 | `DataError`     | A value fails its check or schema, or JSON from outside holds a property named `__proto__`, `prototype` or `constructor` | Read the message: it names the value and what was expected. Input from users or files can be passed in directly |
 | `SecurityError` | `checkJsonInput` finds JSON larger than its `limit`; the error carries `limit` (`limitName`) and `maximum`               | Refuse the input, or raise the limit of the caller that passed `limit`                                          |
 | `signal.reason` | The `signal` of `raceAbort` aborted                                                                                      | Nothing: the caller ended the wait                                                                              |
-
-## Limits
-
-| Limit               | Value                         | Applies to                                   |
-| ------------------- | ----------------------------- | -------------------------------------------- |
-| `limit` of the JSON | The caller's; none by default | `checkJsonInput`, a `SecurityError` above it |
-| Depth of plain JSON | 256 levels, fixed             | `plainSchema`, a `DataError`                 |
 
 ## Not included
 

@@ -99,38 +99,13 @@ A document that declares XML 1.1 is a `ReadError`. So is one that has what the p
 keep or write: a lone surrogate in a string, a namespace declaration with white space at its start or end, and a qualified
 name whose prefix or local part is not an `NCName`, such as `p:1` ([Differences from the references](#differences-from-the-references)).
 
-## Limits
-
-Every limit is a positive integer, and the defaults are about 300 times the largest document of the 1EdTech QTI 3.0
-examples for size and node count (32 KiB, 1,126 nodes), 16 times its depth (16) and 20 times its attributes on an element (12).
-`maxBytes` and `maxNodes` are as large as the memory allows: the worst document within both peaks at 200 MiB of heap or less in
-every reader, under the budget of 256 MiB, and a host with more memory raises them together, at up to 20 MiB of heap for each
-MiB of `maxBytes` with 30,000 `maxNodes` ([SECURITY.md](../../SECURITY.md#peak-memory)).
-
-| Limit             | Default    | Unit       | Applies to                                                            |
-| ----------------- | ---------- | ---------- | --------------------------------------------------------------------- |
-| `maxBytes`        | 10,485,760 | bytes      | The bytes of a document (UTF-8 for a string).                         |
-| `maxDepth`        | 256        | levels     | Nesting of elements; the root is depth 1.                             |
-| `maxAttributes`   | 256        | attributes | Attributes on one element, namespace declarations included.           |
-| `maxNodes`        | 300,000    | nodes      | Elements, text, CDATA sections, comments and processing instructions. |
-| `maxIncludeDepth` | 8          | levels     | Nesting of includes (`resolveIncludes`).                              |
-
-A limit that a document exceeds throws a `SecurityError` whose `limit` is the limit's name and `maximum` its value. The
-limits are checked while the tree grows: the reader never builds a tree larger than a limit allows. A limit that is not a
-positive integer is a `DataError` whose message begins `The limit maxBytes`, and so on for each name.
-
-`maxDepth` also bounds the recursion of everything that walks a tree: the readers of [asi](asi.md), the writers,
-`resolveIncludes` and the interpreter of [processing](processing.md), whose expressions are as deep as the document they were
-read from. Node.js with its default stack reads, writes and evaluates trees of 1,000 levels, four times the default; raise
-`maxDepth` only with a stack to match.
-
 ## Security
 
 | Threat                                 | Control                                                                                                                                                       |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | XXE, entity expansion (billion laughs) | Any DOCTYPE throws a `SecurityError` with `limit` `"doctype"` before an entity is declared. Only the five predefined entities and character references exist. |
 | Network and file access                | The reader and the writer read nothing. `resolveIncludes` calls only the resolver the caller passes.                                                          |
-| Oversized, deep or wide documents      | The limits above.                                                                                                                                             |
+| Oversized, deep or wide documents      | The [limits](#limits).                                                                                                                                        |
 | Prototype pollution                    | The tree is arrays of objects with fixed fields; a name such as `__proto__` is data.                                                                          |
 
 ## Writing
@@ -237,6 +212,31 @@ An include that is the root of the tree must be replaced by exactly one element.
 model keeps as XML. `readLomGeneral` of [metadata](metadata.md) reads the title and identifiers of a LOM this way. They never
 fail: an attribute or a child that is not there is `undefined` or left out. A reader that maps a whole document uses
 `ElementReader`.
+
+## Limits
+
+Every limit is a positive integer, and the defaults are about 300 times the largest document of the 1EdTech QTI 3.0
+examples for size and node count (32 KiB, 1,126 nodes), 16 times its depth (16) and 20 times its attributes on an element (12).
+`maxBytes` and `maxNodes` are as large as the memory allows: the worst document within both peaks at 200 MiB of heap or less in
+every reader, under the budget of 256 MiB, and a host with more memory raises them together, at up to 20 MiB of heap for each
+MiB of `maxBytes` with 30,000 `maxNodes` ([SECURITY.md](../../SECURITY.md#peak-memory)).
+
+| Limit             | Default    | Unit       | Applies to                                                            |
+| ----------------- | ---------- | ---------- | --------------------------------------------------------------------- |
+| `maxBytes`        | 10,485,760 | bytes      | The bytes of a document (UTF-8 for a string).                         |
+| `maxDepth`        | 256        | levels     | Nesting of elements; the root is depth 1.                             |
+| `maxAttributes`   | 256        | attributes | Attributes on one element, namespace declarations included.           |
+| `maxNodes`        | 300,000    | nodes      | Elements, text, CDATA sections, comments and processing instructions. |
+| `maxIncludeDepth` | 8          | levels     | Nesting of includes (`resolveIncludes`).                              |
+
+A limit that a document exceeds throws a `SecurityError` whose `limit` is the limit's name and `maximum` its value. The
+limits are checked while the tree grows: the reader never builds a tree larger than a limit allows. A limit that is not a
+positive integer is a `DataError` whose message begins `The limit maxBytes`, and so on for each name.
+
+`maxDepth` also bounds the recursion of everything that walks a tree: the readers of [asi](asi.md), the writers,
+`resolveIncludes` and the interpreter of [processing](processing.md), whose expressions are as deep as the document they were
+read from. Node.js with its default stack reads, writes and evaluates trees of 1,000 levels, four times the default; raise
+`maxDepth` only with a stack to match.
 
 ## Errors
 

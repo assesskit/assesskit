@@ -175,23 +175,6 @@ Every run takes a `ProcessingContext`.
 | `resolveTemplate` | none                        | Returns the response processing of a template that is not standard                                                                                                                                                |
 | `limits`          | `DEFAULT_PROCESSING_LIMITS` | `maxContainerSize`: the most values a container that an expression builds may hold, 10,000 by default; see [Limits](#limits)                                                                                      |
 
-## Limits
-
-Processing runs documents that authors wrote and values that candidates supplied, so each way it can grow has a bound.
-
-| What                                            | Bound                                                         | Default | When exceeded                                                                                                                                                                              |
-| ----------------------------------------------- | ------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Values in a container that an expression builds | `limits.maxContainerSize`, in values                          | 10,000  | `SecurityError` with `limit` `maxContainerSize`: `qti-multiple`, `qti-ordered`, `qti-repeat`, `qti-custom-operator`, `qti-outcome-minimum`, `qti-outcome-maximum` and `qti-test-variables` |
-| Runs of template processing for its constraints | fixed                                                         | 100     | None: after the last run the template variables keep their defaults and processing goes on                                                                                                 |
-| Nesting of expressions and rules                | `maxDepth` of [xml](xml.md#limits), when the document is read | 256     | `SecurityError` with `limit` `maxDepth`, from the reader; the interpreter recurses no deeper than the document                                                                             |
-| Automaton of a `qti-pattern-match` pattern      | `maxStates` of [`compileXsdRegex`](values.md#limits)          | 100,000 | `ProcessingError` with the message of the compiler                                                                                                                                         |
-| Nesting of a `qti-pattern-match` pattern        | `maxDepth` of `compileXsdRegex`                               | 100     | `ProcessingError` with the message of the compiler                                                                                                                                         |
-
-`maxContainerSize` counts the values an expression builds, not the values it reads: the containers of variables are as large as the
-caller made them, and the delivery engine bounds those when it accepts a response. A `qti-repeat` of NULL is NULL however many
-repeats it names, and `qti-repeat` checks its size before it builds anything. The regular expressions run in time linear in the
-text (see [values](values.md#limits)), so no pattern is a limit on the text.
-
 ## Test scope
 
 Outcome processing reads the item sessions of a test through a `TestScope`, which the delivery engine implements over a session and
@@ -217,6 +200,45 @@ the ref's variable mappings, and its weights scale integer and float values into
 | `qti-test-variables`              | The single values of a variable, NULL left out, as a multiple container.                                                                                           |
 
 Correct and incorrect counts leave out items without response variables and items with one that has no correct response.
+
+## Limits
+
+Processing runs documents that authors wrote and values that candidates supplied, so each way it can grow has a bound.
+
+| What                                            | Bound                                                         | Default | When exceeded                                                                                                                                                                              |
+| ----------------------------------------------- | ------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Values in a container that an expression builds | `limits.maxContainerSize`, in values                          | 10,000  | `SecurityError` with `limit` `maxContainerSize`: `qti-multiple`, `qti-ordered`, `qti-repeat`, `qti-custom-operator`, `qti-outcome-minimum`, `qti-outcome-maximum` and `qti-test-variables` |
+| Runs of template processing for its constraints | fixed                                                         | 100     | None: after the last run the template variables keep their defaults and processing goes on                                                                                                 |
+| Nesting of expressions and rules                | `maxDepth` of [xml](xml.md#limits), when the document is read | 256     | `SecurityError` with `limit` `maxDepth`, from the reader; the interpreter recurses no deeper than the document                                                                             |
+| Automaton of a `qti-pattern-match` pattern      | `maxStates` of [`compileXsdRegex`](values.md#limits)          | 100,000 | `ProcessingError` with the message of the compiler                                                                                                                                         |
+| Nesting of a `qti-pattern-match` pattern        | `maxDepth` of `compileXsdRegex`                               | 100     | `ProcessingError` with the message of the compiler                                                                                                                                         |
+
+`maxContainerSize` counts the values an expression builds, not the values it reads: the containers of variables are as large as the
+caller made them, and the delivery engine bounds those when it accepts a response. A `qti-repeat` of NULL is NULL however many
+repeats it names, and `qti-repeat` checks its size before it builds anything. The regular expressions run in time linear in the
+text (see [values](values.md#limits)), so no pattern is a limit on the text.
+
+## Errors
+
+| Situation                                                            | Result                                                                      |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| An argument of the wrong type, as plain JavaScript or JSON passes it | `DataError` that says what is wrong and what is expected                    |
+| An expression that reads a variable the item does not declare        | `ProcessingError`                                                           |
+| An operand of the wrong cardinality or base type                     | `ProcessingError` that names the operator and what it takes                 |
+| A custom operator that throws                                        | `ProcessingError` that names the operator, with the thrown value as `cause` |
+| A value that does not fit the variable it is assigned to             | `ProcessingError`                                                           |
+| A text that is not in the lexical form of its base type              | `ProcessingError`                                                           |
+| A container above `maxContainerSize`                                 | `SecurityError` with `limit` `maxContainerSize`                             |
+| A response processing template that cannot be found                  | `ProcessingError`                                                           |
+
+## Not included
+
+| Not included                                                      | Why                                                            |
+| ----------------------------------------------------------------- | -------------------------------------------------------------- |
+| When each processing runs, and the reset of outcomes before a run | The delivery engine decides                                    |
+| The item sessions of a test                                       | `delivery` implements `TestScope`; processing reads them       |
+| A percentage coordinate in `qti-inside`                           | It needs the size of the image, which processing does not have |
+| Evaluating a document that failed validation                      | Static checks are `validate`'s                                 |
 
 ## Differences from the references
 
@@ -244,28 +266,6 @@ Where the specifications are silent or contradict themselves, [spec gaps](spec-g
 An attribute out of its range at run time (`figures`, a negative tolerance) makes the operator NULL, as `qti-index` does for n ≤ 0;
 "not a numerical value" for `qti-min`, `qti-max` and `qti-stats-operator` is NaN; `qti-any-n` with min > max is false; a result of
 `qti-round-to` beyond the floats is NULL; and `qti-test-variables` and the outcome bounds leave out items without the variable.
-
-## Errors
-
-| Situation                                                            | Result                                                                      |
-| -------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| An argument of the wrong type, as plain JavaScript or JSON passes it | `DataError` that says what is wrong and what is expected                    |
-| An expression that reads a variable the item does not declare        | `ProcessingError`                                                           |
-| An operand of the wrong cardinality or base type                     | `ProcessingError` that names the operator and what it takes                 |
-| A custom operator that throws                                        | `ProcessingError` that names the operator, with the thrown value as `cause` |
-| A value that does not fit the variable it is assigned to             | `ProcessingError`                                                           |
-| A text that is not in the lexical form of its base type              | `ProcessingError`                                                           |
-| A container above `maxContainerSize`                                 | `SecurityError` with `limit` `maxContainerSize`                             |
-| A response processing template that cannot be found                  | `ProcessingError`                                                           |
-
-## Not included
-
-| Not included                                                      | Why                                                            |
-| ----------------------------------------------------------------- | -------------------------------------------------------------- |
-| When each processing runs, and the reset of outcomes before a run | The delivery engine decides                                    |
-| The item sessions of a test                                       | `delivery` implements `TestScope`; processing reads them       |
-| A percentage coordinate in `qti-inside`                           | It needs the size of the image, which processing does not have |
-| Evaluating a document that failed validation                      | Static checks are `validate`'s                                 |
 
 ## Files
 

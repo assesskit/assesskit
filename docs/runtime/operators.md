@@ -400,16 +400,6 @@ edit distance for each string and accepted text, at most 2,000 × 129 cells, wha
 accepted texts of 2,000 characters each 65 edits from a response of as many, scores in about 1 s on a laptop. A hotspot
 response tests at most 1,000 points against areas of 4,000 coordinates, then matches them by Hopcroft and Karp.
 
-## Differences from the references
-
-| Case                                                                                                                | Resolution                                                                                                                                             |
-| ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Sides that differ by less than about 1e-9 of their size                                                             | Agree: the comparator evaluates in doubles. SymPy's exact verdict differs; the reference pairs leave out the sides closer than 1e-6 and count them     |
-| A side that overflows a double at most points                                                                       | Undecided: NULL. SymPy decides; the reference pairs leave out expressions past 1e250 and count them                                                    |
-| A pair that SymPy cannot simplify, as `\arcsin x+\arccos x`                                                         | The comparator decides from its points; the reference pairs leave such pairs out and count them                                                        |
-| Normalization and case of a code point that the JavaScript engine's ICU and Python's `unicodedata` give differently | The engine's: `String.prototype.normalize` and `toLowerCase`. The reference texts use blocks where both agree                                          |
-| A word of a text written without spaces, as Japanese or Thai                                                        | One word for each run between spaces, where `Intl.Segmenter` would split by a dictionary, which the browser baseline lacks: count `characters` instead |
-
 ## Errors
 
 | Situation                                                                                                                                                                                                                    | Result                                                                                                       |
@@ -433,6 +423,16 @@ response tests at most 1,000 points against areas of 4,000 coordinates, then mat
 | A decimal comma in the numeric equivalence of a text             | `1,500` is a thousand and a half where the sources write numbers; a `number` key reads the comma with `decimalSeparator`             |
 | A compiler of keys into response processing                      | `compileScoring` of [scoring](scoring.md), which writes these calls                                                                  |
 | Word segmentation by dictionary                                  | `Intl.Segmenter`, which the browser baseline lacks; `characters` counts any script                                                   |
+
+## Differences from the references
+
+| Case                                                                                                                | Resolution                                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Sides that differ by less than about 1e-9 of their size                                                             | Agree: the comparator evaluates in doubles. SymPy's exact verdict differs; the reference pairs leave out the sides closer than 1e-6 and count them     |
+| A side that overflows a double at most points                                                                       | Undecided: NULL. SymPy decides; the reference pairs leave out expressions past 1e250 and count them                                                    |
+| A pair that SymPy cannot simplify, as `\arcsin x+\arccos x`                                                         | The comparator decides from its points; the reference pairs leave such pairs out and count them                                                        |
+| Normalization and case of a code point that the JavaScript engine's ICU and Python's `unicodedata` give differently | The engine's: `String.prototype.normalize` and `toLowerCase`. The reference texts use blocks where both agree                                          |
+| A word of a text written without spaces, as Japanese or Thai                                                        | One word for each run between spaces, where `Intl.Segmenter` would split by a dictionary, which the browser baseline lacks: count `characters` instead |
 
 ## Build or adopt
 

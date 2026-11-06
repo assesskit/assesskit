@@ -247,6 +247,16 @@ with `createPackageResolvers`. Each document is checked once, however many tests
 | An argument of the wrong type, a model whose shape is not the schema's, or a `maxFindings` that is not a positive integer | `DataError` that says what is wrong and what is expected                                                      | Pass the model that a reader of the runtime returns                                    |
 | A resolver or a custom operator of the host throws an error that is not one of the runtime's                              | The error itself: a defect of the host's code, not a finding                                                  | Fix the function that threw                                                            |
 
+## Not included
+
+| Not included                           | Why                                                                                         |
+| -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Validation against the XSD schemas     | [node](node.md) compiles the schemas with libxml2; `validate` is pure and runs everywhere   |
+| Resolving `xi:include`                 | The caller resolves includes first; one left in the document is an error                    |
+| Fixing content                         | The validator reports; it changes nothing                                                   |
+| Checks that need a run                 | A static check cannot tell what a candidate answers; [processing](processing.md) runs rules |
+| Rendering and accessibility of content | The player owns presentation                                                                |
+
 ## Differences from the references
 
 Where the specifications are silent or ambiguous, the validator reads them like this:
@@ -272,16 +282,6 @@ Where the specifications are silent or ambiguous, the validator reads them like 
 | Results of one item instance                          | Item results of one instance, such as attempts, share a `sequenceIndex`; two different items must not.                  |
 
 Each decision is a place where the specifications differ; [Spec gaps](spec-gaps.md) lists them.
-
-## Not included
-
-| Not included                           | Why                                                                                         |
-| -------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Validation against the XSD schemas     | [node](node.md) compiles the schemas with libxml2; `validate` is pure and runs everywhere   |
-| Resolving `xi:include`                 | The caller resolves includes first; one left in the document is an error                    |
-| Fixing content                         | The validator reports; it changes nothing                                                   |
-| Checks that need a run                 | A static check cannot tell what a candidate answers; [processing](processing.md) runs rules |
-| Rendering and accessibility of content | The player owns presentation                                                                |
 
 ## Files
 
