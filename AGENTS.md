@@ -98,6 +98,10 @@ Biome enforces, folder by folder.
 - `rules` is not a job of `ci.yml`: `rules.yml` runs it each Monday, on `workflow_dispatch` and from `release.yml`, which publishes
   only when it passes, so that per-push CI stays short as Actions minutes are limited. A builder runs the rules of its package
   before a merge (`pnpm check:rules packages/<package>`).
+  The rules of a package are in `scripts/rules/<package>.ts`; `scripts/check-rules.ts` runs the whole test file of a rule, runs
+  the unchanged code once for each test file, and runs a browser rule in Chromium. measurekit's engine differs: it keeps its
+  rules in `scripts/check-rules.ts` and runs only the tests whose titles a rule names. The two stay apart until after the
+  release, as joining them costs a full run of the rules in each repository; `rules.yml` checks each engine as it stands.
 - `player-bench`, `browsers` and `rules` run in the image of the Playwright that the lock file pins, which holds the browsers,
   so that no job installs them: a bump of Playwright changes the tag in both workflows and in the container of
   [evidence.md](docs/player/evidence.md#tests-in-a-browser), which `scripts/test/versions.test.ts` holds to the lock file.
