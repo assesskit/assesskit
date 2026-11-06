@@ -5,7 +5,7 @@ import { createScoringOperators } from "@assesskit/runtime/operators";
 import { createItemVariables, runResponseProcessing } from "@assesskit/runtime/processing";
 import type { Value } from "@assesskit/runtime/values";
 import { afterEach, expect, inject } from "vitest";
-import { commands, userEvent } from "vitest/browser";
+import { commands, server, userEvent } from "vitest/browser";
 import { waitFor } from "../../../player/test/wait.js";
 import { interactionOf } from "./items.js";
 
@@ -29,7 +29,7 @@ export interface MountOptions {
   readonly language?: string;
 }
 
-const mounted: { readonly frame: PciFrame; readonly host: HTMLElement; readonly title: string }[] = [];
+const mounted: { readonly frame: PciFrame; readonly host: HTMLElement }[] = [];
 
 /** The fields of the page around the frames, which the test removes after it. */
 const around: HTMLElement[] = [];
@@ -66,7 +66,7 @@ export function mount(xml: string, options: MountOptions): Mounted {
     },
     onEvent: (event) => events.push(event),
   });
-  mounted.push({ frame, host, title: options.title });
+  mounted.push({ frame, host });
   return { frame, events, title: options.title, token };
 }
 
@@ -99,34 +99,47 @@ export function surround(): { readonly before: HTMLInputElement; readonly after:
 }
 
 /**
- * Waits until the page has caught up with the focus: a frame whose document has the focus is the page's active element.
- * Firefox moves the focus between a page and a frame of another origin in steps that reach the two documents apart: after
- * a press from the page into a frame, the frame has the focus and takes the keys while the page still has its own element
- * active, and when a later press leaves the frame first, the late step takes the focus back into it. The frame's element
- * with the frame's document unfocused is a stop of its own in Firefox, in both directions, and is settled.
+ * Gives a field of the page the focus and waits for it. The window of the test page takes the focus first: after a test that
+ * removed a frame with the focus, the first press of the next test otherwise does not move on from the field.
  */
-async function focusSettled(): Promise<void> {
-  await waitFor(async () => {
-    for (const { frame, title } of mounted) {
-      if (await commands.readInFrame(title, "document.hasFocus()")) {
-        expect(document.activeElement, `The page's active element while ${title} has the focus`).toBe(frame.element);
-      }
-    }
-  });
+export async function focusOn(field: HTMLElement): Promise<void> {
+  window.focus();
+  field.focus();
+  await waitFor(() => expect(document.hasFocus() && document.activeElement === field).toBe(true));
 }
 
 /**
- * Presses Tab, or Shift+Tab, until a condition holds, six times at most: Firefox stops at a frame itself too, and Chromium
- * and Firefox at the buttons that Safari skips. Each press waits until the focus has settled in the page and the frames, as
- * a person's next press comes after the focus has moved. A keyboard that a frame traps never meets the condition.
+ * Whether the engine has two stops of its own at a frame: Firefox stops at the frame's document when Tab comes from the page
+ * before it, and at the frame with its document unfocused when Tab or Shift+Tab leaves it.
  */
-export async function tabUntil(reached: () => Promise<boolean> | boolean, shift = false): Promise<void> {
-  await focusSettled();
-  for (let presses = 0; presses < 6 && !(await reached()); presses++) {
-    await userEvent.tab({ shift });
-    await focusSettled();
+export const STOPS_AT_FRAME = server.browser === "firefox";
+
+/** Whether Tab passes the buttons of a frame: Safari's default on macOS, where Playwright's WebKit on Linux stops at them. */
+export const SKIPS_BUTTONS = server.browser === "webkit" && server.platform === "darwin";
+
+/**
+ * Presses Tab, or Shift+Tab, once and waits for the stop that it leads to. The focus reaches the page and a frame at different
+ * times, so a read may come before it lands: with the stop named, the read waits, where a second press would go past the stop.
+ */
+export async function tabTo(stop: () => Promise<boolean> | boolean, shift = false): Promise<void> {
+  await userEvent.tab({ shift });
+  await waitFor(async () => expect(await stop()).toBe(true));
+}
+
+/** Whether a frame's document has the focus, and the frame is the page's active element. */
+export const inFrame =
+  ({ frame, title }: Mounted) =>
+  async (): Promise<boolean> =>
+    document.activeElement === frame.element && (await commands.readInFrame(title, "document.hasFocus()")) === true;
+
+/** Presses Tab or Shift+Tab from an element of a frame to a field of the page, past the stop of the engine at the frame. */
+export async function tabOut({ frame, title }: Mounted, field: HTMLElement, shift = false): Promise<void> {
+  if (STOPS_AT_FRAME) {
+    const unfocused = async () =>
+      document.activeElement === frame.element && (await commands.readInFrame(title, "document.hasFocus()")) === false;
+    await tabTo(unfocused, shift);
   }
-  expect(await reached()).toBe(true);
+  await tabTo(() => document.activeElement === field, shift);
 }
 
 /** Waits until the interaction of a frame is ready, and fails at once on a frame that failed. */

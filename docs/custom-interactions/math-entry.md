@@ -146,14 +146,14 @@ each against the nearest earlier line that reads.
 
 ## Accessibility
 
-| Need                          | What the interaction does                                                                                                                                                                                   |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A name (WCAG 4.1.2)           | The frame and the field take the prompt; each line of steps is named `Step n`, and its button `Remove step n`                                                                                               |
-| Keyboard (WCAG 2.1.1)         | Tab reaches the field from the page; every key of the subset is on the physical keyboard, the arrows move through a formula, and the buttons of steps are buttons                                           |
-| No keyboard trap (WCAG 2.1.2) | Tab and Shift+Tab move through the slots of a formula, and where MathLive has nowhere to go they leave the field for the next element in the browser's order: a button of steps, or the page past the frame |
-| Speech                        | MathLive announces the formula in words through a live region of the field, which a screen reader speaks                                                                                                    |
-| Contrast                      | axe finds no violation of WCAG 2.2 AA with the keyboard shown, nor with worked steps; the keyboard's selected tab takes the color of its text, since MathLive's accent fails the contrast of AA on its gray |
-| Pointer                       | The virtual keyboard writes every key of the subset with a tap                                                                                                                                              |
+| Need                          | What the interaction does                                                                                                                                                                                                                                       |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A name (WCAG 4.1.2)           | The frame and the field take the prompt; each line of steps is named `Step n`, and its button `Remove step n`                                                                                                                                                   |
+| Keyboard (WCAG 2.1.1)         | Tab reaches the field from the page; every key of the subset is on the physical keyboard, the arrows move through a formula, and the buttons of steps are buttons                                                                                               |
+| No keyboard trap (WCAG 2.1.2) | Tab and Shift+Tab move through the slots of a formula, and where MathLive has nowhere to go they leave the field for the next element in the browser's order: a button of steps, or the page past the frame, even before MathLive has finished taking the focus |
+| Speech                        | MathLive announces the formula in words through a live region of the field, which a screen reader speaks                                                                                                                                                        |
+| Contrast                      | axe finds no violation of WCAG 2.2 AA with the keyboard shown, nor with worked steps; the keyboard's selected tab takes the color of its text, since MathLive's accent fails the contrast of AA on its gray                                                     |
+| Pointer                       | The virtual keyboard writes every key of the subset with a tap                                                                                                                                                                                                  |
 
 ## Limits
 

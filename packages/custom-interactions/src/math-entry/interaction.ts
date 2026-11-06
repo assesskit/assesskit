@@ -96,6 +96,23 @@ function leaveOnTab(field: MathfieldElement, event: KeyboardEvent): void {
 }
 
 /**
+ * Lets the focus go when it leaves the frame while MathLive is still taking it, so that MathLive does not take it back.
+ *
+ * @remarks
+ * MathLive finishes taking the focus from a timer 60 ms after its field gets it, and drops a blur that comes before the
+ * timer. When keys leave the frame sooner, the frame's document keeps the field as its active element, so the timer finds
+ * the field still focused and focuses it again, which takes the focus back from the page. Firefox then holds the keyboard
+ * in the frame: each Tab stops there, with the document of the frame unfocused. The `focusout` follows the blur that MathLive
+ * dropped, and blurring the field empties the document's active element, so that the timer finds the focus gone. A focus
+ * that stays in the document, as it does at a press of a key of MathLive's keyboard, stays MathLive's.
+ *
+ * @see {@link https://www.w3.org/WAI/WCAG22/Understanding/no-keyboard-trap.html | Understanding WCAG 2.2, 2.1.2 No Keyboard Trap}
+ */
+function releaseFocus(field: MathfieldElement): void {
+  if (!document.hasFocus() && field.hasFocus()) field.blur();
+}
+
+/**
  * Creates the math entry interaction: a MathLive field whose value, LaTeX, is the response, or one field a line for worked
  * steps when the response variable is `ordered`.
  *
@@ -132,6 +149,7 @@ export function createMathEntry(args: InstanceArguments): PciInstance {
     field.addEventListener("pointerdown", () => window.focus(), { capture: true });
     // Before MathLive, which takes every Tab: the field is the host of the element that has the focus.
     field.addEventListener("keydown", (event) => leaveOnTab(field, event), { capture: true });
+    field.addEventListener("focusout", () => releaseFocus(field));
     return field;
   };
 

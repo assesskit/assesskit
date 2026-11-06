@@ -4,7 +4,9 @@ import { commands } from "vitest/browser";
 import type {} from "../../player/test/fixtures/commands.js";
 import { waitFor } from "../../player/test/wait.js";
 import {
+  focusOn,
   hitsOf,
+  inFrame,
   type Mounted,
   mount,
   ready,
@@ -12,7 +14,8 @@ import {
   scoreOf,
   stateOf,
   surround,
-  tabUntil,
+  tabOut,
+  tabTo,
 } from "./fixtures/frame.js";
 import { writeStrokeWritingItem } from "./fixtures/items.js";
 
@@ -141,10 +144,12 @@ describe("the frame", () => {
 
   it("holds no keyboard: Tab and Shift+Tab pass the frame, which has nothing to focus", async () => {
     const title = "Pass 十.";
-    await mountCharacter(title);
+    const mounted = await mountCharacter(title);
     const { before, after } = surround();
-    before.focus();
-    await tabUntil(() => document.activeElement === after);
-    await tabUntil(() => document.activeElement === before, true);
+    await focusOn(before);
+    await tabTo(inFrame(mounted));
+    await tabOut(mounted, after);
+    await tabTo(inFrame(mounted), true);
+    await tabOut(mounted, before, true);
   });
 });

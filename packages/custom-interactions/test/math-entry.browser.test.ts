@@ -10,7 +10,21 @@ import { describe, expect, it } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import type {} from "../../player/test/fixtures/commands.js";
 import { waitFor } from "../../player/test/wait.js";
-import { hitsOf, mount, ready, responseOf, scoreOf, stateOf, surround, tabUntil } from "./fixtures/frame.js";
+import {
+  focusOn,
+  hitsOf,
+  inFrame,
+  mount,
+  ready,
+  responseOf,
+  SKIPS_BUTTONS,
+  STOPS_AT_FRAME,
+  scoreOf,
+  stateOf,
+  surround,
+  tabOut,
+  tabTo,
+} from "./fixtures/frame.js";
 import { writeMathEntryItem, writeStepsItem } from "./fixtures/items.js";
 
 /** The WCAG levels that axe checks, as the player's tests check them. */
@@ -83,6 +97,14 @@ const focusIn = (title: string): Promise<unknown> =>
     title,
     "document.hasFocus() && (document.activeElement?.ariaLabel ?? document.activeElement?.textContent)",
   );
+
+/**
+ * Waits until MathLive has finished taking the focus, as a person's next key comes later. MathLive does so from a timer 60 ms
+ * after its field gets the focus, and in Firefox a frame whose field lost the focus sooner does not give it back to Shift+Tab.
+ * A timer of the same document that starts after MathLive's with a longer delay ends after it, however busy the host is.
+ */
+const waitForFocusTaken = (title: string): Promise<unknown> =>
+  commands.readInFrame(title, "new Promise((settle) => setTimeout(settle, 100))");
 
 /** Mounts an item of one expression and waits for its interaction. */
 async function mountExpression(key: ExpressionKey, title: string, attributes = "") {
@@ -314,15 +336,19 @@ describe("the frame", () => {
     const { before, after } = surround();
     // The field is named by the prompt.
     const inField = async () => (await focusIn(title)) === title;
-    before.focus();
-    await tabUntil(inField);
+    await focusOn(before);
+    if (STOPS_AT_FRAME) await tabTo(inFrame(mounted));
+    await tabTo(inField);
     await userEvent.keyboard("x+x");
+    await waitForFocusTaken(title);
     const places = () => [mounted.frame.element, after].map((element) => element.getBoundingClientRect().toJSON());
     const placed = places();
-    await tabUntil(() => document.activeElement === after);
+    await tabOut(mounted, after);
     expect(places()).toEqual(placed);
-    await tabUntil(inField, true);
-    await tabUntil(() => document.activeElement === before, true);
+    await tabTo(inField, true);
+    // From the start of the field, where MathLive has nowhere to go; from elsewhere Shift+Tab moves to the start first.
+    await userEvent.keyboard("{Home}");
+    await tabOut(mounted, before, true);
     const response = await responseOf(mounted);
     expect(response).toEqual(buildSingle("string", "x+x"));
     expect(scoreOf(xml, response ?? null)).toEqual(FULL);
@@ -335,7 +361,11 @@ describe("the frame", () => {
     await commands.keysInFrame(title, "math-field", ["2/", "ArrowLeft", "Tab", "3"]);
     expect(await focusIn(title)).toBe(title);
     expect(await responseOf(mounted)).toEqual(buildSingle("string", "\\frac23"));
-    await tabUntil(() => document.activeElement === after);
+    // The keys reach the frame in their order, so a press that stays in the field waits for nothing.
+    await userEvent.tab();
+    await userEvent.tab();
+    expect(await focusIn(title)).toBe(title);
+    await tabOut(mounted, after);
   });
 
   it("lets Tab leave worked steps past their buttons, and Shift+Tab leave the first line", async () => {
@@ -344,8 +374,27 @@ describe("the frame", () => {
     await ready(mounted);
     const { before, after } = surround();
     await commands.keysInFrame(title, "math-field", ["x"]);
-    await tabUntil(() => document.activeElement === after);
-    await commands.keysInFrame(title, "math-field", []);
-    await tabUntil(() => document.activeElement === before, true);
+    if (!SKIPS_BUTTONS) {
+      await tabTo(async () => (await focusIn(title)) === "Remove step 1");
+      await tabTo(async () => (await focusIn(title)) === "Add a step");
+    }
+    await tabOut(mounted, after);
+    // From the start of the line, where MathLive has nowhere to go.
+    await commands.keysInFrame(title, "math-field", ["Home"]);
+    await tabOut(mounted, before, true);
+  });
+
+  it("keeps the focus on the page when Tab passes the field before MathLive has finished taking the focus", async () => {
+    const title = "Tab past the field.";
+    const { mounted } = await mountExpression(expression("2x"), title);
+    const { before, after } = surround();
+    await focusOn(before);
+    if (STOPS_AT_FRAME) await tabTo(inFrame(mounted));
+    // Each press as soon as the last has returned, past the field and the frame's stop. On a host so slow that the presses
+    // come after MathLive's timer, the test passes with or without what it holds.
+    for (let press = 0; press < (STOPS_AT_FRAME ? 3 : 2); press++) await userEvent.tab();
+    await waitForFocusTaken(title);
+    expect(document.activeElement).toBe(after);
+    expect(await commands.readInFrame(title, "document.hasFocus()")).toBe(false);
   });
 });
