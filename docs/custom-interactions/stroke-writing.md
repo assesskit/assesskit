@@ -81,16 +81,17 @@ resource: the asset gate gives the interaction one prefix for its modules, the d
 
 ### Properties
 
-| Attribute                               | Value                                                                                               | Default |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------- | ------- |
-| `data-size`                             | The side of the square drawing area, in CSS pixels, at least 100                                    | `300`   |
-| `data-show-outline`                     | `true` shows the character's outline under the pen, as practice does; `false` hides it              | `true`  |
-| `data-show-hint-after-misses`           | After this many mistakes on a stroke, the stroke flashes as a hint; `0` never                       | `3`     |
-| `data-mark-stroke-correct-after-misses` | After this many mistakes on a stroke, the stroke counts as written and the quiz moves on; `0` never | `0`     |
-| `data-leniency`                         | How strictly a stroke is matched: below 1 stricter, above 1 more lenient                            | `1`     |
+| Attribute                               | Value                                                                                                             | Default |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------- |
+| `data-size`                             | The side of the square drawing area, in CSS pixels: a whole number of 6 digits at most, at least 100              | `300`   |
+| `data-show-outline`                     | `true` shows the character's outline under the pen, as practice does; `false` hides it                            | `true`  |
+| `data-show-hint-after-misses`           | After this many mistakes on a stroke, the stroke flashes as a hint; a whole number of 6 digits at most, `0` never | `3`     |
+| `data-mark-stroke-correct-after-misses` | After this many mistakes on a stroke, the stroke counts as written and the quiz moves on; as above, `0` never     | `0`     |
+| `data-leniency`                         | How strictly a stroke is matched: a positive number in digits, as `0.5`; below 1 stricter, above 1 more lenient   | `1`     |
 
-These are the options of Hanzi Writer's quiz. A stroke that is never written keeps the quiz on it, so an item that must end
-gives `data-mark-stroke-correct-after-misses`, and its `mistakes` still count each miss.
+These are the options of Hanzi Writer's quiz. Any other value is an invalid property ([Errors](#errors)). A stroke that is
+never written keeps the quiz on it, so an item that must end gives `data-mark-stroke-correct-after-misses`, and its `mistakes`
+still count each miss.
 
 ### Scoring
 
@@ -187,9 +188,9 @@ the item out of the candidate's form; the interaction itself offers no other way
 
 ## Differences from the references
 
-| Reference               | Difference                                                                                                                                                                                                  |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Hanzi Writer's defaults | Darker colors, so that the outline keeps 3:1 on white; the quiz's options as the properties above, with Hanzi Writer's defaults; the data from the item's package, where Hanzi Writer fetches it from a CDN |
+| Reference               | Difference                                                                                                                        |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Hanzi Writer's defaults | Darker colors, so that the outline keeps 3:1 on white; the data from the item's package, where Hanzi Writer fetches it from a CDN |
 
 ## Files
 
