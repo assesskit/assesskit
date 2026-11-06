@@ -141,7 +141,7 @@ Biome enforces, folder by folder.
   `.github` repository), the domain of `SITE` with Pages and `docs.yml`, and Zenodo, which reads `CITATION.cff`. Context7 reads
   `context7.json`, whose description and rules `pnpm check:standards` holds to the family's sentence and `FACTS`.
 
-## Boundary between the runtime and the player
+## Boundaries
 
 [architecture.md](docs/runtime/architecture.md#boundary-with-the-player) says who owns what. The player never evaluates an
 expression, decides what is visible or valid, chooses a variant, or holds an answer key outside the runtime's solution view. A rule
