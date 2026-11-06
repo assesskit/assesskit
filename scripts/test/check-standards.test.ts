@@ -11,6 +11,7 @@ import {
   checkModuleExamples,
   checkNotIncluded,
   checkReadmeSections,
+  checkReadonlyResults,
   checkSectionSigns,
   checkSecurityLimits,
   checkStandards,
@@ -513,5 +514,49 @@ describe("all checks", () => {
         message: "Name the rule in words, or link the specification; no section signs.",
       },
     ]);
+  });
+});
+
+describe("readonly results", () => {
+  const index =
+    'export { rows, matrix, byId, maybe, table, sorted, pair } from "./x.js";\nexport type { Row } from "./x.js";\n';
+
+  it("reports a public function that returns a mutable list, matrix or record, alone or in a union", () => {
+    const files = repository({
+      "packages/a/src/m/index.ts": index,
+      "packages/a/src/m/x.ts": [
+        "export function rows(): Row[] { return []; }",
+        "export function matrix(): readonly number[][] { return []; }",
+        "export function byId(): Record<string, number> { return {}; }",
+        "export function maybe(): Array<number> | null { return null; }",
+        "export function table(): Readonly<Record<string, string[]>> { return {}; }",
+      ].join("\n"),
+    });
+    expect(
+      checkReadonlyResults(files).map(({ file, line, message }) => [file, line, message.split(";")[0]]),
+    ).toStrictEqual([
+      ["packages/a/src/m/x.ts", 1, "rows returns Row[]"],
+      ["packages/a/src/m/x.ts", 2, "matrix returns number[]"],
+      ["packages/a/src/m/x.ts", 3, "byId returns Record<string, number>"],
+      ["packages/a/src/m/x.ts", 4, "maybe returns Array<number>"],
+      ["packages/a/src/m/x.ts", 5, "table returns string[]"],
+    ]);
+  });
+
+  it("accepts readonly lists, matrices and records, tuples, promises of them, and a function the module keeps to itself", () => {
+    const files = repository({
+      "packages/a/src/m/index.ts": index,
+      "packages/a/src/m/x.ts": [
+        "export function rows(): readonly Row[] { return []; }",
+        "export function matrix(): readonly (readonly number[])[] { return []; }",
+        "export function byId(): Readonly<Record<string, number>> { return {}; }",
+        "export function maybe(): ReadonlyArray<number> | null { return null; }",
+        "export function table(): Readonly<Record<string, readonly string[]>> { return {}; }",
+        "export function sorted(): Promise<readonly number[]> { return Promise.resolve([]); }",
+        "export function hidden(): Row[] { return []; }",
+        "export function pair(): [number, number] { return [0, 0]; }",
+      ].join("\n"),
+    });
+    expect(checkReadonlyResults(files).map(({ message }) => message.split(" ")[0])).toStrictEqual([]);
   });
 });

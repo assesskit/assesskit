@@ -618,6 +618,86 @@ export function checkModuleExamples(files: Files): Violation[] {
 }
 
 /** Every check, in the order of the standards. */
+/** The types of the standard library that are mutable lists or records, and so are not a result. */
+const MUTABLE_CONTAINERS = new Set(["Array", "Record", "Map", "Set"]);
+
+/** The part of a return type that a caller could write to, or `undefined` when every list and record in it is readonly. */
+function mutablePart(node: ts.TypeNode): string | undefined {
+  if (ts.isParenthesizedTypeNode(node)) return mutablePart(node.type);
+  if (ts.isUnionTypeNode(node)) return node.types.map(mutablePart).find((part) => part !== undefined);
+  if (ts.isArrayTypeNode(node)) return node.getText();
+  if (ts.isTypeOperatorNode(node))
+    return ts.isArrayTypeNode(node.type) ? mutablePart(node.type.elementType) : undefined;
+  if (!ts.isTypeReferenceNode(node)) return undefined;
+  const name = node.typeName.getText();
+  if (MUTABLE_CONTAINERS.has(name)) return node.getText();
+  // A readonly record holds readonly values; a promise or a readonly array holds what it wraps.
+  const wrapped = ["Readonly", "ReadonlyArray", "Promise"].includes(name) ? node.typeArguments?.at(-1) : undefined;
+  if (wrapped === undefined) return undefined;
+  return mutablePart(
+    ts.isTypeReferenceNode(wrapped) && wrapped.typeName.getText() === "Record"
+      ? (wrapped.typeArguments?.at(-1) ?? wrapped)
+      : wrapped,
+  );
+}
+
+/** The value names that a re-export of an `index.ts` takes from the file at its relative specifier, if it is one. */
+function reexportedValues(file: string, statement: ts.Statement): { target: string; names: string[] } | undefined {
+  if (!ts.isExportDeclaration(statement) || statement.isTypeOnly) return undefined;
+  const { moduleSpecifier, exportClause } = statement;
+  if (moduleSpecifier === undefined || exportClause === undefined || !ts.isNamedExports(exportClause)) return undefined;
+  const specifier = (moduleSpecifier as ts.StringLiteral).text;
+  if (!specifier.startsWith(".")) return undefined;
+  return {
+    target: posix.normalize(posix.join(dirname(file), specifier.replace(/\.js$/, ".ts"))),
+    names: exportClause.elements
+      .filter((element) => !element.isTypeOnly)
+      .map((element) => (element.propertyName ?? element.name).text),
+  };
+}
+
+/** The names that the `index.ts` of each module exports as values, by the path of the file that declares them. */
+function publicValues(files: Files): Map<string, Set<string>> {
+  const exported = new Map<string, Set<string>>();
+  for (const [file, text] of files) {
+    if (!/^packages\/[^/]+\/src\/(?:[^/]+\/)?index\.ts$/.test(file)) continue;
+    for (const statement of ts.createSourceFile(file, text, ts.ScriptTarget.ES2022).statements) {
+      const reexport = reexportedValues(file, statement);
+      if (reexport === undefined) continue;
+      const names = exported.get(reexport.target) ?? new Set<string>();
+      for (const name of reexport.names) names.add(name);
+      exported.set(reexport.target, names);
+    }
+  }
+  return exported;
+}
+
+/**
+ * A public function returns plain data whose lists and records are `readonly`, at the top level as inside objects: a
+ * caller who sorts in place copies first, and no function hands out an array it also keeps.
+ */
+export function checkReadonlyResults(files: Files): Violation[] {
+  const found: Violation[] = [];
+  for (const [file, names] of publicValues(files)) {
+    const text = files.get(file);
+    if (text === undefined) continue;
+    const source = ts.createSourceFile(file, text, ts.ScriptTarget.ES2022, true);
+    for (const statement of source.statements) {
+      if (!ts.isFunctionDeclaration(statement) || statement.name === undefined || statement.type === undefined)
+        continue;
+      const mutable = names.has(statement.name.text) ? mutablePart(statement.type) : undefined;
+      if (mutable !== undefined)
+        found.push({
+          file,
+          line: source.getLineAndCharacterOfPosition(statement.type.getStart(source)).line + 1,
+          rule: "readonly-result",
+          message: `${statement.name.text} returns ${mutable}; write it readonly, as a caller who sorts in place copies first.`,
+        });
+    }
+  }
+  return found;
+}
+
 export const CHECKS: readonly ((files: Files) => Violation[])[] = [
   checkSectionSigns,
   checkTestTitles,
@@ -630,6 +710,7 @@ export const CHECKS: readonly ((files: Files) => Violation[])[] = [
   checkErrorNames,
   checkFamilies,
   checkEntries,
+  checkReadonlyResults,
   checkConsole,
   checkSecurityLimits,
   checkModuleExamples,
