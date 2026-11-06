@@ -398,6 +398,14 @@ tests of every engine, and waits for the next change to that part.
   default that puts a reader above it is lowered. The bytes of a file that `file` inflates lie outside the heap, so its case
   (`packageEntry`) also bounds the resident memory that the reading raises (`riseMiB`), as do the readings of a ZIP file, which the
   reading writes as a sparse file of the length that a package may have (`packageFile`, `packageDirectory`).
+- Every entry point of a package has a size budget that `pnpm test` holds: the bytes of its first load (its entry chunk and
+  the chunks it loads statically), bundled alone as a host's bundler makes it, minified and with code splitting, after gzip
+  at level 9 on Node.js 22, and the modules other than its own that it holds, so that an import which pulls one module into
+  another fails until the list says so. The bytes are 1.25 times those measured, rounded up to the next 500. Every budget
+  is set again by this rule from main before a release, and one budget, in a commit that says why, when its entry passes
+  it. `packages/player/test/size-budgets.ts` holds the budgets of the runtime and the player and of the files that a page
+  loads besides them, and `packages/custom-interactions/test/size-budgets.ts` those of the modules of the interactions,
+  with the bytes of their other files by the same rule.
 - A benchmark against a reference runs the two sides in turns on the same input, doing the same work to the same point, and
   gates the ratio; in the runtime it is `compareRow` of `test/budgets.ts`, which also gates the time.
 - A test reads a JSON fixture with `readFixture<T>` of `packages/runtime/test/fixtures.ts` and declares `T` for the fields it

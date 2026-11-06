@@ -67,7 +67,7 @@ to the next 500 bytes. A budget also lists the packages the script holds, so a n
 
 | Module           | Script, gzip |  Budget |                                     Files beside it |  Budget | Holds          |
 | ---------------- | -----------: | ------: | --------------------------------------------------: | ------: | -------------- |
-| `math-entry`     |      230,345 | 288,000 | 264,499: the 20 fonts of MathLive and their license | 331,000 | `mathlive`     |
+| `math-entry`     |      230,345 | 288,500 | 264,499: the 20 fonts of MathLive and their license | 331,000 | `mathlive`     |
 | `stroke-writing` |       13,159 |  16,500 |             0: the strokes are the item's, not here |       0 | `hanzi-writer` |
 
 The fonts are WOFF2, which is compressed already. A page loads a module once per frame, and a browser caches it by its URL

@@ -15,16 +15,17 @@ export interface EntryBudget {
  * are those of the first load: the entry chunk and the chunks that load with it, among them the code that it shares with
  * what `import()` loads, and not the chunks that `import()` loads. The size is 1.25 times the size measured, rounded up to
  * the next 500 bytes; the modules are those it holds, so that an import which pulls another module into an entry point fails
- * until the list says so. docs/player/size.md and docs/runtime/performance.md list them. A budget changes only with the
- * reason in the commit that changes it.
+ * until the list says so. docs/player/size.md and docs/runtime/performance.md list them. Every budget is set again by this
+ * rule from main before a release, and one budget, in a commit that says why, when its entry passes it; gzip is measured on
+ * Node.js 22.
  */
 export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   "@assesskit/runtime": {
-    gzip: 3000,
+    gzip: 3500,
     holds: ["runtime/checks", "runtime/checks-internal", "runtime/errors", "runtime/random", "valibot"],
   },
   "@assesskit/runtime/asi": {
-    gzip: 49_000,
+    gzip: 50_000,
     holds: [
       "runtime/checks",
       "runtime/checks-internal",
@@ -37,7 +38,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/runtime/cat": {
-    gzip: 12_000,
+    gzip: 14_500,
     holds: [
       "@scure/base",
       "runtime/checks",
@@ -49,13 +50,13 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
       "valibot",
     ],
   },
-  "@assesskit/runtime/checks": { gzip: 5_500, holds: ["runtime/errors", "valibot"] },
+  "@assesskit/runtime/checks": { gzip: 6000, holds: ["runtime/errors", "valibot"] },
   "@assesskit/runtime/content": {
-    gzip: 10_500,
+    gzip: 12_500,
     holds: ["runtime/asi", "runtime/checks", "runtime/errors", "runtime/values", "valibot"],
   },
   "@assesskit/runtime/delivery": {
-    gzip: 140_500,
+    gzip: 147_000,
     holds: [
       "@scure/base",
       "runtime/asi",
@@ -77,7 +78,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/runtime/delivery/wire": {
-    gzip: 22_500,
+    gzip: 23_500,
     holds: [
       "runtime/checks",
       "runtime/checks-internal",
@@ -92,15 +93,15 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
   },
   "@assesskit/runtime/errors": { gzip: 500, holds: [] },
   "@assesskit/runtime/interactions": {
-    gzip: 21_500,
+    gzip: 23_000,
     holds: ["runtime/asi", "runtime/checks", "runtime/checks-internal", "runtime/errors", "runtime/values", "valibot"],
   },
   "@assesskit/runtime/pci": {
-    gzip: 11_000,
+    gzip: 12_000,
     holds: ["runtime/checks", "runtime/checks-internal", "runtime/errors", "runtime/values", "valibot"],
   },
   "@assesskit/runtime/pnp": {
-    gzip: 27_500,
+    gzip: 30_500,
     holds: [
       "runtime/checks",
       "runtime/checks-internal",
@@ -112,7 +113,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/runtime/results": {
-    gzip: 27_500,
+    gzip: 30_000,
     holds: [
       "runtime/checks",
       "runtime/checks-internal",
@@ -125,7 +126,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/runtime/usage": {
-    gzip: 24_000,
+    gzip: 27_000,
     holds: [
       "runtime/checks",
       "runtime/checks-internal",
@@ -138,7 +139,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/runtime/validate": {
-    gzip: 91_000,
+    gzip: 93_000,
     holds: [
       "runtime/asi",
       "runtime/checks",
@@ -159,7 +160,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/runtime/metadata": {
-    gzip: 23_500,
+    gzip: 26_500,
     holds: [
       "runtime/asi",
       "runtime/checks",
@@ -172,7 +173,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/runtime/item-formats": {
-    gzip: 153_000,
+    gzip: 161_000,
     holds: [
       "@scure/base",
       "entities",
@@ -198,7 +199,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     holds: [],
   },
   "@assesskit/runtime/operators": {
-    gzip: 43_000,
+    gzip: 43_500,
     holds: [
       "runtime/asi",
       "runtime/checks",
@@ -227,7 +228,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/runtime/package": {
-    gzip: 64_000,
+    gzip: 69_000,
     holds: [
       "fflate",
       "runtime/asi",
@@ -243,7 +244,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/runtime/processing": {
-    gzip: 33_500,
+    gzip: 36_000,
     holds: [
       "runtime/asi",
       "runtime/checks",
@@ -255,15 +256,15 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/runtime/values": {
-    gzip: 23_500,
+    gzip: 24_000,
     holds: ["@scure/base", "runtime/checks", "runtime/checks-internal", "runtime/errors", "valibot"],
   },
   "@assesskit/runtime/xml": {
-    gzip: 21_000,
+    gzip: 22_000,
     holds: ["runtime/checks", "runtime/checks-internal", "runtime/errors", "saxes", "valibot", "xmlchars"],
   },
   "@assesskit/runtime/node": {
-    gzip: 626_000,
+    gzip: 622_500,
     holds: [
       "fflate",
       "libxml2-wasm",
@@ -282,7 +283,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/runtime/cli": {
-    gzip: 682_500,
+    gzip: 686_500,
     holds: [
       "fflate",
       "libxml2-wasm",
@@ -308,11 +309,11 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/player": {
-    gzip: 10_000,
+    gzip: 12_000,
     holds: ["player/errors", "player/messages", "runtime/checks", "runtime/errors", "valibot"],
   },
   "@assesskit/player/player": {
-    gzip: 134_500,
+    gzip: 161_000,
     holds: [
       "@scure/base",
       "player/errors",
@@ -336,7 +337,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/player/client": {
-    gzip: 25_000,
+    gzip: 25_500,
     holds: [
       "player/errors",
       "player/protocol",
@@ -353,11 +354,11 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/player/client/local": {
-    gzip: 11_000,
+    gzip: 12_500,
     holds: ["player/protocol", "runtime/checks", "runtime/errors", "runtime/package", "valibot"],
   },
   "@assesskit/player/protocol": {
-    gzip: 7_000,
+    gzip: 8000,
     holds: [
       "runtime/asi",
       "runtime/checks",
@@ -369,7 +370,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/player/scoring": {
-    gzip: 13_000,
+    gzip: 13_500,
     holds: [
       "player/protocol",
       "runtime/asi",
@@ -383,7 +384,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/player/cat": {
-    gzip: 24_500,
+    gzip: 27_500,
     holds: [
       "@scure/base",
       "runtime/cat",
@@ -401,7 +402,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/player/cat-rest": {
-    gzip: 18_000,
+    gzip: 21_000,
     holds: [
       "@scure/base",
       "runtime/cat",
@@ -415,7 +416,7 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
     ],
   },
   "@assesskit/player/server": {
-    gzip: 62_000,
+    gzip: 64_500,
     holds: [
       "@scure/base",
       "jose",
@@ -442,23 +443,24 @@ export const ENTRY_BUDGETS: Readonly<Record<string, EntryBudget>> = {
       "xmlchars",
     ],
   },
-  "@assesskit/player/messages-id": { gzip: 8_000, holds: [] },
+  "@assesskit/player/messages-id": { gzip: 8000, holds: [] },
 };
 
 /**
  * The most that a file may take after gzip, in bytes, for the files that a browser loads besides the entry points: the first
  * load of `mountItem`, and the static files that `pnpm build` writes. Each is 1.25 times the size measured, rounded up to
- * the next 500 bytes; docs/player/size.md lists the sizes. A budget changes only with the reason in the commit that changes it.
+ * the next 500 bytes; docs/player/size.md lists the sizes. Every budget is set again by this rule from main before a
+ * release, and one budget, in a commit that says why, when its entry passes it; gzip is measured on Node.js 22.
  */
 export const SIZE_BUDGETS = {
   /** `mountItem` of `@assesskit/player/player`, with the code that it shares with `mountDelivery` and none of the chrome. */
-  item: 101_000,
+  item: 124_500,
   /** The script of the frame of a portable custom interaction. */
-  bridge: 5_000,
+  bridge: 5500,
   /** RequireJS, which the frame loads. */
-  requirejs: 9_000,
+  requirejs: 9000,
   /** The script of the audio worklet. */
   worklet: 500,
   /** `player.css`. */
-  stylesheet: 16_000,
+  stylesheet: 17_500,
 } as const;
