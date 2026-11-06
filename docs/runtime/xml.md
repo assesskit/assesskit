@@ -96,9 +96,8 @@ A string is taken as it is: the encoding it declares is ignored. Bytes are decod
 | no mark and no declaration           | UTF-8. Bytes that are not valid UTF-8 are a `ReadError`.                                                                                                         |
 
 A document that declares XML 1.1 is a `ReadError`. So is one that has what the parser lets through and a tree could not
-keep or write: a lone surrogate in a string (it is no character), a namespace declaration with white space at its start or
-end (the parser strips it from the namespace of the elements but keeps it in the declaration), and a qualified name whose
-prefix or local part is not an `NCName`, such as `p:1`.
+keep or write: a lone surrogate in a string, a namespace declaration with white space at its start or end, and a qualified
+name whose prefix or local part is not an `NCName`, such as `p:1` ([Differences from the references](#differences-from-the-references)).
 
 ## Limits
 
@@ -271,12 +270,11 @@ a limit is a `SecurityError` ([Limits](#limits)): refuse it, or raise the limit 
 
 ## Differences from the references
 
-| Case                                                                                    | Resolution                                                                                                                                          |
-| --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| XML 1.0 allows a DOCTYPE, and the entities that it declares                             | Any DOCTYPE is a `SecurityError`, so that no entity is declared, expanded or read; only the five predefined entities and character references exist |
-| A lone surrogate in a string, and a qualified name such as `p:1`                        | A `ReadError`: the parser lets them through, and a tree could not keep or write them                                                                |
-| A namespace declaration with white space at its start or end                            | A `ReadError`: the parser strips it from the namespace of the elements and keeps it in the declaration                                              |
-| XInclude with `parse="text"`, an `xpointer`, and the fixup of `xml:base` and `xml:lang` | Refused or not done, as QTI forbids them or XInclude makes them optional                                                                            |
+| Case                                                             | Resolution                                                                                                                                          |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| XML 1.0 allows a DOCTYPE, and the entities that it declares      | Any DOCTYPE is a `SecurityError`, so that no entity is declared, expanded or read; only the five predefined entities and character references exist |
+| A lone surrogate in a string, and a qualified name such as `p:1` | A `ReadError`: the parser lets them through, and a tree could not keep or write them                                                                |
+| A namespace declaration with white space at its start or end     | A `ReadError`: the parser strips it from the namespace of the elements and keeps it in the declaration                                              |
 
 ## Build or adopt
 
