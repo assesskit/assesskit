@@ -315,7 +315,9 @@ tests of every engine, and waits for the next change to that part.
 - What a call throws goes into a table of errors, not into a sample.
 - The main function of each subpath has an `@example` in its TSDoc, after the other tags: a fenced `ts` block as complete as a
   guide's sample, with its imports and its results as `// => result`, short, and taken from the guide of the module where the
-  guide has one. The `tsdoc.test.ts` of each package runs the examples of its `src` with `examplesIn` and `runExample` of
+  guide has one. `pnpm check:standards` fails (`module-example`) on a subpath of a `package.json` whose entry exports functions
+  and none has an `@example`, through the modules it re-exports; an entry that exports none, such as `errors`, is left out. The
+  `tsdoc.test.ts` of each package runs the examples of its `src` with `examplesIn` and `runExample` of
   `scripts/tsdoc-examples.ts`, and fails on an example that shows no result or a result that differs; in Node,
   `scripts/tsdoc-sources.ts` reads the sources and loads the packages of the repository from their sources and not a build.
 - Every package has a Supported, an Evidence and a Choosing page in `docs/<package>/` (`evidence-page`). A count on them is a number of

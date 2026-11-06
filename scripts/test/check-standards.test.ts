@@ -8,6 +8,7 @@ import {
   checkFileNames,
   checkGuideSections,
   checkHistory,
+  checkModuleExamples,
   checkNotIncluded,
   checkReadmeSections,
   checkSectionSigns,
@@ -300,6 +301,96 @@ describe("module entries", () => {
   it("accepts the entries of a module, its wire forms, its own files and the files of the package root", () => {
     const accepted = [...files].filter(([file]) => file === "packages/a/src/one/write.ts");
     expect(checkEntries(new Map(accepted))).toStrictEqual([]);
+  });
+});
+
+describe("module examples", () => {
+  const documented =
+    "/**\n * Adds.\n *\n * @example\n * ```ts\n * add(1, 2); // => 3\n * ```\n */\nexport function add(): number { return 3; }\n";
+  const plain = "/** Subtracts. */\nexport function subtract(): number { return 1; }\n";
+  /** A manifest whose subpaths are given with the file that their types come from, as `tsc` writes it in `dist/`. */
+  const manifest = (subpaths: Record<string, string>): string =>
+    JSON.stringify({
+      name: "@family/a",
+      exports: Object.fromEntries(
+        Object.entries(subpaths).map(([subpath, types]) => [
+          subpath,
+          { types, default: types.replace(".d.ts", ".js") },
+        ]),
+      ),
+    });
+
+  it("accepts an entry that exports a function with an example, by name or through export *, at any depth", () => {
+    const files = repository({
+      "packages/a/package.json": manifest({
+        ".": "./dist/index.d.ts",
+        "./m": "./dist/m/index.d.ts",
+        "./n": "./dist/n/index.d.ts",
+      }),
+      "packages/a/src/index.ts": 'export * from "./m/index.js";\n',
+      "packages/a/src/m/index.ts": 'export { add } from "./add.js";\nexport type { Sum } from "./add.js";\n',
+      "packages/a/src/m/add.ts": documented,
+      "packages/a/src/n/index.ts": 'export { add as plus } from "../m/add.js";\n',
+    });
+    expect(checkModuleExamples(files)).toStrictEqual([]);
+  });
+
+  it("reports an entry whose exported functions have no example, even when another function of the file has one", () => {
+    const files = repository({
+      "packages/a/package.json": manifest({ "./m": "./dist/m/index.d.ts", "./n": "./dist/n/index.d.ts" }),
+      "packages/a/src/m/index.ts": 'export { subtract } from "./ops.js";\n',
+      "packages/a/src/m/ops.ts": `${plain}${documented}`,
+      "packages/a/src/n/index.ts": 'export { subtract } from "./plain.js";\n',
+      "packages/a/src/n/plain.ts": plain,
+    });
+    expect(checkModuleExamples(files)).toStrictEqual([
+      {
+        file: "packages/a/src/m/index.ts",
+        line: 0,
+        rule: "module-example",
+        message:
+          "The entry exports no function whose TSDoc has an @example; put one on the main function of the module.",
+      },
+      {
+        file: "packages/a/src/n/index.ts",
+        line: 0,
+        rule: "module-example",
+        message:
+          "The entry exports no function whose TSDoc has an @example; put one on the main function of the module.",
+      },
+    ]);
+  });
+
+  it("takes the entries from the exports of the manifests, files that are not an index among them", () => {
+    const files = repository({
+      "packages/a/package.json": manifest({ "./checks": "./dist/checks.d.ts", "./wire": "./dist/delivery/wire.d.ts" }),
+      "packages/a/src/checks.ts": plain,
+      "packages/a/src/delivery/wire.ts": documented,
+      "packages/a/src/other/index.ts": plain,
+    });
+    expect(checkModuleExamples(files).map(({ file }) => file)).toStrictEqual(["packages/a/src/checks.ts"]);
+  });
+
+  it("leaves out an entry that exports no function, a type, a class, a constant and an export without types", () => {
+    const files = repository({
+      "packages/a/package.json": JSON.stringify({
+        name: "@family/a",
+        exports: {
+          "./errors": { types: "./dist/errors.d.ts", default: "./dist/errors.js" },
+          "./style.css": "./style.css",
+        },
+      }),
+      "packages/a/src/errors.ts": [
+        "export class AError extends Error {}",
+        "export const LIMIT = 1;",
+        "export type Sum = number;",
+        'export type { Other } from "./other.js";',
+        'export { type Third } from "./other.js";',
+      ].join("\n"),
+      "packages/a/src/other.ts": plain,
+      "packages/b/package.json": '{ "name": "@family/b" }',
+    });
+    expect(checkModuleExamples(files)).toStrictEqual([]);
   });
 });
 

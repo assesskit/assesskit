@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { basename, dirname, extname, join, posix, resolve } from "node:path";
 import ts from "typescript";
 import { checkClaimWords, checkIdentity, checkReadmeLinks, checkTrademarks } from "./check-identity.ts";
+import { subpathSources } from "./subpaths.ts";
 
 /** One breach of the standards: the file, the 1-based line (0 for the whole file), the rule and what to do. */
 export interface Violation {
@@ -530,6 +531,74 @@ export function checkSecurityLimits(files: Files): Violation[] {
   return found;
 }
 
+/** The files that an entry re-exports values from, with the names it takes, or all of them. */
+interface Reexport {
+  readonly target: string;
+  readonly names: ReadonlySet<string> | "all";
+}
+
+/** The re-exports of values in a source file, to files of the same package. */
+function reexportsOf(file: string, source: ts.SourceFile): Reexport[] {
+  return source.statements.flatMap((statement): Reexport[] => {
+    if (!ts.isExportDeclaration(statement) || statement.isTypeOnly) return [];
+    const specifier = (statement.moduleSpecifier as ts.StringLiteral | undefined)?.text;
+    if (specifier === undefined || !specifier.startsWith(".")) return [];
+    const target = posix.normalize(posix.join(dirname(file), specifier.replace(/\.js$/, ".ts")));
+    const { exportClause } = statement;
+    if (exportClause === undefined) return [{ target, names: "all" }];
+    if (!ts.isNamedExports(exportClause)) return [];
+    const names = exportClause.elements
+      .filter((element) => !element.isTypeOnly)
+      .map((element) => (element.propertyName ?? element.name).text);
+    return [{ target, names: new Set(names) }];
+  });
+}
+
+/**
+ * Whether each exported function of an entry, among the names given and through the modules it re-exports, has an
+ * `@example`: one entry per function.
+ */
+function functionsOf(entry: string, files: Files, names: ReadonlySet<string> | "all" = "all"): boolean[] {
+  const text = files.get(entry);
+  if (text === undefined) return [];
+  const source = ts.createSourceFile(entry, text, ts.ScriptTarget.Latest, true);
+  const declared = source.statements.flatMap((statement) =>
+    ts.isFunctionDeclaration(statement) &&
+    isExported(statement) &&
+    statement.name !== undefined &&
+    (names === "all" || names.has(statement.name.text))
+      ? [source.text.slice(statement.getFullStart(), statement.getStart(source)).includes("@example")]
+      : [],
+  );
+  const reexported = reexportsOf(entry, source).flatMap(({ target, names: taken }) =>
+    functionsOf(
+      target,
+      files,
+      names === "all" ? taken : taken === "all" ? names : new Set([...taken].filter((name) => names.has(name))),
+    ),
+  );
+  return [...declared, ...reexported];
+}
+
+/**
+ * The entry of every subpath of a package, `exports` in its manifest, exports a function whose TSDoc has an `@example`: the
+ * main function of the module, shown with its result as a comment. An entry that exports no function, such as the errors,
+ * has none. The `tsdoc.test.ts` of each package runs every example and compares the results it shows.
+ */
+export function checkModuleExamples(files: Files): Violation[] {
+  return [...subpathSources(files).values()]
+    .filter((entry) => {
+      const functions = functionsOf(entry, files);
+      return functions.length > 0 && !functions.includes(true);
+    })
+    .map((entry) => ({
+      file: entry,
+      line: 0,
+      rule: "module-example",
+      message: "The entry exports no function whose TSDoc has an @example; put one on the main function of the module.",
+    }));
+}
+
 /** Every check, in the order of the standards. */
 export const CHECKS: readonly ((files: Files) => Violation[])[] = [
   checkSectionSigns,
@@ -545,6 +614,7 @@ export const CHECKS: readonly ((files: Files) => Violation[])[] = [
   checkEntries,
   checkConsole,
   checkSecurityLimits,
+  checkModuleExamples,
   checkIdentity,
   checkTrademarks,
   checkClaimWords,
