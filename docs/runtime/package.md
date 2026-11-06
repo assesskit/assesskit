@@ -109,11 +109,11 @@ example does), and `file(path)` then returns `undefined`.
 
 The model differs from the XML in three places:
 
-| In the XML                | In the model                                                        |
-| ------------------------- | ------------------------------------------------------------------- |
-| `organizations`           | Not kept; `writeManifest` writes it empty                           |
-| `schemaversion`           | Not kept; always `3.0.0`                                            |
-| `xml:base` of `resources` | `resourcesBase`, beside `base` of the manifest and of each resource |
+| In the XML                | In the model                                                               |
+| ------------------------- | -------------------------------------------------------------------------- |
+| `organizations`           | Not kept, as the QTI profile prohibits it; `writeManifest` writes it empty |
+| `schemaversion`           | Not kept; always `3.0.0`                                                   |
+| `xml:base` of `resources` | `resourcesBase`, beside `base` of the manifest and of each resource        |
 
 `writeManifest` refuses a manifest that the CP schema would reject: an identifier that is not an XML name or is declared twice,
 a vocabulary term outside its list, a resource with no file, a `dependency` or `variant` that names no resource
@@ -270,8 +270,8 @@ a separate outcome declaration or response processing template resource. Variant
 
 `readLtiLink(input, options?)` reads the `cartridge_basiclti_link` document of a resource of type `imsbasiclti_xmlv1p3`:
 `title`, `description`, `launchUrl`, `secureLaunchUrl`, `custom` (a `Map`), `extensions` (a platform and a `Map`)
-and `vendor`. Text is read without the white space around it. The root is accepted in `http://www.imsglobal.org/xsd/imslticc_v1p0`
-and in the relative namespace `/xsd/imslticc_v1p0` that the 1EdTech examples declare. A document without a title, a property
+and `vendor`. Text is read without the white space around it. The root is accepted in the namespace of the schema and in the relative one that the 1EdTech examples declare
+([Differences](#differences-from-the-references)). A document without a title, a property
 without a name or with a repeated name, or a vendor without a code is a `ReadError` (`assesskit/package/lti-link`,
 `assesskit/package/lti-property`). Launching the tool belongs to the host, through the player's port `LtiLogin`.
 
@@ -293,7 +293,6 @@ platform that launches it.
 | Not included                                             | Why                                                                                                                                   |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Reading files and directories                            | [node](node.md) reads them; `openPackage` takes any `PackageFiles`                                                                    |
-| Organizations in the manifest                            | The QTI profile of content packaging prohibits them                                                                                   |
 | Archives in several parts, other compression, encryption | Content packages do not use them, and encrypted entries are refused                                                                   |
 | ZIP64 when writing                                       | `writePackage` writes the classic format, which holds 65,534 files and 4 GiB; the reader accepts larger packages up to its limits     |
 | Choosing a variant                                       | The resolvers return the variants; the delivery engine chooses                                                                        |
@@ -305,8 +304,6 @@ platform that launches it.
 | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | The namespace of IMS Content Packaging 1.1 in the samples of the specifications and two 1EdTech example archives | The schemas decide: the manifest is in the namespace of the QTI profile, and any other is a `ReadError` ([G12](spec-gaps.md)) |
 | The root of an LTI link in a relative namespace, `/xsd/imslticc_v1p0`, which the 1EdTech examples declare        | Accepted, besides `http://www.imsglobal.org/xsd/imslticc_v1p0`                                                                |
-| `organizations` and `schemaversion` of the manifest                                                              | Not kept: the QTI profile prohibits organizations, and `schemaversion` is always `3.0.0`                                      |
-| A link that names only a vendor                                                                                  | `resolveLaunchUrl` throws: a platform could only look the tool up, which no QTI rule describes                                |
 
 ## Files
 
