@@ -314,11 +314,17 @@ tests of every engine, and waits for the next change to that part.
   the test file of the module and fails on a result that differs, or on a result that no statement picked up. It takes the text of
   the guide: a test in Node reads the file, and the guides of the player that run in a page are imported with `?raw`, in
   `guides.browser.test.ts`.
-- Each guide has the diagram, a Quick start that runs, the options with their defaults, the limits with their values, the errors
-  with what to do about them, what is not included and why, and the differences from the references, or `None` and the reason.
-  Not included is the table `| Not included | Why |`. `pnpm check:standards` fails on a guide without these sections; the documents of
-  `docs/<package>/` that are not the guide of a module (architecture, baseline, choosing, conformance, conventions, evidence, performance,
-  size, spec gaps and supported) are listed in `NOT_GUIDES` of `scripts/check-standards.ts`.
+- A guide of a module has its sections in this order, each fact in one of them: its diagram, before the first heading;
+  `## Quick start`, a minimal sample of the main call that runs; the topics of the module, in the order a reader uses them,
+  each option once with its default, in a table under the call that takes it, or in `## Options` where one options object
+  serves the module's calls; `## Limits`, where the module has limits, each once with its value and the option that sets it;
+  `## Errors`, every error a user can meet, with what to do about it, and one row of `SecurityError` for every limit;
+  `## Not included`, the table `| Not included | Why |`; `## Differences from the references`; and last, where the guide
+  has them, `## Build or adopt`, `## Evidence`, `## Files` and `## References`. A section with nothing to say says "None"
+  and why. `pnpm check:standards` fails on a guide without Quick start, Errors, Not included or Differences from the
+  references (`guide-sections`); the documents of `docs/<package>/` that are not the guide of a module (architecture,
+  baseline, choosing, conformance, conventions, evidence, performance, size, spec gaps and supported) are listed in `NOT_GUIDES`
+  of `scripts/check-standards.ts`.
 - What a call throws goes into a table of errors, not into a sample.
 - The main function of each subpath has an `@example` in its TSDoc, after the other tags: a fenced `ts` block as complete as a
   guide's sample, with its imports and its results as `// => result`, short, and taken from the guide of the module where the
