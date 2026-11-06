@@ -1006,29 +1006,57 @@ describe("checkSubmission", () => {
   });
 
   it("checks the items and the parts of a body in time that grows with its size, not with its square", () => {
-    const keys = Array.from({ length: 40_000 }, (_, index) => ({ ref: `i${index}`, instance: 1 }));
     const [first] = SUBMISSION.items;
     const [part] = SUBMISSION.parts;
-    const body = (items: readonly unknown[], parts: readonly unknown[]): unknown =>
+    const keysOf = (count: number): readonly { readonly ref: string; readonly instance: number }[] =>
+      Array.from({ length: count }, (_, index) => ({ ref: `i${index}`, instance: 1 }));
+    const itemsOf = (count: number): readonly unknown[] => keysOf(count).map((key) => ({ ...first, key }));
+    const partsOf = (count: number): readonly unknown[] => keysOf(count).map((item) => ({ ...part, item }));
+    /** A body as a server reads it: JSON that holds the items and the parts. */
+    const bodyOf = (items: readonly unknown[], parts: readonly unknown[]): unknown =>
       json(JSON.stringify({ ...SUBMISSION, items, parts }));
-    const items = keys.map((key) => ({ ...first, key }));
-    const parts = keys.map((item) => ({ ...part, item }));
-    const bodies = [body(items, parts), body([...items, ...items], []), body([], parts)];
-    const started = performance.now();
-    const outcomes = bodies.map((value) => {
+    const verdictOf = (value: unknown): string => {
       try {
         checkSubmission(value);
         return "accepted";
       } catch (error) {
         return error instanceof DataError ? error.message.replace(/ instance .*$/, "") : "failed";
       }
-    });
-    expect(performance.now() - started).toBeLessThan(2000);
-    expect(outcomes).toEqual([
+    };
+    const small = 2_000;
+    const large = 16_000;
+    // The three verdicts on a large body: accepted, an item twice, and a part whose item the body lacks.
+    expect(
+      [
+        bodyOf(itemsOf(large), partsOf(large)),
+        bodyOf([...itemsOf(large), ...itemsOf(large)], []),
+        bodyOf([], partsOf(large)),
+      ].map(verdictOf),
+    ).toEqual([
       "accepted",
       'A submission is invalid: has the item "i0"',
       'A submission is invalid: A part names the item "i0"',
     ]);
+    // A busy machine delays a process but adds nothing to its processor time, so the growth is measured on that and not on
+    // the wall clock, and the least of five runs leaves out what a garbage collection or a cold compiler adds. The small body
+    // is checked as many times as it is smaller, so that both sides do the same work if the time is linear.
+    const microsecondsPerMillisecond = 1000;
+    const runs = 5;
+    const processorTimeOf = (value: unknown, times: number): number => {
+      const before = process.cpuUsage();
+      for (let time = 0; time < times; time += 1) checkSubmission(value);
+      const { user, system } = process.cpuUsage(before);
+      return (user + system) / microsecondsPerMillisecond;
+    };
+    const leastTime = (count: number, times: number): number => {
+      const value = bodyOf(itemsOf(count), partsOf(count));
+      checkSubmission(value);
+      return Math.min(...Array.from({ length: runs }, () => processorTimeOf(value, times)));
+    };
+    const growth = leastTime(large, 1) / leastTime(small, large / small);
+    // Linear time makes the ratio about 1, and checking each item against the ones before it makes it about 6 at these sizes.
+    // The limit of 3 is where the time grows with the 1.5th power of the size, which is 2.8 for 8 times the size.
+    expect(growth).toBeLessThan(3);
   });
 });
 
