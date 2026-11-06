@@ -328,7 +328,8 @@ tests of every engine, and waits for the next change to that part.
   `scripts/tsdoc-examples.ts`, and fails on an example that shows no result or a result that differs; in Node,
   `scripts/tsdoc-sources.ts` reads the sources and loads the packages of the repository from their sources and not a build.
 - Every package has a Supported, an Evidence and a Choosing page in `docs/<package>/` (`evidence-page`). A count on them is a number of
-  a file of the repository or of `pnpm exec vitest list`, stated with the commit and the date of the count, and a statement of
+  a file of the repository or of a run of the tests, stated with the commit and the date of the count, and with the
+  Node.js of a run, and a statement of
   what another library has is dated and linked, with what the package lacks of it. The Choosing pages are written from
   `assesskit-comparators.md` of the workspace, re-checked against the guides: a comparator's status is its own text of that
   date, never a test result of ours, and a claim word is never used for a certification, which only 1EdTech grants.
