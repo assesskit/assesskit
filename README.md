@@ -98,7 +98,5 @@ deploy safely.
 [Apache License 2.0](https://github.com/assesskit/assesskit/blob/main/LICENSE). Copyright Fariz Wakan; see the NOTICE of each package.
 
 QTI® is a trademark of 1EdTech® Consortium, Inc. (1edtech.org).
-LTI® is a trademark of 1EdTech® Consortium, Inc. (1edtech.org).
-Caliper Analytics® is a trademark of 1EdTech® Consortium, Inc. (1edtech.org).
 W3C® is a trademark of the World Wide Web Consortium.
 assesskit is not affiliated with, endorsed by or approved by 1EdTech Consortium, Inc. or W3C.
