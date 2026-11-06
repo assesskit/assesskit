@@ -165,6 +165,17 @@ each against the nearest earlier line that reads.
 | The frame's `failed` event, `instance` | `data-decimal-separator` is neither `.` nor `,`                                                          | Fix the item                                                               |
 | The frame's `failed` event, `modules`  | The module is not at `primary-path` in the package                                                       | Put the files of `readModuleFiles` at the folder that `primary-path` names |
 
+## Limits
+
+The module sets no limit on what a candidate types or on the lines of worked steps. What bounds a response is where it goes:
+
+| Limit                                 | Default                                                         | Applies to                                                                                                                                            |
+| ------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `maxInputLength` of the operators     | 2,000 UTF-16 code units, all the strings of a response together | Scoring: a longer response is unreadable, so `expression-equivalent` gives NULL and `readable` is false ([operators](../runtime/operators.md#limits)) |
+| `maxSteps` of `compareMathSteps`      | 200 lines                                                       | Scoring worked steps: more lines are a `SecurityError` ([operators](../runtime/operators.md#limits))                                                  |
+| `maxActionSize` of `ActionLimits`     | 4,194,304                                                       | The action that carries the response to the engine                                                                                                    |
+| `maxPciStateLength` of `ActionLimits` | 1,048,576 code units                                            | The state of the interaction ([delivery](../runtime/delivery.md#wire-forms))                                                                          |
+
 ## Not included
 
 | Not included                                       | Why                                                                                                                                                                                                    |

@@ -281,7 +281,7 @@ nothing.
 
 Everything a module sends is untrusted. The player reads a message only from the frame's window, only with the shape of
 the table above, and a response only as a value of its declaration. It sets the height of the frame to the content height the frame
-reports, between 48 and 4096 CSS pixels ; taller content scrolls in the frame.
+reports, between 48 and 4096 CSS pixels; taller content scrolls in the frame.
 
 A module is code of the package and its source is visible to the candidate, so it must not hold an answer key.
 
