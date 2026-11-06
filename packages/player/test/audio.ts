@@ -141,7 +141,15 @@ export function suspendedAudioContext(): SuspendedContexts {
  * press of a test that made the code ask for the microphone is such a gesture, and a second press would overlap it.
  */
 async function activate(): Promise<void> {
-  if (navigator.userActivation.isActive) return;
+  if (!navigator.userActivation.isActive) await pressAside();
+}
+
+/**
+ * Presses a button that it adds and removes, so that the page has a user activation from now, which WebKit keeps for five
+ * seconds. A test whose code makes an audio context of its own after the microphone's presses it as the microphone gives its
+ * stream, so that the context starts within the activation however long the microphone took to start.
+ */
+export async function pressAside(): Promise<void> {
   const button = document.createElement("button");
   button.style.cssText = "position: fixed; top: 0; left: 0; width: 8px; height: 8px; z-index: 2147483647;";
   document.body.append(button);

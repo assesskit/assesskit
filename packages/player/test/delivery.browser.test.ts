@@ -15,7 +15,7 @@ import type { MountFiles, SpeechRequest, StylesheetFetch, ToolSlots } from "../s
 import { mountDelivery } from "../src/player/index.js";
 import { HOST_SHADOW_RULE } from "../src/player/internal.js";
 import type { HostSession, SessionClient } from "../src/protocol/index.js";
-import { audioContextRuns, fakeMicrophone, heardFor, needsAudio, trackAudioContexts } from "./audio.js";
+import { audioContextRuns, fakeMicrophone, heardFor, needsAudio, pressAside, trackAudioContexts } from "./audio.js";
 import { feedViews } from "./client-fixture.js";
 import { computed, PLAYER_CSS } from "./css-fixture.js";
 import { examDefinition, examFiles, examHost, lexiconFiles, packageOf, pciFiles } from "./exam-fixture.js";
@@ -2355,7 +2355,14 @@ describe("a recording kept at the clock", () => {
   async function recording(practice: boolean, context: Parameters<typeof needsAudio>[0]) {
     await needsAudio(context, audioContextRuns());
     trackAudioContexts();
-    vi.spyOn(navigator.mediaDevices, "getUserMedia").mockImplementation(fakeMicrophone);
+    // WebKit runs an audio context only within five seconds of a press, and the fake microphone presses only when the page
+    // has no activation, so that the recorder, whose context starts after the microphone's, could ask past the activation
+    // and wait for ever. The page is pressed as the microphone gives its stream, and the recorder starts within the press.
+    vi.spyOn(navigator.mediaDevices, "getUserMedia").mockImplementation(async () => {
+      const stream = await fakeMicrophone();
+      await pressAside();
+      return stream;
+    });
     vi.useFakeTimers({ toFake: ["setTimeout", "setInterval", "clearTimeout", "clearInterval"] });
     const store = recordingStore();
     const dispatched: Promise<unknown>[] = [];
@@ -2367,8 +2374,8 @@ describe("a recording kept at the clock", () => {
       });
     const s = await shell({ files: recordingFiles(), practice, reserve: store.reserve, fill: store.fill, wrap });
     await vi.advanceTimersByTimeAsync(0);
-    // The start is awaited on the real clock: `waitFor` moves the fake clock at each look, and a busy WebKit that is slow to
-    // run the audio context would see the recorder's limit of 5 seconds pass before it ran.
+    // The start is awaited on the real clock: `waitFor` moves the fake clock at each look, toward the recorder's limit of 5
+    // seconds on its start.
     while (contentOf(s.ui).querySelector(".ak-recording") === null) await real(20);
     await heardFor(0.5);
     await vi.advanceTimersByTimeAsync(1100);
