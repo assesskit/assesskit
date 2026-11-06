@@ -255,7 +255,7 @@ jobs:
     timeout-minutes: 20
     strategy:
       matrix:
-        node: [22, 24]
+        node: [22, 24, 26]
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6

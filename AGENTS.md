@@ -102,18 +102,18 @@ Biome enforces, folder by folder.
   so that no job installs them: a bump of Playwright changes the tag in both workflows and in the container of
   [evidence.md](docs/player/evidence.md#tests-in-a-browser), which `scripts/test/versions.test.ts` holds to the lock file.
 
-| Job                   | Runs when the change reaches                                                              | Minutes |
-| --------------------- | ----------------------------------------------------------------------------------------- | ------: |
-| `check`               | every push                                                                                |      12 |
-| `test` (Node 22, 24)  | any package, example, compat or script                                                    |      20 |
-| `bench`               | the runtime                                                                               |      10 |
-| `player-bench`        | the player                                                                                |      10 |
-| `browsers`            | the player, its guides, or the custom interactions                                        |      25 |
-| `engines`             | the player or compat                                                                      |      10 |
-| `runtimes`            | the runtime, the player or compat/runtimes                                                |      10 |
-| `corpus`              | the runtime, its guides or an example of it                                               |      10 |
-| `xsd`                 | the runtime, its guides, the player, the custom interactions or an example of the runtime |      10 |
-| `rules` (`rules.yml`) | each Monday, on dispatch and at a release                                                 |     120 |
+| Job                      | Runs when the change reaches                                                              | Minutes |
+| ------------------------ | ----------------------------------------------------------------------------------------- | ------: |
+| `check`                  | every push                                                                                |      12 |
+| `test` (Node 22, 24, 26) | any package, example, compat or script                                                    |      20 |
+| `bench`                  | the runtime                                                                               |      10 |
+| `player-bench`           | the player                                                                                |      10 |
+| `browsers`               | the player, its guides, or the custom interactions                                        |      25 |
+| `engines`                | the player or compat                                                                      |      10 |
+| `runtimes`               | the runtime, the player or compat/runtimes                                                |      10 |
+| `corpus`                 | the runtime, its guides or an example of it                                               |      10 |
+| `xsd`                    | the runtime, its guides, the player, the custom interactions or an example of the runtime |      10 |
+| `rules` (`rules.yml`)    | each Monday, on dispatch and at a release                                                 |     120 |
 
 - The scripts in `compat/` and `scripts/` are TypeScript that Node runs directly, so their relative imports end in `.ts`.
 - The Firefox of Playwright does not start on some macOS versions (it did not on macOS 27): run the browser tests in the Linux
