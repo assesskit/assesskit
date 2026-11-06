@@ -210,6 +210,15 @@ const submissionSchema = v.pipe(
  *
  * @param value - The parsed JSON.
  * @throws `DataError` when it is not a submission; the message names the path of the first problem.
+ * @example
+ * ```ts
+ * import { checkSubmission } from "@assesskit/player/protocol";
+ *
+ * const body = JSON.parse(`{"request":"item:essay:1:SCORE","outcome":"SCORE","mode":"human","requestedAt":1000,
+ *   "declaration":{"cardinality":"single","baseType":"float"},"rubric":[],"parts":[],"items":[]}`);
+ * checkSubmission(body);
+ * body.request; // => "item:essay:1:SCORE"
+ * ```
  */
 export function checkSubmission(value: unknown): asserts value is Submission {
   parseWith(submissionSchema, value, "A submission");

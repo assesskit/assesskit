@@ -44,6 +44,51 @@ const TICK_MS = 1000;
  * @throws `DataError` when `host` or an option is not of its type.
  * @see {@link https://www.w3.org/TR/WCAG22/#status-messages | WCAG 2.2, status messages}
  * @see {@link https://www.w3.org/TR/WCAG22/#focus-order | WCAG 2.2, focus order}
+ * @example
+ * ```ts
+ * import { readAsi } from "@assesskit/runtime/asi";
+ * import { createLocalSession } from "@assesskit/player/client/local";
+ * import { mountDelivery } from "@assesskit/player/player";
+ * import css from "@assesskit/player/player.css?inline"; // any bundler that imports a file as text
+ *
+ * const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+ *     identifier="q1" title="Question" adaptive="false" time-dependent="false">
+ *   <qti-item-body><p>Hello</p></qti-item-body>
+ * </qti-assessment-item>`);
+ * const saved = new Map();
+ * const client = await createLocalSession({
+ *   definition: { kind: "item", item, base: "items/q1.xml" },
+ *   store: {
+ *     load: async (session) => saved.get(session),
+ *     save: async (session, { state }) => void saved.set(session, state),
+ *   },
+ *   session: "preview-1",
+ *   seed: 1,
+ *   assets: (path) => `https://assets.example/package/${path}`,
+ * });
+ *
+ * const stylesheet = new CSSStyleSheet();
+ * stylesheet.replaceSync(css);
+ * const host = document.createElement("div");
+ * document.body.append(host);
+ * const mounted = mountDelivery(host, {
+ *   client,
+ *   files: {
+ *     upload: async (bytes, mimeType) => ({ reference: "f1", mimeType }),
+ *     read: async () => new Uint8Array(),
+ *     url: (file) => `/files/${file.reference}`,
+ *     reserve: async (mimeType) => ({ reference: "f2", mimeType }),
+ *     fill: async (file, bytes) => undefined,
+ *   },
+ *   staticUrl: "https://assets.example/static/",
+ *   stylesheet,
+ *   fetch: (url, init) => fetch(url, init),
+ *   language: "id",
+ * });
+ * await mounted.settled();
+ * host.shadowRoot.querySelector(".ak-heading")?.textContent; // => "Question"
+ * mounted.destroy();
+ * ```
  */
 export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Mounted {
   checkDeliveryOptions(host, options);

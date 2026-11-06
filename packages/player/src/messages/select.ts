@@ -39,6 +39,15 @@ const optionsSchema = v.pipe(recordSchema, v.strictObject({ catalogs: v.optional
  * @throws `DataError` when `language` is not a string, `options` has another property than `catalogs`, `catalogs` is not an
  * object of objects, a catalog has a key that is not a message key, or a message is not a string.
  * @see {@link https://www.rfc-editor.org/rfc/rfc5646 | RFC 5646, tags for identifying languages}
+ * @example
+ * ```ts
+ * import { selectMessages } from "@assesskit/player";
+ * import { ID_MESSAGES } from "@assesskit/player/messages-id";
+ *
+ * selectMessages("id-ID").toolRule; // => "Ruler"
+ * selectMessages("id-ID", { catalogs: { id: ID_MESSAGES } }).toolRule === ID_MESSAGES.toolRule; // => true
+ * selectMessages("jv", { catalogs: { id: ID_MESSAGES } }).toolRule; // => "Ruler"
+ * ```
  */
 export function selectMessages(language: string, options: SelectMessagesOptions = {}): Messages {
   checkString(language, "The language");

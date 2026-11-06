@@ -145,6 +145,58 @@ function loggedAction(action: CandidateAction | HostAction, at: number): string 
  * @returns The session host.
  * @throws `DataError` when an option has the wrong type, `maxIdleMs` is set and `clientActions` omit `suspend`, or the test
  * of the engine has a maximum time and there is no `scheduler`.
+ * @example
+ * ```ts
+ * import { createEngine } from "@assesskit/runtime/delivery";
+ * import { openPackage } from "@assesskit/runtime/package";
+ * import { createAssetGate, createSessionHost } from "@assesskit/player/server";
+ *
+ * const files = new Map(
+ *   Object.entries({
+ *     "imsmanifest.xml": `<manifest xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1" identifier="package">
+ *       <metadata><schema>QTI Package</schema><schemaversion>3.0.0</schemaversion></metadata>
+ *       <organizations/>
+ *       <resources>
+ *         <resource identifier="q1" type="imsqti_item_xmlv3p0" href="items/q1.xml"><file href="items/q1.xml"/></resource>
+ *       </resources>
+ *     </manifest>`,
+ *     "items/q1.xml": `<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+ *         identifier="q1" title="Question" adaptive="false" time-dependent="false">
+ *       <qti-item-body><p>Hello</p></qti-item-body>
+ *     </qti-assessment-item>`,
+ *   }).map(([path, text]) => [path, new TextEncoder().encode(text)]),
+ * );
+ * const pkg = openPackage({ paths: [...files.keys()].sort(), read: (path) => files.get(path) });
+ * const document = pkg.document("items/q1.xml");
+ * if (document.kind !== "item") throw new Error("The document is not an item.");
+ * const engine = createEngine({ kind: "item", item: document.item, base: "items/q1.xml" });
+ *
+ * // The store of a host is its database; this one keeps one session in memory.
+ * const records = new Map();
+ * const store = {
+ *   create: async (session, record) => !records.has(session) && !!records.set(session, { ...record, version: 0, seq: 0 }),
+ *   load: async (session) => records.get(session),
+ *   save: async (session, { action, ...record }) => {
+ *     if (records.get(session)?.version !== record.version) return false;
+ *     records.set(session, { ...record, version: record.version + 1 });
+ *     return true;
+ *   },
+ * };
+ * const fileStore = { put: async () => ({ reference: "none", mimeType: "text/plain" }), read: async () => undefined };
+ * const key = await crypto.subtle.generateKey({ name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
+ * const packages = async () => pkg;
+ * const gate = createAssetGate({ key, origin: "https://assets.example", packages, files: fileStore });
+ * const host = createSessionHost({ engine, store, gate, packages });
+ *
+ * // In the handler of POST /exam/start, for the caller that the host authenticated:
+ * const caller = { session: "s1", principal: "candidate-7" };
+ * const first = await host.start(caller, { seed: 12345 });
+ * first.seq; // => 0
+ * first.view.current.title; // => "Question"
+ * const again = await host.handle(caller, { seq: 1, action: { type: "end-test" } });
+ * again.seq; // => 1
+ * records.get("s1").version; // => 1
+ * ```
  */
 export function createSessionHost(options: SessionHostOptions): SessionHost {
   checkHostOptions(options);

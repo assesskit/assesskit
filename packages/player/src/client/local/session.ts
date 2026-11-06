@@ -270,6 +270,31 @@ function loadEngine(): Promise<EngineModule> {
  * @throws `DataError` when an option has the wrong type, the engine cannot be created, or the session cannot start.
  * @throws `signal.reason` when the signal aborts before the load or the first save. A session already saved stays, and a
  * new call resumes it.
+ * @example
+ * ```ts
+ * import { readAsi } from "@assesskit/runtime/asi";
+ * import { createLocalSession } from "@assesskit/player/client/local";
+ *
+ * const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+ *     identifier="q1" title="Question" adaptive="false" time-dependent="false">
+ *   <qti-item-body><p>Hello</p></qti-item-body>
+ * </qti-assessment-item>`);
+ * const saved = new Map();
+ * const client = await createLocalSession({
+ *   definition: { kind: "item", item, base: "items/q1.xml" },
+ *   store: {
+ *     load: async (session) => saved.get(session),
+ *     save: async (session, { state }) => void saved.set(session, state),
+ *   },
+ *   session: "preview-1",
+ *   seed: 1,
+ *   assets: (path) => `https://assets.example/package/${path}`,
+ * });
+ * client.view.current?.title; // => "Question"
+ * client.assets("items/q1.xml"); // => "https://assets.example/package/items/q1.xml"
+ * saved.has("preview-1"); // => true
+ * client.close();
+ * ```
  */
 export async function createLocalSession(options: LocalSessionOptions): Promise<LocalSession> {
   parseWith(optionsSchema, options, "The options object");

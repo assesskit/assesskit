@@ -137,6 +137,37 @@ const DOT_SEGMENTS: ReadonlySet<string> = new Set([".", ".."]);
  * @returns The engine, as the runtime's `CatPort`.
  * @throws `DataError` when an option has the wrong type, an engine is malformed or an endpoint is not an `https` URL.
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding}
+ * @example
+ * ```ts
+ * import { createRestCatPort } from "@assesskit/player/cat-rest";
+ *
+ * const requests = [];
+ * const fetch = async (url, request) => {
+ *   requests.push(`${request.method} ${url}`);
+ *   const body = url.endsWith("/token") ? { access_token: "t0ken", token_type: "Bearer" } : { sectionIdentifier: "s1" };
+ *   return { ok: true, status: 200, text: async () => JSON.stringify(body) };
+ * };
+ * // The package names the engine by its public address; the platform reaches it through a gateway.
+ * const reference = "https://engine.example/ims/cat/v1p0";
+ * const engines = new Map([
+ *   [
+ *     reference,
+ *     {
+ *       endpoint: "https://gateway.internal/engines/a/ims/cat/v1p0",
+ *       credentials: {
+ *         tokenUrl: "https://auth.example/token",
+ *         clientId: "tool",
+ *         clientSecret: "secret",
+ *         scope: "https://purl.imsglobal.org/cat/v1p0/scope/api",
+ *       },
+ *     },
+ *   ],
+ * ]);
+ * const port = createRestCatPort({ fetch, engines: (known) => engines.get(known) });
+ * const section = await port.createSection(reference, { sectionConfiguration: "e30=" });
+ * section; // => { sectionIdentifier: "s1" }
+ * requests; // => ["POST https://auth.example/token", "POST https://gateway.internal/engines/a/ims/cat/v1p0/sections"]
+ * ```
  */
 export function createRestCatPort(options: RestCatPortOptions): CatPort {
   const { fetch, engines, timeoutMs, maxTokens } = parseWith(optionsSchema, options, "The options object");

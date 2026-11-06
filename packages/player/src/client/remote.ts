@@ -129,6 +129,33 @@ const isRejection = (error: unknown): boolean =>
  * @param options - See {@link RemoteSessionOptions}.
  * @returns The session client.
  * @throws `DataError` when an argument has the wrong type.
+ * @example
+ * ```ts
+ * import { readAsi } from "@assesskit/runtime/asi";
+ * import { createEngine } from "@assesskit/runtime/delivery";
+ * import { writeView } from "@assesskit/runtime/delivery/wire";
+ * import { createRemoteSession } from "@assesskit/player/client";
+ *
+ * const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+ *     identifier="q1" title="Question" adaptive="false" time-dependent="false">
+ *   <qti-item-body><p>Hello</p></qti-item-body>
+ * </qti-assessment-item>`);
+ * const engine = createEngine({ kind: "item", item, base: "items/q1.xml" });
+ * const view = writeView(engine.view(engine.start({ seed: 1, at: 0 }).state, 0));
+ *
+ * // The transport sends an envelope to the session host; this one answers as a host would, from the view above.
+ * const sent = [];
+ * const transport = async (envelope) => {
+ *   sent.push(envelope.seq);
+ *   return { seq: envelope.seq, view, assets: { "": "https://assets.example/g/token/" } };
+ * };
+ * const client = createRemoteSession(transport, { seq: 0, view, assets: {} });
+ * const answer = await client.dispatch({ type: "end-test" });
+ * sent; // => [1]
+ * answer.view.current?.title; // => "Question"
+ * client.assets("items/q1.xml"); // => "https://assets.example/g/token/items/q1.xml"
+ * client.close();
+ * ```
  */
 export function createRemoteSession(
   transport: Transport,

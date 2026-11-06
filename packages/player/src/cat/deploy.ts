@@ -107,6 +107,43 @@ export interface DeployCatSectionsOptions extends CallOptions {
  * @throws `ReadError` and `SecurityError` as `readPackage` documents for a package that cannot be read.
  * @throws `signal.reason` when the signal aborts before a request or while one waits for its answer.
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding, Create Section and Get Section}
+ * @example
+ * ```ts
+ * import { openPackage } from "@assesskit/runtime/package";
+ * import { deployCatSections } from "@assesskit/player/cat";
+ *
+ * const ASI = "http://www.imsglobal.org/xsd/imsqtiasi_v3p0";
+ * const files = new Map(
+ *   Object.entries({
+ *     "imsmanifest.xml": `<manifest xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1" identifier="package">
+ *       <metadata><schema>QTI Package</schema><schemaversion>3.0.0</schemaversion></metadata>
+ *       <organizations/>
+ *       <resources>
+ *         <resource identifier="exam" type="imsqti_test_xmlv3p0" href="test.xml"><file href="test.xml"/></resource>
+ *       </resources>
+ *     </manifest>`,
+ *     "test.xml": `<qti-assessment-test xmlns="${ASI}" identifier="exam" title="Exam">
+ *       <qti-test-part identifier="part" navigation-mode="nonlinear" submission-mode="individual">
+ *         <qti-assessment-section identifier="cat" title="Adaptive" visible="true">
+ *           <qti-adaptive-selection>
+ *             <qti-adaptive-engine-ref identifier="engine" href="https://engine.example/ims/cat/v1p0"/>
+ *           </qti-adaptive-selection>
+ *           <qti-assessment-item-ref identifier="q1" href="q1.xml"/>
+ *         </qti-assessment-section>
+ *       </qti-test-part>
+ *     </qti-assessment-test>`,
+ *   }).map(([path, text]) => [path, new TextEncoder().encode(text)]),
+ * );
+ * const pkg = openPackage({ paths: [...files.keys()].sort(), read: (path) => files.get(path) });
+ *
+ * // The port of an engine: this one creates the section and reports the pool that the test names.
+ * const port = {
+ *   createSection: async () => ({ sectionIdentifier: "s1" }),
+ *   getSection: async () => ({ sectionData: { sectionConfiguration: "" }, items: { itemIdentifiers: ["q1"] } }),
+ * };
+ * const sections = await deployCatSections(pkg, () => port);
+ * sections.get("cat"); // => { prefix: "https://engine.example/ims/cat/v1p0", sectionIdentifier: "s1" }
+ * ```
  */
 export async function deployCatSections(
   pkg: QtiPackage,

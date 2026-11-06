@@ -94,6 +94,35 @@ function checkView(view: unknown): asserts view is ScorerView {
  * @returns The submission, which `mountSubmission` shows and `checkSubmission` accepts.
  * @throws `DataError` when `view` is not a scorer view, or what it holds is not a submission, and a `DataError` of the runtime when a
  * value is not a value.
+ * @example
+ * ```ts
+ * import { readAsi } from "@assesskit/runtime/asi";
+ * import { createEngine } from "@assesskit/runtime/delivery";
+ * import { buildSingle } from "@assesskit/runtime/values";
+ * import { buildSubmission } from "@assesskit/player/scoring";
+ *
+ * const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="essay"
+ *     title="Essay" time-dependent="false">
+ *   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>
+ *   <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float" external-scored="human"
+ *       normal-minimum="0" normal-maximum="10"/>
+ *   <qti-item-body>
+ *     <p>Write about your town.</p>
+ *     <qti-extended-text-interaction response-identifier="RESPONSE"/>
+ *   </qti-item-body>
+ * </qti-assessment-item>`);
+ * const engine = createEngine({ kind: "item", item, base: "essay.xml" });
+ * const started = engine.start({ seed: 1, at: 0 });
+ * const key = { ref: "essay", instance: 1 };
+ * const responses = new Map([["RESPONSE", buildSingle("string", "Dear Sir")]]);
+ * const written = engine.apply(started.state, { type: "set-responses", item: key, responses, at: 1_000 });
+ * const submitted = engine.apply(written.state, { type: "submit", item: key, at: 2_000 });
+ * const [request] = engine.pending(submitted.state).scoring;
+ * const submission = buildSubmission(engine.scorerView(submitted.state, request.id));
+ * submission.request; // => "item:essay:1:SCORE"
+ * submission.declaration; // => { cardinality: "single", baseType: "float", normalMinimum: 0, normalMaximum: 10 }
+ * submission.parts[0]?.value; // => { cardinality: "single", baseType: "string", value: { base: { string: "Dear Sir" } } }
+ * ```
  */
 export function buildSubmission(view: ScorerView): Submission {
   checkView(view);
