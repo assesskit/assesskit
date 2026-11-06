@@ -28,10 +28,14 @@ const PLAYER_SOURCES = [
 ];
 
 /**
- * The limit of a test in the projects whose tests do seconds of work on the CPU. It is there to catch a hang, and not to
- * judge speed: a host that runs many test runs at once takes tens of times as long as a quiet one.
+ * The limit of a test and of a hook, in milliseconds, which catches a hang. A test ends within half of it on a runner under
+ * coverage, which runs two to three times as long as a developer's machine, so it holds the tests of about 10 s that STANDARDS
+ * section 7 allows; a test that needs more is cut, never given a longer timeout of its own.
  */
 const HANG_LIMIT = 60_000;
+
+/** The limit of a benchmark file's test and hook, in milliseconds: a benchmark ends within half of it on a CI runner. */
+const BENCHMARK_LIMIT = 120_000;
 
 /**
  * The engines that run, from `BROWSERS` as a comma-separated list. Coverage and `check:rules` run Chromium alone, the one
@@ -156,6 +160,7 @@ export default defineConfig({
           include: ["packages/runtime/test/**/*.test.ts"],
           exclude: ["**/*.corpus.test.ts", "**/*.xsd.test.ts"],
           testTimeout: HANG_LIMIT,
+          hookTimeout: HANG_LIMIT,
         },
       },
       {
@@ -165,6 +170,7 @@ export default defineConfig({
           include: ["packages/player/test/**/*.test.ts"],
           exclude: ["**/*.browser.test.ts", "**/*.corpus.test.ts", "**/*.xsd.test.ts"],
           testTimeout: HANG_LIMIT,
+          hookTimeout: HANG_LIMIT,
         },
       },
       {
@@ -185,6 +191,7 @@ export default defineConfig({
           include: ["packages/player/test/**/*.browser.bench.ts"],
           globalSetup: GLOBAL_SETUP,
           testTimeout: HANG_LIMIT,
+          hookTimeout: HANG_LIMIT,
           browser: { ...browser(), instances: [{ browser: "chromium" as const }] },
         },
       },
@@ -206,6 +213,7 @@ export default defineConfig({
           include: ["packages/player/test/**/*.corpus.test.ts"],
           exclude: ["**/*.browser.corpus.test.ts"],
           testTimeout: HANG_LIMIT,
+          hookTimeout: HANG_LIMIT,
         },
       },
       {
@@ -215,8 +223,8 @@ export default defineConfig({
         test: {
           name: "player-xsd",
           include: ["packages/player/test/**/*.xsd.test.ts"],
-          testTimeout: 60_000,
-          hookTimeout: 60_000,
+          testTimeout: HANG_LIMIT,
+          hookTimeout: HANG_LIMIT,
         },
       },
       {
@@ -229,6 +237,7 @@ export default defineConfig({
           exclude: ["**/*.browser.test.ts", "**/*.xsd.test.ts"],
           globalSetup: ["packages/custom-interactions/test/fixtures/modules-setup.ts"],
           testTimeout: HANG_LIMIT,
+          hookTimeout: HANG_LIMIT,
         },
       },
       {
@@ -247,8 +256,8 @@ export default defineConfig({
         test: {
           name: "custom-interactions-xsd",
           include: ["packages/custom-interactions/test/**/*.xsd.test.ts"],
-          testTimeout: 60_000,
-          hookTimeout: 60_000,
+          testTimeout: HANG_LIMIT,
+          hookTimeout: HANG_LIMIT,
         },
       },
       {
@@ -259,6 +268,7 @@ export default defineConfig({
           include: ["examples/*/*/test/**/*.test.ts"],
           exclude: ["**/*.corpus.test.ts", "**/*.xsd.test.ts"],
           testTimeout: HANG_LIMIT,
+          hookTimeout: HANG_LIMIT,
         },
       },
       {
@@ -268,6 +278,7 @@ export default defineConfig({
           name: "runtime-examples-corpus",
           include: ["examples/runtime/*/test/**/*.corpus.test.ts"],
           testTimeout: HANG_LIMIT,
+          hookTimeout: HANG_LIMIT,
         },
       },
       {
@@ -276,8 +287,8 @@ export default defineConfig({
         test: {
           name: "runtime-examples-xsd",
           include: ["examples/runtime/*/test/**/*.xsd.test.ts"],
-          testTimeout: 60_000,
-          hookTimeout: 60_000,
+          testTimeout: HANG_LIMIT,
+          hookTimeout: HANG_LIMIT,
         },
       },
       {
@@ -293,6 +304,7 @@ export default defineConfig({
           name: "runtime-corpus",
           include: ["packages/runtime/test/**/*.corpus.test.ts"],
           testTimeout: HANG_LIMIT,
+          hookTimeout: HANG_LIMIT,
         },
       },
       {
@@ -313,8 +325,8 @@ export default defineConfig({
           name: "runtime-bench",
           include: [],
           server: { deps: { external: [/\/packages\/runtime\/dist\//] } },
-          testTimeout: 120_000,
-          hookTimeout: 120_000,
+          testTimeout: BENCHMARK_LIMIT,
+          hookTimeout: BENCHMARK_LIMIT,
           benchmark: {
             include: ["packages/runtime/test/**/*.bench.ts"],
             // Vitest counts the export getters that a benchmark reads and warns about them. The counting makes the
@@ -328,8 +340,8 @@ export default defineConfig({
         test: {
           name: "runtime-xsd",
           include: ["packages/runtime/test/**/*.xsd.test.ts"],
-          testTimeout: 60_000,
-          hookTimeout: 60_000,
+          testTimeout: HANG_LIMIT,
+          hookTimeout: HANG_LIMIT,
         },
       },
     ],
