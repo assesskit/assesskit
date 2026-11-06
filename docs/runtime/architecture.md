@@ -35,7 +35,7 @@ flowchart TD
 ```
 
 A module imports only from lower layers, and imports never form cycles (lint). Every module may import `errors.ts`,
-`checks.ts`, `checks-internal.ts` and `random.ts`; `checks.ts` imports `errors.ts` and valibot only, `checks-internal.ts` holds the
+`checks.ts`, `checks-internal.ts` and `random.ts`; `checks.ts` ([checks](checks.md)) imports `errors.ts` and valibot only, `checks-internal.ts` holds the
 checks that only the runtime uses and imports `errors.ts` and `checks.ts`, and `random.ts` imports `errors.ts`, `checks.ts` and
 `checks-internal.ts`.
 `delivery` is the top library layer, and no runtime module imports it. `packages/runtime` never imports `@assesskit/player`.

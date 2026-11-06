@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import * as v from "valibot";
 import { describe, expect, it, vi } from "vitest";
+import { runGuideSamples } from "../../../scripts/guide-samples.js";
 import {
   abortSignalSchema,
   checkAbortSignal,
@@ -563,5 +565,13 @@ describe("the schemas of numbers and strings", () => {
     expect(() => parseWith(nonNegativeIntegerSchema, 2 ** 53, "N")).toThrow(DataError);
     expect(() => parseWith(positiveIntegerSchema, 0, "N")).toThrow(DataError);
     expect(() => parseWith(nonEmptyStringSchema, "", "N")).toThrow(DataError);
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const guide = readFileSync(new URL("../../../docs/runtime/checks.md", import.meta.url), "utf8");
+    const modules = { "@assesskit/runtime/checks": await import("../src/checks.js") };
+    expect(await runGuideSamples(guide, modules)).toBeGreaterThan(0);
   });
 });
