@@ -531,19 +531,25 @@ export function checkSecurityLimits(files: Files): Violation[] {
   return found;
 }
 
-/** The files that an entry re-exports values from, with the names it takes, or all of them. */
+/** A re-export of a source file: the path of the file it takes from, and the names it takes. */
 interface Reexport {
   readonly target: string;
   readonly names: ReadonlySet<string> | "all";
 }
 
-/** The re-exports of values in a source file, to files of the same package. */
-function reexportsOf(file: string, source: ts.SourceFile): Reexport[] {
+/** The source file of a specifier: a relative path from the file, or an entry of a package of the family; undefined for any other package. */
+function sourceOf(file: string, specifier: string, entries: ReadonlyMap<string, string>): string | undefined {
+  if (specifier.startsWith(".")) return posix.normalize(posix.join(dirname(file), specifier.replace(/\.js$/, ".ts")));
+  return entries.get(specifier);
+}
+
+/** The re-exports of values in a source file, relative or from a package of the family. */
+function reexportsOf(file: string, source: ts.SourceFile, entries: ReadonlyMap<string, string>): Reexport[] {
   return source.statements.flatMap((statement): Reexport[] => {
     if (!ts.isExportDeclaration(statement) || statement.isTypeOnly) return [];
     const specifier = (statement.moduleSpecifier as ts.StringLiteral | undefined)?.text;
-    if (specifier === undefined || !specifier.startsWith(".")) return [];
-    const target = posix.normalize(posix.join(dirname(file), specifier.replace(/\.js$/, ".ts")));
+    const target = specifier === undefined ? undefined : sourceOf(file, specifier, entries);
+    if (target === undefined) return [];
     const { exportClause } = statement;
     if (exportClause === undefined) return [{ target, names: "all" }];
     if (!ts.isNamedExports(exportClause)) return [];
@@ -554,41 +560,53 @@ function reexportsOf(file: string, source: ts.SourceFile): Reexport[] {
   });
 }
 
+/** The tag `@example` at the start of a line of a comment, and not an address such as `learner@example.org` in its text. */
+const EXAMPLE_TAG = /^[ \t]*\*[ \t]*@example\b/m;
+
 /**
  * Whether each exported function of an entry, among the names given and through the modules it re-exports, has an
- * `@example`: one entry per function.
+ * `@example`: one value for each function. A file that is being read already, in a cycle of re-exports, adds none.
  */
-function functionsOf(entry: string, files: Files, names: ReadonlySet<string> | "all" = "all"): boolean[] {
+function functionsOf(
+  entry: string,
+  files: Files,
+  entries: ReadonlyMap<string, string>,
+  names: ReadonlySet<string> | "all" = "all",
+  reading: ReadonlySet<string> = new Set(),
+): boolean[] {
   const text = files.get(entry);
-  if (text === undefined) return [];
+  if (text === undefined || reading.has(entry)) return [];
   const source = ts.createSourceFile(entry, text, ts.ScriptTarget.Latest, true);
   const declared = source.statements.flatMap((statement) =>
     ts.isFunctionDeclaration(statement) &&
     isExported(statement) &&
     statement.name !== undefined &&
     (names === "all" || names.has(statement.name.text))
-      ? [source.text.slice(statement.getFullStart(), statement.getStart(source)).includes("@example")]
+      ? [EXAMPLE_TAG.test(source.text.slice(statement.getFullStart(), statement.getStart(source)))]
       : [],
   );
-  const reexported = reexportsOf(entry, source).flatMap(({ target, names: taken }) =>
+  const reexported = reexportsOf(entry, source, entries).flatMap(({ target, names: taken }) =>
     functionsOf(
       target,
       files,
+      entries,
       names === "all" ? taken : taken === "all" ? names : new Set([...taken].filter((name) => names.has(name))),
+      new Set([...reading, entry]),
     ),
   );
   return [...declared, ...reexported];
 }
 
 /**
- * The entry of every subpath of a package, `exports` in its manifest, exports a function whose TSDoc has an `@example`: the
+ * The entry of every subpath of a package, as its manifest exports it, exports a function whose TSDoc has an `@example`: the
  * main function of the module, shown with its result as a comment. An entry that exports no function, such as the errors,
  * has none. The `tsdoc.test.ts` of each package runs every example and compares the results it shows.
  */
 export function checkModuleExamples(files: Files): Violation[] {
-  return [...subpathSources(files).values()]
+  const entries = subpathSources(files);
+  return [...entries.values()]
     .filter((entry) => {
-      const functions = functionsOf(entry, files);
+      const functions = functionsOf(entry, files, entries);
       return functions.length > 0 && !functions.includes(true);
     })
     .map((entry) => ({

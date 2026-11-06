@@ -371,6 +371,40 @@ describe("module examples", () => {
     expect(checkModuleExamples(files).map(({ file }) => file)).toStrictEqual(["packages/a/src/checks.ts"]);
   });
 
+  it("takes the tag at the start of a line of the comment, and not an address that holds the word", () => {
+    const files = repository({
+      "packages/a/package.json": manifest({ "./m": "./dist/m/index.d.ts", "./n": "./dist/n/index.d.ts" }),
+      "packages/a/src/m/index.ts": "/**\n * Mails learner@example.org.\n */\nexport function mail(): void {}\n",
+      "packages/a/src/n/index.ts":
+        "/**\n * Adds.\n *\n * @example\n * ```ts\n * add(); // => 1\n * ```\n */\nexport function add(): void {}\n",
+    });
+    expect(checkModuleExamples(files).map(({ file }) => file)).toStrictEqual(["packages/a/src/m/index.ts"]);
+  });
+
+  it("follows a re-export of an entry of another package, and stops at a cycle of re-exports", () => {
+    const files = repository({
+      "packages/a/package.json": manifest({ ".": "./dist/index.d.ts" }),
+      "packages/b/package.json": JSON.stringify({
+        name: "@family/b",
+        exports: {
+          ".": { types: "./dist/index.d.ts" },
+          "./loop": { types: "./dist/loop/index.d.ts" },
+          "./other": { types: "./dist/other.d.ts" },
+        },
+      }),
+      "packages/a/src/index.ts": 'export { add } from "@family/b";\nexport { subtract } from "@family/b/other";\n',
+      "packages/b/src/index.ts": 'export * from "./add.js";\n',
+      "packages/b/src/add.ts": documented,
+      "packages/b/src/other.ts": plain,
+      "packages/b/src/loop/index.ts": 'export * from "./again.js";\n',
+      "packages/b/src/loop/again.ts": 'export * from "./index.js";\nexport function loop(): void {}\n',
+    });
+    expect(checkModuleExamples(files).map(({ file }) => file)).toStrictEqual([
+      "packages/b/src/loop/index.ts",
+      "packages/b/src/other.ts",
+    ]);
+  });
+
   it("leaves out an entry that exports no function, a type, a class, a constant and an export without types", () => {
     const files = repository({
       "packages/a/package.json": JSON.stringify({
