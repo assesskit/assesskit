@@ -176,12 +176,9 @@ QTI's own and are not properties.
 
 ## Differences from the references
 
-| Case                                                                                            | Resolution                                                                                                                   |
-| ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| A duration with years or months, as in the example of the best practices guide                  | A `DataError` where it is decoded; durations are written as `PT<seconds>S` ([G14, G39](spec-gaps.md))                        |
-| The fields of a JSON record may be `"base": null`, but the fields of a record are single values | A NULL field is left out of the record ([G37](spec-gaps.md))                                                                 |
-| The mapping of the type `intOrIdentifier` to a value                                            | By JSON type: a number is an integer, a string an identifier; in a variable, by its declared base type ([G38](spec-gaps.md)) |
-| The lexical form of a `file` value                                                              | A reference everywhere; the bytes go through the host's callbacks ([G10](spec-gaps.md))                                      |
+| Case                                                                                                                                                                | Resolution                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| The JSON binding of the best practices guide: a duration with years or months, a record field of `"base": null`, `intOrIdentifier` and the lexical form of a `file` | As [the forms above](#the-json-of-variables) say, each for the reason in [values](values.md#json) ([G10, G14, G37, G38, G39](spec-gaps.md)) |
 
 ## Files
 
