@@ -240,6 +240,11 @@ describe("checkChoice", () => {
     );
     expect(() => checkChoice("d", "The mode", ["a", "b", "c"])).toThrow('The mode must be "a", "b" or "c", found "d".');
   });
+
+  it("names the one choice that there is, with no list", () => {
+    expect(() => checkChoice("a", "The mode", ["a"])).not.toThrow();
+    expect(() => checkChoice("d", "The mode", ["a"])).toThrow(new DataError('The mode must be "a", found "d".'));
+  });
 });
 
 describe("checkNonNegativeInteger", () => {

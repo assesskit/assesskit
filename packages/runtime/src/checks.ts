@@ -271,7 +271,7 @@ export function checkChoice<T extends string>(
 ): asserts value is T {
   if (!choices.some((choice) => choice === value)) {
     const quoted = choices.map((choice) => JSON.stringify(choice));
-    const list = `${quoted.slice(0, -1).join(", ")} or ${quoted.at(-1)}`;
+    const list = quoted.length < 2 ? quoted.join("") : `${quoted.slice(0, -1).join(", ")} or ${quoted.at(-1)}`;
     throw new DataError(`${label} must be ${list}, found ${describe(value)}.`);
   }
 }

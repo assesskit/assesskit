@@ -70,21 +70,21 @@ await raceAbort(Promise.resolve(7), { signal: new AbortController().signal }); /
 An entry point checks each argument once, where it reads it, with the `label` that names it: `The option <name>` for an option.
 Inner functions trust their callers. A check returns nothing, but `checkOptional`, which returns the field; a TypeScript caller gets the narrowed type from it.
 
-| Check                                   | Accepts                                                               | Message                                                                                |
-| --------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `checkRecord(value, message)`           | An object that is neither `null` nor an array                         | `<message>, found <value>.`                                                            |
-| `checkArray(value, message)`            | An array with no hole: a hole is no value of JSON, and `map` skips it | `<message>, found <value>.` or `<message>, found an array with a hole at index <i>.`   |
-| `checkFunction(value, message)`         | A function                                                            | `<message>, found <value>.`                                                            |
-| `checkProperties(record, label, known)` | A record with no property but the names in `known`                    | `<label> has the properties "a" and "b", found "c".` (`the property "a"` for one name) |
-| `checkOptional(value, check)`           | `undefined`, or a value that `check` accepts; `null` is checked       | The message of `check`; the call returns the value                                     |
-| `checkString(value, label)`             | A string                                                              | `<label> must be a string, found <value>.`                                             |
-| `checkNonEmptyString(value, label)`     | A string of at least one character                                    | `<label> must be a non-empty string, found <value>.`                                   |
-| `checkBoolean(value, label)`            | `true` or `false`                                                     | `<label> must be a boolean, found <value>.`                                            |
-| `checkChoice(value, label, choices)`    | One of the strings in `choices`                                       | `<label> must be "a", "b" or "c", found <value>.`                                      |
-| `checkNonNegativeInteger(value, label)` | A safe integer from 0                                                 | `<label> must be a non-negative integer, found <value>.`                               |
-| `checkPositive(value, label)`           | A finite number above 0                                               | `<label> must be a positive number, found <value>.`                                    |
-| `checkPositiveInteger(value, label)`    | A safe integer from 1                                                 | `<label> must be a positive integer, found <value>.`                                   |
-| `checkAbortSignal(value, label)`        | An `AbortSignal`                                                      | `<label> must be an AbortSignal, found <value>.`                                       |
+| Check                                   | Accepts                                                               | Message                                                                                             |
+| --------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `checkRecord(value, message)`           | An object that is neither `null` nor an array                         | `<message>, found <value>.`                                                                         |
+| `checkArray(value, message)`            | An array with no hole: a hole is no value of JSON, and `map` skips it | `<message>, found <value>.` or `<message>, found an array with a hole at index <i>.`                |
+| `checkFunction(value, message)`         | A function                                                            | `<message>, found <value>.`                                                                         |
+| `checkProperties(record, label, known)` | A record with no property but the names in `known`                    | `<label> has the properties "a" and "b", found "c".` (`the property "a"` for one name)              |
+| `checkOptional(value, check)`           | `undefined`, or a value that `check` accepts; `null` is checked       | The message of `check`; the call returns the value                                                  |
+| `checkString(value, label)`             | A string                                                              | `<label> must be a string, found <value>.`                                                          |
+| `checkNonEmptyString(value, label)`     | A string of at least one character                                    | `<label> must be a non-empty string, found <value>.`                                                |
+| `checkBoolean(value, label)`            | `true` or `false`                                                     | `<label> must be a boolean, found <value>.`                                                         |
+| `checkChoice(value, label, choices)`    | One of the strings in `choices`                                       | `<label> must be "a", found <value>.`, `"a" or "b"` for two choices and `"a", "b" or "c"` for three |
+| `checkNonNegativeInteger(value, label)` | A safe integer from 0                                                 | `<label> must be a non-negative integer, found <value>.`                                            |
+| `checkPositive(value, label)`           | A finite number above 0                                               | `<label> must be a positive number, found <value>.`                                                 |
+| `checkPositiveInteger(value, label)`    | A safe integer from 1                                                 | `<label> must be a positive integer, found <value>.`                                                |
+| `checkAbortSignal(value, label)`        | An `AbortSignal`                                                      | `<label> must be an AbortSignal, found <value>.`                                                    |
 
 `describe(value)` writes `<value>` into a message: a string quoted, an array, a function and any other object as `an array`,
 `a function` and `an object`, and any other value as `String` prints it. `isRecord(value)` is the test that `checkRecord` makes.
