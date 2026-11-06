@@ -69,6 +69,12 @@ const characterSchema = v.pipe(nonEmptyStringSchema, v.maxLength(MAX_CHARACTER_L
  * item's module resolution names it `stroke-writing-character`. The reference strokes are content of the bank, with the
  * license and the credit of their source: the module holds the data as it is given.
  *
+ * @param character - The character, which names the drawing for assistive technology.
+ * @param strokes - Its reference strokes, such as a file of hanzi-writer-data read as JSON.
+ * @returns The text of the module, a JavaScript file that defines the character and its strokes.
+ * @throws `DataError` when the character is not one, or the strokes are not reference strokes: no stroke, more than 64, a
+ * median missing, a path that is not SVG path data or longer than 4,096 characters, a median of fewer than 2 or more than
+ * 256 points, or another property.
  * @example
  * ```ts
  * import { writeCharacterModule } from "@assesskit/custom-interactions";
@@ -79,13 +85,6 @@ const characterSchema = v.pipe(nonEmptyStringSchema, v.maxLength(MAX_CHARACTER_L
  * });
  * text.startsWith('define({"character":"一","strokes":["M 100 400'); // => true
  * ```
- *
- * @param character - The character, which names the drawing for assistive technology.
- * @param strokes - Its reference strokes, such as a file of hanzi-writer-data read as JSON.
- * @returns The text of the module, a JavaScript file that defines the character and its strokes.
- * @throws `DataError` when the character is not one, or the strokes are not reference strokes: no stroke, more than 64, a
- * median missing, a path that is not SVG path data or longer than 4,096 characters, a median of fewer than 2 or more than
- * 256 points, or another property.
  */
 export function writeCharacterModule(character: string, strokes: CharacterStrokes): string {
   const symbol = parseWith(characterSchema, character, "The character");

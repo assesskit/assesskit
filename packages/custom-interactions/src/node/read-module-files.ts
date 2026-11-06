@@ -31,6 +31,12 @@ async function listBelow(folder: string): Promise<readonly string[]> {
  * interaction, which reaches no network, loads the interaction entirely from the package: the module and the files it
  * loads, MathLive's fonts for math entry.
  *
+ * @param name - The interaction.
+ * @param options - A signal that ends the reading.
+ * @returns The bytes of each file by its path in the package, the module first, under `modules/`. A tool that keeps the
+ * modules in another folder renames the keys.
+ * @throws `DataError` when the name is not an interaction of the package, or an option is not valid.
+ * @throws `AssesskitError` when the package was installed without its built modules.
  * @example
  * ```ts
  * import { readModuleFiles } from "@assesskit/custom-interactions/node";
@@ -39,13 +45,6 @@ async function listBelow(folder: string): Promise<readonly string[]> {
  * files.has("modules/math-entry.js"); // => true
  * files.has("modules/math-entry/fonts/KaTeX_Main-Regular.woff2"); // => true
  * ```
- *
- * @param name - The interaction.
- * @param options - A signal that ends the reading.
- * @returns The bytes of each file by its path in the package, the module first, under `modules/`. A tool that keeps the
- * modules in another folder renames the keys.
- * @throws `DataError` when the name is not an interaction of the package, or an option is not valid.
- * @throws `AssesskitError` when the package was installed without its built modules.
  */
 export async function readModuleFiles(
   name: InteractionName,
