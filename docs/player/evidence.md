@@ -26,14 +26,14 @@ flowchart LR
 
 ## Results
 
-The counts are those of the repository at `1647c74`, run on 2026-11-05: every test below passed, and none failed or was skipped. The
+The counts are those of the repository at `b543e977`, run on 2026-11-06: every test below passed, and none failed or was skipped. The
 tests in Node ran on Node.js 22.23.4, and the tests in a browser in Chromium; Firefox and WebKit run the same files in the job
 `browsers` of `.github/workflows/ci.yml`, and their results are not counted here.
 
 | Layer                                 | Count                                               | Where                                                                                                                                   |
 | ------------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Tests in Node, offline                | 871 tests in 23 files                               | `pnpm test`, project `player`                                                                                                           |
-| Tests in a browser                    | 1,195 tests in 27 files, in Chromium                | `pnpm test:browser`, project `player-browser`                                                                                           |
+| Tests in Node, offline                | 893 tests in 22 files                               | `pnpm test`, project `player`                                                                                                           |
+| Tests in a browser                    | 1,216 tests in 27 files, in Chromium                | `pnpm test:browser`, project `player-browser`                                                                                           |
 | Of these, tests that name axe or WCAG | 88                                                  | the titles of the tests of `*.browser.test.ts`, which say the rule or the success criterion that they hold                              |
 | Tests over the 1EdTech examples       | 49 tests in Node and 8 tests in 4 files in Chromium | `pnpm test:corpus`, projects `player-corpus-node` and `player-corpus`; `qti-examples` at commit `0a92fbb` of `scripts/corpus.lock.json` |
 | Tests against the published schemas   | 4 tests                                             | `pnpm test:xsd`, project `player-xsd`: the HTML elements of the ASI schema                                                              |

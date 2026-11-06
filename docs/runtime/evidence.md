@@ -17,14 +17,14 @@ flowchart LR
 
 ## Results
 
-The counts are those of the repository at `1647c74`, run on Node.js 22.23.4 on 2026-11-05: every test below passed, and none failed
+The counts are those of the repository at `b543e977`, run on Node.js 22.23.4 on 2026-11-06: every test below passed, and none failed
 or was skipped. The other counts come from the file that the last column names.
 
 | Layer                                          | Count                                                              | Where                                                                                                                                               |
 | ---------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tests in Node, offline                         | 2,623 tests in 32 files                                            | `pnpm test`, project `runtime`                                                                                                                      |
+| Tests in Node, offline                         | 2,731 tests in 32 files                                            | `pnpm test`, project `runtime`                                                                                                                      |
 | Tests over the 1EdTech examples                | 2,453 tests in 17 files                                            | `pnpm test:corpus`, project `runtime-corpus`; `qti-examples` at commit `0a92fbb` of `scripts/corpus.lock.json`, last changed 2026-11-01             |
-| Tests against the published schemas            | 177 tests in 15 files, over 33 schema files                        | `pnpm test:xsd`, project `runtime-xsd`; the files of `packages/runtime/src/node/schema-files.json`                                                  |
+| Tests against the published schemas            | 181 tests in 15 files, over 33 schema files                        | `pnpm test:xsd`, project `runtime-xsd`; the files of `packages/runtime/src/node/schema-files.json`                                                  |
 | Feature IDs of Appendix A of CERT              | 150: 140 `Implements`, 10 `Host`, none `Partly`                    | `scripts/conformance-features.json`, last changed 2026-11-02; the rows of [conformance](conformance.md), held by `scripts/test/conformance.test.ts` |
 | Items against Longsight `qti3-core` 0.13.3     | 446 items and 99 sessions compared, no difference but those pinned | `differential.corpus.test.ts`; the pinned differences are in `differential/accepted.ts`                                                             |
 | Items against Amp-up `qti3-item-player` 1.1.20 | 442 items compared; 50 cases are outside what the player supports  | `differential.corpus.test.ts`; the pinned differences are in `differential/accepted-amp-up.ts`                                                      |

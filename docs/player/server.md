@@ -191,8 +191,8 @@ what the parse has built. 32 MiB of empty objects take more than a gigabyte. An 
    nothing; a stale one is a `DataError`.
 2. The action is read with the runtime's `readCandidateAction` and its size limits. The actions of the host are refused there.
 3. The client-action policy applies: an action outside `clientActions` is a `DataError`.
-4. The action is stamped with `stamp(state, action, clock.now())`, which never goes back, so a clock that steps back refuses
-   nothing, and applied.
+4. The action is stamped with `stamp(state, action, clock.now())` and applied. `stamp` never goes back, so a clock that steps
+   back refuses nothing.
 5. The deadlines of the new state are scheduled, then the state is saved by version, then the events are forwarded.
 6. The answer is the view, with the actions the policy allows, the signed asset prefixes and the documents of the
    content, among them the pronunciation lexicons of the item. A refusal of the engine is in the envelope and the state stays as it was; the `seq` is still stored, so a repeat
