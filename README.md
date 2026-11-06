@@ -43,22 +43,10 @@ document to its guide and its test.
 
 The runtime owns what QTI defines that is not presentation or platform; the player owns presentation and the platform.
 
-| Concern                                                                | runtime                             | player                                                                        |
-| ---------------------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------- |
-| Reading, writing and validating content, packages, results, usage data | yes                                 | uses                                                                          |
-| Response, template and outcome processing                              | yes                                 |                                                                               |
-| Navigation, submission, time limits, attempts, variants                | the engine                          | applies it on a device, hosts it on a server                                  |
-| Rendering, MathML, stylesheets, accessibility in the interface         |                                     | yes                                                                           |
-| Portable custom interactions                                           | the data, the codec and the state   | loading and API                                                               |
-| The candidate view, without answer keys                                | builds it                           | transports and shows it                                                       |
-| External scoring, computer adaptive testing                            | requests, covers, scorer view, port | scorer interface, adapters to engines                                         |
-| LTI 1.3 with grade services, Caliper                                   | results and events                  | ports; [interopkit](https://github.com/interopkit/interopkit) implements them |
-| The validator command line                                             | yes                                 |                                                                               |
-
 The two meet in JSON: views, actions and state, with values in a self-describing form that needs no declaration to decode. On a
 server the player hosts the engine, so clients hold only views and send actions, and the answer keys and the seed never leave;
 for practice the engine runs in the browser. [Architecture](https://assesskit.wakan.dev/_assesskit/runtime/architecture/#boundary-with-the-player)
-has the full list of who owns what, and [Delivery](https://assesskit.wakan.dev/_assesskit/runtime/delivery/#modes) the two modes.
+lists who owns what for each concern, and [Delivery](https://assesskit.wakan.dev/_assesskit/runtime/delivery/#modes) the two modes.
 
 ## Documentation
 

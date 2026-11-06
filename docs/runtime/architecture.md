@@ -5,7 +5,7 @@ The runtime is one package with a subpath per module.
 ## Layers
 
 An arrow points from a layer to the layers it imports. `@assesskit/player` imports the runtime only through its published
-subpaths.
+subpaths, never by relative path.
 
 ```mermaid
 flowchart TD
@@ -38,8 +38,7 @@ A module imports only from lower layers, and imports never form cycles (lint). E
 `checks.ts`, `checks-internal.ts` and `random.ts`; `checks.ts` imports `errors.ts` and valibot only, `checks-internal.ts` holds the
 checks that only the runtime uses and imports `errors.ts` and `checks.ts`, and `random.ts` imports `errors.ts`, `checks.ts` and
 `checks-internal.ts`.
-`delivery` is the top library layer, and no runtime module imports it. `packages/runtime` never imports `@assesskit/player`, and
-`@assesskit/player` imports the runtime only through its published subpaths, never by relative path.
+`delivery` is the top library layer, and no runtime module imports it. `packages/runtime` never imports `@assesskit/player`.
 
 | Layer | Modules                                                     | Imports                                                                                                                                 |
 | ----- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
