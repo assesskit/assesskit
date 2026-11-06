@@ -617,7 +617,6 @@ export function checkModuleExamples(files: Files): Violation[] {
     }));
 }
 
-/** Every check, in the order of the standards. */
 /** The types of the standard library that are mutable lists or records, and so are not a result. */
 const MUTABLE_CONTAINERS = new Set(["Array", "Record", "Map", "Set"]);
 
@@ -698,6 +697,7 @@ export function checkReadonlyResults(files: Files): Violation[] {
   return found;
 }
 
+/** Every check, in the order of the standards. */
 export const CHECKS: readonly ((files: Files) => Violation[])[] = [
   checkSectionSigns,
   checkTestTitles,
