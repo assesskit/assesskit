@@ -1,8 +1,10 @@
 name: Docs
 
+# The site is built and deployed on each push to main, and on "Run workflow", which deploys it again without a push.
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
