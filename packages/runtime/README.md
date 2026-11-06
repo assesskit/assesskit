@@ -233,7 +233,7 @@ not throw: it returns `Issue`s, each with the specification reference that defin
 | Usage data                                  | 3.0                                                                            |
 | Personal needs and preferences              | 3.0, the QTI profile                                                           |
 | Computer adaptive testing                   | 1.0                                                                            |
-| Node.js (`node`, `cli`)                     | 22 and later; CI runs 22 and 24                                                |
+| Node.js (`node`, `cli`)                     | 22 and later; CI runs 22, 24 and 26                                            |
 | Other runtimes (every other subpath)        | any that supports ECMAScript 2023                                              |
 
 The runtime does not read QTI 2.x content.
