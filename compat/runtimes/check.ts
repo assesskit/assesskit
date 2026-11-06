@@ -4,9 +4,11 @@ import { createRequire } from "node:module";
 import { connect, createServer } from "node:net";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import { build } from "esbuild";
+import { build, type Metafile } from "esbuild";
 import type { Results } from "./scenario.ts";
 
+/** The root of the repository: the metafile of a bundle names its inputs by their path from it. */
+const ROOT = join(import.meta.dirname, "../..");
 const DIST = join(import.meta.dirname, ".dist");
 /** The workerd program: the package of that name exports the path of the binary for the platform. */
 const WORKERD = (createRequire(import.meta.url)("workerd") as { readonly default: string }).default;
@@ -49,6 +51,7 @@ const EXPECTED: Omit<Results, "state"> & { readonly state: Pick<Results["state"]
 
 /** The options that both bundles share: one ES module of the packages as they ship, for a platform with the web standards alone. */
 const SHARED = {
+  absWorkingDir: ROOT,
   outdir: DIST,
   bundle: true,
   format: "esm",
@@ -56,13 +59,35 @@ const SHARED = {
   target: "es2022",
   // The packages as built, whatever the paths of the type checker say.
   tsconfigRaw: {},
+  metafile: true,
   logLevel: "warning",
 } as const;
 
-/** Bundles the entries into one file each, which every runtime then runs as it is. */
+/** A file of a package that is not in its `dist`, such as a source, and a file that is. */
+const NOT_SHIPPED = /^packages\/[^/]+\/(?!dist\/)/;
+const SHIPPED = /^packages\/[^/]+\/dist\//;
+
+/**
+ * Throws when a bundle holds a file of a package that the package does not ship, or holds none that it ships, so that the
+ * pattern above could not tell the one from the other.
+ */
+function assertShipped(name: string, { inputs }: Metafile): void {
+  const files = Object.keys(inputs);
+  const unshipped = files.filter((file) => NOT_SHIPPED.test(file));
+  if (unshipped.length > 0) {
+    throw new Error(`${name} holds ${unshipped.length} files that the packages do not ship, such as ${unshipped[0]}.`);
+  }
+  if (!files.some((file) => SHIPPED.test(file))) {
+    throw new Error(`${name} holds no file of the dist of a package, so this check cannot tell what the bundle holds.`);
+  }
+}
+
+/** Bundles the entries into one file each, which every runtime then runs as it is: the packages as they ship, no more. */
 async function bundle(): Promise<void> {
-  await build({ ...SHARED, entryPoints: { run: join(import.meta.dirname, "run.ts") } });
-  await build({ ...SHARED, entryPoints: { worker: join(import.meta.dirname, "worker.ts") } });
+  const run = await build({ ...SHARED, entryPoints: { run: join(import.meta.dirname, "run.ts") } });
+  const worker = await build({ ...SHARED, entryPoints: { worker: join(import.meta.dirname, "worker.ts") } });
+  assertShipped("run.js", run.metafile);
+  assertShipped("worker.js", worker.metafile);
 }
 
 /** Runs a command and returns what it printed. */
