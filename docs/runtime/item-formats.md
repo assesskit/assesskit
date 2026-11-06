@@ -202,7 +202,7 @@ nodes, 256 levels and 256 attributes of an element.
 
 A file of the most elements, 813 questions of 100 answers, reads in a heap of 72 MiB at most on Node.js 22, 24 and 26, and a
 Moodle XML file of the most nodes of its tree and the most elements of its items in 96 MiB; essays
-of the most tags to the limit of elements, in 48 MiB, and in 88 ms on a laptop. The parser of HTML moves the children of an
+of the most tags to the limit of elements, in 48 MiB. The parser of HTML moves the children of an
 element one by one when it mends tags that close out of order, in time that grows with their square, which `maxTextTags` bounds. A writer runs
 an item's processing on at most 1,023 sets of choices, every set of 10 choices, and beside each choice of no credit on at most
 64 sets of choices of credit; on as many texts and numbers as the item names, at most `maxAnswers`; and on each pair of a match,

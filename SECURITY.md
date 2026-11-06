@@ -74,7 +74,7 @@ flowchart LR
   longer list with the error `assesskit/validate/findings-stopped` instead of throwing. Content that is wrong at every
   element of a document at the XML limits makes an issue for each element, up to 300,000 of them, and a package of such
   documents, small once compressed, would hold gigabytes of them. libxml2 still reports every violation of the schema to
-  `validateXmlFiles`, so such a document takes minutes there; validate untrusted uploads off the request path.
+  `validateXmlFiles`, so such a document is slow there; validate untrusted uploads off the request path.
 - **Command line.** `assesskit validate` reads the path it is given and the schema directory, and no other file: an `xi:include`
   of a lone document is not resolved. It refuses a package that breaks a rule of **Packages** below, and an XML file above
   `maxBytes` of `parseXml` before it reads the file, with the exit code 2.
@@ -265,7 +265,7 @@ items, the rubric for the scorer and the scoring rubric of the outcome ([scoring
 - An endpoint that receives a submission limits the size of the body before it parses it, and calls `checkSubmission` on the
   parsed value before any other use: the check refuses what `buildSubmission` does not write, the three names that reach the
   prototype and content nested deeper than 256 levels, in time that grows with the body (a body of 12 MiB with a million
-  nodes: 0.2 s and 85 MiB of heap, 2026-11-06). It checks the form, not the sender.
+  nodes: 85 MiB of heap, 2026-11-06). It checks the form, not the sender.
 - `mountSubmission` draws the content of a submission with the renderer of the player, so the content is sanitized as a
   candidate's is. It draws a file that a candidate submitted as an image, audio, video or a link, and never in a frame, because
   the candidate chose its bytes and its media type. The URL of a file comes from the host's `files.url`, which must give an

@@ -139,9 +139,8 @@ client by itself: a host that has views of its own shows them through a `Session
 
 The map is hidden where the test part has fewer than two items. After the end of a test that the engine lets the candidate review (`reviewAfterEnd` of the [runtime](../runtime/delivery.md#review-after-the-end)), the map lists the items presented in every part, and choosing one sends `review` in place of `move`; the buttons for the review and the solution of the item shown follow `view.actions`.
 
-The map is drawn again with each view, and WebKit lays out a long one in a time that grows faster than its entries: about seven
-seconds for 30,000 items on a laptop. A test part of thousands of items in Safari is better served by a host that draws its
-own map (`chrome: false`) and shows a part of it.
+The map is drawn again with each view, and WebKit lays out a long one in a time that grows faster than its entries. A test part of
+thousands of items in Safari is better served by a host that draws its own map (`chrome: false`) and shows a part of it.
 
 ## LTI items
 

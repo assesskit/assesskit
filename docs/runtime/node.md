@@ -123,8 +123,8 @@ after loading is never compiled.
 
 The list keeps the first `maxFindings` issues of all the files, 1,000 unless the option says otherwise, and ends with the error
 `assesskit/validate/findings-stopped` when there were more, as the lists of [validate](validate.md#issues) do. libxml2 still
-reports every violation to the runtime, at about half a millisecond each, so a document at the size limit of `parseXml` that
-breaks the schema at every element takes minutes to validate.
+reports every violation to the runtime, one call each, so a document at the size limit of `parseXml` that breaks the schema at
+every element is slow to validate.
 
 A document goes through `parseXml` first, with the default limits, so a DOCTYPE, a document over a limit and one that is not
 well-formed never reach libxml2. libxml2 also runs with network access and external entities off. It throws `DataError` for
@@ -133,8 +133,8 @@ arguments of the wrong type and for a `SchemaSet` that is closed or that `loadSc
 ## Compiled once
 
 A schema is compiled the first time a document needs it, and the compiled schema stays in the `SchemaSet` for every later call.
-Compiling an ASI schema takes about 2 seconds and adds about 120 MB of memory; every schema of another specification compiles in
-under 10 ms. After that a document validates in well under a millisecond. Keep one `SchemaSet` per process or per test run, and call
+Compiling an ASI schema is the slow step and adds about 120 MB of memory; every schema of another specification compiles
+quickly, and after the compile a document validates in a fraction of it. Keep one `SchemaSet` per process or per test run, and call
 `close()` when done: libxml2-wasm needs the compiled schemas disposed explicitly.
 
 libxml2-wasm keeps its input providers (how it reads the schemas that a schema imports) in one table for the process. The runtime
@@ -144,22 +144,20 @@ providers should do so after compiling.
 ## Engine
 
 Two npm packages compile libxml2 to WebAssembly. The runtime uses `libxml2-wasm`; the measurements that decided it are below
-(one run each on macOS with Node.js 26.8.1; the ratios matter more than the values). The schema is `imsqti_asiv3p0p1_v1p0.xsd`,
+(one run each on macOS with Node.js 26.8.1). The schema is `imsqti_asiv3p0p1_v1p0.xsd`,
 18.8 MB with 9 imported files.
 
-| Measure                                            | `libxml2-wasm` 0.7.2 (libxml2 2.15.1)           | `xmllint-wasm` 5.3.0 (libxml2 2.13.8)                                                   |
-| -------------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Compile the ASI schema                             | 2.0 s, once per `SchemaSet`                     | 1.6 to 1.8 s on every call                                                              |
-| Validate the 58 example items                      | 11 ms after the compile                         | 1.9 s in one call; 5 items in 5 calls take 8.8 s                                        |
-| Peak resident memory for the process               | 173 MB                                          | 790 to 885 MB                                                                           |
-| Memory limit                                       | grows as needed                                 | the default 16 MiB aborts the compile; 64 MiB fails, 128 MiB works                      |
-| Schemas that import others                         | an input provider serves them by URL from bytes | every `schemaLocation` in the 18.8 MB schema must be rewritten to a preloaded file name |
-| `XInclude.xsd` (UTF-16 with a byte order mark)     | read from bytes                                 | contents are strings: the file must be transcoded and its declaration rewritten         |
-| Each other schema (usage data, manifest, PNP, ...) | 3 to 8 ms, once                                 | about 30 ms per call                                                                    |
+| Measure                                        | `libxml2-wasm` 0.7.2 (libxml2 2.15.1)           | `xmllint-wasm` 5.3.0 (libxml2 2.13.8)                                                   |
+| ---------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Peak resident memory for the process           | 173 MB                                          | 790 to 885 MB                                                                           |
+| Memory limit                                   | grows as needed                                 | the default 16 MiB aborts the compile; 64 MiB fails, 128 MiB works                      |
+| Schemas that import others                     | an input provider serves them by URL from bytes | every `schemaLocation` in the 18.8 MB schema must be rewritten to a preloaded file name |
+| `XInclude.xsd` (UTF-16 with a byte order mark) | read from bytes                                 | contents are strings: the file must be transcoded and its declaration rewritten         |
 
 `xmllint-wasm` runs the `xmllint` program in a worker for every call, so it compiles the schema again each time and cannot
-keep it. `libxml2-wasm` compiles an `XsdValidator` and reuses it. Its risks: its README marks XSD `import` and `include` support experimental, and `xmlRegisterInputProvider` is marked alpha and
-is process-wide. Both are covered by the tests, which compile each primary schema and the schemas it imports.
+keep it. `libxml2-wasm` compiles an `XsdValidator` and reuses it, which makes it about 170 times faster on the 58 example items once
+compiled. Its risks: its README marks XSD `import` and `include` support experimental, and `xmlRegisterInputProvider` is marked
+alpha and is process-wide. Both are covered by the tests, which compile each primary schema and the schemas it imports.
 
 ## Errors
 

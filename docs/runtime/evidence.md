@@ -32,7 +32,7 @@ or was skipped. The other counts come from the file that the last column names.
 | Runtimes                                       | Node.js, Deno, Bun and workerd                                     | `compat/runtimes/`; [runtimes](#runtimes)                                                                                                           |
 
 The 1EdTech examples are the `qtiv3-examples` of `1EdTech/qti-examples`: 24 packages and 327 XML files in the clone that `pnpm corpus`
-makes at the pinned commit. The speed of each hot path against its reference is in [performance](performance.md).
+makes at the pinned commit. The benchmark of each hot path against its reference is in [performance](performance.md).
 ## Citations
 
 A rule cites its source by an ID and a section, such as `INFO section 2.11.3.37`.

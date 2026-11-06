@@ -193,9 +193,9 @@ body sets them:
 
 The limits are `DEFAULT_KEY_LIMITS` of [keys](keys.md), which an operator reads its key within as well. Compiling is linear in
 the entries. The worst item within them, 256 orders of 1,000 choices scored per position, a condition for each choice, compiles
-in 139 ms on a laptop and ends in a heap of 224 MiB on Node.js 22, 24 and 26. Its XML holds about 14 nodes for each choice: such
+in a heap of 224 MiB at most on Node.js 22, 24 and 26. Its XML holds about 14 nodes for each choice: such
 an item has more nodes than the 300,000 that `DEFAULT_XML_LIMITS` lets a reader take, and a host that compiles keys this large
-reads its items with raised XML limits ([xml](xml.md#limits)). An item of a few responses compiles in 0.04 ms.
+reads its items with raised XML limits ([xml](xml.md#limits)).
 
 ## Errors
 

@@ -58,5 +58,5 @@ By their documentation and source trees of 2026-11-02:
 ## Where the evidence is
 
 [Evidence](evidence.md) gives the counts of tests, the corpus and the schemas, and the comparison with Longsight `qti3-core` and Amp-up
-`qti3-item-player`; [conformance](conformance.md) maps every feature ID of the conformance document; [performance](performance.md) times the
-runtime against Longsight and libxml2; [supported](supported.md) says what is read, written, validated and run, and what is left out.
+`qti3-item-player`; [conformance](conformance.md) maps every feature ID of the conformance document; [performance](performance.md) says how the
+benchmarks hold the runtime against Longsight and libxml2 and lists the sizes of its entry points; [supported](supported.md) says what is read, written, validated and run, and what is left out.

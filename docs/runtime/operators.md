@@ -394,11 +394,11 @@ means absent is the empty list or object (`units`, `credit`, `variables`, `patte
 | Lines of worked steps                                                                    | `maxSteps` of `compareMathSteps`                | 200     | none   | `SecurityError` with `limit` `maxSteps`                                               |
 | Points of a hotspot response                                                             | the count of the key's areas                    | none    | none   | Unreadable: NULL                                                                      |
 
-The reader is linear in the text, and the comparator evaluates 24 points; the worst expression of 2,000 characters reads and
-compares in a few milliseconds (1.4 ms for a sum of 1,000 terms on a laptop). The credit tiers of a text key measure one banded
-edit distance for each string and accepted text, at most 2,000 × 129 cells, whatever the count of tiers: the worst key, 1,000
-accepted texts of 2,000 characters each 65 edits from a response of as many, scores in about 1 s on a laptop. A hotspot
-response tests at most 1,000 points against areas of 4,000 coordinates, then matches them by Hopcroft and Karp.
+The reader is linear in the text, and the comparator evaluates 24 points: the worst expression of 2,000 characters costs one
+read and 24 evaluations. The credit tiers of a text key measure one banded edit distance for each string and accepted text, at
+most 2,000 × 129 cells, whatever the count of tiers: the worst key, 1,000 accepted texts of 2,000 characters each 65 edits from
+a response of as many, fills 1,000 such bands. A hotspot response tests at most 1,000 points against areas of 4,000
+coordinates, then matches them by Hopcroft and Karp.
 
 ## Errors
 
@@ -437,36 +437,31 @@ response tests at most 1,000 points against areas of 4,000 coordinates, then mat
 ## Build or adopt
 
 The trusted libraries for three generic parts of these operators, each measured in place of the code it would replace, at its best
-setting: `leven` with `maxDistance`, `decimal.js` at 20 digits and at 900, and `complex.js`. Times are the fastest samples on a
-laptop with Node.js 22, on 2026-11-04 and 2026-11-05; sizes are esbuild's for the browser baseline, after gzip. All three parts
-stay built.
+setting: `leven` with `maxDistance`, `decimal.js` at 20 digits and at 900, and `complex.js`. Sizes are esbuild's for the
+browser baseline, after gzip. All three parts stay built.
 
-| The edit distance of a credit tier                                      | `leven` 4.1.0 (MIT) | Built: a band, in code points |
-| ----------------------------------------------------------------------- | ------------------- | ----------------------------- |
-| Alone                                                                   | 360 B               | 391 B                         |
-| The subpath `operators`                                                 | 34,374 B            | 34,321 B                      |
-| The text benchmark: 200 words against 50 answers, a tier of 2 edits     | 0.37 ms             | 0.53 ms                       |
-| A response and a text of 2,000 characters, 50 edits apart, a tier of 64 | 12.2 ms             | 0.93 ms                       |
-| The same text, a response past the tier                                 | 0.83 ms             | 0.11 ms                       |
-| The 1,440 cases of the reference                                        | All agree           | All agree                     |
-| Key `𠮷野`, response `吉野`, a tier of 1 edit                           | 0: two edits        | 0.5: one edit                 |
+| The edit distance of a credit tier            | `leven` 4.1.0 (MIT) | Built: a band, in code points |
+| --------------------------------------------- | ------------------- | ----------------------------- |
+| Alone                                         | 360 B               | 391 B                         |
+| The subpath `operators`                       | 34,374 B            | 34,321 B                      |
+| The 1,440 cases of the reference              | All agree           | All agree                     |
+| Key `𠮷野`, response `吉野`, a tier of 1 edit | 0: two edits        | 0.5: one edit                 |
 
 `leven` is faster on short words and weighs the same, but it counts UTF-16 code units where the rule counts code points, and
 `maxDistance` stops it only once a whole row passes the cap: it computes each row whole, so two long texts near each other cost
 the whole table, 13 times the band, which holds each accepted text to 2,000 × 129 cells. Mapping each code point above U+FFFF to
 one unit would mend the count, not the time.
 
-| The exact numbers of `number-equivalent`                                          | `decimal.js` 10.6.0 (MIT)                    | Built: BigInt rationals |
-| --------------------------------------------------------------------------------- | -------------------------------------------- | ----------------------- |
-| Alone                                                                             | 13,027 B                                     | 558 B                   |
-| The subpath `operators`                                                           | 47,769 B, over its budget of 43,000          | 34,321 B                |
-| The number benchmark: `1 1/4 km` against a key with units, a tolerance and a tier | 5.0 µs at 20 digits, 5.3 µs at 900           | 3.3 µs                  |
-| The 3,158 cases of the reference                                                  | All agree, at both                           | All agree               |
-| Key 4 with the unit `yd` of factor 3, response `4/3 yd`                           | 0: 1.33… × 3 falls short of 4, at any digits | 1                       |
+| The exact numbers of `number-equivalent`                | `decimal.js` 10.6.0 (MIT)                    | Built: BigInt rationals |
+| ------------------------------------------------------- | -------------------------------------------- | ----------------------- |
+| Alone                                                   | 13,027 B                                     | 558 B                   |
+| The subpath `operators`                                 | 47,769 B, over its budget of 43,000          | 34,321 B                |
+| The 3,158 cases of the reference                        | All agree, at both                           | All agree               |
+| Key 4 with the unit `yd` of factor 3, response `4/3 yd` | 0: 1.33… × 3 falls short of 4, at any digits | 1                       |
 
 A decimal holds no third, so a fraction under a unit's factor can miss a value that it equals, and its 13 kB hold no reading of
-units, fractions or `\times10^{n}`, which would stay built. No case of the reference tells the two apart, so these samples hold
-what does:
+units, fractions or `\times10^{n}`, which would stay built. The built rationals are also about 1.5 times faster on the number
+benchmark, at 20 digits as at 900. No case of the reference tells the two apart, so these samples hold what does:
 
 ```ts
 import { buildOperatorCall, createScoringOperators, OPERATOR_DEFINITIONS } from "@assesskit/runtime/operators";
@@ -498,13 +493,11 @@ operators.get(OPERATOR_DEFINITIONS["number-equivalent"])(of("4/3 yd"), length).v
 | The complex arithmetic of the comparator (`complex.ts`)              | `complex.js` 2.4.3 (MIT)                                                                        | Built: SymPy's branches |
 | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------- |
 | The subpath `operators`                                              | 36,411 B                                                                                        | 34,392 B                |
-| The expression benchmark                                             | 0.04 ms                                                                                         | 0.02 ms                 |
-| A sum of 1,000 terms against a key of as many                        | 6.59 ms                                                                                         | 3.57 ms                 |
 | The 738 values of the reference, to SymPy's at 30 digits within 1e-6 | 734: `tanh(e^{5x})` at x = 9.4 is NaN, and the cube root of a negative sine takes the conjugate | All 738                 |
 
-`complex.js` was measured as a thin adapter in place of `complex.ts`, with no case of its own. It is slower and larger, and it
-leaves SymPy's principal branches at four values of the reference: it overflows in `tanh` where the value is 1, and it reads the
-imaginary part −0 that the sine of a real gives as below the cut, where SymPy reads a real. The verdicts of the reference agree.
+`complex.js` was measured as a thin adapter in place of `complex.ts`, with no case of its own. It is about twice as slow on the
+expression benchmark and larger, and it leaves SymPy's principal branches at four values of the reference: it overflows in
+`tanh` where the value is 1, and it reads the imaginary part −0 that the sine of a real gives as below the cut, where SymPy reads a real. The verdicts of the reference agree.
 
 ## Files
 

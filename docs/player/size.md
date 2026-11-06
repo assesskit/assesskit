@@ -120,21 +120,21 @@ are built by `scripts/build-static.ts`, which the test calls, so it measures wha
 ## Mount time
 
 `pnpm bench` also builds the packages and times the mounts of the build in Chromium with the CPU slowed 4 times through the
-DevTools protocol, as a mid-range phone is, and fails when the fastest of 5 samples is above its budget. The files are `mount-time.browser.bench.ts` and
-`mount-budgets.ts` in `packages/player/test/`; the browser pane of the run is the Chromium of Playwright.
+DevTools protocol, as a mid-range phone is, and fails when the fastest of 5 samples is above its budget. The files are
+`mount-time.browser.bench.ts` and `mount-budgets.ts` in `packages/player/test/`; the browser pane of the run is the Chromium of
+Playwright. The docs publish no measured time: it differs on every machine, and the benchmarks hold it.
 
-| Mount                                                      | On the CI runner | On a laptop | Budget |
-| ---------------------------------------------------------- | ---------------- | ----------- | ------ |
-| `mountDelivery` over a test, until the first item is shown | 20.4 ms          | 7 ms        | 200 ms |
-| 10 calls of `mountItem` on one page, until all are shown   | 30.1 ms          | 7 ms        | 200 ms |
-| Turning on the highlighter over a passage of 2,000 words   | 33.5 ms          | 13 ms       | 200 ms |
+| Mount                                                      |
+| ---------------------------------------------------------- |
+| `mountDelivery` over a test, until the first item is shown |
+| 10 calls of `mountItem` on one page, until all are shown   |
+| Turning on the highlighter over a passage of 2,000 words   |
 
-A budget is five times the fastest sample, the fastest of five runs of the build on the CI runner on 2026-11-05, rounded up to
-one significant digit: the rule of the other benchmarks of the repository ([performance](../runtime/performance.md#budgets)),
-whose sample is the one that the CI runner took, because the gate runs there. The runner takes 3 to 4 times as long as a
-laptop, and one run of it takes up to 1.6 times as long as another on the same code (the lesson page 30.1 to 48.9 ms), so a
-budget of five times the sample of a laptop fails on the runner with no change in the code. A mount must become several times slower on the runner before it fails
-its budget; the sizes above guard the load. The times of the laptop and of the runner are those of the build on 2026-11-05.
+A budget is five times the fastest sample of five runs of the build on the CI runner, rounded up to one significant digit: the
+rule of the other benchmarks of the repository ([performance](../runtime/performance.md#budgets)), whose sample is the one
+that the CI runner took, because the gate runs there. The runner is several times slower than a laptop, and one run of it is
+slower than another on the same code, so a budget of five times the sample of a laptop fails on the runner with no change in
+the code. A mount must become several times slower on the runner before it fails its budget; the sizes above guard the load.
 
 ### Against the Amp-up player
 
@@ -142,20 +142,12 @@ The lesson page also comes from the documents of its ten items, in the player an
 Vue 2), the player that holds the certifications of 1EdTech for QTI 3 delivery, with the CPU slowed 4 times. The player
 reads each item, starts a local session and mounts it with `mountItem`; the Amp-up player mounts a player for each item and
 loads its document with `loadItemFromXml`. Both are timed until the text of every item is in the page, checked at each task
-rather than at each frame, in turns over 5 samples; the gate compares the fastest of each.
+rather than at each frame, in turns over 5 samples; the gate compares the fastest of each. The target is parity or better,
+and the budget is a ratio, twice the highest ratio that the runner measured, rounded up to one significant digit: the gate
+runs there, and a ratio holds on any machine within the noise of a shared one
+([performance](../runtime/performance.md#budgets)). The player draws each item in shadow roots of its own, with the
+stylesheet of a content root, a status region and the controls of the supports, where the Amp-up player draws plain elements;
+the time of the page is that of the player plus the runtime's reading, gate and start of the ten items. A local session loads
+the engine with `import()` once for a page, not once for each session.
 
-| Row                                                            | The player | Amp-up  | Ratio | Budget (ratio) |
-| -------------------------------------------------------------- | ---------- | ------- | ----- | -------------- |
-| A lesson page of ten items from their documents, on the runner | 73.9 ms    | 83.1 ms | 0.89  | 2              |
-| The same page on a laptop                                      | 14.5 ms    | 14.6 ms | 0.99  | 2              |
-
-The times are those of the run whose ratio is the median of five runs of the build on the CI runner on 2026-11-05, which gave
-0.80 to 0.98, and of the run of a laptop whose ratio is the median of three, which gave 0.43 to 1.07. The budget is twice the highest
-ratio of the runner, 0.98, rounded up to one significant digit: the gate runs there, and a ratio holds on any machine within the noise
-of a shared one ([performance](../runtime/performance.md#budgets)). The player draws each
-item in shadow roots of its own, with the stylesheet of a content root, a status region and the controls of the supports, where
-the Amp-up player draws plain elements; with the sessions made, the player takes 7 ms on a laptop for the same page (the lesson row
-above), and the runtime's reading, gate and start of the ten items the rest. A local session loads the engine with `import()` once for a page, not once for each session.
-
-The times do not include loading and parsing the bundle, which `size.test.ts` bounds by bytes: with the CPU slowed 4 times
-the bundle of `mountDelivery` loaded, parsed and evaluated in 47 ms, and that of `mountItem` in 46 ms.
+The mounts do not include loading and parsing the bundle, which `size.test.ts` bounds by bytes.

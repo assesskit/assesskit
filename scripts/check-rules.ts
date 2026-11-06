@@ -37,9 +37,9 @@ const SKIPPED = new Set(["node_modules", ".git", "dist", "coverage", ".cache", "
 /** The generated API reference, which no test reads. */
 const API_DOCS = "docs/api";
 /**
- * The longest a test of a mutated copy may take, in milliseconds: a removed deadline makes a test wait for ever. The slowest test
- * that a rule runs takes 0.7 s on a quiet machine, in a fresh copy as well, and 4.2 s on a shared laptop with 6 runnable
- * processes for each core. Five times that, rounded up to one significant digit, is 30 s, the rule of the benchmark budgets.
+ * The longest a test of a mutated copy may take, in milliseconds: a removed deadline makes a test wait for ever. It is five
+ * times what the slowest test that a rule runs takes on a shared machine with several runnable processes for each core,
+ * rounded up to one significant digit: the rule of the benchmark budgets.
  */
 const TEST_TIMEOUT_MS = 30_000;
 /** The same for a test in a browser, which starts a page, waits for messages between frames and keeps quiet to see none. */

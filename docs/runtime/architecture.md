@@ -147,7 +147,7 @@ session replays to the same state and events from its seed and its actions.
 - A subpath holds only the modules it uses, which a test holds for each ([Performance](performance.md#entry-points)).
 
 No compiled or indexed form of the model exists, because the budgets hold. [Performance](performance.md) lists the
-budgets and the runtime's times against Longsight `qti3-core` and libxml2.
+benchmarks against Longsight `qti3-core` and libxml2 and the budgets that hold them.
 
 ## Security
 
