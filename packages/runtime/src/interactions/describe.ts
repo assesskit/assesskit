@@ -399,6 +399,26 @@ const DESCRIPTORS = new WeakMap<AssessmentItem, readonly InteractionDescriptor[]
  * content and the position object interactions of a stage; none for an item without a body.
  * @throws `DataError` when `item` is not an object of the model of `qti-assessment-item`.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ * @example
+ * ```ts
+ * import { readAsi } from "@assesskit/runtime/asi";
+ * import { describeInteractions } from "@assesskit/runtime/interactions";
+ *
+ * const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+ *     identifier="capital" title="Capital" time-dependent="false">
+ *   <qti-response-declaration identifier="RESPONSE" cardinality="multiple" base-type="identifier"/>
+ *   <qti-item-body>
+ *     <qti-choice-interaction response-identifier="RESPONSE" min-choices="1" max-choices="2">
+ *       <qti-simple-choice identifier="Paris">Paris</qti-simple-choice>
+ *       <qti-simple-choice identifier="Lyon" fixed="true">Lyon</qti-simple-choice>
+ *     </qti-choice-interaction>
+ *   </qti-item-body>
+ * </qti-assessment-item>`);
+ * const [descriptor] = describeInteractions(item);
+ * descriptor.constraints; // => { minChoices: 1, maxChoices: 2 }
+ * descriptor.bindings; // => [{ cardinality: "multiple", baseTypes: ["identifier"] }]
+ * descriptor.choices.map(({ identifier, fixed }) => [identifier, fixed]); // => [["Paris", false], ["Lyon", true]]
+ * ```
  */
 export function describeInteractions(item: AssessmentItem): readonly InteractionDescriptor[] {
   const input: unknown = item;

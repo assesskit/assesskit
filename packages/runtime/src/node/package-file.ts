@@ -22,6 +22,29 @@ import { fileSource } from "./file-source.js";
  * @returns The package.
  * @throws `DataError` when an argument has the wrong type, a limit is not a positive integer, or the path cannot be read.
  * @throws `ReadError` and `SecurityError` as `readPackage` does, and `SecurityError` for the directory rules above.
+ * @example
+ * ```ts
+ * import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+ * import { tmpdir } from "node:os";
+ * import { join } from "node:path";
+ * import { readPackageFile } from "@assesskit/runtime/node";
+ *
+ * const directory = mkdtempSync(join(tmpdir(), "package-"));
+ * writeFileSync(
+ *   join(directory, "imsmanifest.xml"),
+ *   `<manifest xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1" identifier="demo">
+ *   <metadata><schema>QTI Package</schema><schemaversion>3.0.0</schemaversion></metadata>
+ *   <organizations/>
+ *   <resources>
+ *     <resource identifier="capital" type="imsqti_item_xmlv3p0" href="capital.xml"><file href="capital.xml"/></resource>
+ *   </resources>
+ * </manifest>`,
+ * );
+ * writeFileSync(join(directory, "capital.xml"), "<qti-assessment-item/>");
+ * const pkg = await readPackageFile(directory);
+ * pkg.paths; // => ["capital.xml", "imsmanifest.xml"]
+ * rmSync(directory, { recursive: true });
+ * ```
  */
 export async function readPackageFile(path: string, options: ReadPackageOptions = {}): Promise<QtiPackage> {
   checkString(path, "The path");

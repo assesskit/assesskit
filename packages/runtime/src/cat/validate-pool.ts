@@ -35,6 +35,23 @@ function itemReferencesOf(section: Readonly<Record<string, unknown>>): Set<strin
  * lacks, then the items of the pool that the section lacks, each in list order.
  * @throws `DataError` when an argument has the wrong type.
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, item pool}
+ * @example
+ * ```ts
+ * import { readAsi } from "@assesskit/runtime/asi";
+ * import { validatePool } from "@assesskit/runtime/cat";
+ *
+ * const { section } = readAsi(`<qti-assessment-section xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+ *     identifier="sec" title="Adaptive" visible="true">
+ *   <qti-adaptive-selection>
+ *     <qti-adaptive-engine-ref identifier="engine" href="http://example.org/engine"/>
+ *     <qti-adaptive-settings-ref identifier="settings" href="settings.data"/>
+ *   </qti-adaptive-selection>
+ *   <qti-assessment-item-ref identifier="item434" href="item434.xml"/>
+ *   <qti-assessment-item-ref identifier="item065" href="item065.xml"/>
+ * </qti-assessment-section>`);
+ * validatePool(section, { itemIdentifiers: ["item434", "item999"] }).map(({ rule }) => rule);
+ * // => ["assesskit/cat/item-not-in-pool", "assesskit/cat/item-not-in-section"]
+ * ```
  */
 export function validatePool(section: AssessmentSection, pool: ItemStage): readonly Issue[] {
   const input: unknown = section;

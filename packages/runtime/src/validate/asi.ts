@@ -19,6 +19,24 @@ import { checkTest } from "./test.js";
  * @returns The issues in the order the checks found them; none when the document is valid.
  * @throws `DataError` when an argument has the wrong type, or the document is not an object of one of the kinds of
  * `AsiDocument` with models of the shape the schema gives them.
+ * @example
+ * ```ts
+ * import { readAsi } from "@assesskit/runtime/asi";
+ * import { validateAsi } from "@assesskit/runtime/validate";
+ *
+ * const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+ *     identifier="capital" title="Capital" time-dependent="false">
+ *   <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="integer"/>
+ *   <qti-item-body><p>Question</p></qti-item-body>
+ *   <qti-response-processing>
+ *     <qti-set-outcome-value identifier="SCORE"><qti-base-value base-type="float">1</qti-base-value></qti-set-outcome-value>
+ *   </qti-response-processing>
+ * </qti-assessment-item>`);
+ * const issues = validateAsi(document, { path: "capital.xml" });
+ * issues.map(({ severity, rule }) => `${severity} ${rule}`);
+ * // => ["warning assesskit/validate/standard-outcome", "error assesskit/validate/assignment-type"]
+ * issues[1]?.message; // => 'The variable "SCORE" is a single integer and cannot be set to a single float.'
+ * ```
  */
 export function validateAsi(document: AsiDocument, options: ValidateOptions = {}): readonly Issue[] {
   const checked = checkValidateOptions(options);

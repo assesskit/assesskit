@@ -147,6 +147,22 @@ function checkPciStates(action: CandidateAction, limit: number): void {
  * `prototype` or `constructor`, or an option has the wrong type.
  * @throws `SecurityError` when the action is larger than `maxActionSize`, a PCI state is longer than `maxPciStateLength`, or
  * a list in the settings of `support-settings` is longer than `maxSettingListLength`.
+ * @example
+ * ```ts
+ * import { readCandidateAction, writeCandidateAction } from "@assesskit/runtime/delivery/wire";
+ * import { buildSingle } from "@assesskit/runtime/values";
+ *
+ * const answer = {
+ *   type: "set-responses",
+ *   item: { ref: "capital", instance: 1 },
+ *   responses: new Map([["RESPONSE", buildSingle("identifier", "B")]]),
+ * };
+ * const text = JSON.stringify(writeCandidateAction(answer));
+ * const received = readCandidateAction(JSON.parse(text), { limits: { maxActionSize: 100_000 } });
+ * received.type; // => "set-responses"
+ * received.responses.get("RESPONSE");
+ * // => { cardinality: "single", baseType: "identifier", value: "B" }
+ * ```
  */
 export function readCandidateAction(json: unknown, options: ReadCandidateActionOptions = {}): CandidateAction {
   const { limits = DEFAULT_ACTION_LIMITS } = parseWith(readCandidateActionOptionsSchema, options, "The options object");

@@ -60,6 +60,27 @@ function responseRules(processing: ResponseProcessing | undefined, environment: 
  * @throws `SecurityError` when a container would exceed `maxContainerSize`.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-set-outcome-value}
  * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
+ * @example
+ * ```ts
+ * import { createRandom } from "@assesskit/runtime";
+ * import { readAsi } from "@assesskit/runtime/asi";
+ * import { createItemVariables, runResponseProcessing } from "@assesskit/runtime/processing";
+ * import { buildSingle } from "@assesskit/runtime/values";
+ *
+ * const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+ *     identifier="capital" title="Capital" time-dependent="false">
+ *   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
+ *     <qti-correct-response><qti-value>B</qti-value></qti-correct-response>
+ *   </qti-response-declaration>
+ *   <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
+ *   <qti-item-body><p>Choose B.</p></qti-item-body>
+ *   <qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct"/>
+ * </qti-assessment-item>`);
+ * const variables = createItemVariables(item);
+ * const submitted = { ...variables, responses: new Map(variables.responses).set("RESPONSE", buildSingle("identifier", "B")) };
+ * runResponseProcessing(item, submitted, { random: createRandom(1) }).outcomes.get("SCORE");
+ * // => { cardinality: "single", baseType: "float", value: 1 }
+ * ```
  */
 export function runResponseProcessing(
   item: AssessmentItem,

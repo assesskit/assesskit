@@ -172,6 +172,14 @@ function parseText(text: string, limits: XmlLimits, path: string | undefined): X
  * @see {@link https://www.w3.org/TR/xml/ | Extensible Markup Language (XML) 1.0}
  * @see {@link https://www.w3.org/TR/xml-names/ | Namespaces in XML 1.0}
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, XML security}
+ * @example
+ * ```ts
+ * import { parseXml, serializeXml } from "@assesskit/runtime/xml";
+ *
+ * const root = parseXml('<a xmlns="urn:demo"><b>text</b></a>', { path: "a.xml" });
+ * [root.name, root.namespace, root.line, root.column]; // => ["a", "urn:demo", 1, 1]
+ * serializeXml(root); // => '<?xml version="1.0" encoding="UTF-8"?>\n<a xmlns="urn:demo"><b>text</b></a>'
+ * ```
  */
 export function parseXml(input: string | Uint8Array, options: ParseXmlOptions = {}): XmlElement {
   const { path, limits } = parseWith(parseXmlOptionsSchema, options, "The options object");

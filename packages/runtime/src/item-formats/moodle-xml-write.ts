@@ -246,10 +246,10 @@ function category(path: string): XmlElement {
  * @see {@link https://docs.moodle.org/en/Moodle_XML_format | Moodle, Moodle XML format}
  * @example
  * ```ts
- * import { readAsi } from "@assesskit/runtime/asi";
- * import { writeMoodleXml } from "@assesskit/runtime/item-formats";
- * const { item } = readAsi(xml);
- * const { text, losses } = writeMoodleXml([{ item }]);
+ * import { readGift, writeMoodleXml } from "@assesskit/runtime/item-formats";
+ *
+ * const { items } = readGift("::Capital::The capital of Indonesia is {=Jakarta}.");
+ * writeMoodleXml(items).text.includes("<usecase>0</usecase>"); // => true
  * ```
  */
 export function writeMoodleXml(items: readonly BankItem[], options: WriteMoodleXmlOptions = {}): ExportedItems {

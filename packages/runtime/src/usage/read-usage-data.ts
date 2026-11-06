@@ -142,6 +142,20 @@ function readStatistic(reader: ElementReader): ItemStatistic {
  * target object, a value that is not of its base type, or a date that is not `YYYY-MM-DD`.
  * @throws `SecurityError` when the text or bytes break a limit of `parseXml`.
  * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/ud-bind/index.html | QTI 3.0 Usage Data}
+ * @example
+ * ```ts
+ * import { readUsageData } from "@assesskit/runtime/usage";
+ *
+ * const data = readUsageData(`<usageData xmlns="http://www.imsglobal.org/xsd/imsqti_usagedata_v3p0">
+ *   <ordinaryStatistic name="P-value" context="http://example.com/sample" caseCount="689325" lastUpdated="2004-07-04">
+ *     <targetObject identifier="Item_VB123456"/>
+ *     <value>0.647</value>
+ *   </ordinaryStatistic>
+ * </usageData>`);
+ * data.statistics[0]?.kind; // => "ordinary"
+ * data.statistics[0]?.targetObjects; // => [{ identifier: "Item_VB123456" }]
+ * data.statistics[0]?.lastUpdated; // => "2004-07-04"
+ * ```
  */
 export function readUsageData(input: string | Uint8Array | XmlElement): UsageData {
   const reader = ElementReader.open(input, RULES, "The usage data");

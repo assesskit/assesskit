@@ -313,6 +313,11 @@ tests of every engine, and waits for the next change to that part.
   `docs/<package>/` that are not the guide of a module (architecture, baseline, choosing, conformance, conventions, evidence, performance,
   size, spec gaps and supported) are listed in `NOT_GUIDES` of `scripts/check-standards.ts`.
 - What a call throws goes into a table of errors, not into a sample.
+- The main function of each subpath has an `@example` in its TSDoc, after the other tags: a fenced `ts` block as complete as a
+  guide's sample, with its imports and its results as `// => result`, short, and taken from the guide of the module where the
+  guide has one. The `tsdoc.test.ts` of each package runs the examples of its `src` with `examplesIn` and `runExample` of
+  `scripts/tsdoc-examples.ts`, and fails on an example that shows no result or a result that differs; in Node,
+  `scripts/tsdoc-sources.ts` reads the sources and loads the packages of the repository from their sources and not a build.
 - Every package has a Supported, an Evidence and a Choosing page in `docs/<package>/` (`evidence-page`). A count on them is a number of
   a file of the repository or of `pnpm exec vitest list`, stated with the commit and the date of the count, and a statement of
   what another library has is dated and linked, with what the package lacks of it. The Choosing pages are written from

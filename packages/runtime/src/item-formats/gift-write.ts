@@ -261,10 +261,11 @@ function writeQuestion(entry: ExportEntry, plan: ExportPlan): string {
  * @see {@link https://docs.moodle.org/en/GIFT_format | Moodle, GIFT format}
  * @example
  * ```ts
- * import { readAsi } from "@assesskit/runtime/asi";
- * import { writeGift } from "@assesskit/runtime/item-formats";
- * const { item } = readAsi(xml);
- * const { text, losses } = writeGift([{ item }]);
+ * import { readGift, writeGift } from "@assesskit/runtime/item-formats";
+ *
+ * const { items } = readGift("::Capital::The capital of Indonesia is {=Jakarta}.");
+ * writeGift(items).text;
+ * // => "// [id:item-1]\n::Capital::[html]<div>The capital of Indonesia is {\n\t=Jakarta\n}.</div>\n\n"
  * ```
  */
 export function writeGift(items: readonly BankItem[], options: WriteItemsOptions = {}): ExportedItems {

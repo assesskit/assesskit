@@ -193,6 +193,29 @@ function checkVariables(variables: unknown): asserts variables is ContentVariabl
  * @throws `DataError` when an argument has the wrong type.
  * @see
  * {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, template processing and printed variables}
+ * @example
+ * ```ts
+ * import { readAsi } from "@assesskit/runtime/asi";
+ * import { resolveContent } from "@assesskit/runtime/content";
+ * import { createItemVariables } from "@assesskit/runtime/processing";
+ * import { buildSingle } from "@assesskit/runtime/values";
+ *
+ * const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+ *     identifier="result" title="Result" time-dependent="false">
+ *   <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
+ *   <qti-outcome-declaration identifier="FEEDBACK" cardinality="single" base-type="identifier"/>
+ *   <qti-item-body>
+ *     <p>Score <qti-printed-variable identifier="SCORE" format="%.1f"/>.</p>
+ *     <qti-feedback-block outcome-identifier="FEEDBACK" identifier="right" show-hide="show">
+ *       <qti-content-body><p>Well done.</p></qti-content-body>
+ *     </qti-feedback-block>
+ *   </qti-item-body>
+ * </qti-assessment-item>`);
+ * const { outcomes, templates } = createItemVariables(item);
+ * outcomes.set("SCORE", buildSingle("float", 0.7)).set("FEEDBACK", buildSingle("identifier", "right"));
+ * const resolved = resolveContent(item.body.children, { outcomes, templates }, item, { view: "candidate" });
+ * resolved.map(({ kind }) => kind); // => ["p", "feedback-block"]
+ * ```
  */
 export function resolveContent(
   nodes: readonly BodyNode[],

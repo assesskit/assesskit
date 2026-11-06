@@ -119,6 +119,15 @@ export function buildUntrustedContainer(
  * @param values - The values, as {@link buildSingle} takes them. None may be an empty string, which is NULL.
  * @returns The container, or `null` when there are no values: an empty container is NULL.
  * @throws `DataError` when an argument is not valid.
+ * @example
+ * ```ts
+ * import { buildContainer, buildSingle, matchValues } from "@assesskit/runtime/values";
+ *
+ * const a = buildContainer("multiple", "identifier", ["A", "B", "B"]);
+ * const b = buildContainer("multiple", "identifier", ["B", "A", "B"]);
+ * a !== null && b !== null && matchValues(a, b); // => true
+ * buildSingle("string", ""); // => null
+ * ```
  */
 export function buildContainer(
   cardinality: "multiple" | "ordered",

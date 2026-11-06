@@ -149,6 +149,19 @@ function readRecord(reader: ElementReader): PnpRecord {
  * one, or a missing `xml:lang` or `source-system`.
  * @throws `SecurityError` when the text or bytes break a limit of `parseXml`.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, PNP}
+ * @example
+ * ```ts
+ * import { readPnp, resolveSupports } from "@assesskit/runtime/pnp";
+ *
+ * const profile = readPnp(`<access-for-all-pnp xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imsafa3p0pnp_v1p0">
+ *   <spoken><reading-type>screen-reader</reading-type></spoken>
+ *   <additional-testing-time><time-multiplier>1.5</time-multiplier></additional-testing-time>
+ *   <activate-at-initialization-set><spoken/></activate-at-initialization-set>
+ *   <prohibit-set><magnification/></prohibit-set>
+ * </access-for-all-pnp>`);
+ * "supports" in profile && [...resolveSupports(profile)];
+ * // => [["spoken", "active"], ["additional-testing-time", "assigned"], ["magnification", "prohibited"]]
+ * ```
  */
 export function readPnp(input: string | Uint8Array | XmlElement): PersonalNeedsProfile | readonly PnpRecord[] {
   const reader = ElementReader.open(input, RULES, "The PNP");

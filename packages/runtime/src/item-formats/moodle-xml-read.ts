@@ -345,8 +345,10 @@ function readQuestion(question: XmlElement, limits: ItemFormatLimits): ReadEntry
  * @see {@link https://github.com/moodle/moodle/blob/v5.3.0/public/question/format/xml/format.php | Moodle 5.3, the XML importer}
  * @example
  * ```ts
- * import { readMoodleXml } from "@assesskit/runtime/item-formats";
- * const { items } = readMoodleXml(xml);
+ * import { readGift, readMoodleXml, writeMoodleXml } from "@assesskit/runtime/item-formats";
+ *
+ * const { items } = readGift("::Capital::The capital of Indonesia is {=Jakarta}.");
+ * readMoodleXml(writeMoodleXml(items).text).items.map(({ item }) => item.title); // => ["Capital"]
  * ```
  */
 export function readMoodleXml(input: string | Uint8Array, options: ReadItemsOptions = {}): ImportedItems {

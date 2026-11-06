@@ -37,6 +37,16 @@ const GOLDEN_GAMMA = 0x9e3779b9;
  *
  * @param seed - A safe integer.
  * @throws `DataError` when `seed` is not a safe integer.
+ * @example
+ * ```ts
+ * import { createRandom, restoreRandom } from "@assesskit/runtime";
+ *
+ * const random = createRandom(42);
+ * random.uniform(); // => 0.6606157208001621
+ * const saved = random.state(); // => [3799000961, 1141679633, 2034301298, 2592122788]
+ * random.uniform(); // => 0.1117019639532224
+ * restoreRandom(saved).uniform(); // => 0.1117019639532224
+ * ```
  */
 export function createRandom(seed: number): SeededRandom {
   checkSeed(seed);

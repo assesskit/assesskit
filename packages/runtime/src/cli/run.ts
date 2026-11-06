@@ -21,6 +21,15 @@ import { validateCommand } from "./validate-command.js";
  * @param options - See {@link RunCliOptions}.
  * @returns The exit code: 0, 1 or 2.
  * @throws `DataError` when an argument or an option has the wrong type.
+ * @example
+ * ```ts
+ * import { runCli } from "@assesskit/runtime/cli";
+ *
+ * let output = "";
+ * await runCli(["--help"], { stdout: (text) => (output += text) }); // => 0
+ * output.startsWith("Usage:\n  assesskit validate <path>"); // => true
+ * await runCli(["export"], { stderr: () => undefined }); // => 2
+ * ```
  */
 export async function runCli(args: readonly string[], options: RunCliOptions = {}): Promise<number> {
   checkArray(args, "The arguments must be an array");

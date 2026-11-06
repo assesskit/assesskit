@@ -283,6 +283,18 @@ function totalRules(parts: readonly Part[], options: CompileOptionsData, maximum
  * @throws `SecurityError` past the limits: responses an item, entries a key, characters a pattern.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, response processing}
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, SCORE and MAXSCORE}
+ * @example
+ * ```ts
+ * import { compileScoring } from "@assesskit/runtime/scoring";
+ *
+ * const scoring = compileScoring([
+ *   { identifier: "CAPITAL", key: { kind: "text", answers: [{ texts: ["Jakarta"] }] } },
+ *   { identifier: "STEPS", key: { kind: "order", order: ["A", "B", "C", "D"], scheme: "adjacent-pairs" } },
+ * ]);
+ * scoring.outcomeDeclarations.map(({ identifier }) => identifier);
+ * // => ["SCORE", "MAXSCORE", "SCORE_CAPITAL", "SCORE_STEPS", "FEEDBACK"]
+ * scoring.operators; // => ["urn:uuid:02d09ea0-c251-49b1-95b2-96e4f3b9b540"]
+ * ```
  */
 export function compileScoring(responses: readonly ScoredResponse[], options?: CompileScoringOptions): ItemScoring {
   const read = parseWith(compileScoringOptionsSchema, options, "The options of compileScoring");

@@ -220,6 +220,27 @@ export function openPackage(files: PackageFiles, options: OpenPackageOptions = {
  * or an entry count, size, or compression ratio above its limit.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding, content packages}
  * @see {@link https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT | ZIP File Format Specification (APPNOTE)}
+ * @example
+ * ```ts
+ * import { readManifest, readPackage, writePackage } from "@assesskit/runtime/package";
+ *
+ * const manifest = readManifest(`<manifest xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1" identifier="demo">
+ *   <metadata><schema>QTI Package</schema><schemaversion>3.0.0</schemaversion></metadata>
+ *   <organizations/>
+ *   <resources>
+ *     <resource identifier="capital" type="imsqti_item_xmlv3p0" href="items/capital.xml">
+ *       <file href="items/capital.xml"/>
+ *     </resource>
+ *   </resources>
+ * </manifest>`);
+ * const item = `<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+ *     identifier="capital" title="Capital" adaptive="false" time-dependent="false"/>`;
+ * const zip = writePackage(manifest, new Map([["items/capital.xml", new TextEncoder().encode(item)]]));
+ * const pkg = readPackage(zip);
+ * pkg.paths; // => ["imsmanifest.xml", "items/capital.xml"]
+ * pkg.resolve("items/capital.xml", "../media/map.png"); // => "media/map.png"
+ * pkg.resolve("items/capital.xml", "http://example.com/x.png"); // => undefined
+ * ```
  */
 export function readPackage(zip: Uint8Array, options: ReadPackageOptions = {}): QtiPackage {
   const { limits, xmlLimits } = parseWith(readPackageOptionsSchema, options, "The options object");

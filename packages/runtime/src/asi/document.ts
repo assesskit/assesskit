@@ -150,6 +150,22 @@ function rootOf(
  * @throws `SecurityError` when the document has a DOCTYPE or exceeds a limit.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding}
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
+ * @example
+ * ```ts
+ * import { readAsi, writeAsi } from "@assesskit/runtime/asi";
+ *
+ * const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+ *     identifier="capital" title="Capital" time-dependent="false">
+ *   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
+ *     <qti-correct-response><qti-value>Paris</qti-value></qti-correct-response>
+ *   </qti-response-declaration>
+ *   <qti-item-body><p>Which city is the capital of France?</p></qti-item-body>
+ * </qti-assessment-item>`);
+ * const item = document.kind === "item" ? document.item : undefined;
+ * item?.title; // => "Capital"
+ * item?.responseDeclarations[0]?.correctResponse?.values; // => [{ kind: "value", value: "Paris" }]
+ * writeAsi(document).includes('identifier="capital"'); // => true
+ * ```
  */
 export function readAsi(input: string | Uint8Array | XmlElement, options: ReadAsiOptions = {}): AsiDocument {
   const read = parseWith(parseXmlOptionsSchema, options, "The options object");

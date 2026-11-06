@@ -30,6 +30,16 @@ function inlineFile(file: unknown, files: PciFileLoader): unknown {
  * have the declared type, `files` has no function `load`, or `load` returns anything but a string.
  * @see
  * {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, JSON binding of values}
+ * @example
+ * ```ts
+ * import { decodePciValue, encodePciValue } from "@assesskit/runtime/pci";
+ * import { buildContainer } from "@assesskit/runtime/values";
+ *
+ * const numbers = buildContainer("multiple", "integer", [3, 4]);
+ * encodePciValue(numbers, { cardinality: "multiple", baseType: "integer" }, { load: () => "" }); // => { list: { integer: [3, 4] } }
+ * decodePciValue({ base: { integer: 3 } }, { cardinality: "single", baseType: "integer" }, { store: () => "" });
+ * // => { cardinality: "single", baseType: "integer", value: 3 }
+ * ```
  */
 export function encodePciValue(value: Value | null, declaration: ValueDeclaration, files: PciFileLoader): JsonValue {
   checkRecord(files, "The files must be an object with a function load");

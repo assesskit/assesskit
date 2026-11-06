@@ -40,6 +40,18 @@ export interface CreateScoringOperatorsOptions {
  * @throws `DataError` for options that are not an object or hold another property, or a limit that is not a positive integer
  *   or is past its cap: 20,000, 128, 64 and 256.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-custom-operator}
+ * @example
+ * ```ts
+ * import { buildOperatorCall, createScoringOperators, OPERATOR_DEFINITIONS } from "@assesskit/runtime/operators";
+ *
+ * const call = buildOperatorCall(
+ *   { operator: "expression-equivalent", key: { kind: "expression", expression: "2(x+1)" } },
+ *   "RESPONSE",
+ * );
+ * const score = createScoringOperators().get(OPERATOR_DEFINITIONS["expression-equivalent"]);
+ * score([{ cardinality: "single", baseType: "string", value: "2x+2" }], call); // => { cardinality: "single", baseType: "float", value: 1 }
+ * score([{ cardinality: "single", baseType: "string", value: "2x+1" }], call); // => { cardinality: "single", baseType: "float", value: 0 }
+ * ```
  */
 export function createScoringOperators(
   options: CreateScoringOperatorsOptions = {},

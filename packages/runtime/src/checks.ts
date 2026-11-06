@@ -428,6 +428,15 @@ export function describeIssue(issue: v.BaseIssue<unknown>): string {
  * @param label - Names the data in the error message, such as `The action`.
  * @returns The data, as the schema reads it.
  * @throws `DataError` that names the path of the first issue and what was expected there.
+ * @example
+ * ```ts
+ * import { parseWith, strictRecord } from "@assesskit/runtime/checks";
+ * import { number, optional } from "valibot";
+ *
+ * const schema = strictRecord({ limit: optional(number(), 10) });
+ * parseWith(schema, {}, "The options"); // => { limit: 10 }
+ * parseWith(schema, { limit: 3 }, "The options"); // => { limit: 3 }
+ * ```
  */
 export function parseWith<TSchema extends v.GenericSchema>(
   schema: TSchema,

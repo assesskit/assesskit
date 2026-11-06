@@ -381,6 +381,36 @@ function start(course: Course, options: StartOptions): Step {
  * @throws `DataError` when an argument has the wrong type, the static checks find an error (the message lists them), or
  * a resolver returns a promise.
  * @throws `ReadError` from a resolver, when a reference cannot be resolved.
+ * @example
+ * ```ts
+ * import { readAsi } from "@assesskit/runtime/asi";
+ * import { createEngine, stamp } from "@assesskit/runtime/delivery";
+ * import { buildSingle } from "@assesskit/runtime/values";
+ *
+ * const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+ *     identifier="capital" title="Capital" time-dependent="false">
+ *   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
+ *     <qti-correct-response><qti-value>B</qti-value></qti-correct-response>
+ *   </qti-response-declaration>
+ *   <qti-item-body>
+ *     <qti-choice-interaction response-identifier="RESPONSE" max-choices="1">
+ *       <qti-simple-choice identifier="A">A</qti-simple-choice>
+ *       <qti-simple-choice identifier="B">B</qti-simple-choice>
+ *     </qti-choice-interaction>
+ *   </qti-item-body>
+ * </qti-assessment-item>`);
+ * const engine = createEngine({ kind: "item", item, base: "capital.xml" });
+ * const started = engine.start({ seed: 1, at: 0 });
+ * engine.view(started.state, 2_000).status; // => "in-progress"
+ * const answer = {
+ *   type: "set-responses",
+ *   item: { ref: "capital", instance: 1 },
+ *   responses: new Map([["RESPONSE", buildSingle("identifier", "B")]]),
+ * };
+ * const answered = engine.apply(started.state, stamp(started.state, answer, 5_000));
+ * engine.view(answered.state, 5_000).current.responses.get("RESPONSE");
+ * // => { cardinality: "single", baseType: "identifier", value: "B" }
+ * ```
  */
 export function createEngine(definition: DeliveryDefinition, options: EngineOptions = {}): Engine {
   const course = buildCourse(definition, options);

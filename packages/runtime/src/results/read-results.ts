@@ -245,6 +245,23 @@ function readItemResult(reader: ElementReader): ItemResult {
  * @throws `SecurityError` when the text or bytes break a limit of `parseXml`.
  * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
  * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
+ * @example
+ * ```ts
+ * import { readResults } from "@assesskit/runtime/results";
+ *
+ * const result = readResults(`<assessmentResult xmlns="http://www.imsglobal.org/xsd/imsqti_result_v3p0">
+ *   <context sourcedId="johnsmith1"/>
+ *   <itemResult identifier="Q01" sequenceIndex="1" datestamp="2020-08-25T18:18:40" sessionStatus="final">
+ *     <responseVariable identifier="RESPONSE" cardinality="single" baseType="identifier">
+ *       <candidateResponse><value>B</value></candidateResponse>
+ *     </responseVariable>
+ *     <outcomeVariable identifier="SCORE" cardinality="single" baseType="float"><value>0</value></outcomeVariable>
+ *   </itemResult>
+ * </assessmentResult>`);
+ * result.context; // => { sourcedId: "johnsmith1", sessionIdentifiers: [] }
+ * result.itemResults[0]?.sessionStatus; // => "final"
+ * result.itemResults[0]?.variables[0]?.candidateResponse; // => { cardinality: "single", baseType: "identifier", value: "B" }
+ * ```
  */
 export function readResults(input: string | Uint8Array | XmlElement): AssessmentResult {
   const reader = ElementReader.open(input, RULES, "The results");

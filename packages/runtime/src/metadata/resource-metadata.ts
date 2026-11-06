@@ -96,6 +96,26 @@ function readExternal(element: XmlElement, path: string | undefined): ResourceMe
  * cannot be read; an external file has one of the two parts twice.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding}
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
+ * @example
+ * ```ts
+ * import { readResourceMetadata } from "@assesskit/runtime/metadata";
+ * import { parseXml } from "@assesskit/runtime/xml";
+ *
+ * const metadata = readResourceMetadata(
+ *   parseXml(`<metadata xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1"
+ *     xmlns:qmd="http://www.imsglobal.org/xsd/imsqti_metadata_v3p0">
+ *   <qmd:qtiMetadata>
+ *     <qmd:timeDependent>false</qmd:timeDependent>
+ *     <qmd:interactionType>choiceInteraction</qmd:interactionType>
+ *     <qmd:feedbackType>nonadaptive</qmd:feedbackType>
+ *     <qmd:solutionAvailable>true</qmd:solutionAvailable>
+ *   </qmd:qtiMetadata>
+ * </metadata>`),
+ * );
+ * metadata.qti?.interactionTypes; // => ["choiceInteraction"]
+ * metadata.qti?.feedbackType; // => "nonadaptive"
+ * metadata.qti?.solutionAvailable; // => true
+ * ```
  */
 export function readResourceMetadata(element: XmlElement, options: ReadMetadataOptions = {}): ResourceMetadata {
   checkReadArguments(element, options);
