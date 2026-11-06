@@ -134,8 +134,7 @@ An attribute named `kind` (the kind of a `track`) is `trackKind`, because `kind`
 parameters of `ElementModel` are invariant: a `p` is never an `h1`, though both have the type of the table that models them.
 
 Defaults of the schema are not applied: an attribute the document omits is omitted from the model, and
-`writeAsi` does not write it ([spec gaps](spec-gaps.md): the information model, not the schema, says what `normal-minimum` means when it is
-absent). The semantic modules apply defaults with their sources.
+`writeAsi` does not write it. The semantic modules apply defaults with their sources.
 
 ### Flow content
 
@@ -296,14 +295,8 @@ model; each issue has the code, a sentence, and the path, line, column and eleme
 | `assesskit/asi/text`              | Text where only elements go, or in an empty element.                                                                          |
 | `assesskit/asi/exclusive`         | Two child elements the schema allows only one of, such as an adaptive selection and a selection.                              |
 
-The reader is not a validator. It does not check the order of child elements, the minimum of a list, patterns such as
-identifiers and MIME types, ranges such as `xs:int`, the uniqueness of `id`s, or the rule sets of the XML binding. `validateXmlFiles` of
-[node](node.md) checks the schema, and the `validate` module the rest. A value that must be a number or a boolean cannot
-be represented otherwise, so it is checked. A DOCTYPE or a document over a limit is a `SecurityError` of the XML reader.
-
-The schema defines the target value of a `qti-match-table-entry` as one of the base type names, which cannot be intended;
-the runtime follows the schema, so another text is an `assesskit/asi/invalid-value`, and a numeric table is a
-`qti-interpolation-table` ([spec gaps](spec-gaps.md)).
+The reader is not a validator: [Not included](#not-included) lists what it leaves to the schema and to `validate`. A value that
+must be a number or a boolean cannot be represented otherwise, so it is checked.
 
 ## Writing
 
@@ -355,8 +348,7 @@ table with the one the script generates, and validates documents that fast-check
 
 The generated documents use every element and attribute that the schema declares, and the schema accepts them. The 1EdTech
 examples contain every interaction but the custom one; the other elements have no corpus evidence, only the schema and the
-unit tests. Two examples are not read, because the ASI schema rejects them: one lacks the
-required `use` of a rubric block, and one has an attribute `qti-interaction-modules` does not have.
+unit tests. The two examples that the schema rejects are in [Differences from the references](#differences-from-the-references).
 
 ## Errors
 
